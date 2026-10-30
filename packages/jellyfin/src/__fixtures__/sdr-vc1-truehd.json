@@ -1,0 +1,62 @@
+{
+  "Id": "b791a7dd2cdee04b28b3bac7ac473480",
+  "Container": "mkv",
+  "DefaultAudioStreamIndex": 4,
+  "MediaStreams": [
+    {
+      "Index": 3,
+      "Type": "Video",
+      "Codec": "vc1",
+      "Profile": "Advanced",
+      "Width": 1920,
+      "Height": 1080,
+      "BitDepth": 8,
+      "ColorTransfer": "bt709",
+      "VideoRange": "SDR",
+      "VideoRangeType": "SDR",
+      "AudioSpatialFormat": "None",
+      "IsDefault": true,
+      "DisplayTitle": "1080p VC1 SDR"
+    },
+    {
+      "Index": 4,
+      "Type": "Audio",
+      "Codec": "truehd",
+      "BitDepth": 24,
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 6,
+      "ChannelLayout": "5.1",
+      "Language": "eng",
+      "IsDefault": true,
+      "DisplayTitle": "TrueHD 5.1 - English - Default"
+    },
+    {
+      "Index": 5,
+      "Type": "Audio",
+      "Codec": "ac3",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 6,
+      "ChannelLayout": "5.1",
+      "Language": "eng",
+      "IsDefault": false,
+      "DisplayTitle": "AC3 5.1 - English - Dolby Digital"
+    },
+    {
+      "Index": 6,
+      "Type": "Audio",
+      "Codec": "ac3",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 2,
+      "ChannelLayout": "stereo",
+      "Language": "eng",
+      "IsDefault": false,
+      "DisplayTitle": "Commentary - English - Dolby Digital - Stereo"
+    }
+  ]
+}

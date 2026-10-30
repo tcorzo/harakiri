@@ -1,0 +1,122 @@
+[settings]
+lockfile = true
+
+[tools]
+bun = "1.4.4"
+node = "26.13.0"
+hk = "2.10.0"
+"github:quietvoid/dovi_tool" = "2.3.4"
+"github:quietvoid/hdr10plus_tool" = "1.7.2"
+
+[env]
+_.file = ".env"
+
+[tasks.setup]
+description = "Install deps, register git hooks and check the system media stack"
+shell = "bash -euo pipefail -c"
+run = """
+bun install --frozen-lockfile
+hk install --global --mise
+git config --get-regexp '^hook\\.' >/dev/null || { echo 'hk hooks are not registered' >&2; exit 1; }
+mise run doctor
+"""
+
+[tasks.doctor]
+description = "Check mpv, libplacebo, ffmpeg and the headless compositors the harness needs"
+shell = "bash -euo pipefail -c"
+run = "bun run --filter @harakiri/harness doctor"
+
+[tasks.dev]
+description = "Run the desktop app with hot reload"
+dir = "{{config_root}}/apps/desktop"
+run = "../../scripts/bounded.sh dev 4G -- bun run dev"
+
+[tasks.lint]
+description = "Lint with oxlint (type-aware)"
+run = "bun x oxlint --type-aware"
+
+[tasks.fmt]
+description = "Format with oxfmt"
+run = "bun x oxfmt"
+
+[tasks.typecheck]
+description = "Typecheck every workspace"
+run = "scripts/bounded.sh typecheck 2G -- bun x tsc -b"
+
+[tasks.test]
+description = "Run unit and harness tests that need no network or display"
+run = "scripts/bounded.sh test 3G -- bun x vitest run --maxWorkers=2"
+
+[tasks.watchdog]
+description = "Watch harakiri's memory and stop the largest harakiri scope when the system runs low"
+run = "WATCHDOG_VERBOSE=1 scripts/watchdog.sh"
+
+[tasks."test:fate"]
+description = "Prove DTS-HD MA, DTS:X and TrueHD Atmos passthrough on FFmpeg test-suite samples (HARAKIRI_FATE_DIR, default .cache/fate from media:fetch-fate)"
+run = "HARAKIRI_FATE_DIR=${HARAKIRI_FATE_DIR:-.cache/fate} scripts/bounded.sh fate 3G -- bun x vitest run --config vitest.tiers.config.ts --project 'fate:*' --maxWorkers=2"
+
+[tasks."test:live"]
+description = "Run the live tier against a real Jellyfin (JELLYFIN_DEV_URL/_USER/_PASSWORD, default the dev container); it writes resume points and sessions"
+run = "scripts/bounded.sh live 3G -- bun x vitest run --config vitest.tiers.config.ts --project 'live:*' --maxWorkers=2"
+
+[tasks."media:gen"]
+description = "Generate the synthetic Jellyfin library into .cache/corpus (adds the FATE tier when .cache/fate holds it)"
+run = "scripts/bounded.sh corpus 2G -- bun packages/harness/src/corpus/cli.ts gen"
+
+[tasks."media:fetch-fate"]
+description = "Fetch the pinned FFmpeg FATE samples into .cache/fate (HARAKIRI_FATE_MIRROR overrides the host); fails on any miss"
+run = "bun packages/harness/src/corpus/cli.ts fetch-fate"
+
+[tasks."test:corpus"]
+description = "Check the running dev Jellyfin's scan of the corpus against the catalog's classification (fails when unreachable)"
+run = "bun packages/harness/src/corpus/cli.ts classify --wait 300"
+
+[tasks."jellyfin:up"]
+description = "Start the dev Jellyfin (JELLYFIN_DEV_LIBRARY=corpus|own, read-only, 127.0.0.1:8096) and run its idempotent bootstrap"
+shell = "bash -euo pipefail -c"
+run = """
+if [ "${JELLYFIN_DEV_LIBRARY:-corpus}" = corpus ] && [ ! -f "${HARAKIRI_CORPUS_DIR:-.cache/corpus}/corpus.json" ]; then
+  mise run media:gen
+fi
+dev/jellyfin/jellyfin.sh up
+bun dev/jellyfin/bootstrap.ts
+"""
+
+[tasks."jellyfin:down"]
+description = "Stop the dev Jellyfin, keeping its state"
+run = "dev/jellyfin/jellyfin.sh down"
+
+[tasks."test:contract"]
+description = "Prove a real Jellyfin direct plays every fixture and the whole library under harakiri's profile (JELLYFIN_DEV_URL/_USER/_PASSWORD)"
+run = "scripts/bounded.sh contract 2G -- bun x vitest run --config vitest.tiers.config.ts --project 'contract:*' --maxWorkers=2"
+
+[tasks."jellyfin:gen"]
+description = "Regenerate the Jellyfin client from the pinned OpenAPI spec"
+dir = "{{config_root}}/packages/jellyfin"
+run = "bun run gen"
+
+[tasks."fidelity:table"]
+description = "Regenerate docs/fidelity/compatibility.md from the fidelity engine's scenarios"
+run = "bun packages/fidelity/src/table-cli.ts docs/fidelity/compatibility.md"
+
+[tasks."lint:skips"]
+description = "Fail when a test file can skip instead of living in a live, contract or FATE tier"
+run = "bun scripts/lint-skips.ts"
+
+[tasks.e2e]
+description = "Build the app and run the Playwright e2e in a nested virtual KWin against the in-process fake Jellyfin on the corpus (HARAKIRI_E2E_SERVER=<url> runs it against a real server)"
+dir = "{{config_root}}/apps/desktop"
+shell = "bash -euo pipefail -c"
+run = """
+if [ -z "${HARAKIRI_E2E_SERVER:-}" ]; then mise run media:fetch-fate; fi
+../../scripts/bounded.sh build 3G -- bun run build
+../../scripts/bounded.sh e2e 4G -- bash e2e/headless.sh
+"""
+
+[tasks."lint:private"]
+description = "Fail when a file holds workstation paths, owner domains or library titles (.private-denylist)"
+run = "bun scripts/lint-private.ts"
+
+[tasks.check]
+description = "Everything CI gates on"
+depends = ["lint", "lint:skips", "lint:private", "typecheck", "test"]

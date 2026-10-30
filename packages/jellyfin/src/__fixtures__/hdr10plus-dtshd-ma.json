@@ -1,0 +1,77 @@
+{
+  "Id": "3d5040321fb879e012d7555451a28163",
+  "Container": "mkv",
+  "DefaultAudioStreamIndex": 4,
+  "MediaStreams": [
+    {
+      "Index": 3,
+      "Type": "Video",
+      "Codec": "hevc",
+      "Profile": "Main 10",
+      "Width": 3840,
+      "Height": 1608,
+      "BitDepth": 10,
+      "ColorTransfer": "smpte2084",
+      "VideoRange": "HDR",
+      "VideoRangeType": "HDR10Plus",
+      "Hdr10PlusPresentFlag": true,
+      "AudioSpatialFormat": "None",
+      "IsDefault": true,
+      "DisplayTitle": "Main video - 4K - HEVC - HDR"
+    },
+    {
+      "Index": 4,
+      "Type": "Audio",
+      "Codec": "dts",
+      "Profile": "DTS-HD MA",
+      "BitDepth": 24,
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 6,
+      "ChannelLayout": "5.1",
+      "Language": "eng",
+      "IsDefault": true,
+      "DisplayTitle": "Surround 5.1 - English - DTS-HD MA - Default"
+    },
+    {
+      "Index": 5,
+      "Type": "Audio",
+      "Codec": "eac3",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 6,
+      "ChannelLayout": "5.1",
+      "Language": "eng",
+      "IsDefault": false,
+      "DisplayTitle": "Surround 5.1 - English - Dolby Digital+"
+    },
+    {
+      "Index": 6,
+      "Type": "Audio",
+      "Codec": "ac3",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 2,
+      "ChannelLayout": "stereo",
+      "Language": "eng",
+      "IsDefault": false,
+      "DisplayTitle": "Commentary - English - Dolby Digital - Stereo"
+    },
+    {
+      "Index": 7,
+      "Type": "Audio",
+      "Codec": "ac3",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 2,
+      "ChannelLayout": "stereo",
+      "Language": "eng",
+      "IsDefault": false,
+      "DisplayTitle": "Commentary - English - Dolby Digital - Stereo"
+    }
+  ]
+}

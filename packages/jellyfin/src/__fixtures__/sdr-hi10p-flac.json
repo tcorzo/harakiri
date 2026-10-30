@@ -1,0 +1,51 @@
+{
+  "Id": "7a90068fe79cf7a1e8ce75859598565e",
+  "Container": "mkv",
+  "DefaultAudioStreamIndex": 3,
+  "MediaStreams": [
+    {
+      "Index": 2,
+      "Type": "Video",
+      "Codec": "h264",
+      "Profile": "High 10",
+      "Width": 1920,
+      "Height": 1080,
+      "BitDepth": 10,
+      "ColorTransfer": "bt709",
+      "VideoRange": "SDR",
+      "VideoRangeType": "SDR",
+      "AudioSpatialFormat": "None",
+      "Language": "jpn",
+      "IsDefault": true,
+      "DisplayTitle": "1080p H264 SDR"
+    },
+    {
+      "Index": 3,
+      "Type": "Audio",
+      "Codec": "flac",
+      "BitDepth": 24,
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 2,
+      "ChannelLayout": "stereo",
+      "Language": "jpn",
+      "IsDefault": true,
+      "DisplayTitle": "Japanese - FLAC - Stereo - Default"
+    },
+    {
+      "Index": 4,
+      "Type": "Audio",
+      "Codec": "flac",
+      "BitDepth": 16,
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 2,
+      "ChannelLayout": "stereo",
+      "Language": "eng",
+      "IsDefault": false,
+      "DisplayTitle": "English - FLAC - Stereo"
+    }
+  ]
+}

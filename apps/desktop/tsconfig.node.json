@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "outDir": "${configDir}/.tsbuild/node",
+    "tsBuildInfoFile": "${configDir}/.tsbuild/node.tsbuildinfo",
+    "lib": ["ES2024", "DOM"]
+  },
+  "include": [
+    "src/main",
+    "src/preload",
+    "src/shared",
+    "electron.vite.config.ts",
+    "vitest.config.ts"
+  ]
+}

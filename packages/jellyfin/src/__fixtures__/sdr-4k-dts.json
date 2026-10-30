@@ -1,0 +1,51 @@
+{
+  "Id": "991bfd71a9996493f3c0632f3e62f888",
+  "Container": "mkv",
+  "DefaultAudioStreamIndex": 2,
+  "MediaStreams": [
+    {
+      "Index": 1,
+      "Type": "Video",
+      "Codec": "hevc",
+      "Profile": "Main",
+      "Width": 3840,
+      "Height": 1600,
+      "BitDepth": 8,
+      "ColorTransfer": "bt709",
+      "VideoRange": "SDR",
+      "VideoRangeType": "SDR",
+      "AudioSpatialFormat": "None",
+      "Language": "spa",
+      "IsDefault": true,
+      "DisplayTitle": "4K HEVC SDR"
+    },
+    {
+      "Index": 2,
+      "Type": "Audio",
+      "Codec": "dts",
+      "Profile": "DTS",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 6,
+      "ChannelLayout": "5.1",
+      "Language": "ita",
+      "IsDefault": true,
+      "DisplayTitle": "Italian - DTS - 5.1 - Default"
+    },
+    {
+      "Index": 3,
+      "Type": "Audio",
+      "Codec": "dts",
+      "Profile": "DTS",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 6,
+      "ChannelLayout": "5.1",
+      "Language": "spa",
+      "IsDefault": false,
+      "DisplayTitle": "Spanish - DTS - 5.1"
+    }
+  ]
+}

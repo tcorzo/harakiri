@@ -1,0 +1,35 @@
+{
+  "Id": "11df172c03b72526ba52b28270bdba79",
+  "Container": "mkv",
+  "DefaultAudioStreamIndex": 4,
+  "MediaStreams": [
+    {
+      "Index": 3,
+      "Type": "Video",
+      "Codec": "h264",
+      "Profile": "High",
+      "Width": 1920,
+      "Height": 1080,
+      "BitDepth": 8,
+      "VideoRange": "SDR",
+      "VideoRangeType": "SDR",
+      "AudioSpatialFormat": "None",
+      "Language": "eng",
+      "IsDefault": false,
+      "DisplayTitle": "1080p H264 SDR"
+    },
+    {
+      "Index": 4,
+      "Type": "Audio",
+      "Codec": "pcm_s24le",
+      "BitDepth": 24,
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 1,
+      "Language": "jpn",
+      "IsDefault": true,
+      "DisplayTitle": "LPCM 1.0 - Japanese - PCM_S24LE - 1 ch - Default"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+node_modules/
+out/
+dist/
+*.tsbuildinfo
+.env
+fixtures/real/
+.harness/
+.tsbuild/
+apps/desktop/e2e/screenshots/
+.env.*
+!.env.example
+*.log
+.cache/
+apps/desktop/.impeccable/hook.cache.json
+.private-denylist

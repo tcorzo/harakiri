@@ -1,0 +1,34 @@
+{
+  "Id": "f5c192d63395c144c9bbc668177b8bdb",
+  "Container": "ts",
+  "DefaultAudioStreamIndex": 3,
+  "MediaStreams": [
+    {
+      "Index": 2,
+      "Type": "Video",
+      "Codec": "h264",
+      "Profile": "High",
+      "Width": 1920,
+      "Height": 1080,
+      "BitDepth": 8,
+      "VideoRange": "SDR",
+      "VideoRangeType": "SDR",
+      "AudioSpatialFormat": "None",
+      "IsDefault": false,
+      "DisplayTitle": "1080p H264 SDR"
+    },
+    {
+      "Index": 3,
+      "Type": "Audio",
+      "Codec": "aac",
+      "Profile": "LC",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 2,
+      "ChannelLayout": "stereo",
+      "IsDefault": false,
+      "DisplayTitle": "AAC - Stereo"
+    }
+  ]
+}

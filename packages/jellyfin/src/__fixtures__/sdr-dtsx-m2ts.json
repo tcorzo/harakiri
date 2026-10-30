@@ -1,0 +1,96 @@
+{
+  "Id": "ff080660a712a5aa37464af689bea10f",
+  "Container": "ts",
+  "DefaultAudioStreamIndex": 4,
+  "MediaStreams": [
+    {
+      "Index": 3,
+      "Type": "Video",
+      "Codec": "h264",
+      "Profile": "High",
+      "Width": 1920,
+      "Height": 1080,
+      "BitDepth": 8,
+      "VideoRange": "SDR",
+      "VideoRangeType": "SDR",
+      "AudioSpatialFormat": "None",
+      "IsDefault": false,
+      "DisplayTitle": "1080p H264 SDR"
+    },
+    {
+      "Index": 4,
+      "Type": "Audio",
+      "Codec": "dts",
+      "Profile": "DTS-HD MA + DTS:X",
+      "BitDepth": 24,
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "DTSX",
+      "Channels": 8,
+      "ChannelLayout": "7.1",
+      "IsDefault": false,
+      "DisplayTitle": "DTS-HD MA + DTS:X - 7.1"
+    },
+    {
+      "Index": 5,
+      "Type": "Audio",
+      "Codec": "ac3",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 6,
+      "ChannelLayout": "5.1",
+      "IsDefault": false,
+      "DisplayTitle": "Dolby Digital - 5.1"
+    },
+    {
+      "Index": 6,
+      "Type": "Audio",
+      "Codec": "ac3",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 6,
+      "ChannelLayout": "5.1",
+      "IsDefault": false,
+      "DisplayTitle": "Dolby Digital - 5.1"
+    },
+    {
+      "Index": 7,
+      "Type": "Audio",
+      "Codec": "ac3",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 6,
+      "ChannelLayout": "5.1",
+      "IsDefault": false,
+      "DisplayTitle": "Dolby Digital - 5.1"
+    },
+    {
+      "Index": 8,
+      "Type": "Audio",
+      "Codec": "dts",
+      "Profile": "DTS",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 2,
+      "ChannelLayout": "stereo",
+      "IsDefault": false,
+      "DisplayTitle": "DTS - Stereo"
+    },
+    {
+      "Index": 9,
+      "Type": "Audio",
+      "Codec": "ac3",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 6,
+      "ChannelLayout": "5.1",
+      "IsDefault": false,
+      "DisplayTitle": "Dolby Digital - 5.1"
+    }
+  ]
+}

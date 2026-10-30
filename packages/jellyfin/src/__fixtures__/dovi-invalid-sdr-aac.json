@@ -1,0 +1,42 @@
+{
+  "Id": "6bb4572cb6153c2ab0c68f4e4a4f6d35",
+  "Container": "mkv",
+  "DefaultAudioStreamIndex": 3,
+  "MediaStreams": [
+    {
+      "Index": 2,
+      "Type": "Video",
+      "Codec": "hevc",
+      "Profile": "Main 10",
+      "Width": 3840,
+      "Height": 2076,
+      "BitDepth": 10,
+      "ColorTransfer": "bt709",
+      "VideoRange": "SDR",
+      "VideoRangeType": "DOVIInvalid",
+      "VideoDoViTitle": "Dolby Vision Profile 8.1 (HDR10)",
+      "DvProfile": 8,
+      "DvLevel": 6,
+      "DvBlSignalCompatibilityId": 1,
+      "RpuPresentFlag": 1,
+      "ElPresentFlag": 0,
+      "BlPresentFlag": 1,
+      "AudioSpatialFormat": "None",
+      "IsDefault": true,
+      "DisplayTitle": "4K HEVC Dolby Vision Profile 8.1 (HDR10)"
+    },
+    {
+      "Index": 3,
+      "Type": "Audio",
+      "Codec": "aac",
+      "Profile": "LC",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 6,
+      "ChannelLayout": "5.1",
+      "IsDefault": true,
+      "DisplayTitle": "AAC - 5.1 - Default"
+    }
+  ]
+}

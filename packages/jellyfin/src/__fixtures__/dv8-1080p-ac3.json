@@ -1,0 +1,42 @@
+{
+  "Id": "2e9bcd166387e528d63631eca3e97999",
+  "Container": "mkv",
+  "DefaultAudioStreamIndex": 4,
+  "MediaStreams": [
+    {
+      "Index": 3,
+      "Type": "Video",
+      "Codec": "hevc",
+      "Profile": "Main 10",
+      "Width": 1920,
+      "Height": 804,
+      "BitDepth": 10,
+      "ColorTransfer": "smpte2084",
+      "VideoRange": "HDR",
+      "VideoRangeType": "DOVIWithHDR10",
+      "VideoDoViTitle": "Dolby Vision Profile 8.1 (HDR10)",
+      "DvProfile": 8,
+      "DvLevel": 3,
+      "DvBlSignalCompatibilityId": 1,
+      "RpuPresentFlag": 1,
+      "ElPresentFlag": 0,
+      "BlPresentFlag": 1,
+      "AudioSpatialFormat": "None",
+      "IsDefault": true,
+      "DisplayTitle": "1080p HEVC Dolby Vision Profile 8.1 (HDR10)"
+    },
+    {
+      "Index": 4,
+      "Type": "Audio",
+      "Codec": "ac3",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 6,
+      "ChannelLayout": "5.1",
+      "Language": "eng",
+      "IsDefault": true,
+      "DisplayTitle": "AC-3 5.1-EX - English - Dolby Digital - Default"
+    }
+  ]
+}
