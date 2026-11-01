@@ -12,7 +12,7 @@ import {
   type SessionData,
 } from "@harakiri/jellyfin";
 import { z } from "zod";
-import { CATALOG } from "../../../../packages/harness/src/corpus/catalog";
+import { CATALOG, type Entry, entryPath } from "../../../../packages/harness/src/corpus/catalog";
 import { clientIdentity } from "../../src/shared/identity";
 import { type Backend, CORPUS_DIR } from "./backend";
 
@@ -45,7 +45,7 @@ export async function signInAccount(backend: Backend): Promise<SessionData> {
   );
   if (result.kind !== "signed-in") {
     throw new Error(
-      `Signing in to the ${backend.kind} Jellyfin at ${backend.server} failed: ${JSON.stringify(result)}`,
+      `Signing in to the Jellyfin at ${backend.server} failed: ${JSON.stringify(result)}`,
     );
   }
   return result.session;
@@ -91,6 +91,7 @@ const Item = z.object({
   Id: z.string(),
   Name: z.string(),
   Type: z.string(),
+  Path: z.string().nullish(),
   RunTimeTicks: z.number().nullish(),
   MediaSources: z
     .array(z.object({ Id: z.string(), MediaStreams: z.array(Stream).default([]) }))
@@ -156,9 +157,9 @@ export function minutesLeft(item: ShownItem): number | null {
 export type ItemType = "Movie" | "Episode";
 
 /**
- * What a test needs from the library, matched against the first media source's streams. Against
- * the fake, `corpus` names the catalog entries that satisfy it (packages/harness/src/corpus);
- * against a real server, the library is searched by the criteria.
+ * What a test needs from the library, matched against the first media source's streams. On the
+ * corpus server, `corpus` names the catalog entries that satisfy it (packages/harness/src/corpus);
+ * on another server, the library is searched by the criteria.
  */
 export interface ItemCriteria {
   readonly label: string;
@@ -255,6 +256,37 @@ function matchItem(item: z.infer<typeof Item>, criteria: ItemCriteria): PickedIt
   };
 }
 
+/** Where jellyfin.sh mounts a corpus file in the container: shows/ is mounted as /media/series. */
+const containerPath = (entry: Entry) => `/media/${entryPath(entry).replace(/^shows\//, "series/")}`;
+
+function pickFromCorpus(
+  items: readonly z.infer<typeof Item>[],
+  criteria: ItemCriteria,
+  count: number,
+): PickedItem[] {
+  const wanted = criteria.corpus.slice(0, count);
+  if (wanted.length < count) {
+    throw new Error(`The corpus names ${wanted.length} of the ${count} wanted: ${criteria.label}`);
+  }
+  return wanted.map((entryId) => {
+    const entry = CATALOG.find((candidate) => candidate.id === entryId);
+    if (entry === undefined) throw new Error(`The catalog has no "${entryId}"`);
+    const item = items.find((candidate) => candidate.Path === containerPath(entry));
+    if (item === undefined) {
+      throw new Error(
+        entry.tier === "fate"
+          ? `${criteria.label}: "${entryId}" is a FATE-tier corpus entry and ${CORPUS_DIR} was built without the FATE samples. Run mise run media:fetch-fate, then mise run media:gen (mise run e2e does both).`
+          : `${criteria.label}: the server has no "${entryId}" from ${CORPUS_DIR}. Run mise run media:gen.`,
+      );
+    }
+    const picked = matchItem(item, criteria);
+    if (picked === undefined) {
+      throw new Error(`The corpus entry "${entryId}" is no longer ${criteria.label}`);
+    }
+    return picked;
+  });
+}
+
 /** A typed view of the server state the e2e asserts on, as the signed-in test user. */
 export class Jellyfin {
   readonly #auth: string;
@@ -312,22 +344,21 @@ export class Jellyfin {
   }
 
   /**
-   * Library items matching `criteria`. Against the fake, the catalog entries the criteria name,
-   * checked against the criteria; against a real server, shortest first, so every run picks the
-   * same ones.
+   * Library items matching `criteria`. On the corpus server, the catalog entries the criteria
+   * name, found by path and checked against the criteria; on another server, shortest first, so
+   * every run picks the same ones.
    */
   async pickItems(criteria: ItemCriteria, count: number): Promise<PickedItem[]> {
-    const fake = this.#backend.fake;
-    if (fake !== undefined) return this.#pickFromCorpus(criteria, count, fake);
     const query = new URLSearchParams({
       userId: this.session.userId,
       Recursive: "true",
       IncludeItemTypes: criteria.types.join(","),
-      Fields: "MediaSources",
+      Fields: "MediaSources,Path",
     });
     const { Items } = z
       .object({ Items: z.array(Item) })
       .parse(await this.#request(`Items?${query.toString()}`));
+    if (this.#backend.kind === "corpus") return pickFromCorpus(Items, criteria, count);
     const picked = Items.flatMap((item) => matchItem(item, criteria) ?? [])
       .toSorted((a, b) => a.runTimeTicks - b.runTimeTicks || a.id.localeCompare(b.id))
       .slice(0, count);
@@ -335,45 +366,6 @@ export class Jellyfin {
       throw new Error(`The library has ${picked.length} of the ${count} wanted: ${criteria.label}`);
     }
     return picked;
-  }
-
-  async #pickFromCorpus(
-    criteria: ItemCriteria,
-    count: number,
-    fake: NonNullable<Backend["fake"]>,
-  ): Promise<PickedItem[]> {
-    const wanted = criteria.corpus.slice(0, count);
-    if (wanted.length < count) {
-      throw new Error(
-        `The corpus names ${wanted.length} of the ${count} wanted: ${criteria.label}`,
-      );
-    }
-    const ids = wanted.map((entryId) => {
-      const id = fake.itemId(entryId);
-      if (id !== undefined) return id;
-      const fate = CATALOG.find((entry) => entry.id === entryId)?.tier === "fate";
-      throw new Error(
-        fate
-          ? `${criteria.label}: "${entryId}" is a FATE-tier corpus entry and ${CORPUS_DIR} was built without the FATE samples. Run mise run media:fetch-fate, then mise run media:gen (mise run e2e does both).`
-          : `${criteria.label}: the corpus in ${CORPUS_DIR} has no "${entryId}". Run mise run media:gen.`,
-      );
-    });
-    const query = new URLSearchParams({
-      userId: this.session.userId,
-      ids: ids.join(","),
-      Fields: "MediaSources",
-    });
-    const { Items } = z
-      .object({ Items: z.array(Item) })
-      .parse(await this.#request(`Items?${query.toString()}`));
-    return ids.map((id, i) => {
-      const item = Items.find((candidate) => candidate.Id === id);
-      const picked = item === undefined ? undefined : matchItem(item, criteria);
-      if (picked === undefined) {
-        throw new Error(`The corpus entry "${wanted[i]}" is no longer ${criteria.label}`);
-      }
-      return picked;
-    });
   }
 
   async pickItem(criteria: ItemCriteria): Promise<PickedItem> {

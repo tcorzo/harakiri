@@ -155,39 +155,29 @@ test.describe("with the server answering discovery on loopback", () => {
     backend,
   }) => {
     const { page } = await launch();
-    const shown = backend.fake?.state.userByName(backend.user);
-    if (shown) {
-      // The fake hides its user as the dev server does; this test lists it, for this test only.
-      shown.isHidden = false;
-    } else {
-      // The real server hides its one user, so its public list is served here; sign-in is real.
-      await page.route("**/Users/Public", (route) =>
-        route.fulfill({ json: [{ Name: backend.user, Id: account.userId, HasPassword: true }] }),
-      );
-    }
-    try {
-      await expectFocus(page, "Begin");
-      await page.keyboard.press("Enter");
-      await expectFocus(page, `${(await publicInfo(backend.server)).name}, ${backend.server}`);
-      await page.keyboard.press("Enter");
+    // The server hides its one user, so its public list is served here; sign-in itself is real.
+    await page.route("**/Users/Public", (route) =>
+      route.fulfill({ json: [{ Name: backend.user, Id: account.userId, HasPassword: true }] }),
+    );
+    await expectFocus(page, "Begin");
+    await page.keyboard.press("Enter");
+    await expectFocus(page, `${(await publicInfo(backend.server)).name}, ${backend.server}`);
+    await page.keyboard.press("Enter");
 
-      await expect(main(page, "Who is watching")).toBeVisible();
-      await expect(page.getByRole("heading", { name: "Who is watching?" })).toBeVisible();
-      await expectFocus(page, backend.user);
-      await expect(page.getByRole("button", { name: backend.user, exact: true })).toContainText(
-        "Password",
-      );
-      await page.keyboard.press("Enter");
+    await expect(main(page, "Who is watching")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Who is watching?" })).toBeVisible();
+    await expectFocus(page, backend.user);
+    await expect(page.getByRole("button", { name: backend.user, exact: true })).toContainText(
+      "Password",
+    );
+    await page.keyboard.press("Enter");
 
-      await expect(main(page, `Password for ${backend.user}`)).toBeVisible();
-      await expectFocus(page, "q");
-      await typeOnScreen(page, arrowKeys(page), [...keysFor(backend.password), "Sign in"]);
+    await expect(main(page, `Password for ${backend.user}`)).toBeVisible();
+    await expectFocus(page, "q");
+    await typeOnScreen(page, arrowKeys(page), [...keysFor(backend.password), "Sign in"]);
 
-      await expectLibrary(page, jellyfin);
-      await expectStoredSession(page, backend, userDataDir, account.userId);
-    } finally {
-      if (shown) shown.isHidden = true;
-    }
+    await expectLibrary(page, jellyfin);
+    await expectStoredSession(page, backend, userDataDir, account.userId);
   });
 
   test("Quick Connect signs in once a signed-in device approves the code", async ({

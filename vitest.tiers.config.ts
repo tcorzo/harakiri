@@ -35,7 +35,6 @@ export default defineConfig({
       tier("live", "jellyfin", "packages/jellyfin", jellyfin),
       tier("live", "desktop", "apps/desktop", desktop),
       tier("contract", "jellyfin", "packages/jellyfin", jellyfin),
-      tier("contract", "harness", "packages/harness", harness),
       tier("fate", "harness", "packages/harness", harness),
     ],
   },

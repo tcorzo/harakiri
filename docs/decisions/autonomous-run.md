@@ -237,20 +237,24 @@ Alternatives:
 
 Instead: keep a fixture list of real files. Rejected: it ships the owner's library and needs the NAS.
 
-## D22. e2e runs against a fake Jellyfin on the corpus
+## D22. e2e runs against a real Jellyfin container on the corpus
 
-The owner's rule is that nothing committed may depend on a running third-party service or the owner's library. All 49 e2e tests used to sign in to the dev Jellyfin at worker setup. Each Playwright worker now starts `startFakeJellyfin` from `packages/harness/src/fake-jellyfin` on 127.0.0.1:0.
+The owner's rule is that everything committed runs from a fresh clone: no NAS, no library, no pre-seeded server. Podman and the pinned `jellyfin/jellyfin:12.4` image pulled from ghcr.io are acceptable.
 
-- Its items come from the corpus catalog and `corpus.json`. Its MediaStreams come from ffprobe and the catalog's verified classification.
-- Its state lives in memory per instance and is reset after every test, so the suite no longer saves and restores user data. Any unknown route or invalid body fails the test.
-- It answers discovery on 127.0.0.3, so it never collides with a dev container on 127.0.0.1:7359.
-- globalSetup generates the corpus. `mise run e2e` fetches the FATE samples first, and without them the TrueHD Atmos test fails naming `mise run media:fetch-fate`.
-- `HARAKIRI_E2E_SERVER` keeps the real-server path.
-- A contract-tier conformance test (`fake.contract.test.ts`) holds the fake to a real 12.4 server on the same corpus.
+Playwright's globalSetup generates the corpus when it is missing or stale, then runs `dev/jellyfin/jellyfin.sh up` and `bootstrap.ts` for a dedicated container, `harakiri-jellyfin-e2e`, and waits until the scan is idle and has found every corpus file.
 
-The corpus now loops FATE audio to the item's length, because `atmos.thd` holds 0.1 s.
+- It listens on 127.0.0.1:8296 and answers discovery on 127.0.0.3:7359 (`JELLYFIN_DEV_DISCOVERY_ADDRESS`), so it never collides with a dev container on 8096 and 127.0.0.1:7359. 127.0.0.2 stays the address where nothing answers.
+- Its state lives in `.cache/jellyfin-e2e/`, with the sha256 of the corpus manifest it last scanned. A run reuses a running container when the manifest matches, and wipes and recreates it when the manifest changed.
+- It stays up after the suite, so a rerun starts in under a second. `mise run e2e:down` stops it.
+- Tests find their items by catalog entry, through the file path the container sees.
+- Isolation on the shared server is the pre-fake suite's: `preserveUserData` puts back the resume state a test changes, `revokeAppDevice` deletes the device of an app that signed in through the UI, and the worker signs out its own device at the end.
+- `HARAKIRI_E2E_SERVER` still runs the suite against another server, searching its library by criteria.
 
-Instead: (a) MSW. Rejected: mpv fetches the stream and subtitles itself, outside any in-process interceptor. (b) The real container for every e2e run. Rejected for the default tier: it needs podman and a 751 MB image, and is slower; it stays the contract tier. (c) A fake generated from the OpenAPI types. Rejected: the spec's shapes do not match what 12.4 sends (Open items).
+An in-process fake Jellyfin served the corpus for a while. It was about 3k lines plus a conformance test against a real server, too much to keep in step with Jellyfin, so it was removed. From empty state, globalSetup brings the real container up, bootstraps it and waits out its scan in about 17 s; reusing it takes under a second.
+
+The corpus loops FATE audio to the item's length, because `atmos.thd` holds 0.1 s.
+
+Instead: (a) keep the fake. Rejected: the maintenance cost. (b) MSW. Rejected: mpv fetches the stream and subtitles itself, outside any in-process interceptor. (c) Reset the whole server between tests (wipe the state and rescan). Rejected: about 10 s a test, where restoring what the test touched is instant. (d) Share the dev container. Rejected: the owner's library or state would leak into results, and a run would fight the owner's own sessions.
 
 ## Open items found during the run
 

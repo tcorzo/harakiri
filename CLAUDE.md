@@ -42,7 +42,7 @@ scripts/bounded.sh e2e 4G -- bun x playwright test --workers=1
 - `packages/jellyfin`: client generated from the pinned OpenAPI spec, the "never transcode" `deviceProfile`, branded ids, stream URLs and auth headers.
 - `packages/input`: the action model shared by keyboard, gamepad, and remote, and the routing guard between the UI and mpv.
 - `packages/fidelity`: the pure engine that decides how each play reaches the output and how it steps down (bitstream to PCM, Vulkan to OpenGL, HDR to SDR), with a reason for every downgrade. No mpv, Electron, or Jellyfin types. `apps/desktop/src/main/player/fidelity-*.ts` adapts it to Jellyfin and mpv.
-- `packages/harness`: the validation harness (IEC 61937 extractor, picture checks, the `doctor` CLI), the generated media corpus (`src/corpus`, one catalog of every file and the Jellyfin classification it gets), and the fake Jellyfin the e2e suite runs against (`src/fake-jellyfin`).
+- `packages/harness`: the validation harness (IEC 61937 extractor, picture checks, the `doctor` CLI) and the generated media corpus (`src/corpus`, one catalog of every file and the Jellyfin classification it gets).
 - `dev/jellyfin`: the local dev Jellyfin (podman, pinned image, idempotent bootstrap).
 
 <important if="you are touching playback, video output, or the player UI">
@@ -72,12 +72,12 @@ All web UI goes through the impeccable loop: load the `impeccable` skill, run it
 ## How work is verified
 
 - Tests run the real thing where it is cheap (real mpv, real ffmpeg, generated media) and assert literal expected values.
-- End-to-end tests (`mise run e2e`) drive the built Electron app with Playwright under a nested `kwin_wayland --virtual` against the fake Jellyfin, so they never open windows on the owner's desktop and need no server.
+- End-to-end tests (`mise run e2e`) drive the built Electron app with Playwright under a nested `kwin_wayland --virtual`, so they never open windows on the owner's desktop. They run against a real Jellyfin 12.4 container on the corpus (`harakiri-jellyfin-e2e`, 127.0.0.1:8296, discovery on 127.0.0.3), which the suite starts, scans, and leaves running for the next run; `mise run e2e:down` stops it. Podman is the only thing a fresh clone needs.
 - After each build wave, adversarial reviews (the `interrogate` skill) check UI design, architecture, and other agents' code with at least two reviewers on different models.
 - Report something as done only after observing it work: the test output, the built app, or the harness result.
 
 <important if="you are adding or changing a test, a fixture, a harness check, or anything under dev/">
-Everything committed must run and validate from a fresh clone on any machine: no NAS, no seeded server, no running third-party service, no personal paths, titles, domains or hardware. Media comes from the corpus catalog (`packages/harness/src/corpus/catalog.ts`): add an entry there for a new format. A test that needs a real Jellyfin or FATE samples goes in a tier file (`*.live.test.ts`, `*.contract.test.ts`, `*.fate.test.ts`) and throws naming the mise task that provides its dependency.
+Everything committed must run and validate from a fresh clone on any machine: no NAS, no seeded server, no service the suite does not start itself, no personal paths, titles, domains or hardware. Media comes from the corpus catalog (`packages/harness/src/corpus/catalog.ts`): add an entry there for a new format. A test that needs a real Jellyfin or FATE samples goes in a tier file (`*.live.test.ts`, `*.contract.test.ts`, `*.fate.test.ts`) and throws naming the mise task that provides its dependency.
 
 Validating against the owner's real library stays supported, as an opt-in run (`JELLYFIN_DEV_LIBRARY=own`, `JELLYFIN_DEV_URL`, `HARAKIRI_E2E_SERVER`, set in `.env`). Reproduce a bug found there, then commit a test that recreates it on the corpus, never a test that needs the owner's file.
 </important>
@@ -92,7 +92,6 @@ When the owner corrects a mistake, fix it and add the rule here with what enforc
 | `mise run check` never needs a server, the NAS or the network                                       | Tier files are excluded from every package's default `vitest.config.ts`                                        |
 | No workstation paths, owner domains or library titles in tracked files                              | `scripts/lint-private.ts` (hk pre-commit, `mise run check`), with titles in the gitignored `.private-denylist` |
 | Recorded Jellyfin fixtures carry no real library data                                               | The recorders scrub through `@harakiri/jellyfin/fixture-scrub`; `scrub.test.ts` fails on an unscrubbed fixture |
-| The fake Jellyfin never sends what a real 12.4 server would not                                     | `packages/harness/src/fake-jellyfin/fake.contract.test.ts` (`mise run test:contract`)                          |
 | The corpus gets the classification its catalog declares                                             | `mise run test:corpus` against a real scan                                                                     |
 | Fidelity decisions live in `packages/fidelity`                                                      | `docs/fidelity/compatibility.md` is regenerated and diffed by `table.test.ts`                                  |
 | Secrets never reach mpv's argv                                                                      | `playback.local.test.ts` reads mpv's real cmdline                                                              |

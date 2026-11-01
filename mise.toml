@@ -104,7 +104,7 @@ description = "Fail when a test file can skip instead of living in a live, contr
 run = "bun scripts/lint-skips.ts"
 
 [tasks.e2e]
-description = "Build the app and run the Playwright e2e in a nested virtual KWin against the in-process fake Jellyfin on the corpus (HARAKIRI_E2E_SERVER=<url> runs it against a real server)"
+description = "Build the app and run the Playwright e2e in a nested virtual KWin against a real Jellyfin container on the corpus (HARAKIRI_E2E_SERVER=<url> runs it against another server)"
 dir = "{{config_root}}/apps/desktop"
 shell = "bash -euo pipefail -c"
 run = """
@@ -112,6 +112,10 @@ if [ -z "${HARAKIRI_E2E_SERVER:-}" ]; then mise run media:fetch-fate; fi
 ../../scripts/bounded.sh build 3G -- bun run build
 ../../scripts/bounded.sh e2e 4G -- bash e2e/headless.sh
 """
+
+[tasks."e2e:down"]
+description = "Stop and remove the e2e Jellyfin container (harakiri-jellyfin-e2e), keeping its scan in .cache/jellyfin-e2e"
+run = "JELLYFIN_DEV_NAME=harakiri-jellyfin-e2e JELLYFIN_DEV_STATE=.cache/jellyfin-e2e dev/jellyfin/jellyfin.sh down"
 
 [tasks."lint:private"]
 description = "Fail when a file holds workstation paths, owner domains or library titles (.private-denylist)"

@@ -6,6 +6,6 @@ export default defineConfig({
   // Each test launches Electron, and the player specs start mpv on real media files.
   timeout: 60_000,
   reporter: "list",
-  // Generates the corpus the fake Jellyfin serves when it is missing or stale.
+  // Generates the corpus when it is missing or stale, then starts the e2e Jellyfin on it.
   globalSetup: "./e2e/support/global-setup.ts",
 });

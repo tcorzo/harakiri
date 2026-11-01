@@ -11,7 +11,7 @@ import {
   PlayerProbe,
   type PlayRequest,
 } from "../../src/shared/bridge";
-import { type Backend, startBackend } from "./backend";
+import { type Backend, resolveBackend } from "./backend";
 import { Jellyfin, seedSession, signInAccount, type UserData } from "./jellyfin";
 import { mpvProcesses } from "./mpv";
 
@@ -45,8 +45,8 @@ interface TestFixtures {
   /** Every app the test launched; all are closed, and their mpvs checked gone, at teardown. */
   readonly apps: ElectronApplication[];
   /**
-   * Against a real server: records an item's resume state now and puts it back once every app
-   * has closed. Against the fake there is nothing to put back: `fakeHygiene` resets it per test.
+   * Records an item's resume state now and puts it back once every app has closed, so the next
+   * test on the shared server starts on the same library.
    */
   readonly preserveUserData: (itemId: ItemId) => Promise<void>;
   /** Launches the built app on the profile. */
@@ -58,16 +58,10 @@ interface TestFixtures {
    * through Sign in again (which never sends a token the server refused), leaves it behind.
    */
   readonly revokeAppDevice: void;
-  /**
-   * Automatic, against the fake only: fails the test when the app or the test called a route the
-   * fake does not serve (or sent a body it rejects), then forgets every resume point and playback
-   * the test left, so the next test starts on the same library.
-   */
-  readonly fakeHygiene: void;
 }
 
 interface WorkerFixtures {
-  /** The worker's Jellyfin: the fake on the corpus, or HARAKIRI_E2E_SERVER. */
+  /** The Jellyfin: the e2e container on the corpus, or HARAKIRI_E2E_SERVER. */
   readonly backend: Backend;
   readonly account: SessionData;
   readonly jellyfin: Jellyfin;
@@ -79,10 +73,8 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
 
   backend: [
     // oxlint-disable-next-line no-empty-pattern -- Playwright reads the fixture's dependencies from this pattern
-    async ({}, use, workerInfo) => {
-      const backend = await startBackend(workerInfo.workerIndex);
-      await use(backend);
-      await backend.close();
+    async ({}, use) => {
+      await use(resolveBackend());
     },
     { scope: "worker" },
   ],
@@ -126,11 +118,10 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
     }
   },
 
-  preserveUserData: async ({ jellyfin, apps, backend }, use) => {
+  preserveUserData: async ({ jellyfin, apps }, use) => {
     const saved = new Map<ItemId, UserData>();
     await use(async (itemId) => {
-      if (backend.kind === "real" && !saved.has(itemId))
-        saved.set(itemId, await jellyfin.userData(itemId));
+      if (!saved.has(itemId)) saved.set(itemId, await jellyfin.userData(itemId));
     });
     // An app quitting mid-playback reports a stop, which would overwrite a restored resume point.
     await closeAll(apps);
@@ -148,24 +139,6 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
       if (deviceId === account.deviceId) return;
       // An app that never signed in left nothing on the server.
       if ((await jellyfin.deviceIds()).includes(deviceId)) await jellyfin.deleteDevice(deviceId);
-    },
-    { auto: true },
-  ],
-
-  fakeHygiene: [
-    async ({ backend, apps }, use) => {
-      const fake = backend.fake;
-      const before = fake?.unexpected.length ?? 0;
-      await use();
-      if (fake === undefined) return;
-      await closeAll(apps);
-      const unexpected = fake.unexpected.slice(before);
-      fake.state.resetPlayState();
-      if (unexpected.length > 0) {
-        throw new Error(
-          `The fake Jellyfin was asked what it does not serve:\n${unexpected.join("\n")}`,
-        );
-      }
     },
     { auto: true },
   ],
