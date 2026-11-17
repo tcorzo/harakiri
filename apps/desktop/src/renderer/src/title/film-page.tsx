@@ -4,6 +4,7 @@ import type { BaseItemDto, MediaSourceInfo, MediaStream } from "@harakiri/jellyf
 import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-navigation";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 
 import { episodeCode, minutesLeft, programmeNotes } from "../data/entry";
 import type { Entry } from "../data/entry";
@@ -61,22 +62,24 @@ const audioOptions = (source: MediaSourceInfo | undefined): TrackOption[] =>
 
 /** Subtitles by language and purpose; the file format is not a choice anyone makes. */
 const subtitleTracks = (streams: readonly MediaStream[]): TrackOption[] =>
-  streams
-    .filter(
-      (stream) => stream.Type === "Subtitle" && stream.Index !== undefined && stream.Index !== null
-    )
-    .map((stream) => {
-      const flags = [
-        stream.IsForced === true ? "Forced" : null,
-        stream.IsHearingImpaired === true ? "SDH" : null,
-      ].filter((flag) => flag !== null);
+  streams.flatMap((stream) => {
+    if (stream.Type !== "Subtitle" || stream.Index === undefined || stream.Index === null) {
+      return [];
+    }
 
-      return {
-        index: stream.Index ?? 0,
+    const flags = [
+      stream.IsForced === true ? "Forced" : null,
+      stream.IsHearingImpaired === true ? "SDH" : null,
+    ].filter((flag) => flag !== null);
+
+    return [
+      {
+        index: stream.Index,
         label: [languageOf(stream), ...flags].join(" · "),
         detail: stream.IsExternal === true ? "Sidecar file" : undefined,
-      };
-    });
+      },
+    ];
+  });
 
 /** "Finn the Human (voice)" becomes "Name, voice of Finn the Human", so a comma-separated cast never reads "voice" as another name. */
 const creditOf = (name: string, role: string | null | undefined): string => {
@@ -84,13 +87,13 @@ const creditOf = (name: string, role: string | null | undefined): string => {
     return name;
   }
 
-  const part = role.replaceAll(/\s*\((voice|uncredited)\)/gi, "").trim();
+  const part = role.replaceAll(/\s*\((?:voice|uncredited)\)/giu, "").trim();
 
-  if (/\(voice\)/i.test(role)) {
+  if (/\(voice\)/iu.test(role)) {
     return `${name}, voice of ${part}`;
   }
 
-  return /\(uncredited\)/i.test(role) ? `${name} as ${part} (uncredited)` : `${name} as ${part}`;
+  return /\(uncredited\)/iu.test(role) ? `${name} as ${part} (uncredited)` : `${name} as ${part}`;
 };
 
 /** The synopsis whole when it fits, otherwise cut at the last sentence that does. */
@@ -109,7 +112,7 @@ const synopsis = (text: string | null, max = 420): string => {
   return end > 0 ? cut.slice(0, end + 1) : `${cut.slice(0, cut.lastIndexOf(" "))}…`;
 };
 
-const credits = (item: BaseItemDto): { directors: string[]; cast: string[] } => {
+const credits = (item: BaseItemDto) => {
   const people = item.People ?? [];
 
   return {
@@ -120,6 +123,33 @@ const credits = (item: BaseItemDto): { directors: string[]; cast: string[] } => 
       .map((p) => creditOf(p.Name ?? "", p.Role)),
   };
 };
+
+const Credits = ({
+  directors,
+  cast,
+}: {
+  readonly directors: readonly string[];
+  readonly cast: readonly string[];
+}) => (
+  <dl className="text-body m-0 flex flex-col gap-3">
+    {directors.length > 0 ? (
+      <div className="flex gap-4">
+        <dt className="text-caption text-paper-dim stretch-condensed w-[7rem] shrink-0 font-[620] tracking-[0.1em] uppercase">
+          Directed
+        </dt>
+        <dd className="stretch-semicondensed m-0">{directors.join(", ")}</dd>
+      </div>
+    ) : null}
+    {cast.length > 0 ? (
+      <div className="flex gap-4">
+        <dt className="text-caption text-paper-dim stretch-condensed w-[7rem] shrink-0 font-[620] tracking-[0.1em] uppercase">
+          With
+        </dt>
+        <dd className="stretch-semicondensed m-0 line-clamp-4">{cast.join(", ")}</dd>
+      </div>
+    ) : null}
+  </dl>
+);
 
 type Picking = "none" | "audio" | "subtitle";
 
@@ -185,6 +215,89 @@ export const FilmPage = ({
   const audioLabel = audioChoices.find((o) => o.index === audio)?.label ?? "Default";
   const subtitleLabel = subtitleOptions.find((o) => o.index === subtitle)?.label ?? "Off";
 
+  const playActions = (): ReactNode => {
+    if (source === undefined) {
+      // A server entry that is not a film (a box set, a folder) has no file to screen.
+      return (
+        <p className="text-body text-paper-dim m-0">There is no file to play for this entry.</p>
+      );
+    }
+
+    if (resumable) {
+      return (
+        <>
+          <PlayAction
+            focusKey="title-play"
+            label={`Resume ${entry.title}`}
+            onPress={() => {
+              play(entry.positionTicks);
+            }}
+          >
+            Resume{left === null ? "" : ` · ${left} min left`}
+          </PlayAction>
+          <QuietAction
+            label="Play from the start"
+            onPress={() => {
+              play(0);
+            }}
+          >
+            From the start
+          </QuietAction>
+        </>
+      );
+    }
+
+    return (
+      <PlayAction
+        focusKey="title-play"
+        label={`Play ${entry.title}`}
+        onPress={() => {
+          play(0);
+        }}
+      >
+        Play
+      </PlayAction>
+    );
+  };
+
+  const picker = (): ReactNode => {
+    if (picking === "audio") {
+      return (
+        <TrackPicker
+          title="Sound"
+          options={audioChoices}
+          chosen={audio ?? -2}
+          onChoose={(index) => {
+            setAudio(index);
+            closePicker("title-sound");
+          }}
+          onClose={() => {
+            closePicker("title-sound");
+          }}
+        />
+      );
+    }
+
+    if (picking === "subtitle") {
+      return (
+        <TrackPicker
+          title="Subtitles"
+          options={subtitleOptions}
+          chosen={subtitle}
+          onChoose={(index) => {
+            setSubtitle(index);
+            closePicker("title-subtitles");
+          }}
+          onClose={() => {
+            closePicker("title-subtitles");
+          }}
+        />
+      );
+    }
+
+    return null;
+  };
+
   return (
     <FocusContext.Provider value={focusKey}>
       <main
@@ -212,42 +325,7 @@ export const FilmPage = ({
               <ProgrammeNotes facts={programmeNotes(entry, fidelity)} />
             </div>
             <div className="flex flex-wrap items-center gap-6">
-              {source === undefined ? (
-                // A server entry that is not a film (a box set, a folder) has no file to screen.
-                <p className="text-body text-paper-dim m-0">
-                  There is no file to play for this entry.
-                </p>
-              ) : resumable ? (
-                <>
-                  <PlayAction
-                    focusKey="title-play"
-                    label={`Resume ${entry.title}`}
-                    onPress={() => {
-                      play(entry.positionTicks);
-                    }}
-                  >
-                    Resume{left === null ? "" : ` · ${left} min left`}
-                  </PlayAction>
-                  <QuietAction
-                    label="Play from the start"
-                    onPress={() => {
-                      play(0);
-                    }}
-                  >
-                    From the start
-                  </QuietAction>
-                </>
-              ) : (
-                <PlayAction
-                  focusKey="title-play"
-                  label={`Play ${entry.title}`}
-                  onPress={() => {
-                    play(0);
-                  }}
-                >
-                  Play
-                </PlayAction>
-              )}
+              {playActions()}
               {audioChoices.length > 1 ? (
                 <QuietAction
                   focusKey="title-sound"
@@ -275,54 +353,11 @@ export const FilmPage = ({
             </div>
             <div className="grid grid-cols-[minmax(0,62ch)_minmax(0,1fr)] gap-16">
               <p className="text-body text-paper-dim m-0 self-start">{synopsis(entry.overview)}</p>
-              <dl className="text-body m-0 flex flex-col gap-3">
-                {directors.length > 0 ? (
-                  <div className="flex gap-4">
-                    <dt className="text-caption text-paper-dim stretch-condensed w-[7rem] shrink-0 font-[620] tracking-[0.1em] uppercase">
-                      Directed
-                    </dt>
-                    <dd className="stretch-semicondensed m-0">{directors.join(", ")}</dd>
-                  </div>
-                ) : null}
-                {cast.length > 0 ? (
-                  <div className="flex gap-4">
-                    <dt className="text-caption text-paper-dim stretch-condensed w-[7rem] shrink-0 font-[620] tracking-[0.1em] uppercase">
-                      With
-                    </dt>
-                    <dd className="stretch-semicondensed m-0 line-clamp-4">{cast.join(", ")}</dd>
-                  </div>
-                ) : null}
-              </dl>
+              <Credits directors={directors} cast={cast} />
             </div>
           </div>
         </div>
-        {picking === "audio" ? (
-          <TrackPicker
-            title="Sound"
-            options={audioChoices}
-            chosen={audio ?? -2}
-            onChoose={(index) => {
-              setAudio(index);
-              closePicker("title-sound");
-            }}
-            onClose={() => {
-              closePicker("title-sound");
-            }}
-          />
-        ) : picking === "subtitle" ? (
-          <TrackPicker
-            title="Subtitles"
-            options={subtitleOptions}
-            chosen={subtitle}
-            onChoose={(index) => {
-              setSubtitle(index);
-              closePicker("title-subtitles");
-            }}
-            onClose={() => {
-              closePicker("title-subtitles");
-            }}
-          />
-        ) : null}
+        {picker()}
       </main>
     </FocusContext.Provider>
   );

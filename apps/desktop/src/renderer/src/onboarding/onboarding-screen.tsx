@@ -7,7 +7,7 @@ import {
 } from "@noriginmedia/norigin-spatial-navigation";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { useEffect, useReducer, useState } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
 import type { ReactNode } from "react";
 import { match } from "ts-pattern";
 
@@ -178,6 +178,7 @@ const DiscoveredList = ({ onPick }: { readonly onPick: (address: string) => void
 
   const servers = discovery.data ?? [];
   const firstAddress = servers[0]?.address;
+  // oxlint-disable-next-line react/hook-use-state -- a mount timestamp has no setter
   const [shownAt] = useState(() => Date.now());
 
   // A server found while the owner sits untouched takes focus, as does one found by "Search again";
@@ -263,6 +264,18 @@ const ServerStep = ({ state, send }: Flow) => {
     focusFirst(firstKey("address"));
   }, []);
 
+  const status = (): ReactNode => {
+    if (state.step === "checking") {
+      return <p className="text-body text-paper-dim">Checking {state.address.trim()}…</p>;
+    }
+
+    if (state.step === "server" && state.problem !== undefined) {
+      return <Problem>{serverProblemText(state.problem, state.address)}</Problem>;
+    }
+
+    return null;
+  };
+
   return (
     <Frame step="Server" title="Find your server">
       <Heading detail="Pick a server harakiri found on your network, or type its address below, for example 192.168.1.20 or jellyfin.example.com. Without http:// or https://, harakiri tries HTTPS, then Jellyfin's port 8096.">
@@ -288,11 +301,7 @@ const ServerStep = ({ state, send }: Flow) => {
             }}
           />
           <div className="min-h-[4.5rem]" aria-live="polite">
-            {state.step === "checking" ? (
-              <p className="text-body text-paper-dim">Checking {state.address.trim()}…</p>
-            ) : state.step === "server" && state.problem !== undefined ? (
-              <Problem>{serverProblemText(state.problem, state.address)}</Problem>
-            ) : null}
+            {status()}
           </div>
           <Keyboard
             focusKey="address"
@@ -352,11 +361,13 @@ const ChooseUser = ({
             key={user.Id ?? user.Name ?? i}
             focusKey={`user-${i}`}
             label={user.Name ?? "User"}
+            // oxlint-disable-next-line typescript/no-deprecated -- the public user list offers no other sign of a password
             detail={user.HasPassword === false ? "No password" : "Password"}
             onPress={() => {
               send({
                 type: "pickUser",
                 username: user.Name ?? "",
+                // oxlint-disable-next-line typescript/no-deprecated -- the public user list offers no other sign of a password
                 hasPassword: user.HasPassword !== false,
               });
             }}
@@ -434,6 +445,18 @@ const PasswordStep = ({
     focusFirst(firstKey("password"));
   }, []);
 
+  const status = (): ReactNode => {
+    if (state.step === "authenticating") {
+      return <p className="text-body text-paper-dim">Signing in…</p>;
+    }
+
+    if (state.problem === undefined) {
+      return null;
+    }
+
+    return <Problem>{signInProblemText(state.problem, state.username)}</Problem>;
+  };
+
   return (
     <Frame step="Sign in" title={`Password for ${state.username}`}>
       <Heading detail={`${state.server.name} · Jellyfin ${state.server.version}`}>
@@ -453,11 +476,7 @@ const PasswordStep = ({
           }}
         />
         <div className="min-h-[4.5rem]" aria-live="polite">
-          {state.step === "authenticating" ? (
-            <p className="text-body text-paper-dim">Signing in…</p>
-          ) : state.problem === undefined ? null : (
-            <Problem>{signInProblemText(state.problem, state.username)}</Problem>
-          )}
+          {status()}
         </div>
         <Keyboard
           focusKey="password"
@@ -491,7 +510,10 @@ const SignIn = ({
   const { server, username, password } = state;
   useEffect(() => {
     let live = true;
-    void signIn(server, identity, username, password).then(async (result) => {
+
+    const attempt = async (): Promise<void> => {
+      const result = await signIn(server, identity, username, password);
+
       if (!live) {
         return;
       }
@@ -501,7 +523,9 @@ const SignIn = ({
       } else {
         send({ type: "signInFailed", problem: result.problem });
       }
-    });
+    };
+
+    void attempt();
 
     return () => {
       live = false;
@@ -547,25 +571,31 @@ const QuickConnectStep = ({
     focusFirst("quick-connect-back");
   }, []);
 
+  const status = (): ReactNode => {
+    if (state.problem !== undefined) {
+      return <Problem>{quickConnectProblemText(state.problem)}</Problem>;
+    }
+
+    if (state.code === undefined) {
+      return <p className="text-body text-paper-dim">Asking the server for a code…</p>;
+    }
+
+    return (
+      <p
+        aria-label={`Code ${state.code.split("").join(" ")}`}
+        className="stretch-condensed text-[8rem] leading-none font-[300] tracking-[0.18em]"
+      >
+        {state.code}
+      </p>
+    );
+  };
+
   return (
     <Frame step="Sign in" title="Quick Connect">
       <Heading detail="On a device already signed in to this server, open Quick Connect in the user menu and enter this code.">
         Quick Connect
       </Heading>
-      {state.problem === undefined ? (
-        state.code === undefined ? (
-          <p className="text-body text-paper-dim">Asking the server for a code…</p>
-        ) : (
-          <p
-            aria-label={`Code ${state.code.split("").join(" ")}`}
-            className="stretch-condensed text-[8rem] leading-none font-[300] tracking-[0.18em]"
-          >
-            {state.code}
-          </p>
-        )
-      ) : (
-        <Problem>{quickConnectProblemText(state.problem)}</Problem>
-      )}
+      {status()}
       <div className="mt-12">
         <QuietAction
           focusKey="quick-connect-back"
@@ -612,13 +642,16 @@ export const OnboardingScreen = () => {
       return;
     }
 
-    void checkServer(queryClient, resumeUrls).then((result) => {
+    const resume = async (): Promise<void> => {
+      const result = await checkServer(queryClient, resumeUrls);
       send(
         result.ok
           ? { type: "serverFound", address: resumeAddress, info: result.info }
           : { type: "serverFailed", address: resumeAddress, problem: result.problem }
       );
-    });
+    };
+
+    void resume();
   }, [resumeAddress, resumeUrls, queryClient]);
   const navigate = useNavigate();
 
@@ -632,13 +665,16 @@ export const OnboardingScreen = () => {
     send({ type: "back" });
   });
 
-  const [finish] = useState(() => async (session: Session): Promise<void> => {
-    const { deviceId: _ownedByMain, ...fresh } = session;
-    await window.harakiri.session.save(fresh);
-    queryClient.setQueryData(sessionQuery.queryKey, session);
-    send({ type: "signedIn", session });
-    await navigate({ to: "/library", replace: true });
-  });
+  const finish = useCallback(
+    async (session: Session): Promise<void> => {
+      const { deviceId: _ownedByMain, ...fresh } = session;
+      await window.harakiri.session.save(fresh);
+      queryClient.setQueryData(sessionQuery.queryKey, session);
+      send({ type: "signedIn", session });
+      await navigate({ to: "/library", replace: true });
+    },
+    [queryClient, navigate]
+  );
 
   const flow: Flow = { state, send, identity, finish };
 

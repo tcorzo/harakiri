@@ -1,5 +1,6 @@
 import { reportSessionEnded } from "@harakiri/jellyfin/generated";
 import type { QueryClient } from "@tanstack/react-query";
+import { noop } from "es-toolkit";
 
 import { useLit } from "../library/lit";
 import { seriesPlace } from "../title/series-place";
@@ -24,7 +25,7 @@ export const forgetSession = async (
     await reportSessionEnded({
       client: signedIn(session).client,
       signal: AbortSignal.timeout(3000),
-    }).catch(() => {});
+    }).catch(noop);
   }
 
   await window.harakiri.session.clear();

@@ -2,7 +2,9 @@ import { joinFacts, MediaSourceId } from "@harakiri/jellyfin";
 import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-navigation";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, useRouter } from "@tanstack/react-router";
+import { noop } from "es-toolkit";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
 import type { PlayerEvent, PlayRequest, SignalFact, SignalReport } from "../../../shared/bridge";
 import { episodeCode, markedState } from "../data/entry";
@@ -32,8 +34,8 @@ type Outcome =
   /** An episode played to its end and the series has another: it is offered, not started. */
   | { readonly kind: "next"; readonly next: Entry };
 
-const messageOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
+const messageOf = (cause: unknown): string =>
+  cause instanceof Error ? cause.message : String(cause);
 
 const StationRule = ({ current }: { readonly current: Station }) => {
   const at = stations.indexOf(current);
@@ -177,6 +179,7 @@ export const ScreeningScreen = () => {
   const { entry, item } = data;
   const sourceId = item.MediaSources?.[0]?.Id;
 
+  // oxlint-disable-next-line react/hook-use-state -- the request is fixed for the life of this screening, so there is no setter
   const [request] = useState<PlayRequest>(() => {
     const built: PlayRequest = { itemId: id, startPositionTicks: search.start };
 
@@ -216,15 +219,15 @@ export const ScreeningScreen = () => {
   };
 
   /** A token the server refused is not a failed screening: the owner has to sign in again. */
-  const failWith = (error: unknown): void => {
-    if (classifyFailure(error).kind !== "signedOut") {
-      fail(messageOf(error));
+  const failWith = (cause: unknown): void => {
+    if (classifyFailure(cause).kind !== "signedOut") {
+      fail(messageOf(cause));
 
       return;
     }
 
     inputMode.getState().setMode("ui");
-    setOutcome({ kind: "signedOut", error });
+    setOutcome({ kind: "signedOut", error: cause });
   };
 
   /** Before anything played: back where the owner came from. */
@@ -305,21 +308,21 @@ export const ScreeningScreen = () => {
     }
   });
 
-  const handOff = useEffectEvent(() => {
+  const handOff = useEffectEvent(async (): Promise<void> => {
     setElapsed("picture");
-    window.harakiri.player
-      .play(request)
-      .then(() => {
-        // Only now does mpv have the file and the gamepad; until then the renderer keeps it.
-        if (mounted.current) {
-          inputMode.getState().setMode("player");
-        }
-      })
-      .catch((error: unknown) => {
-        if (mounted.current) {
-          failWith(error);
-        }
-      });
+
+    try {
+      await window.harakiri.player.play(request);
+
+      // Only now does mpv have the file and the gamepad; until then the renderer keeps it.
+      if (mounted.current) {
+        inputMode.getState().setMode("player");
+      }
+    } catch (error) {
+      if (mounted.current) {
+        failWith(error);
+      }
+    }
   });
 
   useEffect(
@@ -330,21 +333,25 @@ export const ScreeningScreen = () => {
     []
   );
 
+  const prepare = useEffectEvent(async (): Promise<void> => {
+    try {
+      const decided = await window.harakiri.player.prepare(request);
+
+      if (mounted.current) {
+        setReport(decided);
+      }
+    } catch (error) {
+      if (mounted.current) {
+        failWith(error);
+      }
+    }
+  });
+
   useEffect(() => {
     mounted.current = true;
     // The server resolves the file while the house dims, so the slug states its decision.
-    window.harakiri.player
-      .prepare(request)
-      .then((decided) => {
-        if (mounted.current) {
-          setReport(decided);
-        }
-      })
-      .catch((error: unknown) => {
-        if (mounted.current) {
-          failWith(error);
-        }
-      });
+    // oxlint-disable-next-line react/set-state-in-effect -- setReport runs after the await, never synchronously
+    void prepare();
 
     const house = window.setTimeout(() => {
       setHouseDone(true);
@@ -355,21 +362,22 @@ export const ScreeningScreen = () => {
       window.clearTimeout(house);
       inputMode.getState().setMode("ui");
     };
-    // The request is fixed for the life of this screening.
-    // oxlint-disable-next-line react/exhaustive-deps
   }, []);
 
   // The programme slug holds once both the house has dimmed and the server has answered.
   const slugReady = houseDone && report !== null && outcome.kind === "running";
+
+  if (slugReady && elapsed === "house") {
+    setElapsed("slug");
+  }
+
   useEffect(() => {
     if (!slugReady) {
-      return () => {};
+      return noop;
     }
 
-    setElapsed("slug");
-
     const picture = window.setTimeout(() => {
-      handOff();
+      void handOff();
     }, handoffTiming.slugMs);
 
     return () => {
@@ -404,6 +412,49 @@ export const ScreeningScreen = () => {
 
   const name = entry.kind === "Episode" && entry.series !== null ? entry.series.name : entry.title;
   const code = episodeCode(entry);
+
+  const footer = (): ReactNode => {
+    if (outcome.kind === "failed") {
+      return (
+        <div className="flex flex-col gap-6">
+          <Notice className="max-w-[64ch]">It did not start. {outcome.message}</Notice>
+          <div>
+            <QuietAction focusKey="screening-back" label="Back to the programme" onPress={cancel} />
+          </div>
+        </div>
+      );
+    }
+
+    if (outcome.kind === "next") {
+      return (
+        <NextEpisode
+          next={outcome.next}
+          onPlay={() => {
+            playNext(outcome.next);
+          }}
+          onLeave={leaveAfterPlayback}
+        />
+      );
+    }
+
+    if (outcome.kind === "ended") {
+      return (
+        <p aria-live="polite" className="text-body text-paper-dim m-0">
+          Played to the end. Press Back to leave.
+        </p>
+      );
+    }
+
+    if (station === "Picture") {
+      return (
+        <p aria-live="polite" className="text-body text-paper-dim m-0">
+          Now screening in the player. Press Back to stop.
+        </p>
+      );
+    }
+
+    return <p className="text-body text-paper-faint m-0">Press Back to cancel.</p>;
+  };
 
   return (
     <FocusContext.Provider value={focusKey}>
@@ -456,38 +507,7 @@ export const ScreeningScreen = () => {
             {/* Once an episode has ended, the screen is about what comes next, not the file that played. */}
             {report === null || outcome.kind === "next" ? null : <ServerDecision report={report} />}
           </div>
-          <div className="flex min-h-[5rem] items-end justify-between">
-            {outcome.kind === "failed" ? (
-              <div className="flex flex-col gap-6">
-                <Notice className="max-w-[64ch]">It did not start. {outcome.message}</Notice>
-                <div>
-                  <QuietAction
-                    focusKey="screening-back"
-                    label="Back to the programme"
-                    onPress={cancel}
-                  />
-                </div>
-              </div>
-            ) : outcome.kind === "next" ? (
-              <NextEpisode
-                next={outcome.next}
-                onPlay={() => {
-                  playNext(outcome.next);
-                }}
-                onLeave={leaveAfterPlayback}
-              />
-            ) : outcome.kind === "ended" ? (
-              <p aria-live="polite" className="text-body text-paper-dim m-0">
-                Played to the end. Press Back to leave.
-              </p>
-            ) : station === "Picture" ? (
-              <p aria-live="polite" className="text-body text-paper-dim m-0">
-                Now screening in the player. Press Back to stop.
-              </p>
-            ) : (
-              <p className="text-body text-paper-faint m-0">Press Back to cancel.</p>
-            )}
-          </div>
+          <div className="flex min-h-[5rem] items-end justify-between">{footer()}</div>
         </div>
       </main>
     </FocusContext.Provider>

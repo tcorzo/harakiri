@@ -78,7 +78,7 @@ const checkOne = async (queryClient: QueryClient, url: string): Promise<Checked>
     info.Id === null ||
     info.Version === undefined ||
     info.Version === null ||
-    !/jellyfin/i.test(info.ProductName ?? "")
+    !/jellyfin/iu.test(info.ProductName ?? "")
   ) {
     return { ok: false, problem: { kind: "notJellyfin" } };
   }
@@ -134,6 +134,13 @@ export type QuickConnectOutcome =
   | { readonly kind: "signedIn"; readonly session: Session }
   | { readonly kind: "failed"; readonly problem: "disabled" | "expired" | "unreachable" };
 
+const sleep = async (ms: number): Promise<void> => {
+  // oxlint-disable-next-line promise/avoid-new -- setTimeout has no promise form in the DOM lib
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
+};
+
 /**
  * Asks for a code, reports it, then polls until the owner approves it from a signed-in device.
  * Jellyfin forgets an unapproved code after a few minutes; the poll then fails and reads as expired.
@@ -150,7 +157,7 @@ export const runQuickConnect = async (
 
   try {
     const started = await initiateQuickConnect(url, identity);
-    secret = started.secret;
+    ({ secret } = started);
     report({ kind: "code", code: started.code });
   } catch {
     report({ kind: "failed", problem: "disabled" });
@@ -159,7 +166,8 @@ export const runQuickConnect = async (
   }
 
   while (!signal.aborted) {
-    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    // oxlint-disable-next-line eslint/no-await-in-loop -- the poll is sequential: each round waits out the interval
+    await sleep(intervalMs);
 
     if (signal.aborted) {
       return;
@@ -168,6 +176,7 @@ export const runQuickConnect = async (
     let approved: boolean;
 
     try {
+      // oxlint-disable-next-line eslint/no-await-in-loop -- the next poll depends on this answer
       approved = await pollQuickConnect(url, identity, secret);
     } catch {
       report({ kind: "failed", problem: "expired" });
@@ -176,6 +185,7 @@ export const runQuickConnect = async (
     }
 
     if (approved) {
+      // oxlint-disable-next-line eslint/no-await-in-loop -- runs once, on the round that was approved
       const result = outcome(await authenticateWithQuickConnect(url, identity, secret));
       report(
         result.ok

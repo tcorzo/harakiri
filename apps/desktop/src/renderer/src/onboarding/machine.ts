@@ -70,7 +70,7 @@ export const initialOnboarding: OnboardingState = { step: "welcome" };
 /** Jellyfin's default HTTP port, tried when the owner types a bare host. */
 const defaultPort = "8096";
 
-const scheme = /^[a-z][a-z0-9+.-]*:\/\//i;
+const scheme = /^[a-z][a-z0-9+.-]*:\/\//iu;
 
 const baseUrl = (url: URL): string => {
   const path = url.pathname.endsWith("/") ? url.pathname : `${url.pathname}/`;
@@ -125,14 +125,14 @@ export const serverCandidates = (typed: string): readonly string[] | null => {
 export const minimumServer = { major: 10, minor: 10 } as const;
 
 export const isServerSupported = (version: string): boolean => {
-  const found = /^(\d+)\.(\d+)/.exec(version);
+  const found = /^(?<major>\d+)\.(?<minor>\d+)/u.exec(version);
 
   if (found === null) {
     return false;
   }
 
-  const major = Number(found[1]);
-  const minor = Number(found[2]);
+  const major = Number(found.groups?.major);
+  const minor = Number(found.groups?.minor);
 
   return (
     major > minimumServer.major || (major === minimumServer.major && minor >= minimumServer.minor)

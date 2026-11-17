@@ -20,27 +20,27 @@ export type Failure =
  */
 const networkErrorNames: ReadonlySet<string> = new Set(["NetworkError", "TimeoutError"]);
 
-const isNetworkFailure = (error: unknown): boolean =>
-  error instanceof Error &&
-  (networkErrorNames.has(error.name) ||
-    (error.name === "TypeError" && error.message === "Failed to fetch"));
+const isNetworkFailure = (cause: unknown): boolean =>
+  cause instanceof Error &&
+  (networkErrorNames.has(cause.name) ||
+    (cause.name === "TypeError" && cause.message === "Failed to fetch"));
 
-export const classifyFailure = (error: unknown): Failure => {
-  if (error instanceof ServerStatusError) {
-    if (error.status === 401) {
+export const classifyFailure = (cause: unknown): Failure => {
+  if (cause instanceof ServerStatusError) {
+    if (cause.status === 401) {
       return { kind: "signedOut" };
     }
 
-    if (error.status === 403) {
+    if (cause.status === 403) {
       return { kind: "refused" };
     }
 
-    return { kind: "server", status: error.status };
+    return { kind: "server", status: cause.status };
   }
 
-  if (isNetworkFailure(error)) {
+  if (isNetworkFailure(cause)) {
     return { kind: "unreachable" };
   }
 
-  return { kind: "unexpected", message: error instanceof Error ? error.message : String(error) };
+  return { kind: "unexpected", message: cause instanceof Error ? cause.message : String(cause) };
 };

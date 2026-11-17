@@ -6,10 +6,11 @@ import {
   useFocusable,
 } from "@noriginmedia/norigin-spatial-navigation";
 import { useQueries, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import type { QueryObserverResult } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { noop } from "es-toolkit";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { preload } from "react-dom";
 
 import { imageUrl } from "../data/entry";
@@ -41,14 +42,14 @@ import { Backdrop, backdropUrl, EntryNotes, InkField, Margin, TitleMark } from "
 
 const noItem = ItemId.parse("00000000000000000000000000000000");
 
-interface RowShape {
+interface RowLayout {
   readonly Card: ComponentType<CardProps>;
   readonly pitchRem: number;
   readonly heightRem: number;
 }
 
-const still: RowShape = { Card: StillCard, pitchRem: 26, heightRem: 19.5 };
-const poster: RowShape = { Card: PosterCard, pitchRem: 15.5, heightRem: 26 };
+const still: RowLayout = { Card: StillCard, pitchRem: 26, heightRem: 19.5 };
+const poster: RowLayout = { Card: PosterCard, pitchRem: 15.5, heightRem: 26 };
 
 /** A failed section holds one line and its retry action. */
 const failedHeightRem = 4.5;
@@ -67,19 +68,19 @@ type PlannedRow =
       readonly kind: "entries";
       readonly section: Section;
       readonly entries: readonly Entry[];
-    } & RowShape)
+    } & RowLayout)
   | {
       readonly kind: "failed";
       readonly section: Section;
       readonly heightRem: number;
-      readonly retry: () => void;
+      readonly handleRetry: () => void;
     };
 
-const failed = (section: Section, refetch: () => unknown): PlannedRow => ({
+const failed = (section: Section, refetch: () => Promise<QueryObserverResult>): PlannedRow => ({
   kind: "failed",
   section,
   heightRem: failedHeightRem,
-  retry: () => {
+  handleRetry: () => {
     void refetch();
   },
 });
@@ -113,13 +114,16 @@ const useProgramme = (): readonly PlannedRow[] | null => {
 
   const add = (
     section: Section,
-    query: { readonly data: readonly Entry[] | undefined; readonly refetch: () => unknown },
-    shape: RowShape
+    query: {
+      readonly data: readonly Entry[] | undefined;
+      readonly refetch: () => Promise<QueryObserverResult>;
+    },
+    layout: RowLayout
   ): void => {
     if (query.data === undefined) {
       rows.push(failed(section, query.refetch));
     } else if (query.data.length > 0) {
-      rows.push({ kind: "entries", section, entries: query.data, ...shape });
+      rows.push({ kind: "entries", section, entries: query.data, ...layout });
     }
   };
 
@@ -169,132 +173,132 @@ const useOpenEntry = (): ((entry: Entry) => void) => {
   );
 };
 
-const Programme = memo(
-  ({
-    server,
-    rows,
-    hero,
-  }: {
-    readonly server: ServerUrl;
-    readonly rows: readonly PlannedRow[];
-    readonly hero: boolean;
-  }) => {
-    const ctx = useSignedIn();
-    const onPressEntry = useOpenEntry();
-    const queryClient = useQueryClient();
-    const { data: numbers } = useSuspenseQuery(catalogueQuery(ctx));
-    const activeId = useLit((s) => s.section.id);
-    const travelling = useLit((s) => s.travelling);
-    const found = rows.findIndex((row) => row.section.id === activeId) + 1;
-    // With no featured film there is no stage to rest on, so the first row leads.
-    const active = found === 0 && !hero ? 1 : found;
+const ProgrammeView = ({
+  server,
+  rows,
+  hero,
+}: {
+  readonly server: ServerUrl;
+  readonly rows: readonly PlannedRow[];
+  readonly hero: boolean;
+}) => {
+  const ctx = useSignedIn();
+  const onPressEntry = useOpenEntry();
+  const queryClient = useQueryClient();
+  const { data: numbers } = useSuspenseQuery(catalogueQuery(ctx));
+  const activeId = useLit((s) => s.section.id);
+  const travelling = useLit((s) => s.travelling);
+  const found = rows.findIndex((row) => row.section.id === activeId) + 1;
+  // With no featured film there is no stage to rest on, so the first row leads.
+  const active = found === 0 && !hero ? 1 : found;
 
-    const offset =
-      active === 0 ? `calc(100vh - ${peekRem}rem)` : `${rowAnchorRem - rowTop(rows, active)}rem`;
+  const offset =
+    active === 0 ? `calc(100vh - ${peekRem}rem)` : `${rowAnchorRem - rowTop(rows, active)}rem`;
 
-    const onFocusEntry = useCallback(
-      (entry: Entry, section: Section): void => {
-        const lit = useLit.getState();
-        // The section moves at once so a held d-pad scrolls; the field re-lights once focus rests.
-        lit.enter(section);
-        lit.remember({ section: section.id, entry: entry.id });
-        window.clearTimeout(relightTimer);
-        relightTimer = window.setTimeout(() => {
-          useLit.getState().light(entry, section);
-          // Only a card the owner rests on is worth fetching in full.
-          void queryClient.query(rawItemQuery(ctx, entry.id)).catch(noop);
+  const onFocusEntry = useCallback(
+    (entry: Entry, section: Section): void => {
+      const lit = useLit.getState();
+      // The section moves at once so a held d-pad scrolls; the field re-lights once focus rests.
+      lit.enter(section);
+      lit.remember({ section: section.id, entry: entry.id });
+      window.clearTimeout(relightTimer);
+      relightTimer = window.setTimeout(() => {
+        useLit.getState().light(entry, section);
+        // Only a card the owner rests on is worth fetching in full.
+        void queryClient.query(rawItemQuery(ctx, entry.id)).catch(noop);
 
-          if (entry.kind === "Series") {
-            void queryClient.query(seasonsQuery(ctx, entry.id)).catch(noop);
-          }
+        if (entry.kind === "Series") {
+          void queryClient.query(seasonsQuery(ctx, entry.id)).catch(noop);
+        }
 
-          if (entry.backdrop !== null) {
-            preload(backdropUrl(server, entry.backdrop), { as: "image" });
-          }
-        }, relightRestMs);
-      },
-      [ctx, queryClient, server]
-    );
+        if (entry.backdrop !== null) {
+          preload(backdropUrl(server, entry.backdrop), { as: "image" });
+        }
+      }, relightRestMs);
+    },
+    [ctx, queryClient, server]
+  );
 
-    // Up from the first row returns to the stage, which the spatial search cannot see while it is hidden.
-    const first = rows[0]?.section.id;
-    useNavigationGuard((direction) => {
-      if (direction !== "up" || !hero || first === undefined) {
-        return false;
-      }
+  // Up from the first row returns to the stage, which the spatial search cannot see while it is hidden.
+  const first = rows[0]?.section.id;
+  useNavigationGuard((direction) => {
+    if (direction !== "up" || !hero || first === undefined) {
+      return false;
+    }
 
-      // Typed as a string, but null while nothing has focus.
-      const key: string | null = getCurrentFocusKey();
+    // Typed as a string, but null while nothing has focus.
+    const key: string | null = getCurrentFocusKey();
 
-      if (key === null) {
-        return false;
-      }
+    if (key === null) {
+      return false;
+    }
 
-      if (!key.startsWith(cardKey(first, "")) && key !== retryKey(first)) {
-        return false;
-      }
+    if (!key.startsWith(cardKey(first, "")) && key !== retryKey(first)) {
+      return false;
+    }
 
-      return focusFirst("hero-play");
-    });
+    return focusFirst("hero-play");
+  });
 
-    // Returning from a title page lands back on the card the owner left, found by id.
-    const restored = useRef(false);
-    useEffect(() => {
-      if (restored.current) {
-        return;
-      }
+  // Returning from a title page lands back on the card the owner left, found by id.
+  const restored = useRef(false);
+  useEffect(() => {
+    if (restored.current) {
+      return;
+    }
 
-      restored.current = true;
-      const { place } = useLit.getState();
+    restored.current = true;
+    const { place } = useLit.getState();
 
-      if (place !== null || !hero) {
-        focusFirst(...restoreKeys(place, hero, first));
-      }
-    }, [hero, first]);
+    if (place !== null || !hero) {
+      focusFirst(...restoreKeys(place, hero, first));
+    }
+  }, [hero, first]);
 
-    return (
-      <div
-        // A held d-pad moves a row every 120 ms, faster than the 700 ms glide, so while it travels the
-        // rows jump with focus and the glide returns once it rests (the relight ends the travel).
-        className={`ease-curtain absolute inset-x-0 top-0 flex flex-col gap-12 pl-[calc(var(--spacing-safe-x)+var(--spacing-margin)+2.5rem)] ${
-          travelling ? "" : "transition-transform duration-700"
-        }`}
-        style={{ transform: `translateY(${offset})` }}
-      >
-        {rows.map((row, i) => (
-          <div
-            key={row.section.id}
-            // Rows waiting below dim their pictures only; their type keeps full contrast.
-            className={`transition-opacity duration-500 [&_img]:transition-opacity [&_img]:duration-500 ${
-              i + 1 < active ? "opacity-0" : "opacity-100"
-            } ${i + 1 > active && active !== 0 ? "[&_img]:opacity-50" : ""}`}
-          >
-            {row.kind === "failed" ? (
-              <FailedRow
-                sectionId={row.section.id}
-                sectionName={row.section.name}
-                onRetry={row.retry}
-              />
-            ) : (
-              <ProgrammeRow
-                sectionId={row.section.id}
-                sectionName={row.section.name}
-                entries={row.entries}
-                Card={row.Card}
-                pitchRem={row.pitchRem}
-                heightRem={row.heightRem}
-                server={server}
-                numbers={numbers}
-                onFocusEntry={onFocusEntry}
-                onPressEntry={onPressEntry}
-              />
-            )}
-          </div>
-        ))}
-      </div>
-    );
-  }
-);
+  return (
+    <div
+      // A held d-pad moves a row every 120 ms, faster than the 700 ms glide, so while it travels the
+      // rows jump with focus and the glide returns once it rests (the relight ends the travel).
+      className={`ease-curtain absolute inset-x-0 top-0 flex flex-col gap-12 pl-[calc(var(--spacing-safe-x)+var(--spacing-margin)+2.5rem)] ${
+        travelling ? "" : "transition-transform duration-700"
+      }`}
+      style={{ transform: `translateY(${offset})` }}
+    >
+      {rows.map((row, i) => (
+        <div
+          key={row.section.id}
+          // Rows waiting below dim their pictures only; their type keeps full contrast.
+          className={`transition-opacity duration-500 [&_img]:transition-opacity [&_img]:duration-500 ${
+            i + 1 < active ? "opacity-0" : "opacity-100"
+          } ${i + 1 > active && active !== 0 ? "[&_img]:opacity-50" : ""}`}
+        >
+          {row.kind === "failed" ? (
+            <FailedRow
+              sectionId={row.section.id}
+              sectionName={row.section.name}
+              onRetry={row.handleRetry}
+            />
+          ) : (
+            <ProgrammeRow
+              sectionId={row.section.id}
+              sectionName={row.section.name}
+              entries={row.entries}
+              Card={row.Card}
+              pitchRem={row.pitchRem}
+              heightRem={row.heightRem}
+              server={server}
+              numbers={numbers}
+              onFocusEntry={onFocusEntry}
+              onPressEntry={onPressEntry}
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const Programme = memo(ProgrammeView);
 
 const UpNext = ({
   entry,
@@ -388,6 +392,12 @@ const EmptyLibrary = () => {
   );
 };
 
+const preloadBackdrop = (server: ServerUrl, entry: Entry | null): void => {
+  if (entry?.backdrop !== undefined && entry.backdrop !== null) {
+    preload(backdropUrl(server, entry.backdrop), { as: "image" });
+  }
+};
+
 export const LibraryScreen = () => {
   const ctx = useSignedIn();
   const { server, session } = ctx;
@@ -400,6 +410,7 @@ export const LibraryScreen = () => {
   const light = useLit((s) => s.light);
   const featuredIds = useMemo(() => featured.map((film) => film.id), [featured]);
   const cycle = useHeroCycle(featuredIds, section.id === tonight.id);
+  const handleNext = cycle.next;
   const hero = featured[cycle.index] ?? null;
   const holding = section.id === tonight.id && hero !== null;
   const nextIndex = upNext(cycle.index, featured.length);
@@ -441,9 +452,7 @@ export const LibraryScreen = () => {
     focusFirst("hero-play");
   }, []);
 
-  if (next?.backdrop !== undefined && next?.backdrop !== null) {
-    preload(backdropUrl(server, next.backdrop), { as: "image" });
-  }
+  preloadBackdrop(server, next);
 
   if (hero === null && rows !== null && rows.length === 0) {
     return <EmptyLibrary />;
@@ -474,6 +483,85 @@ export const LibraryScreen = () => {
 
   const number = shown === null ? null : numberFor(numbers, shown);
 
+  const heroPanel = (): ReactNode => {
+    if (shown === null) {
+      return null;
+    }
+
+    return (
+      <section
+        aria-label={holding ? "Tonight's screening" : shown.title}
+        className="left-safe-x ease-curtain absolute flex items-stretch gap-10 transition-transform duration-700"
+        style={{
+          bottom: `${peekRem + 3}rem`,
+          // Lifts the block so its last visible line rests just above the focused row.
+          transform: holding
+            ? "none"
+            : `translateY(calc(${rowAnchorRem + 4.25 + peekRem + 3}rem - 100vh))`,
+        }}
+      >
+        <Margin number={number} seen={shown.played} section={section.name} />
+        <div className="flex max-w-[46vw] flex-col justify-end gap-7">
+          <TitleMark entry={shown} server={server} compact={!holding} />
+          <EntryNotes entry={shown}>
+            {holding || shown.overview === null ? null : (
+              <p className="text-body text-paper-dim line-clamp-2 max-w-[60ch]">{shown.overview}</p>
+            )}
+          </EntryNotes>
+          {hero === null ? null : (
+            <div
+              className={`flex items-center gap-6 transition-opacity duration-500 ${holding ? "opacity-100" : "opacity-0"}`}
+            >
+              <PlayAction
+                focusKey="hero-play"
+                label={hero.progress === null ? `Play ${hero.title}` : `Resume ${hero.title}`}
+                focusable={holding}
+                onFocus={lightHero}
+                onPress={playHero}
+              >
+                {hero.progress === null ? "Play" : "Resume"}
+              </PlayAction>
+              <QuietAction
+                focusKey="hero-programme"
+                label={`Programme notes for ${hero.title}`}
+                focusable={holding}
+                onFocus={lightHero}
+                onPress={() => {
+                  openEntry(hero);
+                }}
+              >
+                Programme
+              </QuietAction>
+            </div>
+          )}
+        </div>
+      </section>
+    );
+  };
+
+  const upNextPanel = (): ReactNode => {
+    if (next === null) {
+      return null;
+    }
+
+    return (
+      <div
+        className={`right-safe-x absolute transition-opacity duration-500 ${holding ? "opacity-100" : "opacity-0"}`}
+        style={{ bottom: `${peekRem + 3}rem` }}
+      >
+        <UpNext
+          entry={next}
+          number={numberFor(numbers, next)}
+          since={cycle.since}
+          auto={cycle.auto}
+          focusable={holding}
+          server={server}
+          onPress={handleNext}
+        />
+      </div>
+    );
+  };
+
   return (
     <FocusContext.Provider value={focusKey}>
       <main ref={ref} aria-label="Library" className="relative h-screen w-screen overflow-hidden">
@@ -494,74 +582,9 @@ export const LibraryScreen = () => {
           <SettingsLink />
         </div>
 
-        {shown === null ? null : (
-          <section
-            aria-label={holding ? "Tonight's screening" : shown.title}
-            className="left-safe-x ease-curtain absolute flex items-stretch gap-10 transition-transform duration-700"
-            style={{
-              bottom: `${peekRem + 3}rem`,
-              // Lifts the block so its last visible line rests just above the focused row.
-              transform: holding
-                ? "none"
-                : `translateY(calc(${rowAnchorRem + 4.25 + peekRem + 3}rem - 100vh))`,
-            }}
-          >
-            <Margin number={number} seen={shown.played} section={section.name} />
-            <div className="flex max-w-[46vw] flex-col justify-end gap-7">
-              <TitleMark entry={shown} server={server} compact={!holding} />
-              <EntryNotes entry={shown}>
-                {holding || shown.overview === null ? null : (
-                  <p className="text-body text-paper-dim line-clamp-2 max-w-[60ch]">
-                    {shown.overview}
-                  </p>
-                )}
-              </EntryNotes>
-              {hero === null ? null : (
-                <div
-                  className={`flex items-center gap-6 transition-opacity duration-500 ${holding ? "opacity-100" : "opacity-0"}`}
-                >
-                  <PlayAction
-                    focusKey="hero-play"
-                    label={hero.progress === null ? `Play ${hero.title}` : `Resume ${hero.title}`}
-                    focusable={holding}
-                    onFocus={lightHero}
-                    onPress={playHero}
-                  >
-                    {hero.progress === null ? "Play" : "Resume"}
-                  </PlayAction>
-                  <QuietAction
-                    focusKey="hero-programme"
-                    label={`Programme notes for ${hero.title}`}
-                    focusable={holding}
-                    onFocus={lightHero}
-                    onPress={() => {
-                      openEntry(hero);
-                    }}
-                  >
-                    Programme
-                  </QuietAction>
-                </div>
-              )}
-            </div>
-          </section>
-        )}
+        {heroPanel()}
 
-        {next === null ? null : (
-          <div
-            className={`right-safe-x absolute transition-opacity duration-500 ${holding ? "opacity-100" : "opacity-0"}`}
-            style={{ bottom: `${peekRem + 3}rem` }}
-          >
-            <UpNext
-              entry={next}
-              number={numberFor(numbers, next)}
-              since={cycle.since}
-              auto={cycle.auto}
-              focusable={holding}
-              server={server}
-              onPress={cycle.next}
-            />
-          </div>
-        )}
+        {upNextPanel()}
 
         {rows === null ? null : <Programme server={server} rows={rows} hero={hero !== null} />}
       </main>

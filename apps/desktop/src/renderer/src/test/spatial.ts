@@ -39,6 +39,9 @@ export const place = (node: Element, box: Box): void => {
 
 /** norigin measures on registration and re-measures only stale layouts, so placed boxes are re-read here. */
 export const remeasure = async (): Promise<void> => {
-  await new Promise((resolve) => setTimeout(resolve, 20));
+  // oxlint-disable-next-line promise/avoid-new -- setTimeout has no promise form in the DOM lib
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 20);
+  });
   void updateAllLayouts();
 };

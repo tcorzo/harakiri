@@ -1,3 +1,4 @@
+import { noop } from "es-toolkit";
 import { useEffect, useReducer, useSyncExternalStore } from "react";
 import { useStore } from "zustand";
 
@@ -93,7 +94,7 @@ export const useHeroCycle = (ids: readonly string[], holding: boolean) => {
 
   useEffect(() => {
     if (!auto || count < 2) {
-      return () => {};
+      return noop;
     }
 
     let timer = 0;

@@ -70,40 +70,30 @@ const image = (
     ? null
     : { itemId: asId(itemId), type, tag };
 
-export const toEntry = (item: BaseItemDto): Entry => {
-  const id = asId(item.Id ?? "");
-  const kind = kindOf(item.Type);
+const minutesOf = (ticks: number | null | undefined): number | null =>
+  ticks === undefined || ticks === null ? null : Math.round(ticks / ticksPerMinute);
+
+const progressOf = (percent: number | null): number | null =>
+  percent !== null && percent > 0 && percent < 100 ? percent / 100 : null;
+
+const seriesOf = (item: BaseItemDto): Entry["series"] =>
+  item.SeriesId === undefined || item.SeriesId === null
+    ? null
+    : {
+        id: asId(item.SeriesId),
+        name: item.SeriesName ?? "",
+        season: item.ParentIndexNumber ?? null,
+        episode: item.IndexNumber ?? null,
+      };
+
+const artworkOf = (item: BaseItemDto, id: ItemId, kind: EntryKind) => {
   const tags = item.ImageTags ?? {};
-  const user = item.UserData;
-  const percent = user?.PlayedPercentage ?? null;
 
   const backdrop =
     image(id, "Backdrop", item.BackdropImageTags?.[0]) ??
     image(item.ParentBackdropItemId, "Backdrop", item.ParentBackdropImageTags?.[0]);
 
   return {
-    id,
-    kind,
-    title: item.Name ?? "Untitled",
-    year: item.ProductionYear ?? null,
-    minutes:
-      item.RunTimeTicks === undefined || item.RunTimeTicks === null
-        ? null
-        : Math.round(item.RunTimeTicks / ticksPerMinute),
-    overview: item.Overview ?? null,
-    played: user?.Played ?? false,
-    positionTicks: user?.PlaybackPositionTicks ?? 0,
-    progress: percent !== null && percent > 0 && percent < 100 ? percent / 100 : null,
-    series:
-      item.SeriesId === undefined || item.SeriesId === null
-        ? null
-        : {
-            id: asId(item.SeriesId),
-            name: item.SeriesName ?? "",
-            season: item.ParentIndexNumber ?? null,
-            episode: item.IndexNumber ?? null,
-          },
-    unplayedCount: user?.UnplayedItemCount ?? null,
     backdrop,
     logo:
       image(id, "Logo", tags.Logo) ?? image(item.ParentLogoItemId, "Logo", item.ParentLogoImageTag),
@@ -114,6 +104,28 @@ export const toEntry = (item: BaseItemDto): Entry => {
       kind === "Episode"
         ? image(id, "Primary", tags.Primary)
         : (image(id, "Thumb", tags.Thumb) ?? backdrop),
+  };
+};
+
+export const toEntry = (item: BaseItemDto): Entry => {
+  const id = asId(item.Id ?? "");
+  const kind = kindOf(item.Type);
+  const user = item.UserData;
+  const percent = user?.PlayedPercentage ?? null;
+
+  return {
+    id,
+    kind,
+    title: item.Name ?? "Untitled",
+    year: item.ProductionYear ?? null,
+    minutes: minutesOf(item.RunTimeTicks),
+    overview: item.Overview ?? null,
+    played: user?.Played ?? false,
+    positionTicks: user?.PlaybackPositionTicks ?? 0,
+    progress: progressOf(percent),
+    series: seriesOf(item),
+    unplayedCount: user?.UnplayedItemCount ?? null,
+    ...artworkOf(item, id, kind),
     fidelity: classifyFidelity(item.MediaSources?.[0]),
   };
 };

@@ -15,6 +15,7 @@ if (typeof window !== "undefined") {
 
 /** CSS pixels per rem, read once per window size rather than once per card per render. */
 export const rootRem = (): number => {
+  // oxlint-disable-next-line unicorn/prefer-number-coercion -- the value is a CSS length like "16px", which Number() reads as NaN
   cachedRem ??= Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
 
   return cachedRem;

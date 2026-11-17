@@ -3,7 +3,7 @@ import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-naviga
 import type { FocusableComponentLayout } from "@noriginmedia/norigin-spatial-navigation";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useEffectEvent, useState, useTransition } from "react";
 
 import { episodeCode, programmeNotes } from "../data/entry";
 import type { Entry } from "../data/entry";
@@ -155,15 +155,18 @@ export const SeriesPage = ({
   });
 
   // The loader brought the opening season's episodes, so Play (or the remembered episode) is mounted.
-  useEffect(() => {
+  const focusOnArrival = useEffectEvent(() => {
     const episode = seriesPlace.get(series.id)?.episode;
     focusFirst(
       ...(episode === undefined || episode === null ? [] : [episodeKey(episode)]),
       "title-play",
       `season-${picked}`
     );
-    // Only on arrival; later season changes keep focus on the season tabs.
-    // oxlint-disable-next-line react/exhaustive-deps
+  });
+
+  // Only on arrival; later season changes keep focus on the season tabs.
+  useEffect(() => {
+    focusOnArrival();
   }, []);
 
   const pick = (index: number): void => {
