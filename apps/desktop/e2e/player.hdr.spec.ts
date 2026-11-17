@@ -4,9 +4,9 @@ import { z } from "zod";
 import {
   expect,
   play,
+  playerEventUntil,
   probeUntil,
   recordPlayerEvents,
-  playerEventUntil,
   test,
 } from "./support/harakiri";
 import { ITEMS, TICKS_PER_SECOND } from "./support/jellyfin";
@@ -40,18 +40,19 @@ const cases = [
     criteria: ITEMS.dvP5,
     colormatrix: "dolbyvision",
     signal: "Dolby Vision tone-mapped to SDR · ",
-    reshaped: true,
+    rpuApplied: true,
   },
   {
     name: "HDR10",
     criteria: ITEMS.hdr10,
     colormatrix: "bt.2020-ncl",
     signal: "HDR10 tone-mapped to SDR · ",
-    reshaped: false,
+    rpuApplied: false,
   },
 ] as const;
 
-for (const { name, criteria, colormatrix, signal, reshaped } of cases) {
+// oxlint-disable-next-line vitest/prefer-each -- Playwright has no test.each; a loop is how it parametrizes
+for (const { name, criteria, colormatrix, signal, rpuApplied } of cases) {
   test(`${name} reaches gpu-next as PQ BT.2020 and plays`, async ({
     launch,
     jellyfin,
@@ -110,6 +111,6 @@ for (const { name, criteria, colormatrix, signal, reshaped } of cases) {
       { kind: "displaySdr" },
     ]);
     // libplacebo's Dolby Vision reshaping pass: the RPU is applied, not ignored.
-    expect(/reshap/i.test(passes)).toBe(reshaped);
+    expect(/reshap/iu.test(passes)).toBe(rpuApplied);
   });
 }

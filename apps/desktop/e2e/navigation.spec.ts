@@ -7,6 +7,7 @@ import {
   expect,
   expectFocus,
   focusedControl,
+  focusRoute,
   test,
   until,
 } from "./support/harakiri";
@@ -16,7 +17,7 @@ import type { ShownItem } from "./support/jellyfin";
 import { heroPlay, leadContinueWatching, main, openLibrary } from "./support/library";
 
 /** The film on tonight's screening, read off its focused Play or Resume. */
-function heroTitle(focus: FocusedControl): string {
+const heroTitle = (focus: FocusedControl): string => {
   const title = heroPlay.exec(focus.name)?.[2];
 
   if (title === undefined) {
@@ -24,32 +25,35 @@ function heroTitle(focus: FocusedControl): string {
   }
 
   return title;
-}
+};
 
 /** Presses a key and waits until focus rests on a visible, labelled control (named `name` when given). */
-async function press(page: Page, key: string, name?: string | RegExp): Promise<FocusedControl> {
+const press = async (page: Page, key: string, name?: string | RegExp): Promise<FocusedControl> => {
   await page.keyboard.press(key);
 
   return await expectFocus(page, name);
-}
+};
 
 /** Moves down a row at a time, checking focus after each move, until it rests in `section`. */
-async function downTo(
+const downTo = async (
   page: Page,
   section: string,
-  move: () => Promise<unknown>
-): Promise<FocusedControl> {
+  move: () => Promise<void>
+): Promise<FocusedControl> => {
+  /* oxlint-disable eslint/no-await-in-loop -- one move at a time: each is judged by where focus landed */
   for (let i = 0; i < 6; i += 1) {
     const focus = await expectFocus(page);
 
     if (focus.section === section) {
       return focus;
     }
+
     await move();
   }
+  /* oxlint-enable eslint/no-await-in-loop */
 
   throw new Error(`Six moves down never reached ${section}`);
-}
+};
 
 test.beforeEach(({ signIn }) => {
   signIn();
@@ -62,16 +66,17 @@ test("the arrow keys walk the hero, the rows and the title pages, and focus is n
 }) => {
   const { shown } = await leadContinueWatching(jellyfin, preserveUserData);
   const latest = await jellyfin.latest();
-  const picked = latest[3];
+  const { 3: picked } = latest;
 
   if (picked === undefined) {
     throw new Error("The dev library has fewer than 4 recent titles");
   }
+
   const { page } = await launch();
 
   const hero = heroTitle(await openLibrary(page));
   await press(page, "ArrowRight", `Programme notes for ${hero}`);
-  const next = await press(page, "ArrowRight", /^Next screening: \S/);
+  const next = await press(page, "ArrowRight", /^Next screening: \S/u);
   expect(next.name).not.toBe(`Next screening: ${hero}`);
   await press(page, "ArrowLeft", `Programme notes for ${hero}`);
   await press(page, "ArrowLeft", heroPlay);
@@ -86,28 +91,33 @@ test("the arrow keys walk the hero, the rows and the title pages, and focus is n
   ).toContainText(`${left} min left`);
 
   // Down through every row in between, to Recently Added, which opens on the newest title.
-  const recent = await downTo(page, "Recently Added", async () => await press(page, "ArrowDown"));
+  const recent = await downTo(page, "Recently Added", async () => {
+    await press(page, "ArrowDown");
+  });
+
   expect(recent.name).toMatch(cardName(spokenTitle(latest[0] ?? picked)));
 
+  /* oxlint-disable eslint/no-await-in-loop -- Right is pressed one card at a time */
   for (const i of [1, 2, 3]) {
     const card = await press(page, "ArrowRight", cardName(spokenTitle(latest[i] ?? picked)));
     expect(card.section).toBe("Recently Added");
   }
+  /* oxlint-enable eslint/no-await-in-loop */
 
   // Its title page, then Back to the same card.
   await page.keyboard.press("Enter");
   await expect(main(page, picked.Name)).toBeVisible();
-  const title = await expectFocus(page, /^(Play|Resume) \S/, 10_000);
+  const title = await expectFocus(page, /^(?:Play|Resume) \S/u, 10_000);
   expect(title.route).toBe(`/title/${picked.Id}`);
   await press(page, "Escape", cardName(spokenTitle(picked)));
-  expect((await expectFocus(page)).route).toBe("/library");
+  expect(await focusRoute(page)).toBe("/library");
 
   // Back from the rows returns to tonight's screening, then its programme notes open the film.
   expect(heroTitle(await press(page, "Escape", heroPlay))).toBe(hero);
   await press(page, "ArrowRight", `Programme notes for ${hero}`);
   await page.keyboard.press("Enter");
   await expect(main(page, hero)).toBeVisible();
-  await expectFocus(page, new RegExp(`^(Play|Resume) ${escapeRegExp(hero)}$`));
+  await expectFocus(page, new RegExp(`^(?:Play|Resume) ${escapeRegExp(hero)}$`, "u"));
   await page.keyboard.press("Escape");
   expect(heroTitle(await openLibrary(page))).toBe(hero);
 });
@@ -127,11 +137,9 @@ test("the gamepad walks the same way: d-pad, stick, A, B, and a held d-pad repea
   await expectFocus(page, cardName(spokenTitle(shown)));
   await tap(page, "a");
   await expect(main(page, shown.Name)).toBeVisible();
-  expect((await expectFocus(page, `Resume ${shown.Name}`, 10_000)).route).toBe(
-    `/title/${shown.Id}`
-  );
+  expect(await focusRoute(page, `Resume ${shown.Name}`, 10_000)).toBe(`/title/${shown.Id}`);
   await tap(page, "b");
-  expect((await expectFocus(page, cardName(spokenTitle(shown)))).route).toBe("/library");
+  expect(await focusRoute(page, cardName(spokenTitle(shown)))).toBe("/library");
   await tap(page, "b");
   expect(heroTitle(await expectFocus(page, heroPlay))).toBe(hero);
 
@@ -142,7 +150,9 @@ test("the gamepad walks the same way: d-pad, stick, A, B, and a held d-pad repea
   await tap(page, "left");
   await expectFocus(page, heroPlay);
 
-  await downTo(page, "Recently Added", async () => await tap(page, "down"));
+  await downTo(page, "Recently Added", async () => {
+    await tap(page, "down");
+  });
 
   const nth = (i: number): ShownItem => {
     const item = latest[i];
@@ -167,9 +177,9 @@ test("the gamepad walks the same way: d-pad, stick, A, B, and a held d-pad repea
 
   await tap(page, "a");
   await expect(main(page, reached.Name)).toBeVisible();
-  await expectFocus(page, /^(Play|Resume) \S/, 10_000);
+  await expectFocus(page, /^(?:Play|Resume) \S/u, 10_000);
   await tap(page, "b");
-  expect((await expectFocus(page, cardName(spokenTitle(reached)))).route).toBe("/library");
+  expect(await focusRoute(page, cardName(spokenTitle(reached)))).toBe("/library");
 });
 
 test("Up from the first row returns to tonight's screening", async ({
@@ -213,9 +223,12 @@ test("holding Down keeps the focused card on screen at every step", async ({ lau
   const seen: (FocusedControl | null)[] = [];
   const deadline = Date.now() + 1200;
 
+  /* oxlint-disable eslint/no-await-in-loop -- sampling focus over time is sequential by definition */
   while (Date.now() < deadline) {
     seen.push(await focusedControl(page));
   }
+  /* oxlint-enable eslint/no-await-in-loop */
+
   await setButton(page, "down", false);
 
   // Focus lost to nothing counts as off screen too.
@@ -243,27 +256,28 @@ test("a key held down on a card opens its title page once and plays nothing", as
   await page.keyboard.down("Enter");
   await page.keyboard.up("Enter");
   await page.waitForTimeout(500);
-  expect((await expectFocus(page, `Resume ${shown.Name}`)).route).toBe(`/title/${shown.Id}`);
+  expect(await focusRoute(page, `Resume ${shown.Name}`)).toBe(`/title/${shown.Id}`);
 });
 
 /** Fake timers that keep flowing, installed before the renderer's first script by a reload. */
-async function withClock(page: Page): Promise<string> {
+const withClock = async (page: Page): Promise<string> => {
   await page.clock.install();
   await page.reload();
 
   return heroTitle(await openLibrary(page));
-}
+};
 
 /** Stops the page's clock, so from here on only `runFor` moves time, as far as it is told. */
-async function pauseClock(page: Page): Promise<void> {
+const pauseClock = async (page: Page): Promise<void> => {
   const now = await page.evaluate(() => Date.now());
   await page.clock.pauseAt(now + 100);
-}
+};
 
 const nextTitle = async (page: Page) =>
   (
-    (await page.getByRole("button", { name: /^Next screening: / }).getAttribute("aria-label")) ?? ""
-  ).replace(/^Next screening: /, "");
+    (await page.getByRole("button", { name: /^Next screening: /u }).getAttribute("aria-label")) ??
+    ""
+  ).replace(/^Next screening: /u, "");
 
 test.describe("the hero cycle", () => {
   test("after 20 quiet seconds the film Next promised takes the screen, and a press in its first 800 ms is ignored", async ({
@@ -286,7 +300,12 @@ test.describe("the hero cycle", () => {
     expect(heroTitle(await expectFocus(page, heroPlay))).toBe(first);
     // The film changes at 20 s; the clock stops 500 ms later, inside the 800 ms settle.
     await page.clock.runFor(1500);
-    const advanced = await expectFocus(page, new RegExp(`^(Play|Resume) ${escapeRegExp(second)}$`));
+
+    const advanced = await expectFocus(
+      page,
+      new RegExp(`^(?:Play|Resume) ${escapeRegExp(second)}$`, "u")
+    );
+
     expect(advanced.route).toBe("/library");
     const third = await nextTitle(page);
     expect(third).not.toBe(second);
@@ -294,7 +313,7 @@ test.describe("the hero cycle", () => {
     // A press this soon was aimed at the film that just left.
     await page.keyboard.press("Enter");
     await page.waitForTimeout(300);
-    expect((await expectFocus(page, heroPlay)).route).toBe("/library");
+    expect(await focusRoute(page, heroPlay)).toBe("/library");
     expect(heroTitle(await expectFocus(page, heroPlay))).toBe(second);
 
     await page.clock.runFor(1000);
@@ -340,7 +359,7 @@ test.describe("the hero cycle", () => {
     await press(page, "ArrowRight", `Programme notes for ${first}`);
     await press(page, "ArrowRight", `Next screening: ${second}`);
     await page.keyboard.press("Enter");
-    await expectFocus(page, /^Next screening: /);
+    await expectFocus(page, /^Next screening: /u);
     await page.keyboard.press("ArrowLeft");
     await page.keyboard.press("ArrowLeft");
     expect(heroTitle(await expectFocus(page, heroPlay))).toBe(second);

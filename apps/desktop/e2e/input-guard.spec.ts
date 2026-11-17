@@ -1,5 +1,5 @@
 import { writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import path from "node:path";
 
 import type { Page } from "@playwright/test";
 
@@ -9,8 +9,10 @@ import {
   cardName,
   expect,
   expectFocus,
-  playerEvents,
+  focusRoute,
+  isRunning,
   playerEventUntil,
+  playerPhases,
   probe,
   probeUntil,
   recordPlayerEvents,
@@ -24,7 +26,11 @@ import { leadContinueWatching, main, openFirstResumed } from "./support/library"
 import { mpvProcesses, pressKey } from "./support/mpv";
 
 /** Title page, Play, and the handoff all the way to mpv playing; returns mpv's pid. */
-async function startScreening(page: Page, shown: ShownItem, userDataDir: string): Promise<number> {
+const startScreening = async (
+  page: Page,
+  shown: ShownItem,
+  userDataDir: string
+): Promise<number> => {
   await openFirstResumed(page, shown);
   await recordPlayerEvents(page);
   await page.keyboard.press("Enter");
@@ -38,32 +44,33 @@ async function startScreening(page: Page, shown: ShownItem, userDataDir: string)
   }
 
   return mpv.pid;
-}
+};
 
 /** Nothing the renderer received moved it: same screen, same single mpv still playing, one start, no stop. */
-async function expectUntouched(page: Page, shown: ShownItem, userDataDir: string, pid: number) {
-  const before = (await probe(page)).timePos ?? 0;
+const expectUntouched = async (page: Page, shown: ShownItem, userDataDir: string, pid: number) => {
+  const { timePos } = await probe(page);
+  const before = timePos ?? 0;
   await page.waitForTimeout(800);
   await expect(main(page, `Screening ${shown.Name}`)).toBeVisible();
-  expect(await page.evaluate(() => location.hash)).toMatch(new RegExp(`^#/screening/${shown.Id}`));
+  expect(await page.evaluate(() => location.hash)).toMatch(
+    new RegExp(`^#/screening/${shown.Id}`, "u")
+  );
   expect(mpvProcesses(userDataDir).map((p) => p.pid)).toEqual([pid]);
   const now = await probe(page);
   expect(now.running).toBe(true);
   expect(now.pause).toBe(false);
   expect(now.timePos ?? 0).toBeGreaterThan(before);
-  const phases = (await playerEvents(page)).map((event) => event.phase);
+  const phases = await playerPhases(page);
   expect(phases.filter((phase) => phase === "starting")).toHaveLength(1);
   expect(phases).not.toContain("stopped");
-}
+};
 
-async function stopInMpv(page: Page, shown: ShownItem, userDataDir: string): Promise<void> {
+const stopInMpv = async (page: Page, shown: ShownItem, userDataDir: string): Promise<void> => {
   await pressKey(userDataDir, "ESC");
   await playerEventUntil(page, (event) => event.phase === "stopped");
   expect(await waitForNoMpv(userDataDir, 5000)).toEqual([]);
-  expect((await expectFocus(page, `Resume ${shown.Name}`, 10_000)).route).toBe(
-    `/title/${shown.Id}`
-  );
-}
+  expect(await focusRoute(page, `Resume ${shown.Name}`, 10_000)).toBe(`/title/${shown.Id}`);
+};
 
 test.beforeEach(({ signIn }) => {
   signIn();
@@ -83,9 +90,12 @@ test("while mpv plays, every pad button reaches nothing in the renderer; once it
   // A would press Play again, B would stop mpv from the renderer, the d-pad would move focus.
   const buttons: Button[] = ["a", "b", "y", "view", "start", "up", "down", "left", "right"];
 
+  /* oxlint-disable eslint/no-await-in-loop -- each press must land and settle before the next */
   for (const button of buttons) {
     await tap(page, button);
   }
+  /* oxlint-enable eslint/no-await-in-loop */
+
   await setAxis(page, 0, 0.9);
   await setAxis(page, 0, 0);
   await setAxis(page, 1, 0.9);
@@ -98,7 +108,7 @@ test("while mpv plays, every pad button reaches nothing in the renderer; once it
   await tap(page, "left");
   await expectFocus(page, `Resume ${shown.Name}`);
   await tap(page, "b");
-  expect((await expectFocus(page, cardName(spokenTitle(shown)))).route).toBe("/library");
+  expect(await focusRoute(page, cardName(spokenTitle(shown)))).toBe("/library");
 });
 
 test("a B still held when playback ends stays silent until it is released", async ({
@@ -117,11 +127,11 @@ test("a B still held when playback ends stays silent until it is released", asyn
   await expectUntouched(page, shown, userDataDir, pid);
   await stopInMpv(page, shown, userDataDir);
   await page.waitForTimeout(800);
-  expect((await expectFocus(page, `Resume ${shown.Name}`)).route).toBe(`/title/${shown.Id}`);
+  expect(await focusRoute(page, `Resume ${shown.Name}`)).toBe(`/title/${shown.Id}`);
 
   await setButton(page, "b", false);
   await tap(page, "b");
-  expect((await expectFocus(page, cardName(spokenTitle(shown)))).route).toBe("/library");
+  expect(await focusRoute(page, cardName(spokenTitle(shown)))).toBe("/library");
 });
 
 test("while mpv plays, renderer keys neither navigate nor play again, and Back stops as the screen says", async ({
@@ -135,9 +145,11 @@ test("while mpv plays, renderer keys neither navigate nor play again, and Back s
   const pid = await startScreening(page, shown, userDataDir);
 
   // The keyboard is not guarded (only mpv reads the pad); with no control on screen these keys do nothing.
+  /* oxlint-disable eslint/no-await-in-loop -- key presses are ordered */
   for (const key of ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", " "]) {
     await page.keyboard.press(key);
   }
+  /* oxlint-enable eslint/no-await-in-loop */
 
   await expectUntouched(page, shown, userDataDir, pid);
 
@@ -146,14 +158,12 @@ test("while mpv plays, renderer keys neither navigate nor play again, and Back s
   const stopped = await playerEventUntil(page, (event) => event.phase === "stopped");
   expect(stopped.itemId).toBe(shown.Id);
   expect(await waitForNoMpv(userDataDir, 5000)).toEqual([]);
-  expect((await expectFocus(page, `Resume ${shown.Name}`, 10_000)).route).toBe(
-    `/title/${shown.Id}`
-  );
+  expect(await focusRoute(page, `Resume ${shown.Name}`, 10_000)).toBe(`/title/${shown.Id}`);
 });
 
 test.describe("with mpv holding the file until the test lets it load", () => {
   test.use({
-    mpvArgs: `--vo=null --ao=null --script=${resolve(import.meta.dirname, "support/hold-load.lua")}`,
+    mpvArgs: `--vo=null --ao=null --script=${path.resolve(import.meta.dirname, "support/hold-load.lua")}`,
   });
 
   test("B in the moment between the Picture station and mpv taking the file still cancels", async ({
@@ -171,17 +181,15 @@ test.describe("with mpv holding the file until the test lets it load", () => {
     // mpv is up but holds the file, so the play has not resolved and the renderer still owns the pad.
     await until(
       "mpv starts",
-      async () => mpvProcesses(userDataDir),
+      () => mpvProcesses(userDataDir),
       (alive) => alive.length === 1
     );
-    expect((await probe(page)).running).toBe(false);
+    expect(await isRunning(page)).toBe(false);
 
     await tap(page, "b");
-    writeFileSync(join(userDataDir, "mpv", "release"), "");
+    writeFileSync(path.join(userDataDir, "mpv", "release"), "");
 
-    expect((await expectFocus(page, `Resume ${shown.Name}`, 15_000)).route).toBe(
-      `/title/${shown.Id}`
-    );
+    expect(await focusRoute(page, `Resume ${shown.Name}`, 15_000)).toBe(`/title/${shown.Id}`);
     expect(await waitForNoMpv(userDataDir, 5000)).toEqual([]);
   });
 });

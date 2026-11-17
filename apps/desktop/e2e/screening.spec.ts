@@ -4,9 +4,10 @@ import {
   cardName,
   expect,
   expectFocus,
+  focusRoute,
+  isRunning,
   playerEvents,
   playerEventUntil,
-  probe,
   probeUntil,
   recordPlayerEvents,
   test,
@@ -29,15 +30,15 @@ declare global {
 }
 
 /** Records every handoff station the screening shows, with when it appeared. */
-async function recordStations(page: Page): Promise<void> {
+const recordStations = async (page: Page): Promise<void> => {
   await page.evaluate(() => {
     const seen: StationSeen[] = [];
     window.harakiriE2eStations = seen;
 
     const record = (): void => {
-      const station = document.querySelector("main[data-station]")?.getAttribute("data-station");
+      const station = document.querySelector<HTMLElement>("main[data-station]")?.dataset.station;
 
-      if (station != null && seen.at(-1)?.station !== station) {
+      if (station !== undefined && seen.at(-1)?.station !== station) {
         seen.push({ station, at: performance.now() });
       }
     };
@@ -49,10 +50,13 @@ async function recordStations(page: Page): Promise<void> {
       attributeFilter: ["data-station"],
     });
   });
-}
+};
 
-const stations = async (page: Page) =>
-  (await page.evaluate(() => window.harakiriE2eStations ?? [])).map((s) => s.station);
+const stations = async (page: Page) => {
+  const seen = await page.evaluate(() => window.harakiriE2eStations ?? []);
+
+  return seen.map((s) => s.station);
+};
 
 const ticks = (seconds: number) => seconds * TICKS_PER_SECOND;
 
@@ -117,9 +121,12 @@ test("Play from the title page: House, Programme, Picture, then mpv plays the it
   // Three skips forward of 30 s, then Back in mpv, as a remote pointed at the player would.
   const from = running.timePos ?? 60;
 
+  /* oxlint-disable eslint/no-await-in-loop -- the skips are ordered key presses */
   for (let i = 0; i < 3; i += 1) {
     await pressKey(userDataDir, "RIGHT");
   }
+  /* oxlint-enable eslint/no-await-in-loop */
+
   await probeUntil(page, (p) => (p.timePos ?? 0) >= from + 85);
   await pressKey(userDataDir, "ESC");
   const stopped = await playerEventUntil(page, (event) => event.phase === "stopped");
@@ -138,7 +145,7 @@ test("Play from the title page: House, Programme, Picture, then mpv plays the it
   const leftAfter = minutesLeft(saved);
   expect(leftAfter).not.toBeNull();
   expect(leftAfter).not.toBe(leftBefore);
-  expect((await expectFocus(page, `Resume ${shown.Name}`, 10_000)).route).toBe(`/title/${item.id}`);
+  expect(await focusRoute(page, `Resume ${shown.Name}`, 10_000)).toBe(`/title/${item.id}`);
   await expect(page.getByRole("button", { name: `Resume ${shown.Name}` })).toHaveText(
     `Resume · ${leftAfter} min left`
   );
@@ -155,9 +162,11 @@ test("Play from the title page: House, Programme, Picture, then mpv plays the it
 
   await expect(first).toHaveAccessibleName(cardName(spokenTitle(saved)));
   await expect(first).toContainText(`${leftAfter} min left`);
-  expect((await jellyfin.resumeIds())[0]).toBe(item.id);
+  const [leading] = await jellyfin.resumeIds();
+  expect(leading).toBe(item.id);
 });
 
+// oxlint-disable-next-line vitest/prefer-each -- Playwright has no test.each; a loop is how it parametrizes
 for (const station of ["House", "Programme"] as const) {
   test(`Back during ${station} cancels the screening: no mpv starts and Resume has focus again`, async ({
     launch,
@@ -181,14 +190,12 @@ for (const station of ["House", "Programme"] as const) {
     );
     await page.keyboard.press("Escape");
 
-    expect((await expectFocus(page, `Resume ${shown.Name}`, 10_000)).route).toBe(
-      `/title/${shown.Id}`
-    );
+    expect(await focusRoute(page, `Resume ${shown.Name}`, 10_000)).toBe(`/title/${shown.Id}`);
     // Past the moment the picture would have been handed to mpv (1.2 s + 3 s).
     await page.waitForTimeout(4500);
     expect(mpvProcesses(userDataDir)).toEqual([]);
     expect(await playerEvents(page)).toEqual([]);
-    expect((await probe(page)).running).toBe(false);
+    expect(await isRunning(page)).toBe(false);
     expect(await stations(page)).not.toContain("Picture");
     await expectFocus(page, `Resume ${shown.Name}`);
   });

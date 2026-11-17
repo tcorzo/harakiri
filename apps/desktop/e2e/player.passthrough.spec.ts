@@ -1,5 +1,5 @@
 import { readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import path from "node:path";
 
 import { joinFacts } from "@harakiri/jellyfin";
 
@@ -20,7 +20,7 @@ import { pressKey } from "./support/mpv";
 // `--length` ends the capture after exactly a case's capture seconds of content. `--vid=no` keeps
 // 4K remuxes from burning CPU on a video decode this tier does not look at.
 const captureArgs = (userDataDir: string, seconds: number) =>
-  `--vo=null --vid=no --ao=pcm --ao-pcm-file=${join(userDataDir, "capture.wav")} --pause --length=${seconds}`;
+  `--vo=null --vid=no --ao=pcm --ao-pcm-file=${path.join(userDataDir, "capture.wav")} --pause --length=${seconds}`;
 
 test.use({
   // ao_pcm stands in for a receiver, so the fidelity engine is told it plays to one.
@@ -67,6 +67,19 @@ const cases = [
   },
 ] as const;
 
+const matchesAt = (bytes: Uint8Array, sequence: readonly number[], start: number): boolean =>
+  sequence.every((byte, offset) => bytes[start + offset] === byte);
+
+const indexOfSequence = (bytes: Uint8Array, sequence: readonly number[]): number => {
+  for (let i = 0; i + sequence.length <= bytes.length; i += 1) {
+    if (matchesAt(bytes, sequence, i)) {
+      return i;
+    }
+  }
+
+  return -1;
+};
+
 for (const c of cases) {
   const { name, criteria, codec, signalPath, burst, burstsPerSecond, sync } = c;
   test.describe(() => {
@@ -86,6 +99,7 @@ for (const c of cases) {
       if (!item.audio) {
         throw new Error(`${item.name} has no matching audio stream`);
       }
+
       await preserveUserData(item.id);
       const { page } = await launch();
       await recordPlayerEvents(page);
@@ -110,7 +124,7 @@ for (const c of cases) {
       // position is not checked here; the burst count below measures the captured length.
       await playerEventUntil(page, (event) => event.phase === "ended", 30_000);
 
-      const wav = readFileSync(join(userDataDir, "capture.wav"));
+      const wav = readFileSync(path.join(userDataDir, "capture.wav"));
       const pcm = readPcm16(wav);
       const bursts = scanBursts(pcm.data);
       const payload = bursts.filter((b) => b.name === burst);
@@ -119,7 +133,7 @@ for (const c of cases) {
         contentType: "application/json",
         body: JSON.stringify({
           item: item.name,
-          wavBytes: statSync(join(userDataDir, "capture.wav")).size,
+          wavBytes: statSync(path.join(userDataDir, "capture.wav")).size,
           wallSeconds: (Date.now() - startedAt) / 1000,
           format:
             pcm.kind === "wav" ? { channels: pcm.channels, sampleRate: pcm.sampleRate } : "raw",
@@ -137,16 +151,4 @@ for (const c of cases) {
       expect(indexOfSequence(stream.bytes, sync)).toBeGreaterThanOrEqual(0);
     });
   });
-}
-
-function indexOfSequence(bytes: Uint8Array, sequence: readonly number[]): number {
-  outer: for (let i = 0; i + sequence.length <= bytes.length; i++) {
-    for (let j = 0; j < sequence.length; j++) {
-      if (bytes[i + j] !== sequence[j]) continue outer;
-    }
-
-    return i;
-  }
-
-  return -1;
 }

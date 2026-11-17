@@ -1,12 +1,12 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import path from "node:path";
 
 import type { Page } from "@playwright/test";
 
 import type { Backend } from "./support/backend";
 import { padDpad, plugPad, tap } from "./support/gamepad";
-import { cardName, expect, expectFocus, test } from "./support/harakiri";
-import { publicInfo } from "./support/jellyfin";
+import { cardName, expect, expectFocus, focusRoute, test } from "./support/harakiri";
+import { publicInfo, serverEntryName } from "./support/jellyfin";
 import type { Jellyfin } from "./support/jellyfin";
 import { arrowKeys, focusField, keysFor, typeOnScreen } from "./support/keyboard";
 import { deadAddress, reply, stubServer } from "./support/stub";
@@ -15,27 +15,28 @@ import type { Stub } from "./support/stub";
 const main = (page: Page, name: string) => page.getByRole("main", { name, exact: true });
 
 /** Lands on the library: Play focused on tonight's film, and Recently Added opening on the server's newest title. */
-async function expectLibrary(page: Page, jellyfin: Jellyfin): Promise<void> {
+const expectLibrary = async (page: Page, jellyfin: Jellyfin): Promise<void> => {
   await expect(main(page, "Library")).toBeVisible({ timeout: 20_000 });
-  const focus = await expectFocus(page, /^(Play|Resume) \S/, 10_000);
+  const focus = await expectFocus(page, /^(?:Play|Resume) \S/u, 10_000);
   expect(focus.route).toBe("/library");
   const [newest] = await jellyfin.latest();
 
   if (newest === undefined) {
     throw new Error("The library has nothing recently added");
   }
+
   await expect(
     page.getByRole("region", { name: "Recently Added", exact: true }).getByRole("button").first()
   ).toHaveAccessibleName(cardName(newest.Name));
-}
+};
 
 /** The session main stored for this profile, which must be the one the server just issued. */
-async function expectStoredSession(
+const expectStoredSession = async (
   page: Page,
   backend: Backend,
   userDataDir: string,
   userId: string
-) {
+) => {
   const info = await publicInfo(backend.server);
   const session = await page.evaluate(async () => await window.harakiri.session.get());
   expect(session).toMatchObject({
@@ -45,15 +46,15 @@ async function expectStoredSession(
     serverVersion: info.version,
     userId,
     userName: backend.user,
-    deviceId: readFileSync(join(userDataDir, "device-id"), "utf-8").trim(),
+    deviceId: readFileSync(path.join(userDataDir, "device-id"), "utf-8").trim(),
   });
-}
+};
 
 /** From the sign-in chooser: Another user, then the user name and password on the on-screen keyboard. */
-async function signInOnScreen(
+const signInOnScreen = async (
   page: Page,
   { user, password }: { readonly user: string; readonly password: string }
-): Promise<void> {
+): Promise<void> => {
   const keys = arrowKeys(page);
   await expectFocus(page, "Another user");
   await page.keyboard.press("Enter");
@@ -67,10 +68,10 @@ async function signInOnScreen(
   await typeOnScreen(page, keys, keysFor(password));
   await expect(page.getByLabel("Password", { exact: true })).toHaveValue(password);
   await typeOnScreen(page, keys, ["Sign in"]);
-}
+};
 
 /** Begin, then the server address on the on-screen keyboard with the arrow keys, then Connect. */
-async function submitAddress(page: Page, address: string): Promise<void> {
+const submitAddress = async (page: Page, address: string): Promise<void> => {
   await expectFocus(page, "Begin");
   await page.keyboard.press("Enter");
   await expect(main(page, "Find your server")).toBeVisible();
@@ -78,7 +79,7 @@ async function submitAddress(page: Page, address: string): Promise<void> {
   await typeOnScreen(page, arrowKeys(page), keysFor(address, [":8096"]));
   await expect(page.getByRole("textbox", { name: "Server address" })).toHaveValue(address);
   await typeOnScreen(page, arrowKeys(page), ["Connect"]);
-}
+};
 
 const jellyfinInfo = (version: string, name: string) =>
   reply.json(200, {
@@ -94,7 +95,7 @@ const jellyfinInfo = (version: string, name: string) =>
 interface AddressCase {
   readonly name: string;
   readonly stub?: Readonly<Record<string, ReturnType<typeof reply.json>>>;
-  readonly address?: () => Promise<string>;
+  readonly address?: () => Promise<string> | string;
   readonly message: (address: string) => string;
 }
 
@@ -123,7 +124,7 @@ test.describe("with the server answering discovery on loopback", () => {
     const pad = padDpad(page);
 
     await expect(main(page, "Welcome")).toBeVisible();
-    expect((await expectFocus(page, "Begin")).route).toBe("/onboarding");
+    expect(await focusRoute(page, "Begin")).toBe("/onboarding");
     await tap(page, "a");
 
     // The server found by discovery takes focus, named and addressed as it answered.
@@ -163,16 +164,14 @@ test.describe("with the server answering discovery on loopback", () => {
   }) => {
     const { page } = await launch();
     // The server hides its one user, so its public list is served here; sign-in itself is real.
-    await page.route(
-      "**/Users/Public",
-      async (route) =>
-        await route.fulfill({
-          json: [{ Name: backend.user, Id: account.userId, HasPassword: true }],
-        })
-    );
+    await page.route("**/Users/Public", async (route) => {
+      await route.fulfill({
+        json: [{ Name: backend.user, Id: account.userId, HasPassword: true }],
+      });
+    });
     await expectFocus(page, "Begin");
     await page.keyboard.press("Enter");
-    await expectFocus(page, `${(await publicInfo(backend.server)).name}, ${backend.server}`);
+    await expectFocus(page, await serverEntryName(backend));
     await page.keyboard.press("Enter");
 
     await expect(main(page, "Who is watching")).toBeVisible();
@@ -201,7 +200,7 @@ test.describe("with the server answering discovery on loopback", () => {
     const { page } = await launch();
     await expectFocus(page, "Begin");
     await page.keyboard.press("Enter");
-    await expectFocus(page, `${(await publicInfo(backend.server)).name}, ${backend.server}`);
+    await expectFocus(page, await serverEntryName(backend));
     await page.keyboard.press("Enter");
     await expectFocus(page, "Another user");
     await page.keyboard.press("ArrowDown");
@@ -210,10 +209,11 @@ test.describe("with the server answering discovery on loopback", () => {
 
     await expect(main(page, "Quick Connect")).toBeVisible();
     await expectFocus(page, "Use a password instead");
-    const shown = page.getByLabel(/^Code \d( \d)+$/);
+    const shown = page.getByLabel(/^Code \d(?: \d)+$/u);
     await expect(shown).toBeVisible();
-    const code = (await shown.innerText()).trim();
-    expect(code).toMatch(/^\d{6}$/);
+    const text = await shown.textContent();
+    const code = (text ?? "").trim();
+    expect(code).toMatch(/^\d{6}$/u);
     expect(await shown.getAttribute("aria-label")).toBe(`Code ${code.split("").join(" ")}`);
 
     await jellyfin.authorizeQuickConnect(code);
@@ -232,7 +232,7 @@ test.describe("with the server answering discovery on loopback", () => {
     const { page } = await launch();
     await expectFocus(page, "Begin");
     await page.keyboard.press("Enter");
-    await expectFocus(page, `${(await publicInfo(backend.server)).name}, ${backend.server}`);
+    await expectFocus(page, await serverEntryName(backend));
     await page.keyboard.press("Enter");
 
     await signInOnScreen(page, { user: backend.user, password: "not-the-password" });
@@ -242,7 +242,7 @@ test.describe("with the server answering discovery on loopback", () => {
     );
     await expect(page.getByLabel("Password", { exact: true })).toHaveValue("");
     // The keyboard stays where the owner left it, on Sign in, ready for a second try.
-    expect((await expectFocus(page, "Sign in")).route).toBe("/onboarding");
+    expect(await focusRoute(page, "Sign in")).toBe("/onboarding");
 
     // One success resets the server's failed-attempt count, so reruns never lock the account.
     await typeOnScreen(page, arrowKeys(page), [...keysFor(backend.password), "Sign in"]);
@@ -263,7 +263,7 @@ test.describe("with the server answering discovery on loopback", () => {
     await expectFocus(page, "w");
     await expect(
       page.getByRole("button", {
-        name: `${(await publicInfo(backend.server)).name}, ${backend.server}`,
+        name: await serverEntryName(backend),
       })
     ).toBeVisible();
     await page.waitForTimeout(500);
@@ -275,7 +275,7 @@ test.describe("with the server answering discovery on loopback", () => {
     backend,
   }) => {
     const { page } = await launch();
-    const found = `${(await publicInfo(backend.server)).name}, ${backend.server}`;
+    const found = await serverEntryName(backend);
     await expectFocus(page, "Begin");
     await page.keyboard.press("Enter");
     await expectFocus(page, found);
@@ -283,7 +283,7 @@ test.describe("with the server answering discovery on loopback", () => {
     await page.keyboard.press("ArrowRight");
     await expectFocus(page, "Server address");
     await page.keyboard.press("ArrowDown");
-    await expectFocus(page, /^[0-9a-z]$/);
+    await expectFocus(page, /^[0-9a-z]$/u);
     await page.keyboard.press("ArrowLeft");
     await expectFocus(page, found);
   });
@@ -325,24 +325,26 @@ test.describe("with the server answering discovery on loopback", () => {
       });
 
     // The control: the very same request succeeds while the session is live.
-    expect((await asSignedOut()).status).toBe(200);
+    const live = await asSignedOut();
+    expect(live.status).toBe(200);
     await page.keyboard.press("Enter");
 
     // Back on the same server's chooser, with the stored session gone.
     await expect(main(page, `Sign in to ${info.name}`)).toBeVisible();
-    expect((await expectFocus(page, "Another user")).route).toBe("/onboarding");
+    expect(await focusRoute(page, "Another user")).toBe("/onboarding");
     expect(await page.evaluate(async () => await window.harakiri.session.get())).toBeNull();
     // The server revoked the old token too, so a copy of it signs nobody in.
-    expect((await asSignedOut()).status).toBe(401);
+    const revoked = await asSignedOut();
+    expect(revoked.status).toBe(401);
 
     await signInOnScreen(page, backend);
     await expectLibrary(page, jellyfin);
     await expectStoredSession(page, backend, userDataDir, account.userId);
 
     await first.app.close();
-    page = (await launch()).page;
+    ({ page } = await launch());
     await expect(main(page, "Library")).toBeVisible({ timeout: 20_000 });
-    expect((await expectFocus(page, /^(Play|Resume) \S/, 10_000)).route).toBe("/library");
+    expect(await focusRoute(page, /^(?:Play|Resume) \S/u, 10_000)).toBe("/library");
     await expect(main(page, "Welcome")).toHaveCount(0);
     await expectStoredSession(page, backend, userDataDir, account.userId);
   });
@@ -405,7 +407,7 @@ test.describe("with no server answering discovery", () => {
     await page.keyboard.press("Enter");
 
     await expect(main(page, "Welcome")).toBeVisible();
-    expect((await expectFocus(page, "Begin")).route).toBe("/onboarding");
+    expect(await focusRoute(page, "Begin")).toBe("/onboarding");
     expect(await page.evaluate(async () => await window.harakiri.session.get())).toBeNull();
 
     await submitAddress(page, backend.address);
@@ -461,7 +463,7 @@ test.describe("with no server answering discovery", () => {
   const addressCases: readonly AddressCase[] = [
     {
       name: "an address that cannot be a server",
-      address: async () => "ftp://nas",
+      address: () => "ftp://nas",
       message: () =>
         "That is not an address harakiri can use. Type a host name or IP, such as 192.168.1.20 or jellyfin.local.",
     },
@@ -522,7 +524,8 @@ test.describe("with no server answering discovery", () => {
           expect(stub.seen).toContain("GET /System/Info/Public");
         }
         // Focus stays on the keyboard, so the owner can correct the address at once.
-        expect((await expectFocus(page, "Connect")).route).toBe("/onboarding");
+
+        expect(await focusRoute(page, "Connect")).toBe("/onboarding");
 
         await page.keyboard.press("Escape");
         await expect(main(page, "Welcome")).toBeVisible();

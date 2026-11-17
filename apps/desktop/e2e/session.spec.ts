@@ -1,5 +1,5 @@
 import { existsSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import path from "node:path";
 
 import { expect, test } from "./support/harakiri";
 
@@ -28,10 +28,12 @@ test("signing out clears the session for good but keeps the device id", async ({
   signIn();
   const first = await launch();
 
-  await first.page.evaluate(async () => await window.harakiri.session.clear());
+  await first.page.evaluate(async () => {
+    await window.harakiri.session.clear();
+  });
 
   expect(await first.page.evaluate(async () => await window.harakiri.session.get())).toBeNull();
-  expect(existsSync(join(userDataDir, "session.json"))).toBe(false);
+  expect(existsSync(path.join(userDataDir, "session.json"))).toBe(false);
   await first.app.close();
   const second = await launch();
   expect(await second.page.evaluate(async () => await window.harakiri.session.get())).toBeNull();
@@ -45,10 +47,15 @@ test("a session saved through the bridge survives a restart", async ({ launch, a
   const first = await launch();
   const deviceId = await first.page.evaluate(async () => await window.harakiri.deviceId());
 
-  await first.page.evaluate(async (session) => await window.harakiri.session.save(session), {
-    ...rest,
-    accessToken,
-  });
+  await first.page.evaluate(
+    async (session) => {
+      await window.harakiri.session.save(session);
+    },
+    {
+      ...rest,
+      accessToken,
+    }
+  );
   await first.app.close();
 
   const second = await launch();
@@ -67,7 +74,7 @@ test("an unreadable session file reads as signed out and the app keeps working",
 }) => {
   signIn();
   const { page } = await launch();
-  const sessionFile = join(userDataDir, "session.json");
+  const sessionFile = path.join(userDataDir, "session.json");
 
   const corrupt = [
     "{not json",
@@ -77,6 +84,7 @@ test("an unreadable session file reads as signed out and the app keeps working",
     JSON.stringify({ ...account, token: { kind: "encrypted", base64: "AAAA" } }),
   ];
 
+  /* oxlint-disable eslint/no-await-in-loop -- each corrupt file is written, read back and judged in turn */
   for (const contents of corrupt) {
     writeFileSync(sessionFile, contents);
     expect(
@@ -84,6 +92,7 @@ test("an unreadable session file reads as signed out and the app keeps working",
       contents
     ).toBeNull();
   }
+  /* oxlint-enable eslint/no-await-in-loop */
 
   expect(await page.evaluate(async () => await window.harakiri.deviceId())).toBe(account.deviceId);
   signIn();

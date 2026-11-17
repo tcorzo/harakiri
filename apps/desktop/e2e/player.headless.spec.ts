@@ -4,9 +4,11 @@ import { joinFacts } from "@harakiri/jellyfin";
 
 import {
   expect,
+  isRunning,
   play,
   playerEvents,
   playerEventUntil,
+  playerPhases,
   probe,
   probeUntil,
   recordPlayerEvents,
@@ -62,9 +64,9 @@ test("plays from a start position over a direct Jellyfin stream and reports it",
   const playing = await playerEventUntil(page, (event) => event.phase === "playing");
   expect(playing.itemId).toBe(item.id);
   expect(playing.positionTicks).toBeGreaterThanOrEqual(ticks(120));
-  expect(joinFacts(playing.facts)).toMatch(/\S/);
+  expect(joinFacts(playing.facts)).toMatch(/\S/u);
   expect(playing.transcodeReasons).toEqual([]);
-  const phases = (await playerEvents(page)).map((event) => event.phase);
+  const phases = await playerPhases(page);
   expect(phases.indexOf("starting")).toBeLessThan(phases.indexOf("playing"));
 
   const server = await until(
@@ -100,7 +102,8 @@ test("mpv's own key bindings pause, seek, resume and stop through the app", asyn
   );
   const frozenAt = paused.timePos ?? 0;
   await sleep(1000);
-  expect((await probe(page)).timePos).toBeCloseTo(frozenAt, 1);
+  const atFreeze = await probe(page);
+  expect(atFreeze.timePos).toBeCloseTo(frozenAt, 1);
 
   await pressKey(userDataDir, "RIGHT");
   const seeked = await probeUntil(page, (p) => (p.timePos ?? 0) >= frozenAt + 25);
@@ -121,7 +124,7 @@ test("mpv's own key bindings pause, seek, resume and stop through the app", asyn
   await pressKey(userDataDir, "ESC");
   const stopped = await playerEventUntil(page, (event) => event.phase === "stopped");
   expect(stopped.itemId).toBe(item.id);
-  expect((await probe(page)).running).toBe(false);
+  expect(await isRunning(page)).toBe(false);
   expect(mpvProcesses(userDataDir)).toEqual([]);
 });
 
@@ -141,7 +144,7 @@ test("stopping saves the resume position on the server", async ({
   await stop(page);
 
   const stopped = await playerEventUntil(page, (event) => event.phase === "stopped");
-  expect((await probe(page)).running).toBe(false);
+  expect(await isRunning(page)).toBe(false);
   expect(stopped.positionTicks).toBeGreaterThanOrEqual(ticks(203));
 
   const saved = await until(
@@ -174,6 +177,7 @@ test("a second play replaces the first: one mpv, and the first reports stopped",
   if (!first || !second) {
     throw new Error("pickItems returned fewer items than asked");
   }
+
   await preserveUserData(first.id);
   await preserveUserData(second.id);
   const { page } = await launch();
