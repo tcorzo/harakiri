@@ -15,8 +15,8 @@ const logger = getLogger(["harakiri", "player", "fidelity"]);
 
 /** The part of the mpv client the watcher needs, so tests can stand in for mpv. */
 export interface FidelityMpv {
-  getProperty<T>(name: string, schema: z.ZodType<T>): Promise<T>;
-  setProperty(name: string, value: string | number): Promise<void>;
+  getProperty: <T>(name: string, schema: z.ZodType<T>) => Promise<T>;
+  setProperty: (name: string, value: string | number) => Promise<void>;
 }
 
 export interface WatchOptions {
@@ -32,18 +32,18 @@ export interface WatchOptions {
 }
 
 export interface FidelityWatch {
-  view(): FidelityView;
+  view: () => FidelityView;
   /** Call before switching the audio track: sets what mpv may bitstream for the new one. */
-  selectSound(sound: SoundSource | null): Promise<void>;
+  selectSound: (sound: SoundSource | null) => Promise<void>;
   /** Call on each warning mpv logs about its audio output (`ao/…`). */
-  audioOutputWarning(): void;
+  audioOutputWarning: () => void;
   /** Call on each error mpv logs about its video output (`vo/…`). */
-  rendererError(): void;
+  rendererError: () => void;
   /** Starts sampling; call once the file has loaded. Warnings before it still count. */
-  start(): void;
+  start: () => void;
   /** One look at mpv; the interval calls it, and tests call it directly. */
-  sample(): Promise<void>;
-  stop(): void;
+  sample: () => Promise<void>;
+  stop: () => void;
 }
 
 /** Samples kept to judge the audio output; a PipeWire stream that fails reopens and fails again. */
@@ -69,28 +69,28 @@ const TrackList = z.array(
 const HDR_GAMMAS = new Set(["pq", "hlg"]);
 
 /** Reads a property that mpv reports as unavailable while its subsystem is down. */
-async function optional<T>(
+const optional = async <T>(
   mpv: FidelityMpv,
   name: string,
   schema: z.ZodType<T>
-): Promise<T | undefined> {
+): Promise<T | undefined> => {
   try {
     return await mpv.getProperty(name, schema);
   } catch {
     return undefined;
   }
-}
+};
 
 /**
  * Watches mpv's audio and video outputs, feeds what it sees to the fidelity engine, and applies
  * the engine's step-downs: a bitstream that stops playing is decoded, and a renderer that cannot
  * start gives way to the next one.
  */
-export function watchFidelity(
+export const watchFidelity = (
   mpv: FidelityMpv,
   initial: FidelityState,
   options: WatchOptions
-): FidelityWatch {
+): FidelityWatch => {
   let state = initial;
   let shown = JSON.stringify(fidelityView(state));
   let audioSamples: boolean[] = [];
@@ -109,7 +109,7 @@ export function watchFidelity(
         const aid = options.aid();
 
         // mpv picks passthrough when it opens the decoder, so a playing track is reopened.
-        if (reselect && typeof aid === "number") {
+        if (reselect && aid !== false && aid !== undefined) {
           await mpv.setProperty("aid", "no");
           await mpv.setProperty("aid", aid);
         }
@@ -129,20 +129,23 @@ export function watchFidelity(
 
   const learn = async (observation: Observation, failure: boolean): Promise<void> => {
     const step = observe(state, observation);
-    state = step.state;
+    ({ state } = step);
 
     for (const action of step.actions) {
-      await apply(action, failure).catch((error: unknown) => {
+      try {
+        // oxlint-disable-next-line eslint/no-await-in-loop -- the engine's actions reach mpv in the order it gave them
+        await apply(action, failure);
+      } catch (error) {
         logger.warn("Applying {action} failed: {error}", { action, error });
-      });
+      }
     }
 
     if (failure) {
-      await mpv
-        .setProperty("time-pos", lastHealthy ?? options.startSeconds)
-        .catch((error: unknown) => {
-          logger.warn("Returning after a step-down failed: {error}", { error });
-        });
+      try {
+        await mpv.setProperty("time-pos", lastHealthy ?? options.startSeconds);
+      } catch (error) {
+        logger.warn("Returning after a step-down failed: {error}", { error });
+      }
     }
 
     const view = fidelityView(state);
@@ -151,6 +154,7 @@ export function watchFidelity(
     if (next === shown) {
       return;
     }
+
     shown = next;
 
     for (const downgrade of view.downgrades) {
@@ -167,7 +171,8 @@ export function watchFidelity(
       optional(mpv, "time-pos", z.number()),
     ]);
 
-    const audioSelected = typeof options.aid() === "number";
+    const aid = options.aid();
+    const audioSelected = aid !== false && aid !== undefined;
 
     // A PipeWire stream in error reopens about once a second, so with video keeping the clock
     // `current-ao` is present half the time; mpv's own warnings between samples settle it.
@@ -186,7 +191,7 @@ export function watchFidelity(
 
     // A PipeWire stream that keeps failing is open for a moment between attempts, so only a
     // whole window of open samples, or a working renderer, marks a moment worth returning to.
-    const audioHealthy = audioSamples.length === AUDIO_WINDOW && audioSamples.every((open) => open);
+    const audioHealthy = audioSamples.length === AUDIO_WINDOW && audioSamples.every(Boolean);
 
     if (position !== undefined && ((options.video && vo !== undefined) || audioHealthy)) {
       lastHealthy = position;
@@ -219,25 +224,38 @@ export function watchFidelity(
     if (vo === undefined) {
       return;
     }
+
     const target = await optional(mpv, "video-target-params", TargetParams);
 
     if (target === undefined) {
       return;
     }
+
     const hdr = HDR_GAMMAS.has(target.gamma);
 
     if (hdr === display) {
       return;
     }
+
     display = hdr;
     await learn({ kind: "displayTarget", hdr }, false);
+  };
+
+  const sampleOrWarn = async (): Promise<void> => {
+    try {
+      await sample();
+    } catch (error) {
+      logger.warn("Fidelity sample failed: {error}", { error });
+    }
   };
 
   let timer: NodeJS.Timeout | undefined;
 
   return {
     view: () => fidelityView(state),
-    selectSound: async (sound) => await learn({ kind: "soundTrack", sound }, false),
+    selectSound: async (sound) => {
+      await learn({ kind: "soundTrack", sound }, false);
+    },
     audioOutputWarning: () => {
       audioWarnings += 1;
     },
@@ -246,9 +264,7 @@ export function watchFidelity(
     },
     start: () => {
       timer ??= setInterval(() => {
-        void sample().catch((error: unknown) => {
-          logger.warn("Fidelity sample failed: {error}", { error });
-        });
+        void sampleOrWarn();
       }, options.intervalMs ?? 500);
     },
     sample,
@@ -256,4 +272,4 @@ export function watchFidelity(
       clearInterval(timer);
     },
   };
-}
+};

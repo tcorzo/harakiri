@@ -44,14 +44,14 @@ const REASONS: Readonly<Record<TranscodeReason, string>> = {
 const isReason = (raw: string): raw is TranscodeReason => Object.hasOwn(REASONS, raw);
 
 /** The server lists its reasons only inside the TranscodingUrl query. */
-export function transcodeReasons(transcodingUrl: string): string[] {
+export const transcodeReasons = (transcodingUrl: string): string[] => {
   const raw = new URL(transcodingUrl, "http://x/").searchParams.get("TranscodeReasons") ?? "";
 
   return raw
     .split(",")
     .filter((reason) => reason !== "")
     .map((reason) => (isReason(reason) ? REASONS[reason] : reason));
-}
+};
 
 const ERRORS: Readonly<Record<NonNullable<PlaybackInfoResponse["ErrorCode"]>, string>> = {
   NotAllowed: "The server does not allow this user to play it",
@@ -84,32 +84,50 @@ export interface Resolution {
   readonly durationTicks: number | undefined;
 }
 
-/** Picks the media source and the URL mpv plays from a PlaybackInfo response. */
-export function resolve(
-  response: PlaybackInfoResponse,
-  request: ResolveRequest,
-  server: ServerUrl
-): Resolution {
-  if (response.ErrorCode) {
-    throw new Error(ERRORS[response.ErrorCode]);
-  }
+/** The source the request names, or else the server's first; it needs an id to be played. */
+const pickSource = (response: PlaybackInfoResponse, request: ResolveRequest) => {
   const sources = response.MediaSources ?? [];
   const source = sources.find((s) => s.Id === request.mediaSourceId) ?? sources[0];
+  const id = source?.Id;
 
-  if (!source?.Id) {
+  if (source === undefined || id === undefined || id === null || id === "") {
     throw new Error("The server returned no media source");
   }
 
-  const transcodingUrl = source.TranscodingUrl ?? undefined;
-  const method: PlayMethod = transcodingUrl === undefined ? "DirectPlay" : "Transcode";
+  return { source, id };
+};
 
-  const transcodedAudio = transcodingUrl
-    ? Number(new URL(transcodingUrl, server).searchParams.get("AudioStreamIndex") ?? Number.NaN)
-    : Number.NaN;
+/** The audio stream a transcode carries, or else the one asked for or the source's default. */
+const audioIndex = (
+  source: MediaSourceInfo,
+  request: ResolveRequest,
+  transcodingUrl: string | undefined,
+  server: ServerUrl
+): number | undefined => {
+  const transcodedAudio =
+    transcodingUrl === undefined || transcodingUrl === ""
+      ? Number.NaN
+      : Number(new URL(transcodingUrl, server).searchParams.get("AudioStreamIndex") ?? Number.NaN);
 
-  const audioStreamIndex = Number.isNaN(transcodedAudio)
+  return Number.isNaN(transcodedAudio)
     ? (request.audioStreamIndex ?? source.DefaultAudioStreamIndex ?? undefined)
     : transcodedAudio;
+};
+
+/** Picks the media source and the URL mpv plays from a PlaybackInfo response. */
+export const resolve = (
+  response: PlaybackInfoResponse,
+  request: ResolveRequest,
+  server: ServerUrl
+): Resolution => {
+  if (response.ErrorCode) {
+    throw new Error(ERRORS[response.ErrorCode]);
+  }
+
+  const { source, id } = pickSource(response, request);
+  const transcodingUrl = source.TranscodingUrl ?? undefined;
+  const method: PlayMethod = transcodingUrl === undefined ? "DirectPlay" : "Transcode";
+  const audioStreamIndex = audioIndex(source, request, transcodingUrl, server);
 
   const subtitleStreamIndex =
     request.subtitleStreamIndex ?? source.DefaultSubtitleStreamIndex ?? undefined;
@@ -125,11 +143,11 @@ export function resolve(
         ? staticStreamUrl({
             server,
             itemId: ItemId.parse(request.itemId),
-            mediaSourceId: MediaSourceId.parse(source.Id),
+            mediaSourceId: MediaSourceId.parse(id),
           })
         : new URL(transcodingUrl, server).toString(),
     playSessionId: response.PlaySessionId ?? undefined,
-    mediaSourceId: source.Id,
+    mediaSourceId: id,
     transcodeReasons: transcodingUrl === undefined ? [] : transcodeReasons(transcodingUrl),
     // A direct play needs no stream information from the server: mpv reads the file itself.
     unreadable:
@@ -142,7 +160,7 @@ export function resolve(
     sid: mpvTrack(tracks.subtitles, subtitleStreamIndex),
     durationTicks: source.RunTimeTicks ?? undefined,
   };
-}
+};
 
 export interface ProgrammeEntry {
   readonly title: string;
@@ -150,9 +168,10 @@ export interface ProgrammeEntry {
 }
 
 const runtime = (ticks: number | null | undefined): string | undefined => {
-  if (!ticks) {
+  if (ticks === undefined || ticks === null || ticks === 0) {
     return undefined;
   }
+
   const minutes = Math.round(ticks / 600_000_000);
   const hours = Math.floor(minutes / 60);
 
@@ -160,12 +179,15 @@ const runtime = (ticks: number | null | undefined): string | undefined => {
 };
 
 /** The title and the one-line programme note the player controls show. */
-export function programmeEntry(item: BaseItemDto): ProgrammeEntry {
+export const programmeEntry = (item: BaseItemDto): ProgrammeEntry => {
   const name = item.Name ?? "Untitled";
 
   if (item.Type === "Episode") {
     const number =
-      item.ParentIndexNumber != null && item.IndexNumber != null
+      item.ParentIndexNumber !== undefined &&
+      item.ParentIndexNumber !== null &&
+      item.IndexNumber !== undefined &&
+      item.IndexNumber !== null
         ? `S${item.ParentIndexNumber} E${item.IndexNumber}`
         : undefined;
 
@@ -181,4 +203,4 @@ export function programmeEntry(item: BaseItemDto): ProgrammeEntry {
       .filter(Boolean)
       .join(" · "),
   };
-}
+};

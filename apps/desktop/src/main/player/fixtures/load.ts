@@ -37,7 +37,7 @@ export type FixtureName =
 
 /** A PlaybackInfo response recorded from the dev Jellyfin by `record.ts`. */
 export const playbackInfo = (name: FixtureName): PlaybackInfoResponse =>
-  Fixture.parse(JSON.parse(readFileSync(new URL(`./${name}.json`, import.meta.url), "utf-8")));
+  Fixture.parse(JSON.parse(readFileSync(new URL(`${name}.json`, import.meta.url), "utf-8")));
 
 export const mediaSource = (name: FixtureName): MediaSourceInfo => {
   const first = playbackInfo(name).MediaSources?.[0];

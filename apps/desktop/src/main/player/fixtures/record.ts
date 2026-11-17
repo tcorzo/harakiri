@@ -4,7 +4,7 @@
 // Run from the repo root:
 //   mise exec -- bun apps/desktop/src/main/player/fixtures/record.ts dv5-eac3=<itemId> ...
 import { writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import path from "node:path";
 
 import {
   AccessToken,
@@ -33,7 +33,7 @@ const TRANSCODE_FIXTURE = "transcode-bitrate";
 const fixtures = process.argv.slice(2).map((arg) => {
   const [name, itemId] = arg.split("=");
 
-  if (!name || !itemId) {
+  if (name === undefined || name === "" || itemId === undefined || itemId === "") {
     throw new Error(`expected name=itemId, got ${arg}`);
   }
 
@@ -85,14 +85,15 @@ const record = async (name: string, itemId: ItemId, maxBitrate?: number) => {
   });
 
   const json = JSON.stringify(scrubPlaybackInfo({ ...data }, name), null, 2).replaceAll(
-    /ApiKey=[0-9a-f]+/g,
+    /ApiKey=[0-9a-f]+/gu,
     "ApiKey=REDACTED"
   );
 
-  await writeFile(join(import.meta.dirname, `${name}.json`), `${json}\n`);
+  await writeFile(path.join(import.meta.dirname, `${name}.json`), `${json}\n`);
   console.log(`${name}: ${data.MediaSources?.[0]?.Name ?? "?"}`);
 };
 
 for (const { name, itemId } of fixtures) {
+  // oxlint-disable-next-line eslint/no-await-in-loop -- one request at a time against the dev server, logged in argument order
   await record(name, itemId, name === TRANSCODE_FIXTURE ? 200_000 : undefined);
 }

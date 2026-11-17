@@ -54,16 +54,16 @@ const ALERT_MARK = 18;
 
 /** Keeps item titles from opening override blocks or forming `\N`-style escapes. */
 const escape = (raw: string): string =>
-  raw.replaceAll("\\", "\\⁠").replaceAll("{", "\\{").replaceAll("}", "\\}").replaceAll(/\s+/g, " ");
+  raw.replaceAll("\\", "\\⁠").replaceAll("{", "\\{").replaceAll("}", "\\}").replaceAll(/\s+/gu, " ");
 
 const text = (x: number, y: number, style: string, content: string, align = 7): string =>
   `{\\an${align}\\pos(${x},${y})${BASE}${style}}${escape(content)}`;
 
-const shape = (x: number, y: number, color: string, alpha: string, path: string): string =>
+const drawing = (x: number, y: number, color: string, alpha: string, path: string): string =>
   `{\\an7\\pos(${x},${y})${BASE}\\1c${color}\\1a${alpha}\\p1}${path}{\\p0}`;
 
 const rect = (x: number, y: number, w: number, h: number, color: string, alpha = "&H00&") =>
-  shape(x, y, color, alpha, `m 0 0 l ${w} 0 ${w} ${h} 0 ${h}`);
+  drawing(x, y, color, alpha, `m 0 0 l ${w} 0 ${w} ${h} 0 ${h}`);
 
 const clock = (seconds: number): string => {
   const total = Math.max(0, Math.floor(seconds));
@@ -84,8 +84,8 @@ const stateGlyph = (paused: boolean, x: number, y: number): string[] => [
   rect(x - KEYLINE, y - KEYLINE, GLYPH_TILE + 2 * KEYLINE, GLYPH_TILE + 2 * KEYLINE, INK),
   rect(x, y, GLYPH_TILE, GLYPH_TILE, ACCENT),
   paused
-    ? shape(x + 10, y + 8, PAPER, "&H00&", "m 0 0 l 8 0 8 28 0 28 m 16 0 l 24 0 24 28 16 28")
-    : shape(x + 12, y + 8, PAPER, "&H00&", "m 0 0 l 24 14 0 28"),
+    ? drawing(x + 10, y + 8, PAPER, "&H00&", "m 0 0 l 8 0 8 28 0 28 m 16 0 l 24 0 24 28 16 28")
+    : drawing(x + 12, y + 8, PAPER, "&H00&", "m 0 0 l 24 14 0 28"),
 ];
 
 // libass has no gradient fill, so the ink field fades in over stacked bands.
@@ -99,7 +99,7 @@ const scrub = (view: ControlsView, y: number): string[] => {
   const width = RIGHT - LEFT;
 
   const fraction =
-    view.durationSeconds && view.durationSeconds > 0
+    view.durationSeconds !== undefined && view.durationSeconds > 0
       ? Math.min(Math.max(view.positionSeconds / view.durationSeconds, 0), 1)
       : 0;
 
@@ -124,13 +124,15 @@ const menuPanel = (menu: NonNullable<ControlsView["menu"]>): string[] => {
   const width = RIGHT - MENU_LEFT;
   const events: string[] = [];
   let y = 140;
-  visible.forEach((row, offset) => {
+
+  for (const [offset, row] of visible.entries()) {
     const index = start + offset;
 
     if (offset === 0 || rows[index - 1]?.property !== row.property) {
       if (offset > 0) {
         y += 14;
       }
+
       events.push(
         text(MENU_LEFT + 32, y, STYLE.label, row.property === "aid" ? "SOUND" : "SUBTITLES")
       );
@@ -145,19 +147,21 @@ const menuPanel = (menu: NonNullable<ControlsView["menu"]>): string[] => {
     if (focused) {
       events.push(rect(MENU_LEFT + 32, y + 4, 4, 38, PAPER));
     }
+
     events.push(text(MENU_LEFT + 52, y, focused ? STYLE.rowFocused : STYLE.row, row.label));
 
     if (active) {
       events.push(rect(RIGHT - 48, y + 17, 10, 10, PAPER));
     }
+
     y += 48;
-  });
+  }
 
   return [rect(MENU_LEFT, 100, width, y - 60, INK, "&H28&"), ...events];
 };
 
 /** The player controls as ASS events for `osd-overlay` (format ass-events, 1920x1080). */
-export function renderControls(view: ControlsView): string {
+export const renderControls = (view: ControlsView): string => {
   const facts = view.transcodeReasons.length
     ? `${view.signalPath} · ${view.transcodeReasons.join(" · ")}`
     : view.signalPath;
@@ -181,9 +185,17 @@ export function renderControls(view: ControlsView): string {
     ...scrub(view, 968),
     ...stateGlyph(view.paused, LEFT, 984),
     text(LEFT + GLYPH_TILE + 20, 988, STYLE.time, clock(view.positionSeconds)),
-    text(RIGHT, 988, STYLE.note, view.durationSeconds ? clock(view.durationSeconds) : "", 9),
+    text(
+      RIGHT,
+      988,
+      STYLE.note,
+      view.durationSeconds === undefined || view.durationSeconds === 0
+        ? ""
+        : clock(view.durationSeconds),
+      9
+    ),
     ...(view.menu ? menuPanel(view.menu) : []),
   ];
 
   return events.join("\n");
-}
+};

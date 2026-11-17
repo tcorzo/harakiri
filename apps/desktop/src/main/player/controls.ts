@@ -143,8 +143,8 @@ const onAction = (state: ControlsState, action: PlayerAction, rows: readonly Men
 };
 
 /** The player's control logic: mpv input and mpv state in, new state and mpv commands out. */
-export function step(state: ControlsState, input: ControlsInput, rows: readonly MenuRow[]): Step {
-  return match(input)
+export const step = (state: ControlsState, input: ControlsInput, rows: readonly MenuRow[]): Step =>
+  match(input)
     .with({ type: "action" }, ({ action }) => onAction(state, action, rows))
     .with({ type: "hide" }, () => ({
       // Paused or browsing tracks, the controls are the point; only playback hides them.
@@ -157,4 +157,3 @@ export function step(state: ControlsState, input: ControlsInput, rows: readonly 
     }))
     .with({ type: "tracks" }, ({ aid, sid }) => ({ state: { ...state, aid, sid }, commands: [] }))
     .exhaustive();
-}
