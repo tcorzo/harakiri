@@ -86,16 +86,16 @@ Validating against the owner's real library stays supported, as an opt-in run (`
 
 When the owner corrects a mistake, fix it and add the rule here with what enforces it. A rule that has no enforcement and is broken again gets enforcement in the same change.
 
-| Rule                                                                                                | Enforced by                                                                                                    |
-| --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Tests never skip; a test that needs a server or samples lives in a tier and fails loudly without it | `scripts/lint-skips.ts` (hk pre-commit, `mise run check`); tiers selected by file name in `vitest.shared.ts`   |
-| `mise run check` never needs a server, the NAS or the network                                       | Tier files are excluded from every package's default `vitest.config.ts`                                        |
-| No workstation paths, owner domains or library titles in tracked files                              | `scripts/lint-private.ts` (hk pre-commit, `mise run check`), with titles in the gitignored `.private-denylist` |
-| Recorded Jellyfin fixtures carry no real library data                                               | The recorders scrub through `@harakiri/jellyfin/fixture-scrub`; `scrub.test.ts` fails on an unscrubbed fixture |
-| The corpus gets the classification its catalog declares                                             | `mise run test:corpus` against a real scan                                                                     |
-| Fidelity decisions live in `packages/fidelity`                                                      | `docs/fidelity/compatibility.md` is regenerated and diffed by `table.test.ts`                                  |
-| Secrets never reach mpv's argv                                                                      | `playback.local.test.ts` reads mpv's real cmdline                                                              |
-| PR titles are Conventional Commits, like commit messages                                            | `mise run lint:pr-title` (CI: `.github/workflows/pr-title.yml` on every PR open, edit and push)                |
+| Rule                                                                                                         | Enforced by                                                                                                                                                 |
+| ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tests never skip; a test that needs a server or samples lives in a tier and fails loudly without it          | `scripts/lint-skips.ts` (hk pre-commit, `mise run check`); tiers selected by file name in `vitest.shared.ts`                                                |
+| `mise run check` never needs a server, the NAS or the network                                                | Tier files are excluded from every package's default `vitest.config.ts`                                                                                     |
+| No workstation paths, owner domains or library titles in tracked files                                       | `scripts/lint-private.ts` (hk pre-commit, `mise run check`), with titles in the gitignored `.private-denylist`                                              |
+| Recorded Jellyfin fixtures carry no real library data                                                        | The recorders scrub through `@harakiri/jellyfin/fixture-scrub`; `scrub.test.ts` fails on an unscrubbed fixture                                              |
+| The corpus gets the classification its catalog declares                                                      | `mise run test:corpus` against a real scan                                                                                                                  |
+| Fidelity decisions live in `packages/fidelity`                                                               | `docs/fidelity/compatibility.md` is regenerated and diffed by `table.test.ts`                                                                               |
+| Secrets never reach mpv's argv                                                                               | `playback.local.test.ts` reads mpv's real cmdline                                                                                                           |
+| PR titles are Conventional Commits: GitHub only squash-merges, and the PR title becomes the commit on `main` | `mise run lint:pr-title` (CI: `.github/workflows/pr-title.yml` on every PR open, edit and push); squash-only with PR-title commits is a GitHub repo setting |
 
 ## Conventions
 
