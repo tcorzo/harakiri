@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
-import { OnboardingScreen } from "../onboarding/OnboardingScreen";
+import { OnboardingScreen } from "../onboarding/onboarding-screen";
 
 export const Route = createFileRoute("/onboarding")({
   // Signing out returns here with the server already known, so the owner lands on the user list.

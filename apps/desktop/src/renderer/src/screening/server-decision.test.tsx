@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, test } from "vitest";
 
-import { ServerDecision } from "./ScreeningScreen";
+import { ServerDecision } from "./screening-screen";
 
 afterEach(cleanup);
 

@@ -8,7 +8,7 @@ import {
   recentQuery,
   upNextQuery,
 } from "../../data/queries";
-import { LibraryScreen } from "../../library/LibraryScreen";
+import { LibraryScreen } from "../../library/library-screen";
 
 export const Route = createFileRoute("/_signedIn/library")({
   loader: async ({ context: { queryClient, signedIn } }) => {

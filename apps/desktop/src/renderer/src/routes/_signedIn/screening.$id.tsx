@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { rawItemQuery } from "../../data/queries";
-import { ScreeningScreen } from "../../screening/ScreeningScreen";
+import { ScreeningScreen } from "../../screening/screening-screen";
 
 const search = z.object({
   start: z.number().int().nonnegative().catch(0),

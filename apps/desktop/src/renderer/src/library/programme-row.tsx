@@ -8,7 +8,7 @@ import type { Entry } from "../data/entry";
 import { QuietAction } from "../ui/actions";
 import { Notice, rootRem, SectionHead } from "../ui/marks";
 import type { CardProps } from "./cards";
-import { useReducedMotion } from "./heroCycle";
+import { useReducedMotion } from "./hero-cycle";
 import { cardKey, rowKey, useLit } from "./lit";
 import type { Section } from "./lit";
 import { numberFor } from "./sections";

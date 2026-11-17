@@ -2,7 +2,7 @@ import { reportSessionEnded } from "@harakiri/jellyfin/generated";
 import type { QueryClient } from "@tanstack/react-query";
 
 import { useLit } from "../library/lit";
-import { seriesPlace } from "../title/seriesPlace";
+import { seriesPlace } from "../title/series-place";
 import { sessionQuery, signedIn } from "./session";
 
 /**

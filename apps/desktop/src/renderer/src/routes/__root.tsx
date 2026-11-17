@@ -3,7 +3,7 @@ import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import { Suspense } from "react";
 
 import { useInputHub } from "../input/hub";
-import { Curtain } from "../ui/Curtain";
+import { Curtain } from "../ui/curtain";
 
 function Root() {
   useInputHub();

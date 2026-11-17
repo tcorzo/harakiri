@@ -7,12 +7,12 @@ import { useEffect, useState } from "react";
 
 import { episodeCode, minutesLeft, programmeNotes } from "../data/entry";
 import type { Entry } from "../data/entry";
-import { Backdrop, backdropUrl, InkField, Margin, TitleMark } from "../library/Stage";
+import { Backdrop, backdropUrl, InkField, Margin, TitleMark } from "../library/stage";
 import { PlayAction, QuietAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
 import { ProgrammeNotes } from "../ui/marks";
-import { TrackPicker } from "./TrackPicker";
-import type { TrackOption } from "./TrackPicker";
+import { TrackPicker } from "./track-picker";
+import type { TrackOption } from "./track-picker";
 
 /** Jellyfin's index for "no subtitles". */
 const subtitlesOff = -1;

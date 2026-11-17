@@ -4,8 +4,8 @@ import { getRouteApi, Navigate } from "@tanstack/react-router";
 import { catalogueQuery, titleQuery } from "../data/queries";
 import { useSignedIn } from "../data/session";
 import { numberFor } from "../library/sections";
-import { FilmPage } from "./FilmPage";
-import { SeriesPage } from "./SeriesPage";
+import { FilmPage } from "./film-page";
+import { SeriesPage } from "./series-page";
 
 const route = getRouteApi("/_signedIn/title/$id");
 

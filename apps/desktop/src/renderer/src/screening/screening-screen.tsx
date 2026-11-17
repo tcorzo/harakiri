@@ -13,7 +13,7 @@ import { useSignedIn } from "../data/session";
 import { useActionHandler } from "../input/handlers";
 import { inputMode } from "../input/mode";
 import { numberFor } from "../library/sections";
-import { backdropUrl } from "../library/Stage";
+import { backdropUrl } from "../library/stage";
 import { PlayAction, QuietAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
 import { catalogueLabel, Notice, StateMark } from "../ui/marks";

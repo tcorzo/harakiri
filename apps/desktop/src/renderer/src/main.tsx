@@ -10,7 +10,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { routeTree } from "./routeTree.gen";
-import { ErrorScreen } from "./ui/ErrorScreen";
+import { ErrorScreen } from "./ui/error-screen";
 
 import "./styles.css";
 

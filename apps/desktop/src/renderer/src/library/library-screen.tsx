@@ -31,12 +31,12 @@ import { focusFirst } from "../ui/focus";
 import { catalogueLabel, remPx } from "../ui/marks";
 import { PosterCard, StillCard } from "./cards";
 import type { CardProps } from "./cards";
-import { heroHoldMs, upNext, useHeroCycle } from "./heroCycle";
+import { heroHoldMs, upNext, useHeroCycle } from "./hero-cycle";
 import { cardKey, restoreKeys, tonight, useLit } from "./lit";
 import type { Section } from "./lit";
-import { FailedRow, ProgrammeRow, retryKey } from "./ProgrammeRow";
+import { FailedRow, ProgrammeRow, retryKey } from "./programme-row";
 import { numberFor } from "./sections";
-import { Backdrop, backdropUrl, EntryNotes, InkField, Margin, TitleMark } from "./Stage";
+import { Backdrop, backdropUrl, EntryNotes, InkField, Margin, TitleMark } from "./stage";
 
 const noItem = ItemId.parse("00000000000000000000000000000000");
 

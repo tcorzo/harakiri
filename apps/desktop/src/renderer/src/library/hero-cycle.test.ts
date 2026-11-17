@@ -2,7 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { activity, touch } from "../input/activity";
-import { heroCycle, heroHoldMs, heroSettleMs, settled, upNext, useHeroCycle } from "./heroCycle";
+import { heroCycle, heroHoldMs, heroSettleMs, settled, upNext, useHeroCycle } from "./hero-cycle";
 import { useLit } from "./lit";
 
 const films = (count: number): string[] => Array.from({ length: count }, (_, i) => `film-${i}`);

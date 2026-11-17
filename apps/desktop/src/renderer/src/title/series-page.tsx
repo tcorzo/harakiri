@@ -9,11 +9,11 @@ import { episodeCode, programmeNotes } from "../data/entry";
 import type { Entry } from "../data/entry";
 import { episodesQuery, seasonsQuery } from "../data/queries";
 import { useSignedIn } from "../data/session";
-import { Backdrop, backdropUrl, InkField, Margin, TitleMark } from "../library/Stage";
+import { Backdrop, backdropUrl, InkField, Margin, TitleMark } from "../library/stage";
 import { PlayAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
 import { ProgrammeNotes, SeenMark } from "../ui/marks";
-import { seriesPlace } from "./seriesPlace";
+import { seriesPlace } from "./series-place";
 
 const episodeKey = (id: ItemId): string => `episode-${id}`;
 

@@ -3,8 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { toEntry } from "../../data/entry";
 import { catalogueQuery, episodesQuery, rawItemQuery, seasonsQuery } from "../../data/queries";
-import { initialSeason } from "../../title/SeriesPage";
-import { TitleScreen } from "../../title/TitleScreen";
+import { initialSeason } from "../../title/series-page";
+import { TitleScreen } from "../../title/title-screen";
 
 export const Route = createFileRoute("/_signedIn/title/$id")({
   params: { parse: ({ id }) => ({ id: ItemId.parse(id) }), stringify: ({ id }) => ({ id }) },
