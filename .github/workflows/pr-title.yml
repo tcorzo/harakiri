@@ -1,0 +1,21 @@
+name: PR title
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  conventional:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v4
+        with:
+          install_args: hk
+      # The title goes through env, never interpolated into the script.
+      - run: mise run lint:pr-title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}

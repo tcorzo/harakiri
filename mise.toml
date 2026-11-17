@@ -121,6 +121,19 @@ run = "JELLYFIN_DEV_NAME=harakiri-jellyfin-e2e JELLYFIN_DEV_STATE=.cache/jellyfi
 description = "Fail when a file holds workstation paths, owner domains or library titles (.private-denylist)"
 run = "bun scripts/lint-private.ts"
 
+[tasks."lint:pr-title"]
+description = "Fail when a PR title is not a Conventional Commit (PR_TITLE, else the current branch's PR)"
+shell = "bash -euo pipefail -c"
+run = """
+title="${PR_TITLE:-$(gh pr view --json title -q .title)}"
+msg="$(mktemp)"; trap 'rm -f "$msg"' EXIT
+printf '%s\n' "$title" > "$msg"
+hk util check-conventional-commit "$msg" || {
+  echo "PR title '$title' must be a Conventional Commit, like the commits (hk commit-msg): 'feat: ...', 'fix(scope): ...'. Retitle with: gh pr edit --title '<type>: <summary>'" >&2
+  exit 1
+}
+"""
+
 [tasks.check]
 description = "Everything CI gates on"
 depends = ["lint", "lint:skips", "lint:private", "typecheck", "test"]
