@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM"],
+    "types": ["node"],
+    "outDir": "${configDir}/.tsbuild/e2e",
+    "tsBuildInfoFile": "${configDir}/.tsbuild/e2e.tsbuildinfo"
+  },
+  "include": ["e2e", "playwright.config.ts", "src/shared"],
+  "references": [{ "path": "../../packages/jellyfin" }, { "path": "../../packages/harness" }]
+}

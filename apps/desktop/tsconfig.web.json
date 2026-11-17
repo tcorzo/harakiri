@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+    "outDir": "${configDir}/.tsbuild/web",
+    "tsBuildInfoFile": "${configDir}/.tsbuild/web.tsbuildinfo"
+  },
+  "include": ["src/renderer/src", "src/shared"],
+  "references": [{ "path": "../../packages/input" }, { "path": "../../packages/jellyfin" }]
+}

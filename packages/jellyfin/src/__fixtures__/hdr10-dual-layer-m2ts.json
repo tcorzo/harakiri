@@ -1,0 +1,79 @@
+{
+  "Id": "693b98f7f8ba3a7dc7adc5793628ef68",
+  "Container": "ts",
+  "DefaultAudioStreamIndex": 5,
+  "MediaStreams": [
+    {
+      "Index": 3,
+      "Type": "Video",
+      "Codec": "hevc",
+      "Profile": "Main 10",
+      "Width": 3840,
+      "Height": 2160,
+      "BitDepth": 10,
+      "ColorTransfer": "smpte2084",
+      "VideoRange": "HDR",
+      "VideoRangeType": "HDR10",
+      "AudioSpatialFormat": "None",
+      "IsDefault": false,
+      "DisplayTitle": "4K HEVC HDR"
+    },
+    {
+      "Index": 4,
+      "Type": "Video",
+      "Codec": "hevc",
+      "Profile": "Main 10",
+      "Width": 1920,
+      "Height": 1080,
+      "BitDepth": 10,
+      "ColorTransfer": "smpte2084",
+      "VideoRange": "HDR",
+      "VideoRangeType": "HDR10",
+      "AudioSpatialFormat": "None",
+      "IsDefault": false,
+      "DisplayTitle": "1080p HEVC HDR"
+    },
+    {
+      "Index": 5,
+      "Type": "Audio",
+      "Codec": "dts",
+      "Profile": "DTS-HD MA",
+      "BitDepth": 24,
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 2,
+      "ChannelLayout": "stereo",
+      "IsDefault": false,
+      "DisplayTitle": "DTS-HD MA - Stereo"
+    },
+    {
+      "Index": 6,
+      "Type": "Audio",
+      "Codec": "dts",
+      "Profile": "DTS-HD MA",
+      "BitDepth": 24,
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 2,
+      "ChannelLayout": "stereo",
+      "IsDefault": false,
+      "DisplayTitle": "DTS-HD MA - Stereo"
+    },
+    {
+      "Index": 7,
+      "Type": "Audio",
+      "Codec": "dts",
+      "Profile": "DTS-HD MA",
+      "BitDepth": 24,
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 2,
+      "ChannelLayout": "stereo",
+      "IsDefault": false,
+      "DisplayTitle": "DTS-HD MA - Stereo"
+    }
+  ]
+}

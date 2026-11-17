@@ -1,0 +1,51 @@
+amends "package://github.com/jdx/hk/releases/download/v2.10.0/hk@2.10.0#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v2.10.0/hk@2.10.0#/Builtins.pkl"
+
+local typecheck = new Step {
+  glob = List("**/*.ts", "**/*.tsx", "**/tsconfig*.json")
+  check = "scripts/bounded.sh typecheck 2G -- bun x tsc -b"
+}
+
+local test = new Step {
+  glob = List("**/*.ts", "**/*.tsx")
+  check = "scripts/bounded.sh test 3G -- bun x vitest run --maxWorkers=2"
+}
+
+steps {
+  ["oxlint"] {
+    glob = List("**/*.ts", "**/*.tsx")
+    check = "bun x oxlint --type-aware {{files}}"
+    fix = "bun x oxlint --type-aware --fix {{files}}"
+  }
+  ["oxfmt"] {
+    glob = List("**/*.ts", "**/*.tsx", "**/*.json", "**/*.md", "**/*.css")
+    check = "bun x oxfmt --check {{files}}"
+    fix = "bun x oxfmt {{files}}"
+  }
+  // A test that can skip belongs in a live, contract or FATE tier (vitest.shared.ts).
+  ["lint-skips"] {
+    glob = List("**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx")
+    check = "bun scripts/lint-skips.ts {{files}}"
+  }
+  // The repo is public: no workstation paths, owner domains or library titles (.private-denylist).
+  ["lint-private"] {
+    glob = List("**/*")
+    check = "bun scripts/lint-private.ts {{files}}"
+  }
+  ["typecheck"] = (typecheck) { profiles = List("ci") }
+  ["test"] = (test) { profiles = List("ci") }
+}
+
+hooks {
+  ["pre-push"] {
+    steps {
+      ["typecheck"] = typecheck
+      ["test"] = test
+    }
+  }
+  ["commit-msg"] {
+    steps {
+      ["conventional-commit"] = Builtins.check_conventional_commit
+    }
+  }
+}

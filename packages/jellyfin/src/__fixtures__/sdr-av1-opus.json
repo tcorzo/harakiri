@@ -1,0 +1,49 @@
+{
+  "Id": "a8c23612569a25505ff1685c828aee53",
+  "Container": "mkv",
+  "DefaultAudioStreamIndex": 3,
+  "MediaStreams": [
+    {
+      "Index": 2,
+      "Type": "Video",
+      "Codec": "av1",
+      "Profile": "Main",
+      "Width": 1920,
+      "Height": 1080,
+      "BitDepth": 10,
+      "ColorTransfer": "bt709",
+      "VideoRange": "SDR",
+      "VideoRangeType": "SDR",
+      "AudioSpatialFormat": "None",
+      "Language": "jpn",
+      "IsDefault": true,
+      "DisplayTitle": "1080p AV1 - SDR"
+    },
+    {
+      "Index": 3,
+      "Type": "Audio",
+      "Codec": "opus",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 2,
+      "ChannelLayout": "stereo",
+      "Language": "jpn",
+      "IsDefault": true,
+      "DisplayTitle": "Japanese 2.0 (Opus 160 kbps) - Stereo - Default"
+    },
+    {
+      "Index": 4,
+      "Type": "Audio",
+      "Codec": "opus",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 2,
+      "ChannelLayout": "stereo",
+      "Language": "eng",
+      "IsDefault": false,
+      "DisplayTitle": "English 2.0 (Opus 160 kbps) - Stereo"
+    }
+  ]
+}

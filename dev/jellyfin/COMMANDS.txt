@@ -1,0 +1,69 @@
+# harakiri Jellyfin dev server. Run every command from the repo root.
+# Server: http://127.0.0.1:8096 (override with JELLYFIN_DEV_PORT for all commands).
+# Image: ghcr.io/jellyfin/jellyfin:12.4, pinned by digest. JELLYFIN_IMAGE points at a mirror
+#   (keep the @sha256 digest so the bytes stay the same).
+# Dev-only credentials: JELLYFIN_DEV_USER / JELLYFIN_DEV_PASSWORD (default harakiri / harakiri-dev).
+#   Bootstrap hides the user from /Users/Public and enables Quick Connect.
+#
+# Library, one setting: JELLYFIN_DEV_LIBRARY (put it in .env; mise loads it).
+#   corpus (default)  the generated synthetic corpus, no NAS and no network metadata:
+#                     .cache/corpus/movies -> /media/movies:ro, .cache/corpus/shows -> /media/series:ro
+#                     container harakiri-jellyfin-corpus, state dev/jellyfin/.state-corpus/
+#   own               your own library, for debugging a specific file or seeing the UI on real data:
+#                     JELLYFIN_DEV_MOVIES -> /media/movies:ro, JELLYFIN_DEV_SERIES -> /media/series:ro
+#                     container harakiri-jellyfin, state dev/jellyfin/.state/
+#                     internet metadata providers on (posters, logos); the first scan can take hours.
+# The two keep separate containers and state, so switching back and forth never rescans either.
+# Both use the same port: `up` stops the other one.
+
+# corpus: generate it (about 15 s, about 24 MB with the FATE tier); jellyfin:up does this when missing
+mise run media:gen
+# FATE tier (TrueHD Atmos, E-AC3 JOC, DTS-HD MA, DTS:X, VC-1, DV P7): fetch, then regenerate
+mise run media:fetch-fate && mise run media:gen
+# a mirror for the FATE host
+HARAKIRI_FATE_MIRROR=https://mirror.example/fate-suite mise run media:fetch-fate
+
+# up + bootstrap: create or start the container, then the first-run wizard, user, libraries (idempotent)
+mise run jellyfin:up
+# the same, by hand
+dev/jellyfin/jellyfin.sh up
+mise exec -- bun dev/jellyfin/bootstrap.ts
+# force a rescan
+mise exec -- bun dev/jellyfin/bootstrap.ts --scan
+
+# wait: follow the scan, then print item and image counts (arg = timeout in minutes, default 180)
+mise exec -- bun dev/jellyfin/wait-scan.ts 5
+
+# check the corpus scan: every item's VideoRangeType, DvProfile and audio Codec/Profile/Channels
+mise run test:corpus
+
+# own library: in .env (paths are placeholders)
+#   JELLYFIN_DEV_LIBRARY=own
+#   JELLYFIN_DEV_MOVIES=/path/to/your/movies
+#   JELLYFIN_DEV_SERIES=/path/to/your/series
+# then, as above:
+mise run jellyfin:up
+mise exec -- bun dev/jellyfin/wait-scan.ts 180
+# one-off, without editing .env
+JELLYFIN_DEV_LIBRARY=own JELLYFIN_DEV_MOVIES=/path/to/movies JELLYFIN_DEV_SERIES=/path/to/series mise run jellyfin:up
+
+# down: stop and remove the active library's container, keep its state
+dev/jellyfin/jellyfin.sh down
+
+# reset: remove the active library's container and wipe its state (next up + bootstrap rescans it)
+dev/jellyfin/jellyfin.sh reset
+
+# status / logs (of the active library's container)
+dev/jellyfin/jellyfin.sh status
+dev/jellyfin/jellyfin.sh logs 200
+
+# a second server alongside (another name, port and state dir), e.g. for a throwaway check
+JELLYFIN_DEV_NAME=jf-check JELLYFIN_DEV_PORT=8196 JELLYFIN_DEV_DISCOVERY_PORT=7459 \
+  JELLYFIN_DEV_STATE=/tmp/jf-check JELLYFIN_DEV_MEMORY=2g dev/jellyfin/jellyfin.sh up
+
+# token for manual API calls
+curl -s -X POST http://127.0.0.1:8096/Users/AuthenticateByName \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: MediaBrowser Client="harakiri-dev", Device="cli", DeviceId="harakiri-cli", Version="0"' \
+  -d '{"Username":"harakiri","Pw":"harakiri-dev"}' | jq -r .AccessToken
+# then send: Authorization: MediaBrowser Client="harakiri-dev", Device="cli", DeviceId="harakiri-cli", Version="0", Token="<token>"

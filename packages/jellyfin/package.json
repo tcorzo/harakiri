@@ -1,0 +1,28 @@
+{
+  "name": "@harakiri/jellyfin",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./generated": "./src/generated/index.ts",
+    "./generated/client": "./src/generated/client/index.ts",
+    "./generated/zod": "./src/generated/zod.gen.ts",
+    "./generated/react-query": "./src/generated/@tanstack/react-query.gen.ts",
+    "./fixture-scrub": "./src/__fixtures__/scrub.ts",
+    "./corpus": "./src/contract/corpus.ts"
+  },
+  "scripts": {
+    "gen": "openapi-ts"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "catalog:",
+    "ky": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "0.99.0",
+    "msw": "catalog:",
+    "typescript": "npm:@typescript/typescript6@6.0.2"
+  }
+}

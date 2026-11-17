@@ -1,0 +1,11 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/mpv" },
+    { "path": "packages/input" },
+    { "path": "packages/fidelity" },
+    { "path": "packages/jellyfin" },
+    { "path": "packages/harness" },
+    { "path": "apps/desktop" }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "@harakiri/mpv",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@logtape/logtape": "catalog:",
+    "zod": "catalog:"
+  }
+}

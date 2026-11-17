@@ -1,0 +1,71 @@
+{
+  "Id": "7d258785fe9ed32b3a33131f09732870",
+  "Container": "mp4",
+  "DefaultAudioStreamIndex": 3,
+  "MediaStreams": [
+    {
+      "Index": 2,
+      "Type": "Video",
+      "Codec": "hevc",
+      "Profile": "Main 10",
+      "Width": 3840,
+      "Height": 2160,
+      "BitDepth": 10,
+      "ColorTransfer": "smpte2084",
+      "VideoRange": "HDR",
+      "VideoRangeType": "DOVIWithHDR10",
+      "VideoDoViTitle": "Dolby Vision Profile 8.1 (HDR10)",
+      "DvProfile": 8,
+      "DvLevel": 6,
+      "DvBlSignalCompatibilityId": 1,
+      "RpuPresentFlag": 1,
+      "ElPresentFlag": 0,
+      "BlPresentFlag": 1,
+      "AudioSpatialFormat": "None",
+      "Language": "eng",
+      "IsDefault": true,
+      "DisplayTitle": "4K HEVC Dolby Vision Profile 8.1 (HDR10)"
+    },
+    {
+      "Index": 3,
+      "Type": "Audio",
+      "Codec": "eac3",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 6,
+      "ChannelLayout": "5.1",
+      "Language": "eng",
+      "IsDefault": true,
+      "DisplayTitle": "DDP5.1 - English - Dolby Digital+ - Default"
+    },
+    {
+      "Index": 4,
+      "Type": "Audio",
+      "Codec": "flac",
+      "BitDepth": 24,
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 2,
+      "ChannelLayout": "stereo",
+      "Language": "eng",
+      "IsDefault": false,
+      "DisplayTitle": "Commentary Director - English - FLAC - Stereo"
+    },
+    {
+      "Index": 5,
+      "Type": "Audio",
+      "Codec": "flac",
+      "BitDepth": 24,
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 2,
+      "ChannelLayout": "stereo",
+      "Language": "eng",
+      "IsDefault": false,
+      "DisplayTitle": "Commentary Editor - English - FLAC - Stereo"
+    }
+  ]
+}

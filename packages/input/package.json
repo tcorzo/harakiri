@@ -1,0 +1,11 @@
+{
+  "name": "@harakiri/input",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "ts-pattern": "catalog:"
+  }
+}

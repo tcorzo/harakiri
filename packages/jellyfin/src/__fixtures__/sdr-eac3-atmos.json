@@ -1,0 +1,37 @@
+{
+  "Id": "d08637efa84e26490073f69d37d0507a",
+  "Container": "mkv",
+  "DefaultAudioStreamIndex": 4,
+  "MediaStreams": [
+    {
+      "Index": 3,
+      "Type": "Video",
+      "Codec": "h264",
+      "Profile": "High",
+      "Width": 1918,
+      "Height": 802,
+      "BitDepth": 8,
+      "ColorTransfer": "bt709",
+      "VideoRange": "SDR",
+      "VideoRangeType": "SDR",
+      "AudioSpatialFormat": "None",
+      "Language": "eng",
+      "IsDefault": true,
+      "DisplayTitle": "1080p H264 SDR"
+    },
+    {
+      "Index": 4,
+      "Type": "Audio",
+      "Codec": "eac3",
+      "Profile": "Dolby Digital Plus + Dolby Atmos",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "DolbyAtmos",
+      "Channels": 6,
+      "ChannelLayout": "5.1",
+      "Language": "eng",
+      "IsDefault": true,
+      "DisplayTitle": "English - Dolby Digital Plus + Dolby Atmos - 5.1 - Default"
+    }
+  ]
+}

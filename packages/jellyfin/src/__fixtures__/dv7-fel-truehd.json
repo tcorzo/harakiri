@@ -1,0 +1,69 @@
+{
+  "Id": "02d6ed66a128e8500000a0ec1ed87193",
+  "Container": "mkv",
+  "DefaultAudioStreamIndex": 3,
+  "MediaStreams": [
+    {
+      "Index": 2,
+      "Type": "Video",
+      "Codec": "hevc",
+      "Profile": "Main 10",
+      "Width": 3840,
+      "Height": 2160,
+      "BitDepth": 10,
+      "ColorTransfer": "smpte2084",
+      "VideoRange": "HDR",
+      "VideoRangeType": "DOVIWithEL",
+      "VideoDoViTitle": "Dolby Vision Profile 7.6 (HDR10)",
+      "DvProfile": 7,
+      "DvLevel": 6,
+      "DvBlSignalCompatibilityId": 6,
+      "RpuPresentFlag": 1,
+      "ElPresentFlag": 1,
+      "BlPresentFlag": 1,
+      "AudioSpatialFormat": "None",
+      "IsDefault": true,
+      "DisplayTitle": "4K HEVC Dolby Vision Profile 7.6 (HDR10)"
+    },
+    {
+      "Index": 3,
+      "Type": "Audio",
+      "Codec": "truehd",
+      "BitDepth": 24,
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 6,
+      "ChannelLayout": "5.1",
+      "Language": "eng",
+      "IsDefault": true,
+      "DisplayTitle": "English - TRUEHD - 5.1 - Default"
+    },
+    {
+      "Index": 4,
+      "Type": "Audio",
+      "Codec": "ac3",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 6,
+      "ChannelLayout": "5.1",
+      "Language": "eng",
+      "IsDefault": false,
+      "DisplayTitle": "Compatibility Track - English - Dolby Digital - 5.1"
+    },
+    {
+      "Index": 5,
+      "Type": "Audio",
+      "Codec": "ac3",
+      "VideoRange": "Unknown",
+      "VideoRangeType": "Unknown",
+      "AudioSpatialFormat": "None",
+      "Channels": 2,
+      "ChannelLayout": "stereo",
+      "Language": "eng",
+      "IsDefault": false,
+      "DisplayTitle": "Commentary - English - Dolby Digital - Stereo"
+    }
+  ]
+}

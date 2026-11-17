@@ -1,0 +1,169 @@
+import type { ServerUrl } from "@harakiri/jellyfin";
+import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-navigation";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { memo, useRef, type ComponentType, type ReactNode } from "react";
+import type { Entry } from "../data/entry";
+import { QuietAction } from "../ui/actions";
+import { rootRem } from "../ui/marks";
+import type { CardProps } from "./cards";
+import { useReducedMotion } from "./heroCycle";
+import { cardKey, rowKey, useLit, type Section } from "./lit";
+import { numberFor } from "./sections";
+
+export interface ProgrammeRowProps {
+  readonly sectionId: string;
+  readonly sectionName: string;
+  readonly entries: readonly Entry[];
+  readonly Card: ComponentType<CardProps>;
+  /** Card width plus the gap, in rem. */
+  readonly pitchRem: number;
+  readonly heightRem: number;
+  readonly server: ServerUrl;
+  readonly numbers: ReadonlyMap<string, number>;
+  readonly onFocusEntry: (entry: Entry, section: Section) => void;
+  readonly onPressEntry: (entry: Entry) => void;
+}
+
+const gapRem = 2;
+
+function RowHeader({ name, children }: { readonly name: string; readonly children: ReactNode }) {
+  return (
+    <header className="flex h-[3rem] items-center gap-6 pr-safe-x">
+      <h2 className="bg-band px-4 py-1.5 text-body font-[760] text-paper stretch-wide">{name}</h2>
+      <span aria-hidden="true" className="h-0 flex-1 border-t-2 hairline" />
+      {children}
+    </header>
+  );
+}
+
+/**
+ * One programme section: a band label, a hairline, and a horizontally virtualized run of entries.
+ * Memoized, with primitive and stable props, so moving between rows re-renders none of them.
+ */
+export const ProgrammeRow = memo(function ProgrammeRow({
+  sectionId,
+  sectionName,
+  entries,
+  Card,
+  pitchRem,
+  heightRem,
+  server,
+  numbers,
+  onFocusEntry,
+  onPressEntry,
+}: ProgrammeRowProps) {
+  const { ref, focusKey } = useFocusable<object, HTMLElement>({
+    focusKey: rowKey(sectionId),
+    saveLastFocusedChild: true,
+  });
+  const scroller = useRef<HTMLDivElement>(null);
+  const rem = rootRem();
+  // No React Compiler in this build, so the virtualizer's unmemoizable API is fine.
+  // oxlint-disable-next-line react/incompatible-library
+  const virtualizer = useVirtualizer({
+    horizontal: true,
+    count: entries.length,
+    getScrollElement: () => scroller.current,
+    estimateSize: () => (pitchRem - gapRem) * rem,
+    gap: gapRem * rem,
+    // Norigin only sees mounted cards, so keep neighbours mounted in the direction of travel.
+    overscan: 4,
+    // Room for the focused card's scale and ring at the row's leading edge.
+    paddingStart: 1.5 * rem,
+    scrollPaddingStart: 1.5 * rem,
+    initialRect: { width: window.innerWidth, height: 400 },
+    // Returning from a title page reopens the row on the card the owner left, wherever it moved.
+    initialOffset: () => {
+      const place = useLit.getState().place;
+      if (place?.section !== sectionId) return 0;
+      const at = entries.findIndex((entry) => entry.id === place.entry);
+      return at === -1 ? 0 : at * pitchRem * rem;
+    },
+  });
+  const reduced = useReducedMotion();
+  const section: Section = { id: sectionId, name: sectionName };
+
+  return (
+    <FocusContext.Provider value={focusKey}>
+      <section ref={ref} aria-label={sectionName} className="flex flex-col gap-5">
+        <RowHeader name={sectionName}>
+          <span className="text-caption font-[600] text-paper-dim stretch-condensed">
+            {entries.length} {entries.length === 1 ? "title" : "titles"}
+          </span>
+        </RowHeader>
+        <div ref={scroller} className="-ml-6 overflow-x-hidden py-6 pr-safe-x">
+          <div
+            className="relative"
+            style={{ width: virtualizer.getTotalSize(), height: `${heightRem}rem` }}
+          >
+            {virtualizer.getVirtualItems().map((item) => {
+              const entry = entries[item.index];
+              if (entry === undefined) return null;
+              return (
+                <div
+                  key={entry.id}
+                  className="absolute top-0 left-0"
+                  style={{ transform: `translateX(${item.start}px)` }}
+                >
+                  <Card
+                    entry={entry}
+                    number={numberFor(numbers, entry)}
+                    server={server}
+                    focusKey={cardKey(sectionId, entry.id)}
+                    onFocus={() => {
+                      virtualizer.scrollToIndex(item.index, {
+                        align: "start",
+                        behavior: reduced ? "auto" : "smooth",
+                      });
+                      onFocusEntry(entry, section);
+                    }}
+                    onPress={() => onPressEntry(entry)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+    </FocusContext.Provider>
+  );
+});
+
+/** Focus key of a failed section's retry, the one thing in it the d-pad can reach. */
+export const retryKey = (sectionId: string): string => `retry|${sectionId}`;
+
+/** A section whose request failed: the rest of the programme still shows, and this one can retry. */
+export const FailedRow = memo(function FailedRow({
+  sectionId,
+  sectionName,
+  onRetry,
+}: {
+  readonly sectionId: string;
+  readonly sectionName: string;
+  readonly onRetry: () => void;
+}) {
+  const { ref, focusKey } = useFocusable<object, HTMLElement>({ focusKey: rowKey(sectionId) });
+  return (
+    <FocusContext.Provider value={focusKey}>
+      <section ref={ref} aria-label={sectionName} className="flex flex-col gap-5">
+        <RowHeader name={sectionName}>{null}</RowHeader>
+        <div className="flex items-center gap-8 py-6 pr-safe-x">
+          <p role="alert" className="m-0 flex items-start gap-4 text-body">
+            <span
+              aria-hidden="true"
+              className="mt-[0.55em] block h-[0.75rem] w-[0.75rem] shrink-0 bg-alert"
+            />
+            <span>This section did not load from the server.</span>
+          </p>
+          <QuietAction
+            focusKey={retryKey(sectionId)}
+            label={`Try ${sectionName} again`}
+            onPress={onRetry}
+          >
+            Try again
+          </QuietAction>
+        </div>
+      </section>
+    </FocusContext.Provider>
+  );
+});

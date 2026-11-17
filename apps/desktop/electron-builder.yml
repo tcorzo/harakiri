@@ -1,0 +1,10 @@
+appId: dev.harakiri.desktop
+productName: harakiri
+directories:
+  output: dist
+files:
+  - out/**
+  - package.json
+linux:
+  target: AppImage
+  category: AudioVideo
