@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { expect, test } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { MenuRow } from "./controls";
 import { renderControls } from "./overlay";
@@ -25,8 +25,9 @@ const rows: MenuRow[] = [
   { property: "sid", id: 2, label: "(Foreign) - English - Forced - PGSSUB" },
 ];
 
-test("playing: title, programme, signal path, scrub bar at half, paper play glyph on the red tile", () => {
-  expect(renderControls(playing)).toMatchInlineSnapshot(`
+describe("controls overlay", () => {
+  it("playing: title, programme, signal path, scrub bar at half, paper play glyph on the red tile", () => {
+    expect(renderControls(playing)).toMatchInlineSnapshot(`
     "{\\an7\\pos(0,560)\\bord0\\shad0\\blur0\\1c&H05060A&\\1a&HE0&\\p1}m 0 0 l 1920 0 1920 10 0 10{\\p0}
     {\\an7\\pos(0,570)\\bord0\\shad0\\blur0\\1c&H05060A&\\1a&HD4&\\p1}m 0 0 l 1920 0 1920 10 0 10{\\p0}
     {\\an7\\pos(0,580)\\bord0\\shad0\\blur0\\1c&H05060A&\\1a&HC8&\\p1}m 0 0 l 1920 0 1920 10 0 10{\\p0}
@@ -55,19 +56,19 @@ test("playing: title, programme, signal path, scrub bar at half, paper play glyp
     {\\an7\\pos(160,988)\\bord0\\shad0\\blur0\\fnNoto Sans\\b1\\fs34\\fscx84\\1c&HE9F0F3&}1:02:05
     {\\an9\\pos(1824,988)\\bord0\\shad0\\blur0\\fnNoto Sans\\b0\\fs34\\fscx84\\1c&HB3BCC5&}2:04:46"
   `);
-});
+  });
 
-test("paused under a server transcode: an amber square leads the fact line and its reasons", () => {
-  expect(
-    renderControls({
-      ...playing,
-      paused: true,
-      signalPath: "Server transcode",
-      transcodeReasons: ["Bitrate over the limit", "Too many audio channels"],
-      positionSeconds: 59,
-      durationSeconds: 1421,
-    })
-  ).toMatchInlineSnapshot(`
+  it("paused under a server transcode: an amber square leads the fact line and its reasons", () => {
+    expect(
+      renderControls({
+        ...playing,
+        paused: true,
+        signalPath: "Server transcode",
+        transcodeReasons: ["Bitrate over the limit", "Too many audio channels"],
+        positionSeconds: 59,
+        durationSeconds: 1421,
+      })
+    ).toMatchInlineSnapshot(`
     "{\\an7\\pos(0,560)\\bord0\\shad0\\blur0\\1c&H05060A&\\1a&HE0&\\p1}m 0 0 l 1920 0 1920 10 0 10{\\p0}
     {\\an7\\pos(0,570)\\bord0\\shad0\\blur0\\1c&H05060A&\\1a&HD4&\\p1}m 0 0 l 1920 0 1920 10 0 10{\\p0}
     {\\an7\\pos(0,580)\\bord0\\shad0\\blur0\\1c&H05060A&\\1a&HC8&\\p1}m 0 0 l 1920 0 1920 10 0 10{\\p0}
@@ -97,25 +98,25 @@ test("paused under a server transcode: an amber square leads the fact line and i
     {\\an7\\pos(160,988)\\bord0\\shad0\\blur0\\fnNoto Sans\\b1\\fs34\\fscx84\\1c&HE9F0F3&}0:59
     {\\an9\\pos(1824,988)\\bord0\\shad0\\blur0\\fnNoto Sans\\b0\\fs34\\fscx84\\1c&HB3BCC5&}23:41"
   `);
-});
+  });
 
-test("a downgrade leads the fact line with the amber square; a native play has none", () => {
-  const lines = renderControls({ ...playing, downgraded: true }).split("\n");
+  it("a downgrade leads the fact line with the amber square; a native play has none", () => {
+    const lines = renderControls({ ...playing, downgraded: true }).split("\n");
 
-  const fact = lines.findIndex((line) =>
-    line.endsWith("Dolby Vision mapped to HDR10 · TrueHD Atmos bitstream")
-  );
+    const fact = lines.findIndex((line) =>
+      line.endsWith("Dolby Vision mapped to HDR10 · TrueHD Atmos bitstream")
+    );
 
-  expect(lines[fact - 1]).toBe(
-    "{\\an7\\pos(96,902)\\bord0\\shad0\\blur0\\1c&H43C2F7&\\1a&H00&\\p1}m 0 0 l 18 0 18 18 0 18{\\p0}"
-  );
-  expect(lines[fact]).toContain("\\pos(130,894)");
-  expect(renderControls(playing)).not.toContain("&H43C2F7&");
-});
+    expect(lines[fact - 1]).toBe(
+      "{\\an7\\pos(96,902)\\bord0\\shad0\\blur0\\1c&H43C2F7&\\1a&H00&\\p1}m 0 0 l 18 0 18 18 0 18{\\p0}"
+    );
+    expect(lines[fact]).toContain("\\pos(130,894)");
+    expect(renderControls(playing)).not.toContain("&H43C2F7&");
+  });
 
-test("track menu: sections, the focused row, and the tracks in use", () => {
-  const ass = renderControls({ ...playing, menu: { rows, cursor: 3, aid: 1, sid: false } });
-  expect(ass.split("\n").slice(-13)).toMatchInlineSnapshot(`
+  it("track menu: sections, the focused row, and the tracks in use", () => {
+    const ass = renderControls({ ...playing, menu: { rows, cursor: 3, aid: 1, sid: false } });
+    expect(ass.split("\n").slice(-13)).toMatchInlineSnapshot(`
     [
       "{\\an7\\pos(1248,100)\\bord0\\shad0\\blur0\\1c&H05060A&\\1a&H28&\\p1}m 0 0 l 576 0 576 430 0 430{\\p0}",
       "{\\an7\\pos(1280,140)\\bord0\\shad0\\blur0\\fnNoto Sans\\b1\\fs24\\fscx84\\fsp4\\1c&HB3BCC5&}SOUND",
@@ -132,31 +133,32 @@ test("track menu: sections, the focused row, and the tracks in use", () => {
       "{\\an7\\pos(1300,442)\\bord0\\shad0\\blur0\\fnNoto Sans\\b0\\fs32\\fscx84\\1c&HB3BCC5&}(Foreign) - English - Forced - PGSSUB",
     ]
   `);
-});
+  });
 
-test("a long subtitle list scrolls so the cursor stays in a nine-row window", () => {
-  const many: MenuRow[] = Array.from({ length: 30 }, (_, i) => ({
-    property: "sid",
-    id: i + 1,
-    label: `Subtitle ${i + 1}`,
-  }));
+  it("a long subtitle list scrolls so the cursor stays in a nine-row window", () => {
+    const many: MenuRow[] = Array.from({ length: 30 }, (_, i) => ({
+      property: "sid",
+      id: i + 1,
+      label: `Subtitle ${i + 1}`,
+    }));
 
-  const ass = renderControls({ ...playing, menu: { rows: many, cursor: 20, aid: 1, sid: 21 } });
-  const labels = [...ass.matchAll(/\}(Subtitle \d+)$/gm)].map((m) => m[1]);
-  expect(labels).toEqual([
-    "Subtitle 17",
-    "Subtitle 18",
-    "Subtitle 19",
-    "Subtitle 20",
-    "Subtitle 21",
-    "Subtitle 22",
-    "Subtitle 23",
-    "Subtitle 24",
-    "Subtitle 25",
-  ]);
-});
+    const ass = renderControls({ ...playing, menu: { rows: many, cursor: 20, aid: 1, sid: 21 } });
+    const labels = [...ass.matchAll(/\}(Subtitle \d+)$/gm)].map((m) => m[1]);
+    expect(labels).toStrictEqual([
+      "Subtitle 17",
+      "Subtitle 18",
+      "Subtitle 19",
+      "Subtitle 20",
+      "Subtitle 21",
+      "Subtitle 22",
+      "Subtitle 23",
+      "Subtitle 24",
+      "Subtitle 25",
+    ]);
+  });
 
-test("item text cannot open an override block or form an escape", () => {
-  const ass = renderControls({ ...playing, title: "Who {\\b0}Framed\\N Roger" });
-  expect(ass).toContain("}Who \\{\\⁠b0\\}Framed\\⁠N Roger\n");
+  it("item text cannot open an override block or form an escape", () => {
+    const ass = renderControls({ ...playing, title: "Who {\\b0}Framed\\N Roger" });
+    expect(ass).toContain("}Who \\{\\⁠b0\\}Framed\\⁠N Roger\n");
+  });
 });
