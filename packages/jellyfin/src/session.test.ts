@@ -1,6 +1,6 @@
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { DeviceId, ServerUrl } from "./ids";
@@ -74,80 +74,82 @@ const mock = setupServer(
   })
 );
 
-beforeAll(() => {
-  mock.listen({ onUnhandledFrame: "error" });
-});
-
-afterEach(() => {
-  received.length = 0;
-  mock.resetHandlers();
-});
-
-afterAll(() => {
-  mock.close();
-});
-
-const session = {
-  serverUrl: "http://jf.test/",
-  serverId: "srv-1",
-  serverName: "harakiri-dev",
-  serverVersion: "12.4.0",
-  userId: USER,
-  userName: "harakiri",
-  accessToken: "tok-1",
-  deviceId: "dev-1",
-};
-
-test("authenticate sends the client identity and returns everything a Session needs", async () => {
-  await expect(authenticate(server, "harakiri", "right", identity)).resolves.toEqual({
-    kind: "signed-in",
-    session,
+describe("session sign-in", () => {
+  beforeAll(() => {
+    mock.listen({ onUnhandledFrame: "error" });
   });
-  expect(received).toEqual([
-    {
-      method: "POST",
-      url: "/Users/AuthenticateByName",
-      auth: ANONYMOUS,
-      body: { Username: "harakiri", Pw: "right" },
-    },
-  ]);
-});
 
-test("a wrong password and a refusing server are told apart", async () => {
-  await expect(authenticate(server, "harakiri", "wrong", identity)).resolves.toEqual({
-    kind: "wrong-credentials",
+  afterEach(() => {
+    received.length = 0;
+    mock.resetHandlers();
   });
-  await expect(authenticate(server, "harakiri", "rejected", identity)).resolves.toEqual({
-    kind: "rejected",
-    status: 403,
-  });
-});
 
-test("an unreachable server says so", async () => {
-  mock.use(http.get("http://jf.test/System/Info/Public", () => HttpResponse.error()));
-  const result = await authenticate(server, "harakiri", "right", identity);
-  expect(result.kind).toBe("unreachable");
-});
+  afterAll(() => {
+    mock.close();
+  });
 
-test("Quick Connect: enabled, initiate, poll, then sign in with the secret", async () => {
-  await expect(quickConnectEnabled(server, identity)).resolves.toBe(true);
-  await expect(initiateQuickConnect(server, identity)).resolves.toEqual({
-    code: "123456",
-    secret: "s3cret",
+  const session = {
+    serverUrl: "http://jf.test/",
+    serverId: "srv-1",
+    serverName: "harakiri-dev",
+    serverVersion: "12.4.0",
+    userId: USER,
+    userName: "harakiri",
+    accessToken: "tok-1",
+    deviceId: "dev-1",
+  };
+
+  it("authenticate sends the client identity and returns everything a Session needs", async () => {
+    await expect(authenticate(server, "harakiri", "right", identity)).resolves.toStrictEqual({
+      kind: "signed-in",
+      session,
+    });
+    expect(received).toStrictEqual([
+      {
+        method: "POST",
+        url: "/Users/AuthenticateByName",
+        auth: ANONYMOUS,
+        body: { Username: "harakiri", Pw: "right" },
+      },
+    ]);
   });
-  await expect(pollQuickConnect(server, identity, "s3cret")).resolves.toBe(true);
-  await expect(authenticateWithQuickConnect(server, identity, "s3cret")).resolves.toEqual({
-    kind: "signed-in",
-    session,
+
+  it("a wrong password and a refusing server are told apart", async () => {
+    await expect(authenticate(server, "harakiri", "wrong", identity)).resolves.toStrictEqual({
+      kind: "wrong-credentials",
+    });
+    await expect(authenticate(server, "harakiri", "rejected", identity)).resolves.toStrictEqual({
+      kind: "rejected",
+      status: 403,
+    });
   });
-  expect(received).toEqual([
-    { method: "POST", url: "/QuickConnect/Initiate", auth: ANONYMOUS, body: null },
-    { method: "GET", url: "/QuickConnect/Connect?secret=s3cret", auth: ANONYMOUS, body: null },
-    {
-      method: "POST",
-      url: "/Users/AuthenticateWithQuickConnect",
-      auth: ANONYMOUS,
-      body: { Secret: "s3cret" },
-    },
-  ]);
+
+  it("an unreachable server says so", async () => {
+    mock.use(http.get("http://jf.test/System/Info/Public", () => HttpResponse.error()));
+    const result = await authenticate(server, "harakiri", "right", identity);
+    expect(result.kind).toBe("unreachable");
+  });
+
+  it("Quick Connect: enabled, initiate, poll, then sign in with the secret", async () => {
+    await expect(quickConnectEnabled(server, identity)).resolves.toBe(true);
+    await expect(initiateQuickConnect(server, identity)).resolves.toStrictEqual({
+      code: "123456",
+      secret: "s3cret",
+    });
+    await expect(pollQuickConnect(server, identity, "s3cret")).resolves.toBe(true);
+    await expect(authenticateWithQuickConnect(server, identity, "s3cret")).resolves.toStrictEqual({
+      kind: "signed-in",
+      session,
+    });
+    expect(received).toStrictEqual([
+      { method: "POST", url: "/QuickConnect/Initiate", auth: ANONYMOUS, body: null },
+      { method: "GET", url: "/QuickConnect/Connect?secret=s3cret", auth: ANONYMOUS, body: null },
+      {
+        method: "POST",
+        url: "/Users/AuthenticateWithQuickConnect",
+        auth: ANONYMOUS,
+        body: { Secret: "s3cret" },
+      },
+    ]);
+  });
 });

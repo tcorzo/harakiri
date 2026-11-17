@@ -1,6 +1,6 @@
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, beforeAll, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { ServerVersion, playbackInfoRequest } from "./device-profile";
 import { createClient } from "./generated/client";
@@ -18,54 +18,56 @@ const server = setupServer(
   })
 );
 
-beforeAll(() => {
-  server.listen({ onUnhandledFrame: "error" });
-});
-
-afterAll(() => {
-  server.close();
-});
-
-test("the server receives a condition-free profile and the auth header through the generated ky client", async () => {
-  const identity = {
-    client: "Harakiri",
-    device: "TV",
-    deviceId: DeviceId.parse("dev-1"),
-    version: "0.1.0",
-  };
-
-  const client = createClient({
-    baseUrl: "http://jf.test",
-    auth: () => authorizationHeader(identity, AccessToken.parse("tok")),
+describe(playbackInfoRequest, () => {
+  beforeAll(() => {
+    server.listen({ onUnhandledFrame: "error" });
   });
 
-  const userId = UserId.parse("5f2a9c1e0b7d4e3fa8c6d1b2e9f04a7c");
-
-  const { data } = await getPostedPlaybackInfo({
-    client,
-    throwOnError: true,
-    path: { itemId: ItemId.parse("0123456789abcdef0123456789abcdef") },
-    body: playbackInfoRequest({
-      userId,
-      server: ServerVersion.parse("12.4.0"),
-      source: { kind: "default" },
-    }),
+  afterAll(() => {
+    server.close();
   });
 
-  expect(data.PlaySessionId).toBe("ps-1");
-  expect(received).toHaveLength(1);
-  const [request] = received;
-  expect(request?.auth).toBe(
-    'MediaBrowser Client="Harakiri", Device="TV", DeviceId="dev-1", Version="0.1.0", Token="tok"'
-  );
-  expect(request?.body).toMatchObject({
-    MaxStreamingBitrate: 1_000_000_000,
-    SubtitleStreamIndex: -1,
-    EnableDirectPlay: true,
-    DeviceProfile: {
+  it("the server receives a condition-free profile and the auth header through the generated ky client", async () => {
+    const identity = {
+      client: "Harakiri",
+      device: "TV",
+      deviceId: DeviceId.parse("dev-1"),
+      version: "0.1.0",
+    };
+
+    const client = createClient({
+      baseUrl: "http://jf.test",
+      auth: () => authorizationHeader(identity, AccessToken.parse("tok")),
+    });
+
+    const userId = UserId.parse("5f2a9c1e0b7d4e3fa8c6d1b2e9f04a7c");
+
+    const { data } = await getPostedPlaybackInfo({
+      client,
+      throwOnError: true,
+      path: { itemId: ItemId.parse("0123456789abcdef0123456789abcdef") },
+      body: playbackInfoRequest({
+        userId,
+        server: ServerVersion.parse("12.4.0"),
+        source: { kind: "default" },
+      }),
+    });
+
+    expect(data.PlaySessionId).toBe("ps-1");
+    expect(received).toHaveLength(1);
+    const [request] = received;
+    expect(request?.auth).toBe(
+      'MediaBrowser Client="Harakiri", Device="TV", DeviceId="dev-1", Version="0.1.0", Token="tok"'
+    );
+    expect(request?.body).toMatchObject({
       MaxStreamingBitrate: 1_000_000_000,
-      CodecProfiles: [],
-      DirectPlayProfiles: [{ Type: "Video" }, { Type: "Audio" }, { Type: "Photo" }],
-    },
+      SubtitleStreamIndex: -1,
+      EnableDirectPlay: true,
+      DeviceProfile: {
+        MaxStreamingBitrate: 1_000_000_000,
+        CodecProfiles: [],
+        DirectPlayProfiles: [{ Type: "Video" }, { Type: "Audio" }, { Type: "Photo" }],
+      },
+    });
   });
 });

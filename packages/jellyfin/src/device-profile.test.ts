@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   ServerVersion,
@@ -32,7 +32,7 @@ const IMAGE = ["pgssub", "pgs", "dvdsub", "vobsub", "dvbsub"];
 const subtitleRows = (profile: DeviceProfile) =>
   (profile.SubtitleProfiles ?? [])
     .map((s) => [s.Format, s.Method, s.Container ?? ""].join("|"))
-    .sort();
+    .toSorted();
 
 // jellyfin-desktop native/nativeshell.js with force_transcode_dovi, which defaults to true.
 const jellyfinDesktopDefault: DeviceProfile = {
@@ -45,36 +45,38 @@ const jellyfinDesktopDefault: DeviceProfile = {
   ],
 };
 
-describe("deviceProfile", () => {
-  test("declares no codec conditions and wildcard direct play", () => {
+describe(deviceProfile, () => {
+  it("declares no codec conditions and wildcard direct play", () => {
     const profile = deviceProfile(v12);
-    expect(profile.CodecProfiles).toEqual([]);
-    expect(profile.DirectPlayProfiles).toEqual([
+    expect(profile.CodecProfiles).toStrictEqual([]);
+    expect(profile.DirectPlayProfiles).toStrictEqual([
       { Type: "Video" },
       { Type: "Audio" },
       { Type: "Photo" },
     ]);
   });
 
-  test("caps bitrate at 1e9 instead of the server's 8 Mbps default", () => {
+  it("caps bitrate at 1e9 instead of the server's 8 Mbps default", () => {
     const profile = deviceProfile(v12);
     expect(profile.MaxStreamingBitrate).toBe(1_000_000_000);
     expect(profile.MaxStaticBitrate).toBe(1_000_000_000);
   });
 
-  test("lists every subtitle format mpv plays, with the mks VobSub sidecar only on 12+", () => {
+  it("lists every subtitle format mpv plays, with the mks VobSub sidecar only on 12+", () => {
     const shared = [
       ...[...TEXT, ...IMAGE].map((f) => `${f}|Embed|`),
       ...TEXT.map((f) => `${f}|External|`),
       "pgssub|External|",
     ];
 
-    expect(subtitleRows(deviceProfile(v12))).toEqual([...shared, "dvdsub|External|mks"].sort());
-    expect(subtitleRows(deviceProfile(v10))).toEqual([...shared].sort());
+    expect(subtitleRows(deviceProfile(v12))).toStrictEqual(
+      [...shared, "dvdsub|External|mks"].toSorted()
+    );
+    expect(subtitleRows(deviceProfile(v10))).toStrictEqual([...shared].toSorted());
   });
 
-  test("transcode fallback copies lossless and surround audio", () => {
-    expect(deviceProfile(v12).TranscodingProfiles).toEqual([
+  it("transcode fallback copies lossless and surround audio", () => {
+    expect(deviceProfile(v12).TranscodingProfiles).toStrictEqual([
       {
         Type: "Video",
         Container: "mp4",
@@ -86,25 +88,25 @@ describe("deviceProfile", () => {
     ]);
   });
 
-  test("transcode codec lists fit the server's 40-character query validator", () => {
+  it("transcode codec lists fit the server's 40-character query validator", () => {
     const tooLong = (deviceProfile(v12).TranscodingProfiles ?? [])
       .flatMap((t) => [t.VideoCodec ?? "", t.AudioCodec ?? ""])
-      .filter((csv) => !/^[a-zA-Z0-9\-._,|]{0,40}$/.test(csv));
+      .filter((csv) => !/^[a-zA-Z0-9\-._,|]{0,40}$/u.test(csv));
 
-    expect(tooLong).toEqual([]);
+    expect(tooLong).toStrictEqual([]);
   });
 });
 
 describe("profileAllowsAllRanges (DV Profile 5 regression)", () => {
-  test("rejects the jellyfin-desktop default that transcodes bare DOVI", () => {
+  it("rejects the jellyfin-desktop default that transcodes bare DOVI", () => {
     expect(profileAllowsAllRanges(jellyfinDesktopDefault)).toBe(false);
   });
 
-  test("accepts our profile", () => {
+  it("accepts our profile", () => {
     expect(profileAllowsAllRanges(deviceProfile(v12))).toBe(true);
   });
 
-  test("ignores conditions on other properties", () => {
+  it("ignores conditions on other properties", () => {
     const tenBitCap: DeviceProfile = {
       CodecProfiles: [
         {
@@ -118,24 +120,24 @@ describe("profileAllowsAllRanges (DV Profile 5 regression)", () => {
   });
 });
 
-describe("ServerVersion", () => {
-  test("parses the major from System/Info/Public Version", () => {
-    expect(ServerVersion.parse("10.11.3")).toEqual({ major: 10 });
+describe("ServerVersion parsing", () => {
+  it("parses the major from System/Info/Public Version", () => {
+    expect(ServerVersion.parse("10.11.3")).toStrictEqual({ major: 10 });
     expect(ServerVersion.safeParse("unknown").success).toBe(false);
   });
 });
 
-describe("playbackInfoRequest", () => {
+describe(playbackInfoRequest, () => {
   const userId = UserId.parse("5f2a9c1e0b7d4e3fa8c6d1b2e9f04a7c");
 
-  test("asks for direct play at full bitrate and leaves subtitles to mpv", () => {
+  it("asks for direct play at full bitrate and leaves subtitles to mpv", () => {
     const { DeviceProfile: _profile, ...body } = playbackInfoRequest({
       userId,
       server: v12,
       source: { kind: "default" },
     });
 
-    expect(body).toEqual({
+    expect(body).toStrictEqual({
       UserId: "5f2a9c1e0b7d4e3fa8c6d1b2e9f04a7c",
       MaxStreamingBitrate: 1_000_000_000,
       EnableDirectPlay: true,
@@ -148,7 +150,7 @@ describe("playbackInfoRequest", () => {
     });
   });
 
-  test("pairs an audio pick with its media source", () => {
+  it("pairs an audio pick with its media source", () => {
     const body = playbackInfoRequest({
       userId,
       server: v12,
@@ -156,7 +158,7 @@ describe("playbackInfoRequest", () => {
       startTimeTicks: 600_000_000,
     });
 
-    expect([body.MediaSourceId, body.AudioStreamIndex, body.StartTimeTicks]).toEqual([
+    expect([body.MediaSourceId, body.AudioStreamIndex, body.StartTimeTicks]).toStrictEqual([
       "src-1",
       0,
       600_000_000,

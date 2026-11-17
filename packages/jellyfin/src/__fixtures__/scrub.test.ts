@@ -1,15 +1,22 @@
 /// <reference types="node" />
 import { readFileSync, readdirSync } from "node:fs";
 
-import { describe, expect, test } from "vitest";
-import { z } from "zod";
+import { describe, expect, it } from "vitest";
 
+import { zMediaSourceInfo } from "../generated/zod.gen";
 import { scrubPlaybackInfo, scrubSource, scrubText } from "./scrub";
+
+const RecordedSource = zMediaSourceInfo.pick({
+  Id: true,
+  Container: true,
+  DefaultAudioStreamIndex: true,
+  MediaStreams: true,
+});
 
 const REAL_ID = "0123456789abcdef0123456789abcdef";
 
-describe("scrubSource", () => {
-  test("replaces paths, names, ids, ETags and attachment names, and keeps stream facts", () => {
+describe(scrubSource, () => {
+  it("replaces paths, names, ids, ETags and attachment names, and keeps stream facts", () => {
     const scrubbed = scrubSource(
       {
         Id: REAL_ID,
@@ -32,7 +39,7 @@ describe("scrubSource", () => {
       "dv5-eac3"
     );
 
-    expect(scrubbed).toEqual({
+    expect(scrubbed).toStrictEqual({
       Id: "3653ee5a956c9868ec7fdf0caff8a2cb",
       Path: "/media/movies/fixture-dv5-eac3.mkv",
       Name: "Fixture dv5-eac3",
@@ -52,7 +59,7 @@ describe("scrubSource", () => {
     });
   });
 
-  test("a play session id is replaced wherever it appears", () => {
+  it("a play session id is replaced wherever it appears", () => {
     const scrubbed = scrubPlaybackInfo(
       {
         PlaySessionId: "abc123",
@@ -63,7 +70,7 @@ describe("scrubSource", () => {
       "transcode-bitrate"
     );
 
-    expect(scrubbed).toEqual({
+    expect(scrubbed).toStrictEqual({
       PlaySessionId: "e885ab483b5abe4a5dc3457e102ff5c1",
       MediaSources: [
         {
@@ -76,37 +83,41 @@ describe("scrubSource", () => {
   });
 });
 
-test("scrubText drops credits, release tags, encoder credits and dubbing studios", () => {
-  expect(
-    [
-      "Commentary with the director and a producer - English - Default",
-      "1080p AV1 [GROUP] - SDR",
+describe("scrub helpers", () => {
+  it("scrubText drops credits, release tags, encoder credits and dubbing studios", () => {
+    expect(
+      [
+        "Commentary with the director and a producer - English - Default",
+        "1080p AV1 [GROUP] - SDR",
+        "[EN] Opus 160kbit/s Stereo",
+        "Encoded by someone - 4K - HEVC - HDR",
+        "Some Film (1999) - 1080p - AV1 - SDR",
+        "MVO (Some Studio) - Russian - Dolby Digital - Stereo",
+        "Forced - English - PGSSUB",
+      ].map(scrubText)
+    ).toStrictEqual([
+      "Commentary - English - Default",
+      "1080p AV1 - SDR",
       "[EN] Opus 160kbit/s Stereo",
-      "Encoded by someone - 4K - HEVC - HDR",
-      "Some Film (1999) - 1080p - AV1 - SDR",
-      "MVO (Some Studio) - Russian - Dolby Digital - Stereo",
+      "Main video - 4K - HEVC - HDR",
+      "Main video - 1080p - AV1 - SDR",
+      "MVO - Russian - Dolby Digital - Stereo",
       "Forced - English - PGSSUB",
-    ].map(scrubText)
-  ).toEqual([
-    "Commentary - English - Default",
-    "1080p AV1 - SDR",
-    "[EN] Opus 160kbit/s Stereo",
-    "Main video - 4K - HEVC - HDR",
-    "Main video - 1080p - AV1 - SDR",
-    "MVO - Russian - Dolby Digital - Stereo",
-    "Forced - English - PGSSUB",
-  ]);
-});
+    ]);
+  });
 
-test("every recorded MediaSource fixture is already scrubbed", () => {
-  const names = readdirSync(new URL(".", import.meta.url)).filter((file) => file.endsWith(".json"));
-  expect(names).toHaveLength(18);
+  it("every recorded MediaSource fixture is already scrubbed", () => {
+    const names = readdirSync(new URL(".", import.meta.url)).filter((file) =>
+      file.endsWith(".json")
+    );
 
-  for (const file of names) {
-    const json = z
-      .record(z.string(), z.unknown())
-      .parse(JSON.parse(readFileSync(new URL(file, import.meta.url), "utf-8")));
+    expect(names).toHaveLength(18);
 
-    expect({ file, json }).toEqual({ file, json: scrubSource(json, file.slice(0, -5)) });
-  }
+    for (const file of names) {
+      const json: unknown = JSON.parse(readFileSync(new URL(file, import.meta.url), "utf-8"));
+      const source = RecordedSource.parse(json);
+
+      expect({ file, json }).toStrictEqual({ file, json: scrubSource(source, file.slice(0, -5)) });
+    }
+  });
 });
