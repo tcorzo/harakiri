@@ -62,7 +62,7 @@ const checkOne = async (queryClient: QueryClient, url: string): Promise<Checked>
   let info;
 
   try {
-    info = await queryClient.fetchQuery({ ...serverInfoQuery(server.data), staleTime: 0 });
+    info = await queryClient.query({ ...serverInfoQuery(server.data), staleTime: 0 });
   } catch (error) {
     // Only a failed or timed-out connection is unreachable: ky 2 raises those as NetworkError and
     // TimeoutError. An HTTP error status arrives as anything else (ky has already consumed the
@@ -73,7 +73,13 @@ const checkOne = async (queryClient: QueryClient, url: string): Promise<Checked>
     return { ok: false, problem: { kind: unreachable ? "unreachable" : "notJellyfin" } };
   }
 
-  if (info.Id == null || info.Version == null || !/jellyfin/i.test(info.ProductName ?? "")) {
+  if (
+    info.Id === undefined ||
+    info.Id === null ||
+    info.Version === undefined ||
+    info.Version === null ||
+    !/jellyfin/i.test(info.ProductName ?? "")
+  ) {
     return { ok: false, problem: { kind: "notJellyfin" } };
   }
 

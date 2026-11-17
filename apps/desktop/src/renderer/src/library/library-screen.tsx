@@ -7,6 +7,7 @@ import {
 } from "@noriginmedia/norigin-spatial-navigation";
 import { useQueries, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { noop } from "es-toolkit";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import type { ComponentType } from "react";
 import { preload } from "react-dom";
@@ -78,7 +79,9 @@ const failed = (section: Section, refetch: () => unknown): PlannedRow => ({
   kind: "failed",
   section,
   heightRem: failedHeightRem,
-  retry: () => void refetch(),
+  retry: () => {
+    void refetch();
+  },
 });
 
 /**
@@ -159,7 +162,9 @@ const useOpenEntry = (): ((entry: Entry) => void) => {
   const navigate = useNavigate();
 
   return useCallback(
-    (entry: Entry) => void navigate({ to: "/title/$id", params: { id: entry.id } }),
+    (entry: Entry) => {
+      void navigate({ to: "/title/$id", params: { id: entry.id } });
+    },
     [navigate]
   );
 };
@@ -197,10 +202,10 @@ const Programme = memo(
         relightTimer = window.setTimeout(() => {
           useLit.getState().light(entry, section);
           // Only a card the owner rests on is worth fetching in full.
-          void queryClient.prefetchQuery(rawItemQuery(ctx, entry.id));
+          void queryClient.query(rawItemQuery(ctx, entry.id)).catch(noop);
 
           if (entry.kind === "Series") {
-            void queryClient.prefetchQuery(seasonsQuery(ctx, entry.id));
+            void queryClient.query(seasonsQuery(ctx, entry.id)).catch(noop);
           }
 
           if (entry.backdrop !== null) {
@@ -353,7 +358,9 @@ const SettingsLink = () => {
       ref={ref}
       type="button"
       aria-label="Settings"
-      onClick={() => void navigate({ to: "/settings" })}
+      onClick={() => {
+        void navigate({ to: "/settings" });
+      }}
       // Full paper, not dim: it sits on the thin top wash, over whatever the backdrop's sky is.
       className="focus-mark text-body text-paper stretch-semicondensed focus-visible:bg-paper focus-visible:text-ink px-4 py-2 font-[600]"
     >
@@ -415,7 +422,9 @@ export const LibraryScreen = () => {
     forceFocus: true,
   });
 
-  useActionHandler("menu", () => void navigate({ to: "/settings" }));
+  useActionHandler("menu", () => {
+    void navigate({ to: "/settings" });
+  });
   // Back from the rows returns to tonight's screening rather than leaving the app.
   useActionHandler("back", () => {
     if (!holding && hero !== null) {
@@ -432,7 +441,7 @@ export const LibraryScreen = () => {
     focusFirst("hero-play");
   }, []);
 
-  if (next?.backdrop != null) {
+  if (next?.backdrop !== undefined && next?.backdrop !== null) {
     preload(backdropUrl(server, next.backdrop), { as: "image" });
   }
 

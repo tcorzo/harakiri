@@ -22,7 +22,7 @@ const languages = new Intl.DisplayNames(["en"], { type: "language" });
 const languageOf = (stream: MediaStream): string => {
   const code = stream.Language;
 
-  if (code == null || code === "" || code === "und") {
+  if (code === undefined || code === null || code === "" || code === "und") {
     return "Unknown language";
   }
 
@@ -36,7 +36,9 @@ const languageOf = (stream: MediaStream): string => {
 /** Sound tracks named the way the programme notes name them: language, then format and channels. */
 const audioOptions = (source: MediaSourceInfo | undefined): TrackOption[] =>
   (source?.MediaStreams ?? [])
-    .filter((stream) => stream.Type === "Audio" && stream.Index != null)
+    .filter(
+      (stream) => stream.Type === "Audio" && stream.Index !== undefined && stream.Index !== null
+    )
     .map((stream) => {
       const index = stream.Index ?? 0;
       const sound = classifyFidelity(source, { audioStreamIndex: index })?.sound ?? null;
@@ -53,14 +55,16 @@ const audioOptions = (source: MediaSourceInfo | undefined): TrackOption[] =>
       return {
         index,
         label: [languageOf(stream), format].filter((part) => part !== null).join(" · "),
-        ...(extra === undefined ? {} : { detail: extra }),
+        detail: extra,
       };
     });
 
 /** Subtitles by language and purpose; the file format is not a choice anyone makes. */
 const subtitleTracks = (streams: readonly MediaStream[]): TrackOption[] =>
   streams
-    .filter((stream) => stream.Type === "Subtitle" && stream.Index != null)
+    .filter(
+      (stream) => stream.Type === "Subtitle" && stream.Index !== undefined && stream.Index !== null
+    )
     .map((stream) => {
       const flags = [
         stream.IsForced === true ? "Forced" : null,
@@ -70,13 +74,13 @@ const subtitleTracks = (streams: readonly MediaStream[]): TrackOption[] =>
       return {
         index: stream.Index ?? 0,
         label: [languageOf(stream), ...flags].join(" · "),
-        ...(stream.IsExternal === true ? { detail: "Sidecar file" } : {}),
+        detail: stream.IsExternal === true ? "Sidecar file" : undefined,
       };
     });
 
 /** "Finn the Human (voice)" becomes "Name, voice of Finn the Human", so a comma-separated cast never reads "voice" as another name. */
 const creditOf = (name: string, role: string | null | undefined): string => {
-  if (role == null || role === "") {
+  if (role === undefined || role === null || role === "") {
     return name;
   }
 
@@ -170,16 +174,13 @@ export const FilmPage = ({
     focusFirst(opener, "title-play");
   };
 
-  const play = (start: number): void =>
+  const play = (start: number): void => {
     void navigate({
       to: "/screening/$id",
       params: { id: entry.id },
-      search: {
-        start,
-        ...(audio === null ? {} : { audio }),
-        subtitle,
-      },
+      search: audio === null ? { start, subtitle } : { start, audio, subtitle },
     });
+  };
 
   const audioLabel = audioChoices.find((o) => o.index === audio)?.label ?? "Default";
   const subtitleLabel = subtitleOptions.find((o) => o.index === subtitle)?.label ?? "Off";

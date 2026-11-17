@@ -212,7 +212,9 @@ const DiscoveredList = ({ onPick }: { readonly onPick: (address: string) => void
               <QuietAction
                 focusKey={searchAgainKey}
                 label="Search again"
-                onPress={() => void discovery.refetch()}
+                onPress={() => {
+                  void discovery.refetch();
+                }}
               />
             </div>
           ) : (
@@ -268,7 +270,9 @@ const ServerStep = ({ state, send }: Flow) => {
       </Heading>
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-16">
         <DiscoveredList
-          onPick={(picked) => void check(picked, { type: "pickServer", address: picked })}
+          onPick={(picked) => {
+            void check(picked, { type: "pickServer", address: picked });
+          }}
         />
         <div className="flex flex-col gap-6">
           <EntryField
@@ -279,7 +283,9 @@ const ServerStep = ({ state, send }: Flow) => {
             onChange={(text) => {
               send({ type: "edit", text });
             }}
-            onSubmit={() => void check(address, { type: "submitAddress" })}
+            onSubmit={() => {
+              void check(address, { type: "submitAddress" });
+            }}
           />
           <div className="min-h-[4.5rem]" aria-live="polite">
             {state.step === "checking" ? (
@@ -295,7 +301,9 @@ const ServerStep = ({ state, send }: Flow) => {
             onChange={(text) => {
               send({ type: "edit", text });
             }}
-            onSubmit={() => void check(address, { type: "submitAddress" })}
+            onSubmit={() => {
+              void check(address, { type: "submitAddress" });
+            }}
             submitLabel="Connect"
           />
         </div>
@@ -524,7 +532,9 @@ const QuickConnectStep = ({
         .with({ kind: "failed" }, (o) => {
           send({ type: "quickConnectFailed", problem: o.problem });
         })
-        .with({ kind: "signedIn" }, (o) => void finish(o.session))
+        .with({ kind: "signedIn" }, (o) => {
+          void finish(o.session);
+        })
         .exhaustive();
     });
 

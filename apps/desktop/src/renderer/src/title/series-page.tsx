@@ -81,7 +81,7 @@ const EpisodeLine = ({
       className="group hairline focus-visible:bg-paper focus-visible:text-ink grid w-full grid-cols-[5rem_minmax(0,1fr)_auto] items-baseline gap-x-6 border-b-2 px-4 py-4 text-left [contain-intrinsic-size:auto_5rem] [content-visibility:auto]"
     >
       <span className="text-heading stretch-condensed font-[300]">
-        {number == null ? "—" : String(number).padStart(2, "0")}
+        {number === undefined || number === null ? "—" : String(number).padStart(2, "0")}
       </span>
       <span className="flex min-w-0 flex-col gap-1">
         <span className="text-body stretch-semicondensed truncate font-[680]">{episode.title}</span>
@@ -157,7 +157,11 @@ export const SeriesPage = ({
   // The loader brought the opening season's episodes, so Play (or the remembered episode) is mounted.
   useEffect(() => {
     const episode = seriesPlace.get(series.id)?.episode;
-    focusFirst(...(episode == null ? [] : [episodeKey(episode)]), "title-play", `season-${picked}`);
+    focusFirst(
+      ...(episode === undefined || episode === null ? [] : [episodeKey(episode)]),
+      "title-play",
+      `season-${picked}`
+    );
     // Only on arrival; later season changes keep focus on the season tabs.
     // oxlint-disable-next-line react/exhaustive-deps
   }, []);
@@ -180,8 +184,9 @@ export const SeriesPage = ({
     }
   };
 
-  const open = (episode: Entry): void =>
+  const open = (episode: Entry): void => {
     void navigate({ to: "/title/$id", params: { id: episode.id } });
+  };
 
   return (
     <FocusContext.Provider value={focusKey}>

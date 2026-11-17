@@ -4,7 +4,7 @@ import { sessionQuery, signedIn } from "../data/session";
 
 export const Route = createFileRoute("/_signedIn")({
   beforeLoad: async ({ context }) => {
-    const session = await context.queryClient.ensureQueryData(sessionQuery);
+    const session = await context.queryClient.query({ ...sessionQuery, staleTime: "static" });
 
     if (session === null) {
       throw redirect({ to: "/onboarding" });

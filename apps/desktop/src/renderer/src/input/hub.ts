@@ -43,13 +43,17 @@ const perform = (action: Action): void => {
         void navigateByDirection(direction);
       }
     })
-    .with("select", () => void pressFocused())
+    .with("select", () => {
+      void pressFocused();
+    })
     .with("back", () => {
       if (!dispatch("back")) {
         window.history.back();
       }
     })
-    .with("menu", "playPause", (other) => void dispatch(other))
+    .with("menu", "playPause", (other) => {
+      void dispatch(other);
+    })
     .exhaustive();
 };
 

@@ -14,8 +14,8 @@ interface ActionProps {
 
 const useAction = ({ focusKey, onFocus, focusable }: ActionProps) =>
   useFocusable<object, HTMLButtonElement>({
-    ...(focusKey === undefined ? {} : { focusKey }),
-    ...(onFocus === undefined ? {} : { onFocus }),
+    focusKey,
+    onFocus,
     focusable: focusable !== false,
   });
 

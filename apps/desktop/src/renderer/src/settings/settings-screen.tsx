@@ -75,12 +75,16 @@ export const SettingsScreen = () => {
               focusKey="settings-sign-out"
               label="Sign out"
               detail={`Choose another user on ${session.serverName}`}
-              onPress={() => void leave(true)}
+              onPress={() => {
+                void leave(true);
+              }}
             />
             <ListAction
               label="Change server"
               detail="Find or type another server"
-              onPress={() => void leave(false)}
+              onPress={() => {
+                void leave(false);
+              }}
             />
             {updates.data?.state === "ready" ? (
               <ListAction

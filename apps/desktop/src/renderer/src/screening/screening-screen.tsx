@@ -177,13 +177,23 @@ export const ScreeningScreen = () => {
   const { entry, item } = data;
   const sourceId = item.MediaSources?.[0]?.Id;
 
-  const [request] = useState<PlayRequest>(() => ({
-    itemId: id,
-    ...(sourceId == null ? {} : { mediaSourceId: MediaSourceId.parse(sourceId) }),
-    startPositionTicks: search.start,
-    ...(search.audio === undefined ? {} : { audioStreamIndex: search.audio }),
-    ...(search.subtitle === undefined ? {} : { subtitleStreamIndex: search.subtitle }),
-  }));
+  const [request] = useState<PlayRequest>(() => {
+    const built: PlayRequest = { itemId: id, startPositionTicks: search.start };
+
+    if (sourceId !== undefined && sourceId !== null) {
+      built.mediaSourceId = MediaSourceId.parse(sourceId);
+    }
+
+    if (search.audio !== undefined) {
+      built.audioStreamIndex = search.audio;
+    }
+
+    if (search.subtitle !== undefined) {
+      built.subtitleStreamIndex = search.subtitle;
+    }
+
+    return built;
+  });
 
   const [houseDone, setHouseDone] = useState(false);
   const [elapsed, setElapsed] = useState<"house" | "slug" | "picture">("house");
@@ -242,7 +252,7 @@ export const ScreeningScreen = () => {
     }
 
     const next = await queryClient
-      .fetchQuery(nextEpisodeQuery(ctx, entry.series.id, entry.id))
+      .query(nextEpisodeQuery(ctx, entry.series.id, entry.id))
       .catch(() => null);
 
     if (!mounted.current) {
@@ -260,10 +270,10 @@ export const ScreeningScreen = () => {
     void router.navigate({
       to: "/screening/$id",
       params: { id: next.id },
-      search: {
-        start: next.positionTicks,
-        ...(search.after === undefined ? {} : { after: search.after }),
-      },
+      search:
+        search.after === undefined
+          ? { start: next.positionTicks }
+          : { start: next.positionTicks, after: search.after },
       replace: true,
     });
   };

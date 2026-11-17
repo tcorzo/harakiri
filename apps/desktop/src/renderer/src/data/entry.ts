@@ -65,7 +65,10 @@ const image = (
   itemId: string | null | undefined,
   type: ImageType,
   tag: string | null | undefined
-) => (itemId == null || tag == null ? null : { itemId: asId(itemId), type, tag });
+) =>
+  itemId === undefined || itemId === null || tag === undefined || tag === null
+    ? null
+    : { itemId: asId(itemId), type, tag };
 
 export const toEntry = (item: BaseItemDto): Entry => {
   const id = asId(item.Id ?? "");
@@ -83,13 +86,16 @@ export const toEntry = (item: BaseItemDto): Entry => {
     kind,
     title: item.Name ?? "Untitled",
     year: item.ProductionYear ?? null,
-    minutes: item.RunTimeTicks == null ? null : Math.round(item.RunTimeTicks / ticksPerMinute),
+    minutes:
+      item.RunTimeTicks === undefined || item.RunTimeTicks === null
+        ? null
+        : Math.round(item.RunTimeTicks / ticksPerMinute),
     overview: item.Overview ?? null,
     played: user?.Played ?? false,
     positionTicks: user?.PlaybackPositionTicks ?? 0,
     progress: percent !== null && percent > 0 && percent < 100 ? percent / 100 : null,
     series:
-      item.SeriesId == null
+      item.SeriesId === undefined || item.SeriesId === null
         ? null
         : {
             id: asId(item.SeriesId),

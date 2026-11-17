@@ -27,6 +27,6 @@ export const Route = createFileRoute("/_signedIn/screening/$id")({
   params: { parse: ({ id }) => ({ id: ItemId.parse(id) }), stringify: ({ id }) => ({ id }) },
   validateSearch: search,
   loader: async ({ context: { queryClient, signedIn }, params }) =>
-    await queryClient.ensureQueryData(rawItemQuery(signedIn, params.id)),
+    await queryClient.query({ ...rawItemQuery(signedIn, params.id), staleTime: "static" }),
   component: Screening,
 });

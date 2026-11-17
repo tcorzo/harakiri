@@ -83,12 +83,19 @@ export const ErrorScreen = ({ error, reset }: ErrorComponentProps) => {
           <QuietAction
             focusKey="error-first"
             label="Sign in again"
-            onPress={() => void leave(true)}
+            onPress={() => {
+              void leave(true);
+            }}
           />
         ) : (
           <QuietAction focusKey="error-first" label="Try again" onPress={retry} />
         )}
-        <QuietAction label="Change server" onPress={() => void leave(false)} />
+        <QuietAction
+          label="Change server"
+          onPress={() => {
+            void leave(false);
+          }}
+        />
       </div>
     </main>
   );
