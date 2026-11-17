@@ -47,6 +47,7 @@ export const signIn = async (): Promise<ContractSession> => {
   if (result.kind !== "signed-in") {
     throw new Error(`dev sign-in failed: ${JSON.stringify(result)}`);
   }
+
   const client = createJellyfinClient(SERVER, identity, result.session.accessToken);
   client.setConfig({ timeout: 30_000, retry: 0 });
 
@@ -69,6 +70,11 @@ export interface LibraryItem {
   readonly sources: readonly MediaSourceInfo[];
 }
 
+const pad = (n: number | null | undefined) => String(n ?? 0).padStart(2, "0");
+
+const hasText = (value: string | null | undefined): value is string =>
+  value !== undefined && value !== null && value !== "";
+
 const label = (item: {
   Name?: string | null;
   Type?: string;
@@ -79,7 +85,6 @@ const label = (item: {
   if (item.Type !== "Episode") {
     return item.Name ?? "?";
   }
-  const pad = (n: number | null | undefined) => String(n ?? 0).padStart(2, "0");
 
   return `${item.SeriesName} S${pad(item.ParentIndexNumber)}E${pad(item.IndexNumber)}`;
 };
@@ -94,6 +99,8 @@ export const libraryItems = async ({
   const items: LibraryItem[] = [];
 
   for (let start = 0; ; start += PAGE) {
+    // Paging is sequential: the next page starts only once this one says whether there is more.
+    // oxlint-disable-next-line eslint/no-await-in-loop -- each page decides whether another follows
     const { data } = await getItems({
       client,
       throwOnError: true,
@@ -111,9 +118,10 @@ export const libraryItems = async ({
     for (const item of data.Items ?? []) {
       const sources = item.MediaSources ?? [];
 
-      if (sources.length === 0 || !item.Path) {
+      if (sources.length === 0 || !hasText(item.Path)) {
         continue;
       }
+
       items.push({
         id: ItemId.parse(item.Id),
         name: label(item),
@@ -133,8 +141,16 @@ export const playbackInfo = async (
   { client }: ContractSession,
   itemId: ItemId,
   body: PlaybackInfoDto
-): Promise<PlaybackInfoResponse> =>
-  (await getPostedPlaybackInfo({ client, throwOnError: true, path: { itemId }, body })).data;
+): Promise<PlaybackInfoResponse> => {
+  const { data } = await getPostedPlaybackInfo({
+    client,
+    throwOnError: true,
+    path: { itemId },
+    body,
+  });
+
+  return data;
+};
 
 export type Decision =
   | { readonly kind: "direct-play"; readonly source: MediaSourceInfo }
@@ -144,16 +160,17 @@ export type Decision =
 /** The first source is what harakiri plays when it sends no MediaSourceId. */
 export const decide = (response: PlaybackInfoResponse): Decision => {
   const sources = response.MediaSources ?? [];
-  const transcoding = sources.find((source) => source.TranscodingUrl);
+  const transcoding = sources.find((source) => hasText(source.TranscodingUrl));
 
-  if (transcoding?.TranscodingUrl) {
-    const url = transcoding.TranscodingUrl;
+  const url = transcoding?.TranscodingUrl;
+
+  if (hasText(url)) {
     const reasons = new URL(url, SERVER).searchParams.get("TranscodeReasons");
 
-    return { kind: "transcode", reasons: reasons ? reasons.split(",") : [], url };
+    return { kind: "transcode", reasons: hasText(reasons) ? reasons.split(",") : [], url };
   }
 
-  const chosen = sources[0];
+  const [chosen] = sources;
 
   if (chosen?.SupportsDirectPlay === true) {
     return { kind: "direct-play", source: chosen };
@@ -190,6 +207,8 @@ export const mapLimit = async <T, R>(
 
   const worker = async () => {
     for (const [index, input] of queue) {
+      // Each worker runs its inputs one after another; the pool bounds the concurrency.
+      // oxlint-disable-next-line eslint/no-await-in-loop -- bounded-concurrency worker loop
       results[index] = await run(input);
     }
   };

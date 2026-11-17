@@ -51,7 +51,7 @@ export const createJellyfinClient = (
   token?: AccessToken
 ): Client =>
   createClient({
-    baseUrl: server.replace(/\/$/, ""),
+    baseUrl: server.replace(/\/$/u, ""),
     headers: { Authorization: authorizationHeader(identity, token) },
   });
 
@@ -73,8 +73,9 @@ interface Answer {
   readonly response?: Response;
 }
 
-const describe = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
+const FailureMessage = z
+  .unknown()
+  .transform((failure) => (failure instanceof Error ? failure.message : String(failure)));
 
 const toSession = async (
   server: ServerUrl,
@@ -87,7 +88,7 @@ const toSession = async (
   try {
     answers = await Promise.all([signIn, getPublicSystemInfo({ client })]);
   } catch (error) {
-    return { kind: "unreachable", message: describe(error) };
+    return { kind: "unreachable", message: FailureMessage.parse(error) };
   }
 
   const [auth, info] = answers;
@@ -95,7 +96,7 @@ const toSession = async (
   // Without throwOnError the generated client reports a network failure as a missing response.
   for (const answer of answers) {
     if (answer.response === undefined) {
-      return { kind: "unreachable", message: describe(answer.error) };
+      return { kind: "unreachable", message: FailureMessage.parse(answer.error) };
     }
   }
 
@@ -112,6 +113,7 @@ const toSession = async (
   if (info.response?.ok !== true) {
     return { kind: "rejected", status: info.response?.status ?? 0 };
   }
+
   const signedIn = SignedIn.safeParse(auth.data);
   const serverInfo = ServerInfo.safeParse(info.data);
 

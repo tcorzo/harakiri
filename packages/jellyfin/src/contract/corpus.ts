@@ -36,10 +36,15 @@ const Entry = z.discriminatedUnion("kind", [
 
 const Metadata = z.object({ title: z.string(), genres: z.array(z.string()) });
 
+// Loose: the harness catalog owns the full entry, and `entryPath` takes it as recorded there.
+const RawEntry = z.looseObject({ id: z.string() });
+
 const Catalog = z.object({
-  CATALOG: z.array(z.unknown()).min(1),
+  CATALOG: z.array(RawEntry).min(1),
   SERIES: z.record(z.string(), Metadata),
-  entryPath: z.custom<(entry: unknown) => string>((value) => typeof value === "function"),
+  entryPath: z.custom<(entry: z.output<typeof RawEntry>) => string>(
+    (value) => z.instanceof(Function).safeParse(value).success
+  ),
 });
 
 export type CorpusEntry = z.output<typeof Entry> & {
@@ -55,6 +60,8 @@ export interface Corpus {
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
+
+const tail = (entry: CorpusEntry) => `/${entry.path.split("/").slice(1).join("/")}`;
 
 // packages/jellyfin cannot reference packages/harness in its tsconfig, so the catalog is loaded
 // at run time and parsed here. It stays the one table of what the synthetic library holds.
@@ -105,8 +112,6 @@ export const matchCorpus = <T extends { readonly path: string }>(
   corpus: Corpus,
   items: readonly T[]
 ): CorpusMatch<T> | undefined => {
-  const tail = (entry: CorpusEntry) => `/${entry.path.split("/").slice(1).join("/")}`;
-
   const byEntry = new Map(
     corpus.entries.map((entry) => [entry, items.find((item) => item.path.endsWith(tail(entry)))])
   );
@@ -118,11 +123,11 @@ export const matchCorpus = <T extends { readonly path: string }>(
   }
 
   return {
-    present: corpus.entries.filter((entry) => byEntry.get(entry)),
+    present: corpus.entries.filter((entry) => byEntry.get(entry) !== undefined),
     item: (entry) => {
       const item = byEntry.get(entry);
 
-      if (item) {
+      if (item !== undefined) {
         return item;
       }
 

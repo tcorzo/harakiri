@@ -6,6 +6,5 @@ const accepts: Readonly<Record<InputMode, Readonly<Record<InputSource, boolean>>
   player: { keyboard: true, gamepad: false },
 };
 
-export function route(mode: InputMode, source: InputSource, action: Action): Action | undefined {
-  return accepts[mode][source] ? action : undefined;
-}
+export const route = (mode: InputMode, source: InputSource, action: Action): Action | undefined =>
+  accepts[mode][source] ? action : undefined;

@@ -61,7 +61,7 @@ interface Contact {
   readonly stick: boolean;
 }
 
-function contacts(prev: PadState, pad: PadSnapshot): ReadonlyMap<Action, Contact> {
+const contacts = (prev: PadState, pad: PadSnapshot): ReadonlyMap<Action, Contact> => {
   const active = new Map<Action, Contact>();
 
   for (const [index, action] of buttonActions) {
@@ -79,18 +79,18 @@ function contacts(prev: PadState, pad: PadSnapshot): ReadonlyMap<Action, Contact
   }
 
   return active;
-}
+};
 
 /**
  * Advances the pad state to `now`: fires on press edges, and repeats held
  * directions after `delayMs`, then every `intervalMs`.
  */
-export function stepPad(
+export const stepPad = (
   prev: PadState,
   pad: PadSnapshot,
   now: number,
   timing: RepeatTiming = defaultRepeat
-): PadStep {
+): PadStep => {
   const active = contacts(prev, pad);
   const state = new Map<Action, Hold>();
   const fired: Action[] = [];
@@ -101,6 +101,7 @@ export function stepPad(
     if (contact === undefined) {
       continue;
     }
+
     const hold = prev.get(action);
 
     if (hold === undefined) {
@@ -124,14 +125,14 @@ export function stepPad(
   }
 
   return { state, actions: fired };
-}
+};
 
 /**
  * The pad state right after an input mode switch: everything held in `pad`
  * stays silent until released, so the press that switched modes (B or Start
  * ending playback in mpv) does not also act in the new mode.
  */
-export function seedHeld(pad: PadSnapshot, now: number): PadState {
+export const seedHeld = (pad: PadSnapshot, now: number): PadState => {
   const state = new Map<Action, Hold>();
 
   for (const [action, contact] of contacts(idlePad, pad)) {
@@ -139,4 +140,4 @@ export function seedHeld(pad: PadSnapshot, now: number): PadState {
   }
 
   return state;
-}
+};

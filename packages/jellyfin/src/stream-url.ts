@@ -23,17 +23,18 @@ export interface ClientIdentity {
 
 // The server URL-decodes each value, and a raw quote would end the field early.
 export const authorizationHeader = (identity: ClientIdentity, token?: AccessToken): string => {
-  const fields = {
-    Client: identity.client,
-    Device: identity.device,
-    DeviceId: identity.deviceId,
-    Version: identity.version,
-    ...(token === undefined ? {} : { Token: token }),
-  };
+  const fields: (readonly [string, string])[] = [
+    ["Client", identity.client],
+    ["Device", identity.device],
+    ["DeviceId", identity.deviceId],
+    ["Version", identity.version],
+  ];
 
-  const parts = Object.entries(fields).map(
-    ([key, value]) => `${key}="${encodeURIComponent(value)}"`
-  );
+  if (token !== undefined) {
+    fields.push(["Token", token]);
+  }
+
+  const parts = fields.map(([key, value]) => `${key}="${encodeURIComponent(value)}"`);
 
   return `MediaBrowser ${parts.join(", ")}`;
 };

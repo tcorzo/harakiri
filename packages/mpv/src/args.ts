@@ -47,7 +47,7 @@ type MpvOption = readonly [name: string, value: string];
 
 const flag = (on: boolean) => (on ? "yes" : "no");
 
-export function buildPlaybackArgs(config: PlaybackConfig = {}): string[] {
+export const buildPlaybackArgs = (config: PlaybackConfig = {}): string[] => {
   const passthrough = config.audioPassthrough ?? PRD_PASSTHROUGH;
 
   const options: MpvOption[] = [
@@ -70,7 +70,7 @@ export function buildPlaybackArgs(config: PlaybackConfig = {}): string[] {
   }
 
   return options.map(([name, value]) => `--${name}=${value}`);
-}
+};
 
 /**
  * Where mpv reads its config. The shipped player always passes an app-owned dir, so a personal

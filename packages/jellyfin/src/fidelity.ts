@@ -108,18 +108,22 @@ const SOUND: Record<SoundFormat, SoundTraits> = {
   Other: { rank: 13, delivery: "decoded" },
 };
 
-const CHANNELS_BY_COUNT: Record<number, string> = {
-  1: "1.0",
-  2: "2.0",
-  3: "2.1",
-  4: "4.0",
-  5: "5.0",
-  6: "5.1",
-  7: "6.1",
-  8: "7.1",
-};
+const CHANNELS_BY_COUNT = new Map<number, string>([
+  [1, "1.0"],
+  [2, "2.0"],
+  [3, "2.1"],
+  [4, "4.0"],
+  [5, "5.0"],
+  [6, "5.1"],
+  [7, "6.1"],
+  [8, "7.1"],
+]);
 
-const NAMED_LAYOUTS: Record<string, string> = { mono: "1.0", stereo: "2.0", quad: "4.0" };
+const NAMED_LAYOUTS = new Map<string, string>([
+  ["mono", "1.0"],
+  ["stereo", "2.0"],
+  ["quad", "4.0"],
+]);
 
 const resolutionOf = (stream: MediaStream): Resolution | null => {
   const width = stream.Width ?? 0;
@@ -183,40 +187,52 @@ const pictureOf = (stream: MediaStream): PictureClass => {
     case "SDR": {
       return { range: "SDR", resolution, delivery: "native" };
     }
+
     case "HDR10": {
       return { range: "HDR10", resolution, delivery: "native" };
     }
+
     case "HDR10Plus": {
       return { range: "HDR10+", resolution, delivery: "native" };
     }
+
     case "HLG": {
       return { range: "HLG", resolution, delivery: "mapped" };
     }
+
     case "DOVI": {
       return dolbyVision(stream, resolution, "none");
     }
+
     case "DOVIWithHDR10": {
       return dolbyVision(stream, resolution, "HDR10");
     }
+
     case "DOVIWithHDR10Plus": {
       return dolbyVision(stream, resolution, "HDR10", { hdr10Plus: true });
     }
+
     case "DOVIWithSDR": {
       return dolbyVision(stream, resolution, "SDR");
     }
+
     case "DOVIWithHLG": {
       return dolbyVision(stream, resolution, "HLG");
     }
+
     case "DOVIWithEL": {
       return dolbyVision(stream, resolution, "HDR10", { enhancementLayer: true });
     }
+
     case "DOVIWithELHDR10Plus": {
       return dolbyVision(stream, resolution, "HDR10", { hdr10Plus: true, enhancementLayer: true });
     }
+
     case "DOVIInvalid":
     case "Unknown": {
       return plain();
     }
+
     default: {
       const unhandled: never = rangeType;
 
@@ -278,18 +294,19 @@ const soundFormatOf = (stream: MediaStream): SoundFormat => {
 };
 
 const channelsOf = (stream: MediaStream): string | null => {
-  const layout = (stream.ChannelLayout ?? "").replace(/\(.*\)$/, "");
+  const layout = (stream.ChannelLayout ?? "").replace(/\(.*\)$/u, "");
 
-  if (/^\d+\.\d(\.\d)?$/.test(layout)) {
+  if (/^\d+\.\d(?:\.\d)?$/u.test(layout)) {
     return layout;
   }
-  const named = NAMED_LAYOUTS[layout];
+
+  const named = NAMED_LAYOUTS.get(layout);
 
   if (named !== undefined) {
     return named;
   }
 
-  return CHANNELS_BY_COUNT[stream.Channels ?? 0] ?? null;
+  return CHANNELS_BY_COUNT.get(stream.Channels ?? 0) ?? null;
 };
 
 const soundOf = (stream: MediaStream): SoundClass => {
@@ -367,6 +384,7 @@ export const classifyFidelity = (
   if (video === undefined) {
     return null;
   }
+
   const picture = pictureOf(video);
   const tracks = streams.filter((stream) => stream.Type === "Audio").map(soundOf);
 

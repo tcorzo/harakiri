@@ -3,7 +3,7 @@ import { z } from "zod";
 // The server emits Guids without dashes but accepts both forms.
 const guid = z
   .string()
-  .regex(/^(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+  .regex(/^(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/iu);
 
 export const ItemId = guid.brand<"ItemId">();
 
@@ -28,7 +28,7 @@ export type DeviceId = z.output<typeof DeviceId>;
 
 // A base URL that relative API paths resolve against: no query or fragment, pathname ending in "/".
 export const ServerUrl = z
-  .url({ protocol: /^https?$/ })
+  .url({ protocol: /^https?$/u })
   .transform((raw) => {
     const url = new URL(raw);
     url.search = "";

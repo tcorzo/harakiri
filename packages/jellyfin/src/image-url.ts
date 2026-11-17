@@ -25,7 +25,7 @@ export const imageUrl = (
   const url = new URL(path, server);
   url.searchParams.set("maxWidth", String(Math.round(maxWidth)));
 
-  if (tag != null) {
+  if (tag !== null && tag !== undefined) {
     url.searchParams.set("tag", tag);
   }
 

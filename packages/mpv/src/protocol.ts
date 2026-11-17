@@ -17,14 +17,14 @@ export interface CommandRequest {
 const replySchema = z.object({
   request_id: z.number().int(),
   error: z.string(),
-  data: z.unknown().optional(),
+  data: z.json().optional(),
 });
 
 const propertyChangeSchema = z.object({
   event: z.literal("property-change"),
   id: z.number().int(),
   name: z.string(),
-  data: z.unknown().optional(),
+  data: z.json().optional(),
 });
 
 const clientMessageSchema = z.object({
@@ -47,7 +47,7 @@ export type InboundMessage =
   | { readonly kind: "client-message"; readonly args: readonly string[]; readonly event: MpvEvent }
   | { readonly kind: "event"; readonly event: MpvEvent };
 
-export function parseInboundLine(line: string): InboundMessage {
+export const parseInboundLine = (line: string): InboundMessage => {
   const json: unknown = JSON.parse(line);
   const event = otherEventSchema.safeParse(json);
 
@@ -63,6 +63,7 @@ export function parseInboundLine(line: string): InboundMessage {
         event: event.data,
       };
     }
+
     case "client-message": {
       return {
         kind: "client-message",
@@ -70,18 +71,17 @@ export function parseInboundLine(line: string): InboundMessage {
         event: event.data,
       };
     }
+
     default: {
       return { kind: "event", event: event.data };
     }
   }
-}
+};
 
-export function encodeRequest(request: CommandRequest): string {
-  return `${JSON.stringify(request)}\n`;
-}
+export const encodeRequest = (request: CommandRequest): string => `${JSON.stringify(request)}\n`;
 
 /** Splits a chunked byte stream into complete newline-terminated lines. */
-export function createLineSplitter(onLine: (line: string) => void): (chunk: string) => void {
+export const createLineSplitter = (onLine: (line: string) => void): ((chunk: string) => void) => {
   let buffer = "";
 
   return (chunk) => {
@@ -95,7 +95,8 @@ export function createLineSplitter(onLine: (line: string) => void): (chunk: stri
       if (line.trim() !== "") {
         onLine(line);
       }
+
       newline = buffer.indexOf("\n");
     }
   };
-}
+};

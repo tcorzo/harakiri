@@ -31,6 +31,10 @@ export interface ProgrammeSection {
 
 const HERO_POOL = 12;
 const HERO_FILMS = 5;
+
+const isHdr = (item: BaseItemDto): boolean =>
+  (classifyFidelity(item.MediaSources?.[0])?.picture.range ?? "SDR") !== "SDR";
+
 const ROW_LIMIT = 16;
 const SECTION_COUNT = 6;
 const SECTION_ITEMS = 20;
@@ -69,9 +73,6 @@ export const heroQuery = (ctx: LibraryContext) =>
       });
 
       const films = data.Items ?? [];
-
-      const isHdr = (item: BaseItemDto) =>
-        (classifyFidelity(item.MediaSources?.[0])?.picture.range ?? "SDR") !== "SDR";
 
       return [...films.filter(isHdr), ...films.filter((item) => !isHdr(item))].slice(0, HERO_FILMS);
     },
@@ -238,7 +239,7 @@ export const episodesQuery = (ctx: LibraryContext, seriesId: ItemId, seasonId: I
   });
 
 const anonymousClient = (server: ServerUrl): Client =>
-  createClient({ baseUrl: server.replace(/\/$/, "") });
+  createClient({ baseUrl: server.replace(/\/$/u, "") });
 
 export const publicUsersQuery = (server: ServerUrl) =>
   queryOptions({
