@@ -1,6 +1,6 @@
 import { ItemId } from "@harakiri/jellyfin";
 import { QueryClient } from "@tanstack/react-query";
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Session } from "../../../shared/bridge";
 import type { PlayerEvent } from "../../../shared/bridge";
@@ -52,20 +52,22 @@ Object.defineProperty(window, "harakiri", {
   },
 });
 
-afterEach(() => {
-  listeners.clear();
-});
+describe("queries", () => {
+  afterEach(() => {
+    listeners.clear();
+  });
 
-test("the played item is refetched only once the server has the stop report, and only once", () => {
-  const queryClient = new QueryClient();
-  const invalidate = vi.spyOn(queryClient, "invalidateQueries").mockResolvedValue();
-  refetchWhenReported(queryClient, ctx, entry);
+  it("the played item is refetched only once the server has the stop report, and only once", () => {
+    const queryClient = new QueryClient();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries").mockResolvedValue();
+    refetchWhenReported(queryClient, ctx, entry);
 
-  emit("stopped");
-  emit("reported", ItemId.parse("ffffffffffffffffffffffffffffffff"));
-  expect(invalidate).not.toHaveBeenCalled();
+    emit("stopped");
+    emit("reported", ItemId.parse("ffffffffffffffffffffffffffffffff"));
+    expect(invalidate).not.toHaveBeenCalled();
 
-  emit("reported");
-  expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey?.at(-1))).toContain("resume");
-  expect(listeners.size).toBe(0);
+    emit("reported");
+    expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey?.at(-1))).toContain("resume");
+    expect(listeners.size).toBe(0);
+  });
 });
