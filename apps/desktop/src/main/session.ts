@@ -9,7 +9,7 @@ import {
   rmSync,
   writeSync,
 } from "node:fs";
-import { join } from "node:path";
+import path from "node:path";
 
 import { DeviceId } from "@harakiri/jellyfin";
 import { getLogger } from "@logtape/logtape";
@@ -23,11 +23,11 @@ const logger = getLogger(["harakiri", "session"]);
 
 /** The slice of Electron's safeStorage the store needs, so tests can supply their own. */
 export interface TokenCrypto {
-  isEncryptionAvailable(): boolean;
-  encryptString(plain: string): Buffer;
-  decryptString(encrypted: Buffer): string;
+  isEncryptionAvailable: () => boolean;
+  encryptString: (plain: string) => Buffer;
+  decryptString: (encrypted: Buffer) => string;
   /** Linux only. `basic_text` means a hardcoded key: obfuscation, not encryption. */
-  getSelectedStorageBackend(): string;
+  getSelectedStorageBackend: () => string;
 }
 
 export interface SessionStoreOptions {
@@ -38,10 +38,10 @@ export interface SessionStoreOptions {
 }
 
 export interface SessionStore {
-  load(): Session | null;
-  save(session: NewSession): void;
-  clear(): void;
-  deviceId(): DeviceId;
+  load: () => Session | null;
+  save: (session: NewSession) => void;
+  clear: () => void;
+  deviceId: () => DeviceId;
 }
 
 const StoredToken = z.discriminatedUnion("kind", [
@@ -55,15 +55,15 @@ const StoredSession = Session.omit({ accessToken: true, deviceId: true }).extend
 
 type StoredSession = z.infer<typeof StoredSession>;
 
-export function createSessionStore(options: SessionStoreOptions): SessionStore {
-  const sessionFile = join(options.dir, "session.json");
-  const deviceIdFile = join(options.dir, "device-id");
+export const createSessionStore = (options: SessionStoreOptions): SessionStore => {
+  const sessionFile = path.join(options.dir, "session.json");
+  const deviceIdFile = path.join(options.dir, "device-id");
   let memorySession: Session | null = null;
   let cachedDeviceId: DeviceId | undefined;
 
   // A crash mid-write must leave the previous file, never a truncated one; the rename also
   // replaces whatever mode an existing file had with the temp file's 0600.
-  function write(file: string, contents: string): void {
+  const write = (file: string, contents: string): void => {
     mkdirSync(options.dir, { recursive: true });
     const temp = `${file}.${randomUUID()}.tmp`;
 
@@ -82,16 +82,13 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
       rmSync(temp, { force: true });
       throw error;
     }
-  }
+  };
 
-  function encryptionUsable(): boolean {
-    return (
-      options.crypto.isEncryptionAvailable() &&
-      options.crypto.getSelectedStorageBackend() !== "basic_text"
-    );
-  }
+  const encryptionUsable = (): boolean =>
+    options.crypto.isEncryptionAvailable() &&
+    options.crypto.getSelectedStorageBackend() !== "basic_text";
 
-  function deviceId(): DeviceId {
+  const deviceId = (): DeviceId => {
     if (cachedDeviceId !== undefined) {
       return cachedDeviceId;
     }
@@ -104,21 +101,22 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
     }
 
     return cachedDeviceId;
-  }
+  };
 
-  function readToken(token: StoredSession["token"]): string {
+  const readToken = (token: StoredSession["token"]): string => {
     if (token.kind === "plain") {
       return token.value;
     }
 
     return options.crypto.decryptString(Buffer.from(token.base64, "base64"));
-  }
+  };
 
   return {
     load() {
       if (memorySession !== null) {
         return memorySession;
       }
+
       let raw: string;
 
       try {
@@ -174,11 +172,11 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
 
     deviceId,
   };
-}
+};
 
 let defaultStore: SessionStore | undefined;
 
-function electronStore(): SessionStore {
+const electronStore = (): SessionStore => {
   defaultStore ??= createSessionStore({
     dir: app.getPath("userData"),
     crypto: safeStorage,
@@ -186,13 +184,16 @@ function electronStore(): SessionStore {
   });
 
   return defaultStore;
-}
+};
 
 export const loadSession = (): Session | null => electronStore().load();
+
 export const saveSession = (session: NewSession): void => {
   electronStore().save(session);
 };
+
 export const clearSession = (): void => {
   electronStore().clear();
 };
+
 export const deviceId = (): DeviceId => electronStore().deviceId();

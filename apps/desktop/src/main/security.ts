@@ -1,9 +1,9 @@
-import type { IpcMainInvokeEvent, Session, WebContents } from "electron";
+import type { HeadersReceivedResponse, OnHeadersReceivedListenerDetails } from "electron";
 
 /** True when `url` is the app itself: the packaged index.html (any hash route) or the dev server. */
 export type AppUrlCheck = (url: string) => boolean;
 
-export function appUrlCheck(appUrl: string): AppUrlCheck {
+export const appUrlCheck = (appUrl: string): AppUrlCheck => {
   const app = new URL(appUrl);
 
   return (url) => {
@@ -21,13 +21,13 @@ export function appUrlCheck(appUrl: string): AppUrlCheck {
 
     return candidate.origin === app.origin;
   };
-}
+};
 
 /**
  * The renderer talks to the Jellyfin server directly, whose origin is only known after sign-in,
  * so images and fetches allow any http(s) origin while scripts stay same-origin.
  */
-export function contentSecurityPolicy(appUrl: string): string {
+export const contentSecurityPolicy = (appUrl: string): string => {
   const dev = new URL(appUrl).protocol !== "file:";
 
   return [
@@ -43,30 +43,60 @@ export function contentSecurityPolicy(appUrl: string): string {
     "form-action 'none'",
     "frame-ancestors 'none'",
   ].join("; ");
+};
+
+type HeadersDetails = Pick<
+  OnHeadersReceivedListenerDetails,
+  "url" | "resourceType" | "responseHeaders"
+>;
+
+/** The slice of Electron's session that `installContentSecurityPolicy` reads. */
+interface HeadersSession {
+  webRequest: {
+    onHeadersReceived: (
+      listener: (
+        details: HeadersDetails,
+        respond: (response: HeadersReceivedResponse) => void
+      ) => void
+    ) => void;
+  };
 }
 
-export function installContentSecurityPolicy(
-  session: Pick<Session, "webRequest">,
+export const installContentSecurityPolicy = (
+  session: HeadersSession,
   isAppUrl: AppUrlCheck,
   policy: string
-): void {
-  session.webRequest.onHeadersReceived((details, callback) => {
+): void => {
+  session.webRequest.onHeadersReceived((details, respond) => {
     if (details.resourceType !== "mainFrame" || !isAppUrl(details.url)) {
-      callback({});
+      respond({});
 
       return;
     }
 
-    callback({
+    respond({
       responseHeaders: { ...details.responseHeaders, "Content-Security-Policy": [policy] },
     });
   });
+};
+
+interface GuardedEvent {
+  preventDefault: () => void;
 }
 
-type GuardedContents = Pick<WebContents, "on" | "setWindowOpenHandler">;
+interface NavigationEvent extends GuardedEvent {
+  readonly url: string;
+}
+
+/** The slice of Electron's WebContents that `confineWebContents` reads. */
+interface GuardedContents {
+  on: ((event: "will-navigate", listener: (event: NavigationEvent) => void) => void) &
+    ((event: "will-attach-webview", listener: (event: GuardedEvent) => void) => void);
+  setWindowOpenHandler: (handler: () => { action: "deny" }) => void;
+}
 
 /** Keeps a web view on the app: no navigation away, no new windows, no embedded webviews. */
-export function confineWebContents(contents: GuardedContents, isAppUrl: AppUrlCheck): void {
+export const confineWebContents = (contents: GuardedContents, isAppUrl: AppUrlCheck): void => {
   contents.on("will-navigate", (event) => {
     if (!isAppUrl(event.url)) {
       event.preventDefault();
@@ -76,7 +106,7 @@ export function confineWebContents(contents: GuardedContents, isAppUrl: AppUrlCh
     event.preventDefault();
   });
   contents.setWindowOpenHandler(() => ({ action: "deny" }));
-}
+};
 
 export class ForeignSenderError extends Error {
   constructor(url: string | undefined) {
@@ -85,12 +115,17 @@ export class ForeignSenderError extends Error {
   }
 }
 
+interface SenderEvent {
+  readonly senderFrame: { readonly url: string } | null;
+}
+
 /** Wraps an IPC handler so only frames showing the app can call it. */
-export function fromAppOnly<Args extends unknown[], Result>(
-  isAppUrl: AppUrlCheck,
-  handler: (event: IpcMainInvokeEvent, ...args: Args) => Result
-): (event: IpcMainInvokeEvent, ...args: Args) => Result {
-  return (event, ...args) => {
+export const fromAppOnly =
+  <Event extends SenderEvent, Args extends unknown[], Result>(
+    isAppUrl: AppUrlCheck,
+    handler: (event: Event, ...args: Args) => Result
+  ): ((event: Event, ...args: Args) => Result) =>
+  (event, ...args) => {
     const url = event.senderFrame?.url;
 
     if (url === undefined || !isAppUrl(url)) {
@@ -99,4 +134,3 @@ export function fromAppOnly<Args extends unknown[], Result>(
 
     return handler(event, ...args);
   };
-}

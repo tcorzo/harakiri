@@ -1,5 +1,6 @@
 import { ipcMain } from "electron";
 import type { IpcMainInvokeEvent } from "electron";
+import type { z } from "zod";
 
 import { channels, NewSession, PlayRequest } from "../shared/bridge";
 import { discoverServers } from "./discovery";
@@ -10,19 +11,31 @@ import type { AppUrlCheck } from "./security";
 import { clearSession, deviceId, loadSession, saveSession } from "./session";
 import type { Updates } from "./updates";
 
+type HandlerResult = ReturnType<Parameters<typeof ipcMain.handle>[1]>;
+
 /**
  * Registers every main-process handler. Only frames showing the app may call them, and payloads
  * from the renderer are untrusted and parsed here.
  */
-export function registerIpc(
+export const registerIpc = (
   isAppUrl: AppUrlCheck,
   updates: Pick<Updates, "status" | "restart">
-): void {
-  const handle = (
-    channel: string,
-    handler: (event: IpcMainInvokeEvent, payload: unknown) => unknown
-  ): void => {
+): void => {
+  const handle = (channel: string, handler: (event: IpcMainInvokeEvent) => HandlerResult): void => {
     ipcMain.handle(channel, fromAppOnly(isAppUrl, handler));
+  };
+
+  const handleParsed = <Payload>(
+    channel: string,
+    schema: z.ZodType<Payload>,
+    handler: (event: IpcMainInvokeEvent, payload: Payload) => HandlerResult
+  ): void => {
+    const listener: Parameters<typeof ipcMain.handle>[1] = fromAppOnly(isAppUrl, (event, payload) =>
+      // oxlint-disable-next-line typescript/no-unsafe-return -- ipcMain.handle's listener is typed to return any
+      handler(event, schema.parse(payload))
+    );
+
+    ipcMain.handle(channel, listener);
   };
 
   handle(channels.deviceId, () => deviceId());
@@ -34,9 +47,9 @@ export function registerIpc(
 
   handle(channels.sessionGet, () => loadSession());
   // A resolution prepared under the old session holds its token: it must not outlive it.
-  handle(channels.sessionSave, (_event, payload) => {
+  handleParsed(channels.sessionSave, NewSession, (_event, session) => {
     forgetPrepared();
-    saveSession(NewSession.parse(payload));
+    saveSession(session);
   });
   handle(channels.sessionClear, () => {
     forgetPrepared();
@@ -50,9 +63,8 @@ export function registerIpc(
       await discoverServers(discoveryAddress === undefined ? {} : { address: discoveryAddress })
   );
 
-  handle(channels.prepare, async (_event, payload) => await prepare(PlayRequest.parse(payload)));
-  handle(channels.play, async (event, payload) => {
-    const request = PlayRequest.parse(payload);
+  handleParsed(channels.prepare, PlayRequest, async (_event, request) => await prepare(request));
+  handleParsed(channels.play, PlayRequest, async (event, request) => {
     const { sender } = event;
     // Reply to the requesting renderer: while mpv is fullscreen no Electron window has focus.
     await play(request, (playerEvent) => {
@@ -61,9 +73,11 @@ export function registerIpc(
       }
     });
   });
-  handle(channels.stop, async () => await stop());
+  handle(channels.stop, async () => {
+    await stop();
+  });
 
   if (isE2E) {
     handle(channels.testProbe, async () => await probe());
   }
-}
+};

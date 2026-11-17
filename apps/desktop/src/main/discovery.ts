@@ -23,11 +23,14 @@ export interface DiscoveryOptions {
 }
 
 /** Broadcasts Jellyfin's discovery probe and returns every distinct server that answers in time. */
-export async function discoverServers(options: DiscoveryOptions = {}): Promise<DiscoveredServer[]> {
+export const discoverServers = async (
+  options: DiscoveryOptions = {}
+): Promise<DiscoveredServer[]> => {
   const { address = "255.255.255.255", port = 7359, timeoutMs = 1500 } = options;
   const servers = new Map<string, DiscoveredServer>();
   const socket = createSocket("udp4");
 
+  // oxlint-disable-next-line promise/avoid-new -- wraps dgram's event API, which has no promise form
   return await new Promise((resolve) => {
     let done = false;
 
@@ -35,6 +38,7 @@ export async function discoverServers(options: DiscoveryOptions = {}): Promise<D
       if (done) {
         return;
       }
+
       done = true;
       clearTimeout(timer);
       socket.close();
@@ -77,4 +81,4 @@ export async function discoverServers(options: DiscoveryOptions = {}): Promise<D
       socket.send("Who is JellyfinServer?", port, address);
     });
   });
-}
+};

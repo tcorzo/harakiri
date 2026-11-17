@@ -1,5 +1,5 @@
 import { DeviceId } from "@harakiri/jellyfin";
-import type { IpcRenderer, IpcRendererEvent } from "electron";
+import type { IpcRenderer } from "electron";
 import { z } from "zod";
 
 import {
@@ -20,15 +20,27 @@ export interface BridgeOptions {
   readonly warn: (message: string, detail: string) => void;
 }
 
-export function createBridge(
-  ipc: Pick<IpcRenderer, "invoke" | "on" | "removeListener">,
-  options: BridgeOptions
-): HarakiriBridge {
-  async function invoke<T>(
+type IpcArg = Parameters<IpcRenderer["send"]>[1];
+
+export interface IpcEvent {
+  readonly ports: readonly unknown[];
+}
+
+export type IpcListener = (event: IpcEvent, ...args: IpcArg[]) => void;
+
+/** The slice of Electron's ipcRenderer the bridge uses, so tests can supply their own. */
+export interface BridgeIpc {
+  invoke: IpcRenderer["invoke"];
+  on: (channel: string, listener: IpcListener) => void;
+  removeListener: (channel: string, listener: IpcListener) => void;
+}
+
+export const createBridge = (ipc: BridgeIpc, options: BridgeOptions): HarakiriBridge => {
+  const invoke = async <Schema extends z.ZodType>(
     channel: string,
-    schema: { parse(data: unknown): T },
+    schema: Schema,
     ...args: unknown[]
-  ): Promise<T> {
+  ): Promise<z.output<Schema>> => {
     let reply: unknown;
 
     try {
@@ -39,14 +51,18 @@ export function createBridge(
     }
 
     return schema.parse(reply);
-  }
+  };
 
   return {
     deviceId: async () => await invoke(channels.deviceId, DeviceId),
     session: {
       get: async () => await invoke(channels.sessionGet, Session.nullable()),
-      save: async (session) => await invoke(channels.sessionSave, z.undefined(), session),
-      clear: async () => await invoke(channels.sessionClear, z.undefined()),
+      save: async (session) => {
+        await invoke(channels.sessionSave, z.undefined(), session);
+      },
+      clear: async () => {
+        await invoke(channels.sessionClear, z.undefined());
+      },
     },
     updates: {
       status: async () => await invoke(channels.updateStatus, UpdateStatus),
@@ -55,10 +71,14 @@ export function createBridge(
     discover: async () => await invoke(channels.discover, z.array(DiscoveredServer)),
     player: {
       prepare: async (request) => await invoke(channels.prepare, SignalReport, request),
-      play: async (request) => await invoke(channels.play, z.undefined(), request),
-      stop: async () => await invoke(channels.stop, z.undefined()),
+      play: async (request) => {
+        await invoke(channels.play, z.undefined(), request);
+      },
+      stop: async () => {
+        await invoke(channels.stop, z.undefined());
+      },
       onEvent: (listener) => {
-        const handler = (_event: IpcRendererEvent, payload: unknown): void => {
+        const handler: IpcListener = (_event, payload) => {
           const parsed = PlayerEvent.safeParse(payload);
 
           if (parsed.success) {
@@ -79,4 +99,4 @@ export function createBridge(
       test: { probe: async () => await invoke(channels.testProbe, PlayerProbe) },
     }),
   };
-}
+};
