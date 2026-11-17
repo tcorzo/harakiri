@@ -1,7 +1,8 @@
 import { execFileSync } from "node:child_process";
+import { once } from "node:events";
 import { readdirSync, readFileSync } from "node:fs";
 import { connect } from "node:net";
-import { join } from "node:path";
+import path from "node:path";
 import { createInterface } from "node:readline";
 
 import { z } from "zod";
@@ -15,14 +16,15 @@ export interface MpvProcess {
  * The mpv processes the app launched for one profile. Main spawns mpv with
  * `--config-dir=<userData>/mpv`, so the profile's dir identifies this run's mpv and nobody else's.
  */
-export function mpvProcesses(userDataDir: string): MpvProcess[] {
-  const configArg = `--config-dir=${join(userDataDir, "mpv")}`;
+export const mpvProcesses = (userDataDir: string): MpvProcess[] => {
+  const configArg = `--config-dir=${path.join(userDataDir, "mpv")}`;
   const found: MpvProcess[] = [];
 
   for (const entry of readdirSync("/proc")) {
-    if (!/^\d+$/.test(entry)) {
+    if (!/^\d+$/u.test(entry)) {
       continue;
     }
+
     let argv: string[];
 
     try {
@@ -34,17 +36,18 @@ export function mpvProcesses(userDataDir: string): MpvProcess[] {
     if (!argv.includes(configArg)) {
       continue;
     }
+
     const ipc = argv.find((arg) => arg.startsWith("--input-ipc-server="));
     found.push({ pid: Number(entry), ipcSocket: ipc?.slice("--input-ipc-server=".length) });
   }
 
   return found;
-}
+};
 
 const Reply = z.object({
   request_id: z.number().optional(),
   error: z.string().optional(),
-  data: z.unknown(),
+  data: z.json().optional(),
 });
 
 export type JsonValue =
@@ -60,10 +63,13 @@ export type JsonValue =
  * `keypress <KEY>` goes through the app's input.conf, so it exercises the same binding and
  * `script-message harakiri <action>` path a remote or gamepad press does.
  */
-export async function mpvCommand(userDataDir: string, ...command: JsonValue[]): Promise<unknown> {
+export const mpvCommand = async (
+  userDataDir: string,
+  ...command: JsonValue[]
+): Promise<JsonValue | undefined> => {
   const [mpv, ...others] = mpvProcesses(userDataDir);
 
-  if (!mpv?.ipcSocket || others.length > 0) {
+  if (mpv?.ipcSocket === undefined || mpv.ipcSocket === "" || others.length > 0) {
     throw new Error(
       `Expected exactly one mpv with an IPC socket, found ${others.length + (mpv ? 1 : 0)}`
     );
@@ -72,13 +78,11 @@ export async function mpvCommand(userDataDir: string, ...command: JsonValue[]): 
   const socket = connect(mpv.ipcSocket);
 
   try {
-    await new Promise<void>((resolve, reject) => {
-      socket.once("connect", resolve);
-      socket.once("error", reject);
-    });
+    await once(socket, "connect");
     const requestId = Math.floor(Math.random() * 2 ** 31);
 
-    const reply = new Promise<unknown>((resolve, reject) => {
+    // oxlint-disable-next-line promise/avoid-new -- wraps a line-event stream and a timer, which have no promise form
+    const reply = new Promise<JsonValue | undefined>((resolve, reject) => {
       const timer = setTimeout(() => {
         reject(new Error(`mpv did not answer ${JSON.stringify(command)}`));
       }, 5000);
@@ -89,6 +93,7 @@ export async function mpvCommand(userDataDir: string, ...command: JsonValue[]): 
         if (!message.success || message.data.request_id !== requestId) {
           return;
         }
+
         clearTimeout(timer);
 
         if (message.data.error === "success") {
@@ -105,7 +110,7 @@ export async function mpvCommand(userDataDir: string, ...command: JsonValue[]): 
   } finally {
     socket.destroy();
   }
-}
+};
 
 export const pressKey = async (userDataDir: string, key: string) =>
   await mpvCommand(userDataDir, "keypress", key);
@@ -115,13 +120,13 @@ export const pressKey = async (userDataDir: string, key: string) =>
  * name has spaces that HARAKIRI_MPV_ARGS cannot carry, so the UUID names it. It encodes the Mesa
  * version, so it is read from mpv rather than written down.
  */
-export function lavapipeDeviceUuid(): string {
+export const lavapipeDeviceUuid = (): string => {
   const list = execFileSync("mpv", ["--no-config", "--vulkan-device=help"], { encoding: "utf-8" });
-  const uuid = /'llvmpipe[^']*'.*UUID ([0-9a-f-]{36})/.exec(list)?.[1];
+  const uuid = /'llvmpipe[^']*'.*UUID (?<uuid>[0-9a-f-]{36})/u.exec(list)?.groups?.uuid;
 
   if (uuid === undefined) {
     throw new Error(`mpv lists no lavapipe Vulkan device:\n${list}`);
   }
 
   return uuid;
-}
+};

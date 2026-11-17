@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 import { z } from "zod";
@@ -11,18 +11,19 @@ import { fateState } from "../../../../packages/harness/src/corpus/fate";
 import { MANIFEST, readManifest } from "../../../../packages/harness/src/corpus/generate";
 import { CORPUS_DIR, E2E_CONTAINER_ENV, REAL_SERVER, REPO } from "./backend";
 
-const FATE_DIR = process.env.HARAKIRI_FATE_DIR ?? resolve(REPO, ".cache/fate");
+const FATE_DIR = process.env.HARAKIRI_FATE_DIR ?? path.resolve(REPO, ".cache/fate");
 const STATE = E2E_CONTAINER_ENV.JELLYFIN_DEV_STATE;
 
 /** The corpus manifest the container last finished scanning; a different one recreates it. */
-const SCANNED = resolve(STATE, "corpus.sha256");
+const SCANNED = path.resolve(STATE, "corpus.sha256");
 const SERVER = E2E_CONTAINER_ENV.JELLYFIN_DEV_URL;
 
 /** Why the corpus must be (re)generated before the server can scan it, or null when it is current. */
-function staleness(): string | null {
-  if (!existsSync(resolve(CORPUS_DIR, MANIFEST))) {
+const staleness = (): string | null => {
+  if (!existsSync(path.resolve(CORPUS_DIR, MANIFEST))) {
     return `no corpus in ${CORPUS_DIR}`;
   }
+
   const manifest = readManifest(CORPUS_DIR);
   const built = new Set(manifest.entries.map((entry) => entry.id));
   const missing = CATALOG.filter((entry) => entry.tier === "base" && !built.has(entry.id));
@@ -36,9 +37,9 @@ function staleness(): string | null {
   }
 
   return null;
-}
+};
 
-function run(what: string, command: string, args: readonly string[]): void {
+const run = (what: string, command: string, args: readonly string[]): void => {
   const result = spawnSync(command, args, {
     cwd: REPO,
     stdio: "inherit",
@@ -48,29 +49,33 @@ function run(what: string, command: string, args: readonly string[]): void {
   if (result.error !== undefined || result.status !== 0) {
     throw new Error(`${what} failed (${result.error?.message ?? `exit ${result.status}`})`);
   }
-}
+};
 
 const jellyfinSh = (command: string) => {
-  run(`jellyfin.sh ${command}`, resolve(REPO, "dev/jellyfin/jellyfin.sh"), [command]);
+  run(`jellyfin.sh ${command}`, path.resolve(REPO, "dev/jellyfin/jellyfin.sh"), [command]);
 };
 
 const AUTH =
   'MediaBrowser Client="harakiri-e2e-setup", Device="setup", DeviceId="harakiri-e2e-setup", Version="0"';
 
-async function get(path: string, token: string): Promise<unknown> {
-  const response = await fetch(new URL(path, SERVER), {
+const get = async <Schema extends z.ZodType>(
+  schema: Schema,
+  route: string,
+  token: string
+): Promise<z.infer<Schema>> => {
+  const response = await fetch(new URL(route, SERVER), {
     headers: { Authorization: `${AUTH}, Token="${token}"` },
   });
 
   if (!response.ok) {
-    throw new Error(`GET ${path}: HTTP ${response.status}`);
+    throw new Error(`GET ${route}: HTTP ${response.status}`);
   }
 
-  return await response.json();
-}
+  return schema.parse(await response.json());
+};
 
 /** Waits until the library scan is idle and has found every file in the corpus. */
-async function waitForScan(expected: number, timeoutMs = 180_000): Promise<void> {
+const waitForScan = async (expected: number, timeoutMs = 180_000): Promise<void> => {
   const signIn = await fetch(new URL("Users/AuthenticateByName", SERVER), {
     method: "POST",
     headers: { Authorization: AUTH, "Content-Type": "application/json" },
@@ -83,18 +88,24 @@ async function waitForScan(expected: number, timeoutMs = 180_000): Promise<void>
   if (!signIn.ok) {
     throw new Error(`Signing in to the e2e Jellyfin: HTTP ${signIn.status}`);
   }
+
   const { AccessToken: token } = z.object({ AccessToken: z.string() }).parse(await signIn.json());
   const deadline = Date.now() + timeoutMs;
   let last = "";
 
+  /* oxlint-disable eslint/no-await-in-loop -- the scan is polled one round at a time */
   while (Date.now() < deadline) {
-    const counts = z
-      .object({ MovieCount: z.number(), EpisodeCount: z.number() })
-      .parse(await get("Items/Counts", token));
+    const counts = await get(
+      z.object({ MovieCount: z.number(), EpisodeCount: z.number() }),
+      "Items/Counts",
+      token
+    );
 
-    const tasks = z
-      .array(z.object({ Key: z.string(), State: z.string() }))
-      .parse(await get("ScheduledTasks?isHidden=false", token));
+    const tasks = await get(
+      z.array(z.object({ Key: z.string(), State: z.string() })),
+      "ScheduledTasks?isHidden=false",
+      token
+    );
 
     const scan = tasks.find((task) => task.Key === "RefreshLibrary")?.State ?? "missing";
     const found = counts.MovieCount + counts.EpisodeCount;
@@ -102,12 +113,14 @@ async function waitForScan(expected: number, timeoutMs = 180_000): Promise<void>
     if (found === expected && scan === "Idle") {
       return;
     }
+
     last = `${found} of ${expected} items, scan ${scan}`;
     await sleep(500);
   }
+  /* oxlint-enable eslint/no-await-in-loop */
 
   throw new Error(`The e2e Jellyfin did not finish scanning the corpus: ${last}`);
-}
+};
 
 /**
  * Before any test: generates the corpus when it is missing or older than the catalog, then makes
@@ -131,7 +144,7 @@ export default async function globalSetup(): Promise<void> {
 
   if (why !== null) {
     console.log(`e2e: ${why}; generating it (mise run media:gen)`);
-    run("Generating the corpus (mise run media:gen)", resolve(REPO, "scripts/bounded.sh"), [
+    run("Generating the corpus (mise run media:gen)", path.resolve(REPO, "scripts/bounded.sh"), [
       "corpus",
       "2G",
       "--",
@@ -143,7 +156,7 @@ export default async function globalSetup(): Promise<void> {
     ]);
   }
 
-  const manifest = readFileSync(resolve(CORPUS_DIR, MANIFEST));
+  const manifest = readFileSync(path.resolve(CORPUS_DIR, MANIFEST));
   const fingerprint = createHash("sha256").update(manifest).digest("hex");
   const scanned = existsSync(SCANNED) ? readFileSync(SCANNED, "utf-8").trim() : undefined;
 

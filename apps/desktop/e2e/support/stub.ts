@@ -1,5 +1,7 @@
+import { once } from "node:events";
 import { createServer } from "node:http";
-import type { AddressInfo } from "node:net";
+
+import type { JsonValue } from "./mpv";
 
 export interface StubReply {
   readonly status: number;
@@ -15,7 +17,7 @@ export interface Stub {
   readonly close: () => Promise<void>;
 }
 
-const json = (status: number, value: unknown): StubReply => ({
+const json = (status: number, value: JsonValue): StubReply => ({
   status,
   body: JSON.stringify(value),
   type: "application/json",
@@ -28,7 +30,7 @@ export const reply = { json };
  * Routes match the path case-insensitively, without the query; anything else is a 404 page.
  * It answers CORS like Jellyfin does, since the renderer calls it from the app's own origin.
  */
-export async function stubServer(routes: Readonly<Record<string, StubReply>>): Promise<Stub> {
+export const stubServer = async (routes: Readonly<Record<string, StubReply>>): Promise<Stub> => {
   const table = new Map(Object.entries(routes).map(([path, r]) => [path.toLowerCase(), r]));
   const seen: string[] = [];
 
@@ -56,31 +58,31 @@ export async function stubServer(routes: Readonly<Record<string, StubReply>>): P
     response.end(found.body);
   });
 
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const bound: string | AddressInfo | null = server.address();
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const bound = server.address();
 
-  if (bound === null || typeof bound === "string") {
-    throw new Error("The stub is not on a TCP port");
+  if (!(bound instanceof Object)) {
+    throw new TypeError("The stub is not on a TCP port");
   }
+
   const { port } = bound;
 
   return {
     address: `127.0.0.1:${port}`,
     seen,
-    close: async () =>
-      await new Promise<void>((resolve) => {
-        server.closeAllConnections();
-        server.close(() => {
-          resolve();
-        });
-      }),
+    close: async () => {
+      server.closeAllConnections();
+      server.close();
+      await once(server, "close");
+    },
   };
-}
+};
 
 /** A loopback port with nothing listening on it: the kernel refuses the connection at once. */
-export async function deadAddress(): Promise<string> {
+export const deadAddress = async (): Promise<string> => {
   const stub = await stubServer({});
   await stub.close();
 
   return stub.address;
-}
+};
