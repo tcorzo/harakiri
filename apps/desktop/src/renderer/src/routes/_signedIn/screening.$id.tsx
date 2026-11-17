@@ -16,12 +16,12 @@ const search = z.object({
   after: z.enum(["back", "title"]).optional().catch(undefined),
 });
 
-function Screening() {
+const Screening = () => {
   const { id } = Route.useParams();
 
   // Playing the next episode replaces the route with a new id: a new screening, from the house.
   return <ScreeningScreen key={id} />;
-}
+};
 
 export const Route = createFileRoute("/_signedIn/screening/$id")({
   params: { parse: ({ id }) => ({ id: ItemId.parse(id) }), stringify: ({ id }) => ({ id }) },

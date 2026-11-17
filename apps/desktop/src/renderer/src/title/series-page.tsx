@@ -17,11 +17,11 @@ import { seriesPlace } from "./series-place";
 
 const episodeKey = (id: ItemId): string => `episode-${id}`;
 
-function scrollIntoView({ node }: FocusableComponentLayout): void {
+const scrollIntoView = ({ node }: FocusableComponentLayout): void => {
   node.scrollIntoView({ block: "nearest" });
-}
+};
 
-function SeasonTab({
+const SeasonTab = ({
   season,
   selected,
   index,
@@ -31,7 +31,7 @@ function SeasonTab({
   readonly selected: boolean;
   readonly index: number;
   readonly onPick: () => void;
-}) {
+}) => {
   const { ref } = useFocusable<object, HTMLButtonElement>({
     focusKey: `season-${index}`,
     onFocus: onPick,
@@ -51,9 +51,9 @@ function SeasonTab({
       {season.title}
     </button>
   );
-}
+};
 
-function EpisodeLine({
+const EpisodeLine = ({
   episode,
   onFocus,
   onPress,
@@ -61,7 +61,7 @@ function EpisodeLine({
   readonly episode: Entry;
   readonly onFocus: () => void;
   readonly onPress: () => void;
-}) {
+}) => {
   const { ref, focused } = useFocusable<object, HTMLButtonElement>({
     focusKey: episodeKey(episode.id),
     onFocus: (layout) => {
@@ -105,25 +105,25 @@ function EpisodeLine({
       </span>
     </button>
   );
-}
+};
 
-function firstUnwatched(seasons: readonly Entry[]): number {
+const firstUnwatched = (seasons: readonly Entry[]): number => {
   const found = seasons.findIndex((season) => (season.unplayedCount ?? 0) > 0);
 
   return found === -1 ? 0 : found;
-}
+};
 
 /** The season a series page opens on: the one the owner last had, else the first with unwatched episodes. */
-export function initialSeason(seriesId: ItemId, seasons: readonly Entry[]): number {
+export const initialSeason = (seriesId: ItemId, seasons: readonly Entry[]): number => {
   const remembered = seriesPlace.get(seriesId);
 
   const given =
     remembered === undefined ? -1 : seasons.findIndex((season) => season.id === remembered.season);
 
   return given === -1 ? firstUnwatched(seasons) : given;
-}
+};
 
-export function SeriesPage({
+export const SeriesPage = ({
   series,
   number,
   server,
@@ -131,7 +131,7 @@ export function SeriesPage({
   readonly series: Entry;
   readonly number: number | null;
   readonly server: ServerUrl;
-}) {
+}) => {
   const ctx = useSignedIn();
   const navigate = useNavigate();
   const { data: seasons } = useSuspenseQuery(seasonsQuery(ctx, series.id));
@@ -168,6 +168,7 @@ export function SeriesPage({
     if (chosen !== undefined) {
       seriesPlace.set(series.id, { season: chosen.id, episode: null });
     }
+
     startTransition(() => {
       setPicked(index);
     });
@@ -209,6 +210,7 @@ export function SeriesPage({
                     if (season !== undefined) {
                       seriesPlace.set(series.id, { season: season.id, episode: null });
                     }
+
                     void navigate({
                       to: "/screening/$id",
                       params: { id: next.id },
@@ -259,4 +261,4 @@ export function SeriesPage({
       </main>
     </FocusContext.Provider>
   );
-}
+};

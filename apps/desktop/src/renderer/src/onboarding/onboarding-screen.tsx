@@ -42,7 +42,7 @@ interface Flow {
   readonly finish: (session: Session) => Promise<void>;
 }
 
-function Frame({
+const Frame = ({
   step,
   title,
   children,
@@ -50,41 +50,37 @@ function Frame({
   readonly step: string | null;
   readonly title: string;
   readonly children: ReactNode;
-}) {
-  return (
-    <main aria-label={title} className="bg-ink px-safe-x py-safe-y flex h-screen gap-10">
-      <div className="w-margin flex shrink-0 flex-col items-start gap-6">
-        <span className="text-heading stretch-extra-wide font-[820]">harakiri</span>
-        {step === null ? null : <SectionTab>{step}</SectionTab>}
-      </div>
-      <div className="flex min-w-0 flex-1 flex-col pt-[7rem]">{children}</div>
-    </main>
-  );
-}
+}) => (
+  <main aria-label={title} className="bg-ink px-safe-x py-safe-y flex h-screen gap-10">
+    <div className="w-margin flex shrink-0 flex-col items-start gap-6">
+      <span className="text-heading stretch-extra-wide font-[820]">harakiri</span>
+      {step === null ? null : <SectionTab>{step}</SectionTab>}
+    </div>
+    <div className="flex min-w-0 flex-1 flex-col pt-[7rem]">{children}</div>
+  </main>
+);
 
-function Heading({
+const Heading = ({
   children,
   detail,
 }: {
   readonly children: ReactNode;
   readonly detail?: ReactNode;
-}) {
-  return (
-    <header className="mb-10 flex flex-col gap-3">
-      <h1 className="text-title stretch-extra-wide m-0 font-[800] text-balance">{children}</h1>
-      {detail === undefined ? null : (
-        <p className="text-body text-paper-dim max-w-[62ch]">{detail}</p>
-      )}
-    </header>
-  );
-}
+}) => (
+  <header className="mb-10 flex flex-col gap-3">
+    <h1 className="text-title stretch-extra-wide m-0 font-[800] text-balance">{children}</h1>
+    {detail === undefined ? null : (
+      <p className="text-body text-paper-dim max-w-[62ch]">{detail}</p>
+    )}
+  </header>
+);
 
-function Problem({ children }: { readonly children: ReactNode }) {
-  return <Notice className="max-w-[56ch]">{children}</Notice>;
-}
+const Problem = ({ children }: { readonly children: ReactNode }) => (
+  <Notice className="max-w-[56ch]">{children}</Notice>
+);
 
-function serverProblemText(problem: ServerProblem, address: string): string {
-  return match(problem)
+const serverProblemText = (problem: ServerProblem, address: string): string =>
+  match(problem)
     .with(
       { kind: "invalid" },
       () =>
@@ -105,10 +101,9 @@ function serverProblemText(problem: ServerProblem, address: string): string {
         `This server runs Jellyfin ${p.version}. harakiri needs ${minimumServer.major}.${minimumServer.minor} or newer. Update the server, then try again.`
     )
     .exhaustive();
-}
 
-function signInProblemText(problem: SignInProblem, username: string): string {
-  return match(problem)
+const signInProblemText = (problem: SignInProblem, username: string): string =>
+  match(problem)
     .with(
       "wrongPassword",
       () =>
@@ -124,10 +119,9 @@ function signInProblemText(problem: SignInProblem, username: string): string {
       () => "The server stopped answering. Press Back and check that it is still on."
     )
     .exhaustive();
-}
 
-function quickConnectProblemText(problem: QuickConnectProblem): string {
-  return match(problem)
+const quickConnectProblemText = (problem: QuickConnectProblem): string =>
+  match(problem)
     .with(
       "disabled",
       () => "Quick Connect is switched off on this server. Press Back and sign in with a password."
@@ -138,9 +132,8 @@ function quickConnectProblemText(problem: QuickConnectProblem): string {
       () => "The server stopped answering. Press Back and check that it is still on."
     )
     .exhaustive();
-}
 
-function Welcome({ send }: { readonly send: Send }) {
+const Welcome = ({ send }: { readonly send: Send }) => {
   useEffect(() => {
     focusFirst("welcome-begin");
   }, []);
@@ -172,11 +165,11 @@ function Welcome({ send }: { readonly send: Send }) {
       </div>
     </main>
   );
-}
+};
 
 const searchAgainKey = "server-search-again";
 
-function DiscoveredList({ onPick }: { readonly onPick: (address: string) => void }) {
+const DiscoveredList = ({ onPick }: { readonly onPick: (address: string) => void }) => {
   const discovery = useQuery({
     queryKey: ["discover"],
     queryFn: async () => await window.harakiri.discover(),
@@ -193,6 +186,7 @@ function DiscoveredList({ onPick }: { readonly onPick: (address: string) => void
     if (firstAddress === undefined) {
       return;
     }
+
     const untouched = activity.getState().at < shownAt;
 
     if (untouched || getCurrentFocusKey() === searchAgainKey) {
@@ -241,9 +235,9 @@ function DiscoveredList({ onPick }: { readonly onPick: (address: string) => void
         )}
     </section>
   );
-}
+};
 
-function ServerStep({ state, send }: Flow) {
+const ServerStep = ({ state, send }: Flow) => {
   const queryClient = useQueryClient();
   const address = state.step === "server" || state.step === "checking" ? state.address : "";
 
@@ -254,6 +248,7 @@ function ServerStep({ state, send }: Flow) {
     if (urls === null) {
       return;
     }
+
     const result = await checkServer(queryClient, urls);
     send(
       result.ok
@@ -307,9 +302,9 @@ function ServerStep({ state, send }: Flow) {
       </div>
     </Frame>
   );
-}
+};
 
-function ChooseUser({
+const ChooseUser = ({
   server,
   send,
   identity,
@@ -317,7 +312,7 @@ function ChooseUser({
   readonly server: ServerInfo;
   readonly send: Send;
   readonly identity: ClientIdentity;
-}) {
+}) => {
   const users = useQuery(publicUsersQuery(ServerUrl.parse(server.url)));
 
   const qc = useQuery({
@@ -379,9 +374,9 @@ function ChooseUser({
       </div>
     </Frame>
   );
-}
+};
 
-function UsernameStep({ username, send }: { readonly username: string; readonly send: Send }) {
+const UsernameStep = ({ username, send }: { readonly username: string; readonly send: Send }) => {
   useEffect(() => {
     focusFirst(firstKey("username"));
   }, []);
@@ -417,15 +412,15 @@ function UsernameStep({ username, send }: { readonly username: string; readonly 
       </div>
     </Frame>
   );
-}
+};
 
-function PasswordStep({
+const PasswordStep = ({
   flow,
   state,
 }: {
   readonly flow: Flow;
   readonly state: Extract<OnboardingState, { step: "password" | "authenticating" }>;
-}) {
+}) => {
   const { send } = flow;
   useEffect(() => {
     focusFirst(firstKey("password"));
@@ -472,19 +467,19 @@ function PasswordStep({
       {state.step === "authenticating" ? <SignIn {...flow} state={state} /> : null}
     </Frame>
   );
-}
+};
 
 /**
  * Signs in with what the password step holds; a user without a password arrives here straight from
  * the list. It renders nothing: the password step stays mounted around it, so a wrong password
  * keeps the keyboard where the owner left it.
  */
-function SignIn({
+const SignIn = ({
   state,
   send,
   identity,
   finish,
-}: Flow & { readonly state: Extract<OnboardingState, { step: "authenticating" }> }) {
+}: Flow & { readonly state: Extract<OnboardingState, { step: "authenticating" }> }) => {
   const { server, username, password } = state;
   useEffect(() => {
     let live = true;
@@ -506,14 +501,14 @@ function SignIn({
   }, [server, username, password, identity, finish, send]);
 
   return null;
-}
+};
 
-function QuickConnectStep({
+const QuickConnectStep = ({
   state,
   send,
   identity,
   finish,
-}: Flow & { readonly state: Extract<OnboardingState, { step: "quickConnect" }> }) {
+}: Flow & { readonly state: Extract<OnboardingState, { step: "quickConnect" }> }) => {
   const { server } = state;
   useEffect(() => {
     const abort = new AbortController();
@@ -521,6 +516,7 @@ function QuickConnectStep({
       if (abort.signal.aborted) {
         return;
       }
+
       match(outcome)
         .with({ kind: "code" }, (o) => {
           send({ type: "quickConnectCode", code: o.code });
@@ -571,7 +567,7 @@ function QuickConnectStep({
       </div>
     </Frame>
   );
-}
+};
 
 const deviceIdQuery = {
   queryKey: ["deviceId"],
@@ -580,13 +576,13 @@ const deviceIdQuery = {
 } as const;
 
 /** The main process owns the device id, so the session and every request name the same device. */
-function useIdentity(): ClientIdentity {
+const useIdentity = (): ClientIdentity => {
   const { data } = useSuspenseQuery({ ...deviceIdQuery, select: clientIdentity });
 
   return data;
-}
+};
 
-export function OnboardingScreen() {
+export const OnboardingScreen = () => {
   const { server: knownServer } = route.useSearch();
 
   const [state, send] = useReducer(onboarding, knownServer, (address): OnboardingState =>
@@ -605,6 +601,7 @@ export function OnboardingScreen() {
     if (resumeAddress === undefined || resumeUrls === undefined) {
       return;
     }
+
     void checkServer(queryClient, resumeUrls).then((result) => {
       send(
         result.ok
@@ -654,4 +651,4 @@ export function OnboardingScreen() {
       </div>
     </FocusContext.Provider>
   );
-}
+};

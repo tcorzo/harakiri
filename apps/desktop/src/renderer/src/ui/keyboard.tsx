@@ -24,7 +24,7 @@ const letters: Record<Exclude<Case, "symbols">, string[]> = {
 
 const symbols = ["1234567890", "!#$%&*()+=", "?/:;'\"<>[]", "~^`|\\{},._"];
 
-function grid(layout: Layout, letterCase: Case): Key[][] {
+const grid = (layout: Layout, letterCase: Case): Key[][] => {
   if (layout === "address") {
     return [
       ...["1234567890", "qwertyuiop", "asdfghjkl:", "zxcvbnm.-/"].map(chars),
@@ -54,10 +54,10 @@ function grid(layout: Layout, letterCase: Case): Key[][] {
       { kind: "submit" },
     ],
   ];
-}
+};
 
-function keyLabel(key: Key, submitLabel: string): string {
-  return match(key)
+const keyLabel = (key: Key, submitLabel: string): string =>
+  match(key)
     .with({ kind: "char" }, (k) => k.char)
     .with({ kind: "insert" }, (k) => k.text)
     .with({ kind: "case" }, (k) => k.label)
@@ -65,14 +65,12 @@ function keyLabel(key: Key, submitLabel: string): string {
     .with({ kind: "delete" }, () => "Delete")
     .with({ kind: "submit" }, () => submitLabel)
     .exhaustive();
-}
 
-function spokenLabel(key: Key, submitLabel: string): string {
-  return match(key)
+const spokenLabel = (key: Key, submitLabel: string): string =>
+  match(key)
     .with({ kind: "char", char: " " }, () => "space")
     .with({ kind: "case", to: "symbols" }, () => "#+= symbols")
     .otherwise(() => keyLabel(key, submitLabel));
-}
 
 interface KeyCapProps {
   readonly focusKey: string;
@@ -84,7 +82,7 @@ interface KeyCapProps {
   readonly onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
 }
 
-function KeyCap({ focusKey, label, spoken, wide, primary, onPress, onKeyDown }: KeyCapProps) {
+const KeyCap = ({ focusKey, label, spoken, wide, primary, onPress, onKeyDown }: KeyCapProps) => {
   const { ref } = useFocusable<object, HTMLButtonElement>({ focusKey });
 
   return (
@@ -101,7 +99,7 @@ function KeyCap({ focusKey, label, spoken, wide, primary, onPress, onKeyDown }: 
       {label}
     </button>
   );
-}
+};
 
 /** The focus key of the keyboard's first letter, for screens that open with the keyboard focused. */
 export const firstKey = (focusKey: string): string => `${focusKey}-1-0`;
@@ -119,14 +117,14 @@ export interface KeyboardProps {
  * A d-pad keyboard, so an owner with only a gamepad can type an address or a password.
  * A physical keyboard types into the field above it instead.
  */
-export function Keyboard({
+export const Keyboard = ({
   layout,
   value,
   onChange,
   onSubmit,
   submitLabel,
   focusKey,
-}: KeyboardProps) {
+}: KeyboardProps) => {
   const [letterCase, setLetterCase] = useState<Case>("lower");
 
   const { ref, focusKey: context } = useFocusable<object, HTMLFieldSetElement>({
@@ -180,6 +178,7 @@ export function Keyboard({
     } else {
       return;
     }
+
     event.preventDefault();
     event.stopPropagation();
   };
@@ -210,10 +209,10 @@ export function Keyboard({
       </fieldset>
     </FocusContext.Provider>
   );
-}
+};
 
 /** The text field the keyboard writes into; a physical keyboard types here directly. */
-export function EntryField({
+export const EntryField = ({
   label,
   value,
   masked,
@@ -227,7 +226,7 @@ export function EntryField({
   readonly focusKey: string;
   readonly onChange: (value: string) => void;
   readonly onSubmit: () => void;
-}) {
+}) => {
   const { ref } = useFocusable<object, HTMLInputElement>({ focusKey });
 
   return (
@@ -249,6 +248,7 @@ export function EntryField({
           if (event.key !== "Enter") {
             return;
           }
+
           // The field owns this Enter: the hub must not also read it as Select, or it presses
           // whatever the next step focuses (its first key) in the same keystroke.
           event.preventDefault();
@@ -259,4 +259,4 @@ export function EntryField({
       />
     </label>
   );
-}
+};

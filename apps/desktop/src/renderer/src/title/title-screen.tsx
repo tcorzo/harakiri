@@ -9,7 +9,7 @@ import { SeriesPage } from "./series-page";
 
 const route = getRouteApi("/_signedIn/title/$id");
 
-export function TitleScreen() {
+export const TitleScreen = () => {
   const { id } = route.useParams();
   const ctx = useSignedIn();
   const { data } = useSuspenseQuery(titleQuery(ctx, id));
@@ -26,4 +26,4 @@ export function TitleScreen() {
   }
 
   return <FilmPage key={entry.id} entry={entry} item={item} number={number} server={ctx.server} />;
-}
+};

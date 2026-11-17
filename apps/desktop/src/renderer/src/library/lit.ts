@@ -56,6 +56,7 @@ export const useLit = create<LitState>()((set) => ({
       if (state.section.id === section.id) {
         return state;
       }
+
       const now = Date.now();
 
       return { section, movedAt: now, travelling: now - state.movedAt < travelMs };
@@ -93,11 +94,11 @@ export const rowKey = (section: string): string => `row|${section}`;
  * Where focus lands when the library opens: the remembered card, then its row (norigin picks the
  * nearest card), then the hero, then the first row. Each is tried only if it is mounted.
  */
-export function restoreKeys(
+export const restoreKeys = (
   place: Place | null,
   hero: boolean,
   firstSection: string | undefined
-): string[] {
+): string[] => {
   const keys: string[] = [];
 
   if (place !== null) {
@@ -113,4 +114,4 @@ export function restoreKeys(
   }
 
   return keys;
-}
+};

@@ -24,17 +24,18 @@ import { inputMode } from "./mode";
 const noPad: PadSnapshot = { buttons: [], axes: [] };
 
 /** Presses what norigin has focused, which is what the owner sees marked, whatever the DOM thinks. */
-async function pressFocused(): Promise<void> {
+const pressFocused = async (): Promise<void> => {
   const key = getCurrentFocusKey();
 
   if (!doesFocusableExist(key)) {
     return;
   }
+
   const { node } = await SpatialNavigation.getNodeLayoutByFocusKey(key);
   node.click();
-}
+};
 
-function perform(action: Action): void {
+const perform = (action: Action): void => {
   touch();
   match(action)
     .with("up", "down", "left", "right", (direction) => {
@@ -50,14 +51,13 @@ function perform(action: Action): void {
     })
     .with("menu", "playPause", (other) => void dispatch(other))
     .exhaustive();
-}
+};
 
-function firstPad(): PadSnapshot {
-  return navigator.getGamepads().find((pad) => pad?.connected === true) ?? noPad;
-}
+const firstPad = (): PadSnapshot =>
+  navigator.getGamepads().find((pad) => pad?.connected === true) ?? noPad;
 
 /** The single path from keyboard and gamepad to app actions, gated by the input mode. */
-export function useInputHub(): void {
+export const useInputHub = (): void => {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       // Keys a focused text field types with are left to the field, unprevented.
@@ -81,6 +81,7 @@ export function useInputHub(): void {
       if (routed === undefined) {
         return;
       }
+
       event.preventDefault();
       perform(routed);
     };
@@ -121,4 +122,4 @@ export function useInputHub(): void {
       cancelAnimationFrame(frame);
     };
   }, []);
-}
+};

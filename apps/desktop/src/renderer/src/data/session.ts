@@ -20,7 +20,7 @@ export interface SignedIn extends LibraryContext {
 
 const contexts = new WeakMap<Session, SignedIn>();
 
-export function signedIn(session: Session): SignedIn {
+export const signedIn = (session: Session): SignedIn => {
   let context = contexts.get(session);
 
   if (context === undefined) {
@@ -45,10 +45,10 @@ export function signedIn(session: Session): SignedIn {
   }
 
   return context;
-}
+};
 
 /** Only rendered under the signed-in layout, which redirects to onboarding when there is no session. */
-export function useSignedIn(): SignedIn {
+export const useSignedIn = (): SignedIn => {
   const { data } = useSuspenseQuery(sessionQuery);
 
   if (data === null) {
@@ -56,4 +56,4 @@ export function useSignedIn(): SignedIn {
   }
 
   return signedIn(data);
-}
+};

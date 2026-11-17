@@ -56,17 +56,18 @@ const ticksPerMinute = 600_000_000;
 
 const kinds: readonly EntryKind[] = ["Movie", "Series", "Season", "Episode"];
 
-export function kindOf(type: string | null | undefined): EntryKind {
-  return kinds.find((kind) => kind === type) ?? "Other";
-}
+export const kindOf = (type: string | null | undefined): EntryKind =>
+  kinds.find((kind) => kind === type) ?? "Other";
 
 const asId = (raw: string): ItemId => ItemId.parse(raw);
 
-function image(itemId: string | null | undefined, type: ImageType, tag: string | null | undefined) {
-  return itemId == null || tag == null ? null : { itemId: asId(itemId), type, tag };
-}
+const image = (
+  itemId: string | null | undefined,
+  type: ImageType,
+  tag: string | null | undefined
+) => (itemId == null || tag == null ? null : { itemId: asId(itemId), type, tag });
 
-export function toEntry(item: BaseItemDto): Entry {
+export const toEntry = (item: BaseItemDto): Entry => {
   const id = asId(item.Id ?? "");
   const kind = kindOf(item.Type);
   const tags = item.ImageTags ?? {};
@@ -109,19 +110,19 @@ export function toEntry(item: BaseItemDto): Entry {
         : (image(id, "Thumb", tags.Thumb) ?? backdrop),
     fidelity: classifyFidelity(item.MediaSources?.[0]),
   };
-}
+};
 
-function fact(text: string, delivery: SignalState): NoteFact {
+const fact = (text: string, delivery: SignalState): NoteFact => {
   const state = markedState(delivery);
 
   return state === undefined ? { text } : { text, state };
-}
+};
 
 /** The programme note line: year · runtime · picture · sound; mapped and decoded facts carry their state. */
-export function programmeNotes(
+export const programmeNotes = (
   entry: Entry,
   fidelity: Fidelity | null = entry.fidelity
-): NoteFact[] {
+): NoteFact[] => {
   const facts: NoteFact[] = [];
 
   if (entry.year !== null) {
@@ -150,9 +151,9 @@ export function programmeNotes(
   }
 
   return facts;
-}
+};
 
-export function episodeCode(entry: Entry): string | null {
+export const episodeCode = (entry: Entry): string | null => {
   const s = entry.series;
 
   if (s === null || s.season === null || s.episode === null) {
@@ -160,21 +161,20 @@ export function episodeCode(entry: Entry): string | null {
   }
 
   return `S${String(s.season).padStart(2, "0")} E${String(s.episode).padStart(2, "0")}`;
-}
+};
 
-export function minutesLeft(entry: Entry): number | null {
+export const minutesLeft = (entry: Entry): number | null => {
   if (entry.progress === null || entry.minutes === null) {
     return null;
   }
 
   return Math.max(1, Math.round(entry.minutes * (1 - entry.progress)));
-}
+};
 
 /** An image at the width it is shown, in device pixels. */
-export function imageUrl(server: ServerUrl, ref: ImageRef, width: number): string {
-  return serverImageUrl(server, ref.itemId, ref.type, {
+export const imageUrl = (server: ServerUrl, ref: ImageRef, width: number): string =>
+  serverImageUrl(server, ref.itemId, ref.type, {
     maxWidth: width,
     tag: ref.tag,
     quality: 90,
   });
-}

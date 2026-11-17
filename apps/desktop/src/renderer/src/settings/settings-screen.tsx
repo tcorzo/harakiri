@@ -11,7 +11,7 @@ import { focusFirst } from "../ui/focus";
 import { SectionTab } from "../ui/marks";
 import { versionLine } from "./version-line";
 
-export function SettingsScreen() {
+export const SettingsScreen = () => {
   const { session } = useSignedIn();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -95,4 +95,4 @@ export function SettingsScreen() {
       </main>
     </FocusContext.Provider>
   );
-}
+};

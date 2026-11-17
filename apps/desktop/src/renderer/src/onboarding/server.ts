@@ -24,10 +24,10 @@ export type Checked =
  * firewalled candidate costs nothing when another answers. When none does, the problem from a
  * candidate that answered at all says more than "unreachable".
  */
-export async function checkServer(
+export const checkServer = async (
   queryClient: QueryClient,
   urls: readonly string[]
-): Promise<Checked> {
+): Promise<Checked> => {
   const checks = urls.map(async (url) => await checkOne(queryClient, url));
 
   try {
@@ -47,17 +47,18 @@ export async function checkServer(
 
     return failed.find((r) => !r.ok && r.problem.kind !== "unreachable") ?? failed[0] ?? invalid;
   }
-}
+};
 
 const invalid: Checked = { ok: false, problem: { kind: "invalid" } };
 
 /** Validates a server with `GET /System/Info/Public`, the only endpoint that needs no sign-in. */
-async function checkOne(queryClient: QueryClient, url: string): Promise<Checked> {
+const checkOne = async (queryClient: QueryClient, url: string): Promise<Checked> => {
   const server = ServerUrl.safeParse(url);
 
   if (!server.success) {
     return invalid;
   }
+
   let info;
 
   try {
@@ -89,40 +90,38 @@ async function checkOne(queryClient: QueryClient, url: string): Promise<Checked>
       version: info.Version,
     },
   };
-}
+};
 
 export type SignedInResult =
   | { readonly ok: true; readonly session: Session }
   | { readonly ok: false; readonly problem: SignInProblem };
 
-function outcome(result: SignInResult): SignedInResult {
-  return match<SignInResult, SignedInResult>(result)
+const outcome = (result: SignInResult): SignedInResult =>
+  match<SignInResult, SignedInResult>(result)
     .with({ kind: "signed-in" }, (r) => ({ ok: true, session: r.session }))
     .with({ kind: "wrong-credentials" }, () => ({ ok: false, problem: "wrongPassword" }))
     .with({ kind: "rejected" }, () => ({ ok: false, problem: "rejected" }))
     .with({ kind: "unreachable" }, () => ({ ok: false, problem: "unreachable" }))
     .exhaustive();
-}
 
-export async function signIn(
+export const signIn = async (
   server: ServerInfo,
   identity: ClientIdentity,
   username: string,
   password: string
-): Promise<SignedInResult> {
-  return outcome(await authenticate(ServerUrl.parse(server.url), username, password, identity));
-}
+): Promise<SignedInResult> =>
+  outcome(await authenticate(ServerUrl.parse(server.url), username, password, identity));
 
-export async function quickConnectEnabled(
+export const quickConnectEnabled = async (
   server: ServerInfo,
   identity: ClientIdentity
-): Promise<boolean> {
+): Promise<boolean> => {
   try {
     return await serverQuickConnectEnabled(ServerUrl.parse(server.url), identity);
   } catch {
     return false;
   }
-}
+};
 
 export type QuickConnectOutcome =
   | { readonly kind: "code"; readonly code: string }
@@ -133,13 +132,13 @@ export type QuickConnectOutcome =
  * Asks for a code, reports it, then polls until the owner approves it from a signed-in device.
  * Jellyfin forgets an unapproved code after a few minutes; the poll then fails and reads as expired.
  */
-export async function runQuickConnect(
+export const runQuickConnect = async (
   server: ServerInfo,
   identity: ClientIdentity,
   signal: AbortSignal,
   report: (outcome: QuickConnectOutcome) => void,
   intervalMs = 3000
-): Promise<void> {
+): Promise<void> => {
   const url = ServerUrl.parse(server.url);
   let secret: string;
 
@@ -159,6 +158,7 @@ export async function runQuickConnect(
     if (signal.aborted) {
       return;
     }
+
     let approved: boolean;
 
     try {
@@ -180,4 +180,4 @@ export async function runQuickConnect(
       return;
     }
   }
-}
+};

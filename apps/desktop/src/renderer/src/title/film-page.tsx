@@ -19,7 +19,7 @@ const subtitlesOff = -1;
 
 const languages = new Intl.DisplayNames(["en"], { type: "language" });
 
-function languageOf(stream: MediaStream): string {
+const languageOf = (stream: MediaStream): string => {
   const code = stream.Language;
 
   if (code == null || code === "" || code === "und") {
@@ -31,11 +31,11 @@ function languageOf(stream: MediaStream): string {
   } catch {
     return code;
   }
-}
+};
 
 /** Sound tracks named the way the programme notes name them: language, then format and channels. */
-function audioOptions(source: MediaSourceInfo | undefined): TrackOption[] {
-  return (source?.MediaStreams ?? [])
+const audioOptions = (source: MediaSourceInfo | undefined): TrackOption[] =>
+  (source?.MediaStreams ?? [])
     .filter((stream) => stream.Type === "Audio" && stream.Index != null)
     .map((stream) => {
       const index = stream.Index ?? 0;
@@ -56,11 +56,10 @@ function audioOptions(source: MediaSourceInfo | undefined): TrackOption[] {
         ...(extra === undefined ? {} : { detail: extra }),
       };
     });
-}
 
 /** Subtitles by language and purpose; the file format is not a choice anyone makes. */
-function subtitleTracks(streams: readonly MediaStream[]): TrackOption[] {
-  return streams
+const subtitleTracks = (streams: readonly MediaStream[]): TrackOption[] =>
+  streams
     .filter((stream) => stream.Type === "Subtitle" && stream.Index != null)
     .map((stream) => {
       const flags = [
@@ -74,13 +73,13 @@ function subtitleTracks(streams: readonly MediaStream[]): TrackOption[] {
         ...(stream.IsExternal === true ? { detail: "Sidecar file" } : {}),
       };
     });
-}
 
 /** "Finn the Human (voice)" becomes "Name, voice of Finn the Human", so a comma-separated cast never reads "voice" as another name. */
-function creditOf(name: string, role: string | null | undefined): string {
+const creditOf = (name: string, role: string | null | undefined): string => {
   if (role == null || role === "") {
     return name;
   }
+
   const part = role.replaceAll(/\s*\((voice|uncredited)\)/gi, "").trim();
 
   if (/\(voice\)/i.test(role)) {
@@ -88,10 +87,10 @@ function creditOf(name: string, role: string | null | undefined): string {
   }
 
   return /\(uncredited\)/i.test(role) ? `${name} as ${part} (uncredited)` : `${name} as ${part}`;
-}
+};
 
 /** The synopsis whole when it fits, otherwise cut at the last sentence that does. */
-function synopsis(text: string | null, max = 420): string {
+const synopsis = (text: string | null, max = 420): string => {
   if (text === null) {
     return "No synopsis on the server.";
   }
@@ -99,13 +98,14 @@ function synopsis(text: string | null, max = 420): string {
   if (text.length <= max) {
     return text;
   }
+
   const cut = text.slice(0, max);
   const end = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
 
   return end > 0 ? cut.slice(0, end + 1) : `${cut.slice(0, cut.lastIndexOf(" "))}…`;
-}
+};
 
-function credits(item: BaseItemDto): { directors: string[]; cast: string[] } {
+const credits = (item: BaseItemDto): { directors: string[]; cast: string[] } => {
   const people = item.People ?? [];
 
   return {
@@ -115,11 +115,11 @@ function credits(item: BaseItemDto): { directors: string[]; cast: string[] } {
       .slice(0, 8)
       .map((p) => creditOf(p.Name ?? "", p.Role)),
   };
-}
+};
 
 type Picking = "none" | "audio" | "subtitle";
 
-export function FilmPage({
+export const FilmPage = ({
   entry,
   item,
   number,
@@ -129,7 +129,7 @@ export function FilmPage({
   readonly item: BaseItemDto;
   readonly number: number | null;
   readonly server: ServerUrl;
-}) {
+}) => {
   const navigate = useNavigate();
   const source = item.MediaSources?.[0];
   const streams = source?.MediaStreams ?? [];
@@ -325,4 +325,4 @@ export function FilmPage({
       </main>
     </FocusContext.Provider>
   );
-}
+};

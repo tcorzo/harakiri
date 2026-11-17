@@ -6,16 +6,11 @@ import { imageUrl, programmeNotes } from "../data/entry";
 import type { Entry, ImageRef } from "../data/entry";
 import { ProgrammeNotes, SectionTab, SeenMark } from "../ui/marks";
 
-export function backdropUrl(server: ServerUrl, image: ImageRef): string {
-  return imageUrl(
-    server,
-    image,
-    Math.min(3840, window.screen.width * (window.devicePixelRatio || 1))
-  );
-}
+export const backdropUrl = (server: ServerUrl, image: ImageRef): string =>
+  imageUrl(server, image, Math.min(3840, window.screen.width * (window.devicePixelRatio || 1)));
 
 /** Cross-fades from the previous backdrop to the new one so a re-light never flashes to black. */
-export function Backdrop({ url }: { readonly url: string | null }) {
+export const Backdrop = ({ url }: { readonly url: string | null }) => {
   const [layers, setLayers] = useState<readonly (string | null)[]>([url]);
 
   if (layers.at(-1) !== url) {
@@ -40,27 +35,25 @@ export function Backdrop({ url }: { readonly url: string | null }) {
       )}
     </div>
   );
-}
+};
 
 /** The programme-ink field that owns the lower two thirds and the margin side of the frame. */
-export function InkField({ deep }: { readonly deep: boolean }) {
-  return (
-    <div
-      aria-hidden="true"
-      className="ease-curtain absolute inset-0 transition-opacity duration-700"
-      style={{
-        // An eased ramp rather than a hard stop, so a bright backdrop fades into the ink instead of
-        // ending on a horizon line; the thin top band keeps the wordmark and Settings legible.
-        background: deep
-          ? "linear-gradient(to top, var(--color-ink) 0%, var(--color-ink) 35%, color-mix(in oklch, var(--color-ink) 85%, transparent) 50%, color-mix(in oklch, var(--color-ink) 45%, transparent) 72%, color-mix(in oklch, var(--color-ink) 15%, transparent) 100%), linear-gradient(to right, color-mix(in oklch, var(--color-ink) 85%, transparent) 0%, transparent 60%), linear-gradient(to bottom, color-mix(in oklch, var(--color-ink) 70%, transparent) 0%, transparent 16%)"
-          : "linear-gradient(to top, var(--color-ink) 0%, var(--color-ink) 40%, color-mix(in oklch, var(--color-ink) 88%, transparent) 50%, color-mix(in oklch, var(--color-ink) 45%, transparent) 60%, transparent 68%), linear-gradient(to right, color-mix(in oklch, var(--color-ink) 82%, transparent) 0%, transparent 58%), linear-gradient(to bottom, color-mix(in oklch, var(--color-ink) 70%, transparent) 0%, transparent 16%)",
-      }}
-    />
-  );
-}
+export const InkField = ({ deep }: { readonly deep: boolean }) => (
+  <div
+    aria-hidden="true"
+    className="ease-curtain absolute inset-0 transition-opacity duration-700"
+    style={{
+      // An eased ramp rather than a hard stop, so a bright backdrop fades into the ink instead of
+      // ending on a horizon line; the thin top band keeps the wordmark and Settings legible.
+      background: deep
+        ? "linear-gradient(to top, var(--color-ink) 0%, var(--color-ink) 35%, color-mix(in oklch, var(--color-ink) 85%, transparent) 50%, color-mix(in oklch, var(--color-ink) 45%, transparent) 72%, color-mix(in oklch, var(--color-ink) 15%, transparent) 100%), linear-gradient(to right, color-mix(in oklch, var(--color-ink) 85%, transparent) 0%, transparent 60%), linear-gradient(to bottom, color-mix(in oklch, var(--color-ink) 70%, transparent) 0%, transparent 16%)"
+        : "linear-gradient(to top, var(--color-ink) 0%, var(--color-ink) 40%, color-mix(in oklch, var(--color-ink) 88%, transparent) 50%, color-mix(in oklch, var(--color-ink) 45%, transparent) 60%, transparent 68%), linear-gradient(to right, color-mix(in oklch, var(--color-ink) 82%, transparent) 0%, transparent 58%), linear-gradient(to bottom, color-mix(in oklch, var(--color-ink) 70%, transparent) 0%, transparent 16%)",
+    }}
+  />
+);
 
 /** The left margin: catalogue number, the seen annotation and the section band, read top to bottom. */
-export function Margin({
+export const Margin = ({
   number,
   seen,
   section,
@@ -68,30 +61,28 @@ export function Margin({
   readonly number: number | null;
   readonly seen: boolean;
   readonly section: string;
-}) {
-  return (
-    <div className="w-margin flex shrink-0 flex-col items-start gap-4 self-stretch">
-      {number === null ? null : (
-        <p className="m-0 flex items-baseline gap-1 leading-none">
-          <span className="text-body text-paper-dim stretch-condensed font-[560]">No.</span>
-          <span className="text-title stretch-condensed font-[300]">
-            {String(number).padStart(3, "0")}
-          </span>
-        </p>
-      )}
-      {seen ? (
-        <span className="text-caption text-paper stretch-condensed flex items-center gap-2 font-[620]">
-          <SeenMark />
-          Seen
+}) => (
+  <div className="w-margin flex shrink-0 flex-col items-start gap-4 self-stretch">
+    {number === null ? null : (
+      <p className="m-0 flex items-baseline gap-1 leading-none">
+        <span className="text-body text-paper-dim stretch-condensed font-[560]">No.</span>
+        <span className="text-title stretch-condensed font-[300]">
+          {String(number).padStart(3, "0")}
         </span>
-      ) : null}
-      <SectionTab>{section}</SectionTab>
-    </div>
-  );
-}
+      </p>
+    )}
+    {seen ? (
+      <span className="text-caption text-paper stretch-condensed flex items-center gap-2 font-[620]">
+        <SeenMark />
+        Seen
+      </span>
+    ) : null}
+    <SectionTab>{section}</SectionTab>
+  </div>
+);
 
 /** The title as the programme sets it: the film's own logo, or its name wide and heavy. */
-export function TitleMark({
+export const TitleMark = ({
   entry,
   server,
   compact,
@@ -99,7 +90,7 @@ export function TitleMark({
   readonly entry: Entry;
   readonly server: ServerUrl;
   readonly compact: boolean;
-}) {
+}) => {
   const name = entry.kind === "Episode" && entry.series !== null ? entry.series.name : entry.title;
 
   if (entry.logo !== null) {
@@ -129,22 +120,20 @@ export function TitleMark({
       {name}
     </h1>
   );
-}
+};
 
-export function EntryNotes({
+export const EntryNotes = ({
   entry,
   children,
 }: {
   readonly entry: Entry;
   readonly children?: ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-3">
-      {entry.kind === "Episode" ? (
-        <p className="text-body text-paper stretch-semicondensed font-[620]">{entry.title}</p>
-      ) : null}
-      <ProgrammeNotes facts={programmeNotes(entry)} />
-      {children}
-    </div>
-  );
-}
+}) => (
+  <div className="flex flex-col gap-3">
+    {entry.kind === "Episode" ? (
+      <p className="text-body text-paper stretch-semicondensed font-[620]">{entry.title}</p>
+    ) : null}
+    <ProgrammeNotes facts={programmeNotes(entry)} />
+    {children}
+  </div>
+);

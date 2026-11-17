@@ -13,7 +13,7 @@ export interface TrackOption {
 }
 
 /** A side sheet listing tracks; Back closes it without changing the choice. */
-export function TrackPicker({
+export const TrackPicker = ({
   title,
   options,
   chosen,
@@ -25,7 +25,7 @@ export function TrackPicker({
   readonly chosen: number;
   readonly onChoose: (index: number) => void;
   readonly onClose: () => void;
-}) {
+}) => {
   const { ref, focusKey } = useFocusable<object, HTMLElement>({
     focusKey: "track-picker",
     isFocusBoundary: true,
@@ -71,4 +71,4 @@ export function TrackPicker({
       </section>
     </FocusContext.Provider>
   );
-}
+};

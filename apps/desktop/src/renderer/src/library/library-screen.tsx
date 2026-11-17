@@ -86,7 +86,7 @@ const failed = (section: Section, refetch: () => unknown): PlannedRow => ({
  * own retry, so one bad section never takes the library down. Null until every request settles,
  * so the rows appear together rather than shifting under the owner's focus.
  */
-function useProgramme(): readonly PlannedRow[] | null {
+const useProgramme = (): readonly PlannedRow[] | null => {
   const ctx = useSignedIn();
 
   const [resume, nextUp, recent, sections] = useQueries({
@@ -104,6 +104,7 @@ function useProgramme(): readonly PlannedRow[] | null {
   if ([resume, nextUp, recent, sections].some((query) => query.isPending)) {
     return null;
   }
+
   // Rebuilt each render, which is cheap: the rows themselves are memoized on stable data.
   const rows: PlannedRow[] = [];
 
@@ -139,9 +140,9 @@ function useProgramme(): readonly PlannedRow[] | null {
   }
 
   return rows;
-}
+};
 
-function rowTop(rows: readonly PlannedRow[], index: number): number {
+const rowTop = (rows: readonly PlannedRow[], index: number): number => {
   let top = 0;
 
   for (const row of rows.slice(0, Math.max(0, index - 1))) {
@@ -149,19 +150,19 @@ function rowTop(rows: readonly PlannedRow[], index: number): number {
   }
 
   return top;
-}
+};
 
 const relightRestMs = 180;
 let relightTimer = 0;
 
-function useOpenEntry(): (entry: Entry) => void {
+const useOpenEntry = (): ((entry: Entry) => void) => {
   const navigate = useNavigate();
 
   return useCallback(
     (entry: Entry) => void navigate({ to: "/title/$id", params: { id: entry.id } }),
     [navigate]
   );
-}
+};
 
 const Programme = memo(
   ({
@@ -216,6 +217,7 @@ const Programme = memo(
       if (direction !== "up" || !hero || first === undefined) {
         return false;
       }
+
       // Typed as a string, but null while nothing has focus.
       const key: string | null = getCurrentFocusKey();
 
@@ -236,6 +238,7 @@ const Programme = memo(
       if (restored.current) {
         return;
       }
+
       restored.current = true;
       const { place } = useLit.getState();
 
@@ -288,7 +291,7 @@ const Programme = memo(
   }
 );
 
-function UpNext({
+const UpNext = ({
   entry,
   number,
   since,
@@ -304,7 +307,7 @@ function UpNext({
   readonly focusable: boolean;
   readonly server: ServerUrl;
   readonly onPress: () => void;
-}) {
+}) => {
   const { ref } = useFocusable<object, HTMLButtonElement>({ focusKey: "hero-next", focusable });
 
   return (
@@ -339,9 +342,9 @@ function UpNext({
       </span>
     </button>
   );
-}
+};
 
-function SettingsLink() {
+const SettingsLink = () => {
   const navigate = useNavigate();
   const { ref } = useFocusable<object, HTMLButtonElement>({ focusKey: "library-settings" });
 
@@ -357,9 +360,9 @@ function SettingsLink() {
       Settings
     </button>
   );
-}
+};
 
-function EmptyLibrary() {
+const EmptyLibrary = () => {
   useEffect(() => {
     focusFirst("library-settings");
   }, []);
@@ -376,9 +379,9 @@ function EmptyLibrary() {
       </div>
     </main>
   );
-}
+};
 
-export function LibraryScreen() {
+export const LibraryScreen = () => {
   const ctx = useSignedIn();
   const { server, session } = ctx;
   const navigate = useNavigate();
@@ -424,6 +427,7 @@ export function LibraryScreen() {
     if (useLit.getState().place !== null) {
       return;
     }
+
     useLit.setState({ entry: null, section: tonight });
     focusFirst("hero-play");
   }, []);
@@ -441,6 +445,7 @@ export function LibraryScreen() {
     if (hero === null || !cycle.settled()) {
       return;
     }
+
     void navigate({
       to: "/screening/$id",
       params: { id: hero.id },
@@ -452,6 +457,7 @@ export function LibraryScreen() {
     if (hero === null) {
       return;
     }
+
     window.clearTimeout(relightTimer);
     useLit.setState({ place: null });
     light(hero, tonight);
@@ -552,4 +558,4 @@ export function LibraryScreen() {
       </main>
     </FocusContext.Provider>
   );
-}
+};

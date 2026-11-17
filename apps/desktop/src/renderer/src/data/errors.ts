@@ -25,7 +25,7 @@ const isNetworkFailure = (error: unknown): boolean =>
   (networkErrorNames.has(error.name) ||
     (error.name === "TypeError" && error.message === "Failed to fetch"));
 
-export function classifyFailure(error: unknown): Failure {
+export const classifyFailure = (error: unknown): Failure => {
   if (error instanceof ServerStatusError) {
     if (error.status === 401) {
       return { kind: "signedOut" };
@@ -43,4 +43,4 @@ export function classifyFailure(error: unknown): Failure {
   }
 
   return { kind: "unexpected", message: error instanceof Error ? error.message : String(error) };
-}
+};

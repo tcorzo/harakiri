@@ -23,10 +23,11 @@ export type HeroEvent =
   | { readonly type: "next"; readonly now: number; readonly count: number }
   | { readonly type: "restart"; readonly now: number };
 
-export function heroCycle(state: HeroCycle, event: HeroEvent): HeroCycle {
+export const heroCycle = (state: HeroCycle, event: HeroEvent): HeroCycle => {
   if (event.type === "restart") {
     return { ...state, since: event.now };
   }
+
   const due = event.type === "next" || (event.auto && event.now - state.since >= heroHoldMs);
 
   if (!due || event.count < 2) {
@@ -34,41 +35,35 @@ export function heroCycle(state: HeroCycle, event: HeroEvent): HeroCycle {
   }
 
   return { index: (state.index + 1) % event.count, since: event.now, changedAt: event.now };
-}
+};
 
 /** Whether a press at `now` is meant for the film on stage, rather than the one that just left it. */
-export function settled(state: HeroCycle, now: number): boolean {
-  return now - state.changedAt >= heroSettleMs;
-}
+export const settled = (state: HeroCycle, now: number): boolean =>
+  now - state.changedAt >= heroSettleMs;
 
-export function upNext(index: number, count: number): number | null {
-  return count < 2 ? null : (index + 1) % count;
-}
+export const upNext = (index: number, count: number): number | null =>
+  count < 2 ? null : (index + 1) % count;
 
 const reducedMotionQuery = "(prefers-reduced-motion: reduce)";
 
-function subscribeReducedMotion(onChange: () => void): () => void {
+const subscribeReducedMotion = (onChange: () => void): (() => void) => {
   const list = window.matchMedia(reducedMotionQuery);
   list.addEventListener("change", onChange);
 
   return () => {
     list.removeEventListener("change", onChange);
   };
-}
+};
 
-export function useReducedMotion(): boolean {
-  return useSyncExternalStore(
-    subscribeReducedMotion,
-    () => window.matchMedia(reducedMotionQuery).matches
-  );
-}
+export const useReducedMotion = (): boolean =>
+  useSyncExternalStore(subscribeReducedMotion, () => window.matchMedia(reducedMotionQuery).matches);
 
 /**
  * Advances the featured film once the hero has held focus with no input for a whole hold, so the
  * film never changes while the owner is reading or reaching for select. Reduced motion never
  * advances on its own; the owner moves on with Next.
  */
-export function useHeroCycle(ids: readonly string[], holding: boolean) {
+export const useHeroCycle = (ids: readonly string[], holding: boolean) => {
   const count = ids.length;
   const reducedMotion = useReducedMotion();
   const auto = holding && !reducedMotion;
@@ -134,4 +129,4 @@ export function useHeroCycle(ids: readonly string[], holding: boolean) {
     },
     settled: () => settled(state, Date.now()),
   };
-}
+};

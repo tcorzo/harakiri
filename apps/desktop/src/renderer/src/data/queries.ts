@@ -90,7 +90,7 @@ export const nextEpisodeQuery = (ctx: SignedIn, seriesId: ItemId, episodeId: Ite
  * rows built from them, and for an episode its series' counts. The hero, the catalogue and the
  * genre sections stay as they are, so the library the owner returns to has not reshuffled.
  */
-export function playedKeys(ctx: SignedIn, entry: Entry): readonly (readonly unknown[])[] {
+export const playedKeys = (ctx: SignedIn, entry: Entry): readonly (readonly unknown[])[] => {
   const root = libraryRootKey(ctx);
 
   const keys: (readonly unknown[])[] = [
@@ -109,7 +109,7 @@ export function playedKeys(ctx: SignedIn, entry: Entry): readonly (readonly unkn
   }
 
   return keys;
-}
+};
 
 /**
  * Refetches what a screening changed once the server has stored it, on the player's `reported`
@@ -117,28 +117,33 @@ export function playedKeys(ctx: SignedIn, entry: Entry): readonly (readonly unkn
  * then (it hands the title page back as soon as mpv quits), so this listens on its own and stops
  * after that one event.
  */
-export function refetchWhenReported(queryClient: QueryClient, ctx: SignedIn, entry: Entry): void {
+export const refetchWhenReported = (
+  queryClient: QueryClient,
+  ctx: SignedIn,
+  entry: Entry
+): void => {
   const keys = playedKeys(ctx, entry);
 
   const unsubscribe = window.harakiri.player.onEvent((event) => {
     if (event.itemId !== entry.id || event.phase !== "reported") {
       return;
     }
+
     unsubscribe();
 
     for (const queryKey of keys) {
       void queryClient.invalidateQueries({ queryKey });
     }
   });
-}
+};
 
 /**
  * Every film and series id in accession order: the catalogue numbers. A title keeps its number
  * while the library only grows, because new arrivals are appended; removing a title renumbers the
  * ones added after it.
  */
-export function catalogueQuery(ctx: SignedIn) {
-  return queryOptions({
+export const catalogueQuery = (ctx: SignedIn) =>
+  queryOptions({
     queryKey: [...libraryRootKey(ctx), "catalogue"],
     staleTime: 5 * 60_000,
     queryFn: async ({ signal }): Promise<ReadonlyMap<string, number>> => {
@@ -160,4 +165,3 @@ export function catalogueQuery(ctx: SignedIn) {
       return new Map((data.Items ?? []).map((raw, i) => [raw.Id ?? "", i + 1]));
     },
   });
-}

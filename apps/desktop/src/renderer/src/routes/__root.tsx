@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { useInputHub } from "../input/hub";
 import { Curtain } from "../ui/curtain";
 
-function Root() {
+const Root = () => {
   useInputHub();
 
   return (
@@ -13,7 +13,7 @@ function Root() {
       <Outlet />
     </Suspense>
   );
-}
+};
 
 export const Route = createRootRouteWithContext<{ readonly queryClient: QueryClient }>()({
   component: Root,

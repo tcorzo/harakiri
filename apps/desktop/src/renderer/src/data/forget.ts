@@ -14,10 +14,10 @@ import { sessionQuery, signedIn } from "./session";
  * not keep the owner signed in, so that is best effort. A token the server already refused (401)
  * is not sent again.
  */
-export async function forgetSession(
+export const forgetSession = async (
   queryClient: QueryClient,
   { revoke }: { readonly revoke: boolean }
-): Promise<void> {
+): Promise<void> => {
   const session = queryClient.getQueryData(sessionQuery.queryKey);
 
   if (session && revoke) {
@@ -32,4 +32,4 @@ export async function forgetSession(
   seriesPlace.clear();
   queryClient.clear();
   queryClient.setQueryData(sessionQuery.queryKey, null);
-}
+};

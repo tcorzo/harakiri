@@ -35,7 +35,7 @@ type Outcome =
 const messageOf = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
-function StationRule({ current }: { readonly current: Station }) {
+const StationRule = ({ current }: { readonly current: Station }) => {
   const at = stations.indexOf(current);
 
   return (
@@ -57,13 +57,13 @@ function StationRule({ current }: { readonly current: Station }) {
       ))}
     </ol>
   );
-}
+};
 
 /**
  * The server's own signal path, one fact per leg. A native leg is stated bare; a mapped or
  * decoded leg already says so in words, and its mark repeats that in shape.
  */
-export function SignalSlug({ facts }: { readonly facts: readonly SignalFact[] }) {
+export const SignalSlug = ({ facts }: { readonly facts: readonly SignalFact[] }) => {
   const path = joinFacts(facts);
 
   return (
@@ -92,10 +92,10 @@ export function SignalSlug({ facts }: { readonly facts: readonly SignalFact[] })
       })}
     </p>
   );
-}
+};
 
 /** What the server decided, stated before mpv takes the screen (PRD principle 1). */
-export function ServerDecision({ report }: { readonly report: SignalReport }) {
+export const ServerDecision = ({ report }: { readonly report: SignalReport }) => {
   if (report.unreadable) {
     return (
       <Notice className="max-w-[64ch]">
@@ -121,9 +121,9 @@ export function ServerDecision({ report }: { readonly report: SignalReport }) {
   }
 
   return <SignalSlug facts={report.facts} />;
-}
+};
 
-function NextEpisode({
+const NextEpisode = ({
   next,
   onPlay,
   onLeave,
@@ -131,7 +131,7 @@ function NextEpisode({
   readonly next: Entry;
   readonly onPlay: () => void;
   readonly onLeave: () => void;
-}) {
+}) => {
   const code = episodeCode(next);
   const { ref, focusKey } = useFocusable<object, HTMLDivElement>({ focusKey: "screening-next" });
   useEffect(() => {
@@ -163,10 +163,10 @@ function NextEpisode({
       </div>
     </FocusContext.Provider>
   );
-}
+};
 
 /** The screening handoff: the house dims, the slug states the server's signal path, then mpv takes the screen. */
-export function ScreeningScreen() {
+export const ScreeningScreen = () => {
   const { id } = route.useParams();
   const search = route.useSearch();
   const ctx = useSignedIn();
@@ -209,8 +209,10 @@ export function ScreeningScreen() {
   const failWith = (error: unknown): void => {
     if (classifyFailure(error).kind !== "signedOut") {
       fail(messageOf(error));
+
       return;
     }
+
     inputMode.getState().setMode("ui");
     setOutcome({ kind: "signedOut", error });
   };
@@ -235,6 +237,7 @@ export function ScreeningScreen() {
   const offerNext = async (): Promise<void> => {
     if (entry.kind !== "Episode" || entry.series === null) {
       leaveAfterPlayback();
+
       return;
     }
 
@@ -269,6 +272,7 @@ export function ScreeningScreen() {
     if (next.itemId !== id) {
       return;
     }
+
     setEvent(next);
 
     // The server stores the resume point after these arrive; the refetch waits for `reported`.
@@ -331,6 +335,7 @@ export function ScreeningScreen() {
           failWith(error);
         }
       });
+
     const house = window.setTimeout(() => {
       setHouseDone(true);
     }, handoffTiming.houseMs);
@@ -352,6 +357,7 @@ export function ScreeningScreen() {
     }
 
     setElapsed("slug");
+
     const picture = window.setTimeout(() => {
       handOff();
     }, handoffTiming.slugMs);
@@ -476,4 +482,4 @@ export function ScreeningScreen() {
       </main>
     </FocusContext.Provider>
   );
-}
+};

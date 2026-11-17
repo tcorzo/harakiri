@@ -12,8 +12,8 @@ import { QuietAction } from "./actions";
 import { focusFirst } from "./focus";
 import { Notice } from "./marks";
 
-function wording(failure: Failure): { readonly title: string; readonly detail: string } {
-  return match(failure)
+const wording = (failure: Failure): { readonly title: string; readonly detail: string } =>
+  match(failure)
     .with({ kind: "signedOut" }, () => ({
       title: "Signed out by the server",
       detail:
@@ -39,10 +39,9 @@ function wording(failure: Failure): { readonly title: string; readonly detail: s
         "harakiri hit a problem it did not expect. Try again; if it happens again, the message below says what went wrong.",
     }))
     .exhaustive();
-}
 
 /** A screen whose data could not load: says what happened and offers the way on that fits it. */
-export function ErrorScreen({ error, reset }: ErrorComponentProps) {
+export const ErrorScreen = ({ error, reset }: ErrorComponentProps) => {
   const router = useRouter();
   const queryClient = useQueryClient();
   const failure = classifyFailure(error);
@@ -93,4 +92,4 @@ export function ErrorScreen({ error, reset }: ErrorComponentProps) {
       </div>
     </main>
   );
-}
+};

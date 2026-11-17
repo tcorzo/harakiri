@@ -29,15 +29,13 @@ export interface ProgrammeRowProps {
 
 const gapRem = 2;
 
-function RowHeader({ name, children }: { readonly name: string; readonly children: ReactNode }) {
-  return (
-    <header className="pr-safe-x flex h-[3rem] items-center gap-6">
-      <SectionHead>{name}</SectionHead>
-      <span aria-hidden="true" className="hairline h-0 flex-1 border-t-2" />
-      {children}
-    </header>
-  );
-}
+const RowHeader = ({ name, children }: { readonly name: string; readonly children: ReactNode }) => (
+  <header className="pr-safe-x flex h-[3rem] items-center gap-6">
+    <SectionHead>{name}</SectionHead>
+    <span aria-hidden="true" className="hairline h-0 flex-1 border-t-2" />
+    {children}
+  </header>
+);
 
 /**
  * One programme section: a section head, a hairline, and a horizontally virtualized run of entries.
@@ -85,6 +83,7 @@ export const ProgrammeRow = memo(
         if (place?.section !== sectionId) {
           return 0;
         }
+
         const at = entries.findIndex((entry) => entry.id === place.entry);
 
         return at === -1 ? 0 : at * pitchRem * rem;

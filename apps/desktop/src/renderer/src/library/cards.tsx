@@ -14,7 +14,7 @@ export interface CardProps {
   readonly onPress: () => void;
 }
 
-function Picture({
+const Picture = ({
   server,
   image,
   widthRem,
@@ -24,7 +24,7 @@ function Picture({
   readonly image: ImageRef | null;
   readonly widthRem: number;
   readonly className: string;
-}) {
+}) => {
   if (image === null) {
     return <div aria-hidden="true" className={`${className} bg-ink-raised`} />;
   }
@@ -38,9 +38,9 @@ function Picture({
       className={`${className} bg-ink-raised object-cover`}
     />
   );
-}
+};
 
-function spokenName(entry: Entry, number: number | null): string {
+const spokenName = (entry: Entry, number: number | null): string => {
   const code = episodeCode(entry);
 
   const parts = [
@@ -52,10 +52,10 @@ function spokenName(entry: Entry, number: number | null): string {
   ];
 
   return parts.filter((part) => part !== null).join(", ");
-}
+};
 
 /** A landscape still with the progress rule: Continue Watching and Next Up. */
-export function StillCard({ entry, number, server, focusKey, onFocus, onPress }: CardProps) {
+export const StillCard = ({ entry, number, server, focusKey, onFocus, onPress }: CardProps) => {
   const { ref } = useFocusable<object, HTMLButtonElement>({ focusKey, onFocus });
   const left = minutesLeft(entry);
   const code = episodeCode(entry);
@@ -94,10 +94,10 @@ export function StillCard({ entry, number, server, focusKey, onFocus, onPress }:
       </span>
     </button>
   );
-}
+};
 
 /** A poster with its catalogue number: the programme sections. */
-export function PosterCard({ entry, number, server, focusKey, onFocus, onPress }: CardProps) {
+export const PosterCard = ({ entry, number, server, focusKey, onFocus, onPress }: CardProps) => {
   const { ref } = useFocusable<object, HTMLButtonElement>({ focusKey, onFocus });
 
   return (
@@ -125,4 +125,4 @@ export function PosterCard({ entry, number, server, focusKey, onFocus, onPress }
       </span>
     </button>
   );
-}
+};
