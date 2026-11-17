@@ -593,7 +593,8 @@ export const generateCorpus = async (options: GenerateOptions): Promise<Manifest
     let input = 1;
 
     for (const [n, track] of entry.audio.entries()) {
-      const a = audioArgs(track, n, entry.seconds, (input += 1));
+      const a = audioArgs(track, n, entry.seconds, input);
+      input += 1;
       args.push(...a.inputs);
       maps.push(...a.map);
       codecs.push(...a.codec);
@@ -605,7 +606,8 @@ export const generateCorpus = async (options: GenerateOptions): Promise<Manifest
 
     for (const [n, { sub, file }] of embedded.entries()) {
       args.push("-i", file);
-      maps.push("-map", `${(input += 1)}:s:0`);
+      maps.push("-map", `${input}:s:0`);
+      input += 1;
       codecs.push(`-metadata:s:s:${n}`, `language=${sub.language}`);
     }
 
