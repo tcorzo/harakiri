@@ -14,12 +14,12 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 
-const TEST_FILE = /\.(test|spec)\.tsx?$/;
-const SKIP = /\b(?:skipIf|runIf)\(|\.skip\(|\b(?:test|describe|it)\.skip\b|\.todo\(/;
-const ALLOW = /\/\/\s*allow-skip:/;
+const TEST_FILE = /\.(?:test|spec)\.tsx?$/u;
+const SKIP = /\b(?:skipIf|runIf)\(|\.skip\(|\b(?:test|describe|it)\.skip\b|\.todo\(/u;
+const ALLOW = /\/\/\s*allow-skip:/u;
 
 const ALLOW_FULL =
-  /\/\/\s*allow-skip:\s*(?<reason>\S.*?)\s*\(expires (?<date>\d{4}-\d{2}-\d{2}), approved-by (?<name>\S[^)]*)\)/;
+  /\/\/\s*allow-skip:\s*(?<reason>\S.*?)\s*\(expires (?<date>\d{4}-\d{2}-\d{2}), approved-by (?<name>\S[^)]*)\)/u;
 
 const RULE =
   "tests must not skip: a skipped test proves nothing while the run stays green. " +
@@ -70,6 +70,7 @@ const judge = (line: string): string | undefined => {
   if (!ALLOW.test(line)) {
     return "skips without an allow-skip exception";
   }
+
   const allow = ALLOW_FULL.exec(line)?.groups;
   const date = allow?.date;
 
@@ -92,7 +93,7 @@ for (const file of files) {
   for (const [index, line] of lines.entries()) {
     const why = judge(line);
 
-    if (why) {
+    if (why !== undefined) {
       problems.push(`${file}:${index + 1}: ${line.trim()}\n  ${why}`);
     }
   }
@@ -104,6 +105,7 @@ if (problems.length > 0) {
   for (const problem of problems) {
     console.error(`${problem}\n`);
   }
+
   console.error(`Rule: ${RULE}`);
   process.exit(1);
 }

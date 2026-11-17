@@ -1,7 +1,9 @@
 // Follows the library scan until it finishes (or times out), then reports item and image counts.
 // Run: mise exec -- bun dev/jellyfin/wait-scan.ts [timeoutMinutes=180]
 
-import { api, login, waitForServer } from "./client.ts";
+import { setTimeout as sleep } from "node:timers/promises";
+
+import { api, login, waitForServer } from "./client";
 
 interface Task {
   Key: string;
@@ -23,7 +25,9 @@ interface Counts {
 
 const timeoutMin = Number(process.argv[2] ?? 180);
 const POLL_MS = 15_000;
-const IDLE_GRACE_MS = 45_000; // the task may take a moment to enter Running after /Library/Refresh
+
+// The task may take a moment to enter Running after /Library/Refresh.
+const IDLE_GRACE_MS = 45_000;
 
 await waitForServer();
 
@@ -31,24 +35,23 @@ let auth = await login();
 const { userId } = auth;
 
 // Another login with the same DeviceId revokes our token; log in again once and retry.
-async function get<T>(path: string): Promise<T> {
+const get = async <T>(route: string): Promise<T> => {
   try {
-    return await api<T>("GET", path, { token: auth.token });
+    return await api<T>("GET", route, { token: auth.token });
   } catch (error) {
     if (!String(error).includes("-> 401")) {
       throw error;
     }
+
     auth = await login();
 
-    return await api<T>("GET", path, { token: auth.token });
+    return await api<T>("GET", route, { token: auth.token });
   }
-}
+};
 
-async function counts(): Promise<Counts> {
-  return await get<Counts>(`/Items/Counts?userId=${userId}`);
-}
+const counts = async (): Promise<Counts> => await get<Counts>(`/Items/Counts?userId=${userId}`);
 
-async function imageStats(type: string) {
+const imageStats = async (type: string) => {
   const q = new URLSearchParams({
     IncludeItemTypes: type,
     Recursive: "true",
@@ -57,21 +60,22 @@ async function imageStats(type: string) {
     userId,
   });
 
-  const r = await get<{ Items: Item[]; TotalRecordCount: number }>(`/Items?${q}`);
+  const r = await get<{ Items: Item[]; TotalRecordCount: number }>(`/Items?${q.toString()}`);
 
   return {
     total: r.TotalRecordCount,
-    primary: r.Items.filter((i) => i.ImageTags?.Primary).length,
+    primary: r.Items.filter((i) => (i.ImageTags?.Primary ?? "") !== "").length,
     backdrop: r.Items.filter((i) => (i.BackdropImageTags?.length ?? 0) > 0).length,
-    logo: r.Items.filter((i) => i.ImageTags?.Logo).length,
+    logo: r.Items.filter((i) => (i.ImageTags?.Logo ?? "") !== "").length,
   };
-}
+};
 
 const start = Date.now();
 const deadline = start + timeoutMin * 60_000;
 let seenRunning = false;
 let finished = false;
 
+/* oxlint-disable eslint/no-await-in-loop -- the poll is sequential: each round reads the state the previous one left */
 while (Date.now() < deadline) {
   const tasks = await get<Task[]>("/ScheduledTasks?isHidden=false");
   const scan = tasks.find((t) => t.Key === "RefreshLibrary");
@@ -92,8 +96,9 @@ while (Date.now() < deadline) {
     break;
   }
 
-  await Bun.sleep(POLL_MS);
+  await sleep(POLL_MS);
 }
+/* oxlint-enable eslint/no-await-in-loop */
 
 if (!finished) {
   console.log(`timeout after ${timeoutMin}m, scan still running; counts so far:`);
@@ -103,11 +108,14 @@ const c = await counts();
 
 console.log(`\nitems: movies ${c.MovieCount}, series ${c.SeriesCount}, episodes ${c.EpisodeCount}`);
 
+/* oxlint-disable eslint/no-await-in-loop -- sequential so the report prints in type order */
 for (const type of ["Movie", "Series", "Episode"]) {
   const s = await imageStats(type);
+
   console.log(
     `${type.padEnd(8)} total ${s.total} | Primary ${s.primary} | Backdrop ${s.backdrop} | Logo ${s.logo}`
   );
 }
+/* oxlint-enable eslint/no-await-in-loop */
 
 process.exit(finished ? 0 : 1);

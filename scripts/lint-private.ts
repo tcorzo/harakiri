@@ -24,18 +24,18 @@ interface Rule {
 
 // Spelled so this file does not match itself.
 const GENERIC: Rule[] = [
-  { name: "NAS mount path", pattern: new RegExp(["", "mnt", ""].join("/")) },
-  { name: "NAS name", pattern: new RegExp(["true", "nas"].join(""), "i") },
-  { name: "home directory", pattern: new RegExp(["", "home", "[^/\\s\"'`]+"].join("/")) },
-  { name: "agent scratchpad path", pattern: new RegExp(["", "tmp", "claude-"].join("/")) },
-  { name: "owner domain", pattern: new RegExp(["tcorzo", "dev"].join("\\."), "i") },
+  { name: "NAS mount path", pattern: new RegExp(["", "mnt", ""].join("/"), "u") },
+  { name: "NAS name", pattern: new RegExp(["true", "nas"].join(""), "iu") },
+  { name: "home directory", pattern: new RegExp(["", "home", "[^/\\s\"'`]+"].join("/"), "u") },
+  { name: "agent scratchpad path", pattern: new RegExp(["", "tmp", "claude-"].join("/"), "u") },
+  { name: "owner domain", pattern: new RegExp(["tcorzo", "dev"].join("\\."), "iu") },
 ];
 
 const DENYLIST = ".private-denylist";
-const ALLOW = /\/\/\s*allow-private:/;
+const ALLOW = /\/\/\s*allow-private:/u;
 
 const ALLOW_FULL =
-  /\/\/\s*allow-private:\s*(?<reason>\S.*?)\s*\(expires (?<date>\d{4}-\d{2}-\d{2}), approved-by (?<name>\S[^)]*)\)/;
+  /\/\/\s*allow-private:\s*(?<reason>\S.*?)\s*\(expires (?<date>\d{4}-\d{2}-\d{2}), approved-by (?<name>\S[^)]*)\)/u;
 
 const RULE =
   "the repo must not carry data from the owner's workstation or media library. " +
@@ -45,7 +45,7 @@ const RULE =
   "Recorders scrub what they record. A temporary exception needs, on the same line: " +
   "// allow-private: <reason> (expires YYYY-MM-DD, approved-by <name>)";
 
-const escape = (text: string) => text.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const escape = (text: string) => text.replaceAll(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 
 const denied = (): Rule[] =>
   existsSync(DENYLIST)
@@ -87,16 +87,18 @@ const rules = [...GENERIC, ...denied()];
 
 /** Why this line breaks the rule, or undefined when it matches nothing or holds a live exception. */
 const judge = (line: string): string | undefined => {
-  const hits = rules.filter(({ pattern }) => pattern.test(line)).map(({ name }) => name);
+  const hits = rules.flatMap(({ name, pattern }) => (pattern.test(line) ? [name] : []));
 
   if (hits.length === 0) {
     return undefined;
   }
+
   const what = [...new Set(hits)].join(", ");
 
   if (!ALLOW.test(line)) {
     return `${what}, without an allow-private exception`;
   }
+
   const allow = ALLOW_FULL.exec(line)?.groups;
   const date = allow?.date;
 
@@ -123,7 +125,7 @@ for (const file of files) {
   for (const [index, line] of text.split("\n").entries()) {
     const why = judge(line);
 
-    if (why) {
+    if (why !== undefined) {
       problems.push(`${file}:${index + 1}: ${line.trim().slice(0, 160)}\n  ${why}`);
     }
   }
@@ -135,6 +137,7 @@ if (problems.length > 0) {
   for (const problem of problems) {
     console.error(`${problem}\n`);
   }
+
   console.error(`Rule: ${RULE}`);
   process.exit(1);
 }

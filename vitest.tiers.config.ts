@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import path from "node:path";
 
 import { configDefaults, defineConfig } from "vitest/config";
 import type { TestProjectInlineConfiguration } from "vitest/config";
@@ -23,7 +23,7 @@ const tier = (
   // Spread instead of inheriting: `extends` concatenates arrays, so the package's
   // hermetic `exclude` would exclude the tier.
   extends: false,
-  root: resolve(import.meta.dirname, dir),
+  root: path.resolve(import.meta.dirname, dir),
   test: {
     ...base.test,
     name: `${name}:${project}`,

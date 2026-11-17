@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "outDir": "${configDir}/.tsbuild/tools",
+    "tsBuildInfoFile": "${configDir}/.tsbuild/tools.tsbuildinfo"
+  },
+  "include": [
+    "scripts",
+    "dev",
+    "vitest.tiers.config.ts",
+    "vitest.shared.ts",
+    "apps/desktop/vitest.config.ts",
+    "packages/harness/vitest.config.ts",
+    "packages/jellyfin/vitest.config.ts"
+  ]
+}

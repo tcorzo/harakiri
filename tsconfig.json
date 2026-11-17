@@ -6,6 +6,7 @@
     { "path": "packages/fidelity" },
     { "path": "packages/jellyfin" },
     { "path": "packages/harness" },
-    { "path": "apps/desktop" }
+    { "path": "apps/desktop" },
+    { "path": "tsconfig.tools.json" }
   ]
 }
