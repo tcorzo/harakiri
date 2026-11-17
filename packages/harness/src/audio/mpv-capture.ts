@@ -15,11 +15,11 @@ export interface AudioOut {
  * ao_pcm writes what would have gone to the audio device into `wavOut`. Returns the output
  * parameters from mpv's `AO:` line, which say whether it chose passthrough at all.
  */
-export function captureWithMpv(
+export const captureWithMpv = (
   input: string,
   wavOut: string,
   audioPassthrough?: AudioPassthrough
-): AudioOut {
+): AudioOut => {
   const { stdout, stderr } = runToolOrThrow("mpv", [
     configArg("none"),
     ...buildPlaybackArgs(audioPassthrough === undefined ? {} : { audioPassthrough }),
@@ -30,15 +30,16 @@ export function captureWithMpv(
   ]);
 
   return parseAudioOutLine(`${stdout}\n${stderr}`);
-}
+};
 
-export function parseAudioOutLine(log: string): AudioOut {
+export const parseAudioOutLine = (log: string): AudioOut => {
   const found = /^AO: \[\w+\] (\d+)Hz \S+ (\d+)ch (\S+)$/m.exec(log);
 
   if (found === null) {
     throw new Error(`mpv printed no AO line:\n${log}`);
   }
+
   const [, rate = "", channels = "", format = ""] = found;
 
   return { sampleRate: Number(rate), channels: Number(channels), format };
-}
+};

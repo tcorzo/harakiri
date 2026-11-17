@@ -163,13 +163,11 @@ const sdr = (codec: string) => ({ codec, range: "SDR", dvProfile: null }) as con
 const hevc = (range: VideoRangeType, dvProfile: number | null = null) =>
   ({ codec: "hevc", range, dvProfile }) as const;
 
-function movie(
+const movie = (
   id: string,
   meta: Metadata,
   rest: Omit<MovieEntry, "id" | "kind" | "meta" | "tier"> & { readonly tier?: "base" | "fate" }
-): MovieEntry {
-  return { id, kind: "movie", meta, tier: rest.tier ?? "base", ...rest };
-}
+): MovieEntry => ({ id, kind: "movie", meta, tier: rest.tier ?? "base", ...rest });
 
 export const CATALOG: readonly Entry[] = [
   // --- SDR, long: the resume, screening and passthrough items ---
@@ -765,7 +763,7 @@ export const CATALOG: readonly Entry[] = [
 ];
 
 /** The folder under the corpus root, and the file name without extension. */
-export function entryLocation(entry: Entry): { dir: string; stem: string } {
+export const entryLocation = (entry: Entry): { dir: string; stem: string } => {
   if (entry.kind === "movie") {
     const stem = `${entry.meta.title} (${entry.meta.year})`;
 
@@ -779,12 +777,12 @@ export function entryLocation(entry: Entry): { dir: string; stem: string } {
     dir: `shows/${entry.series}/Season ${season}`,
     stem: `${entry.series} - S${season}E${episode}`,
   };
-}
+};
 
-export function entryPath(entry: Entry): string {
+export const entryPath = (entry: Entry): string => {
   const { dir, stem } = entryLocation(entry);
 
   return `${dir}/${stem}.${entry.container}`;
-}
+};
 
 export const SIDECAR_LANGUAGE = { eng: "en", jpn: "ja", fre: "fr" } as const;

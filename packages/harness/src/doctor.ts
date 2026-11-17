@@ -16,23 +16,23 @@ export interface Check {
   readonly judge: (run: ToolRun) => Verdict;
 }
 
-function output(run: ToolRun): string | null {
-  return run.kind === "exited" && run.code === 0 ? `${run.stdout}\n${run.stderr}` : null;
-}
+const output = (run: ToolRun): string | null =>
+  run.kind === "exited" && run.code === 0 ? `${run.stdout}\n${run.stderr}` : null;
 
-function notRunnable(run: ToolRun): Verdict {
-  return run.kind === "not-found"
+const notRunnable = (run: ToolRun): Verdict =>
+  run.kind === "not-found"
     ? { status: "missing", detail: `${run.command} is not on PATH` }
     : { status: "missing", detail: describeFailure(run) };
-}
 
-export function versionAtLeast(prefix: RegExp, min: Version | null): Check["judge"] {
-  return (run) => {
+export const versionAtLeast =
+  (prefix: RegExp, min: Version | null): Check["judge"] =>
+  (run) => {
     const text = output(run);
 
     if (text === null) {
       return notRunnable(run);
     }
+
     const found = parseVersion(text, prefix);
 
     if (found === null) {
@@ -45,23 +45,23 @@ export function versionAtLeast(prefix: RegExp, min: Version | null): Check["judg
 
     return { status: "ok", detail: formatVersion(found) };
   };
-}
 
 /** Every name must appear as a row of an `ffmpeg -filters/-encoders/-bsfs` listing. */
-export function listsAll(names: readonly string[], row: (name: string) => RegExp): Check["judge"] {
-  return (run) => {
+export const listsAll =
+  (names: readonly string[], row: (name: string) => RegExp): Check["judge"] =>
+  (run) => {
     const text = output(run);
 
     if (text === null) {
       return notRunnable(run);
     }
+
     const absent = names.filter((name) => !row(name).test(text));
 
     return absent.length === 0
       ? { status: "ok", detail: names.join(", ") }
       : { status: "missing", detail: `missing ${absent.join(", ")}` };
   };
-}
 
 const ffmpegRow = (name: string) => new RegExp(`^\\s*\\S+\\s+${name}\\s`, "m");
 
@@ -134,14 +134,12 @@ export interface CheckResult {
   readonly verdict: Verdict;
 }
 
-export function runChecks(checks: readonly Check[]): CheckResult[] {
-  return checks.map((check) => {
+export const runChecks = (checks: readonly Check[]): CheckResult[] =>
+  checks.map((check) => {
     const [command, ...args] = check.probe;
 
     return { check, verdict: check.judge(runTool(command, args)) };
   });
-}
 
-export function requiredFailures(results: readonly CheckResult[]): CheckResult[] {
-  return results.filter((r) => r.check.required && r.verdict.status !== "ok");
-}
+export const requiredFailures = (results: readonly CheckResult[]): CheckResult[] =>
+  results.filter((r) => r.check.required && r.verdict.status !== "ok");

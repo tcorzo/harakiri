@@ -89,7 +89,7 @@ const BURST_HEADER_SIZE = 8;
  * Bursts without a preamble (DTS frames that exactly fill the repetition period, as on
  * DTS-in-WAV discs) carry no Pa/Pb and are invisible here by construction.
  */
-export function scanBursts(pcm: Uint8Array): Burst[] {
+export const scanBursts = (pcm: Uint8Array): Burst[] => {
   const view = new DataView(pcm.buffer, pcm.byteOffset, pcm.byteLength);
   const bursts: Burst[] = [];
   let at = 0;
@@ -130,9 +130,9 @@ export function scanBursts(pcm: Uint8Array): Burst[] {
   }
 
   return bursts;
-}
+};
 
-function swapWords(le: Uint8Array): Uint8Array {
+const swapWords = (le: Uint8Array): Uint8Array => {
   const be = new Uint8Array(le.length);
 
   for (let i = 0; i < le.length; i += 2) {
@@ -141,14 +141,14 @@ function swapWords(le: Uint8Array): Uint8Array {
   }
 
   return be;
-}
+};
 
 /**
  * Reassembles the elementary stream the bursts carry, undoing each codec's IEC 61937
  * wrapping. Filler bursts (null, pause) are skipped. Mixing codecs is an error: a
  * passthrough capture of one track carries exactly one.
  */
-export function elementaryStream(bursts: readonly Burst[]): ElementaryStream {
+export const elementaryStream = (bursts: readonly Burst[]): ElementaryStream => {
   const carried = bursts.flatMap((burst) => {
     const stream = DATA_TYPE_BY_CODE.get(burst.dataType)?.stream ?? null;
 
@@ -160,6 +160,7 @@ export function elementaryStream(bursts: readonly Burst[]): ElementaryStream {
   if (first === undefined) {
     throw new Iec61937Error("no audio-carrying bursts");
   }
+
   const other = carried.find((c) => c.stream !== first.stream);
 
   if (other !== undefined) {
@@ -187,7 +188,7 @@ export function elementaryStream(bursts: readonly Burst[]): ElementaryStream {
       bursts: payloads.length,
     }))
     .exhaustive();
-}
+};
 
 const DTSHD_START_CODE = Uint8Array.of(0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfe, 0xfe);
 
@@ -196,7 +197,7 @@ const DTSHD_START_CODE = Uint8Array.of(0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
  * frame, then padding. Pd is rounded up for receivers, so the inner length is the
  * only exact size.
  */
-function unwrapDtsTypeIV(burst: Burst): Uint8Array {
+const unwrapDtsTypeIV = (burst: Burst): Uint8Array => {
   const { payload, offset } = burst;
 
   if (!startsWith(payload, DTSHD_START_CODE, 0)) {
@@ -213,7 +214,7 @@ function unwrapDtsTypeIV(burst: Burst): Uint8Array {
   }
 
   return payload.subarray(frameStart, frameStart + frameLength);
-}
+};
 
 const MAT_FRAME_SIZE = 61_424;
 
@@ -279,7 +280,7 @@ const MAT_CODES = [
  * the markers out at their offsets leaves the data contiguous. Every marker is checked
  * byte for byte rather than searched for, so a shifted or missing code fails loudly.
  */
-function unwrapMatFrame(burst: Burst): Uint8Array {
+const unwrapMatFrame = (burst: Burst): Uint8Array => {
   const { payload, offset } = burst;
 
   if (payload.length !== MAT_FRAME_SIZE) {
@@ -303,14 +304,16 @@ function unwrapMatFrame(burst: Burst): Uint8Array {
   }
 
   return concat(segments);
-}
+};
 
 /**
  * Splits deframed MAT data into TrueHD access units. Each unit starts with a word whose
  * low 12 bits are its length in 16-bit words, which is never zero, so a zero word can
  * only be spdifenc's inter-unit padding.
  */
-function walkTrueHdAccessUnits(data: Uint8Array): { bytes: Uint8Array; partialTailBytes: number } {
+const walkTrueHdAccessUnits = (
+  data: Uint8Array
+): { bytes: Uint8Array; partialTailBytes: number } => {
   const units: Uint8Array[] = [];
   let at = 0;
 
@@ -327,18 +330,18 @@ function walkTrueHdAccessUnits(data: Uint8Array): { bytes: Uint8Array; partialTa
     if (at + length > data.length) {
       return { bytes: concat(units), partialTailBytes: data.length - at };
     }
+
     units.push(data.subarray(at, at + length));
     at += length;
   }
 
   return { bytes: concat(units), partialTailBytes: 0 };
-}
+};
 
-function startsWith(haystack: Uint8Array, needle: Uint8Array, at: number): boolean {
-  return needle.every((byte, i) => haystack[at + i] === byte);
-}
+const startsWith = (haystack: Uint8Array, needle: Uint8Array, at: number): boolean =>
+  needle.every((byte, i) => haystack[at + i] === byte);
 
-function concat(parts: readonly Uint8Array[]): Uint8Array {
+const concat = (parts: readonly Uint8Array[]): Uint8Array => {
   const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
   let at = 0;
 
@@ -348,4 +351,4 @@ function concat(parts: readonly Uint8Array[]): Uint8Array {
   }
 
   return out;
-}
+};

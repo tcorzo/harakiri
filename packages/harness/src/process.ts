@@ -19,11 +19,11 @@ export type ToolRun =
 
 const DEFAULT_TIMEOUT_MS = 60_000;
 
-export function runTool(
+export const runTool = (
   command: string,
   args: readonly string[],
   timeoutMs = DEFAULT_TIMEOUT_MS
-): ToolRun {
+): ToolRun => {
   const result = spawnSync(command, args, {
     encoding: "utf-8",
     maxBuffer: 64 * 1024 * 1024,
@@ -48,6 +48,7 @@ export function runTool(
     if ("code" in result.error && result.error.code === "ENOENT") {
       return { kind: "not-found", command };
     }
+
     throw result.error;
   }
 
@@ -57,22 +58,21 @@ export function runTool(
     stdout: result.stdout,
     stderr: result.stderr,
   };
-}
+};
 
-export function describeFailure(run: Exclude<ToolRun, { kind: "not-found" }>): string {
-  return run.kind === "exited"
+export const describeFailure = (run: Exclude<ToolRun, { kind: "not-found" }>): string =>
+  run.kind === "exited"
     ? `exited ${run.code}`
     : run.timedOutAfterMs === null
       ? `was killed by ${run.signal}`
       : `timed out after ${run.timedOutAfterMs}ms and was killed by ${run.signal}`;
-}
 
 /** Runs a tool that must succeed; the error carries its stderr. */
-export function runToolOrThrow(
+export const runToolOrThrow = (
   command: string,
   args: readonly string[],
   timeoutMs = DEFAULT_TIMEOUT_MS
-): { stdout: string; stderr: string } {
+): { stdout: string; stderr: string } => {
   const run = runTool(command, args, timeoutMs);
 
   if (run.kind === "not-found") {
@@ -84,4 +84,4 @@ export function runToolOrThrow(
   }
 
   return run;
-}
+};

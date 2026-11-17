@@ -14,9 +14,8 @@ export class WavError extends Error {
 const WAVE_FORMAT_PCM = 0x00_01;
 const WAVE_FORMAT_EXTENSIBLE = 0xff_fe;
 
-function fourcc(bytes: Uint8Array, at: number): string {
-  return String.fromCharCode(...bytes.subarray(at, at + 4));
-}
+const fourcc = (bytes: Uint8Array, at: number): string =>
+  String.fromCharCode(...bytes.subarray(at, at + 4));
 
 /**
  * Returns the 16-bit little-endian sample bytes of a capture. A RIFF/WAVE file is
@@ -24,7 +23,7 @@ function fourcc(bytes: Uint8Array, at: number): string {
  * header) and other writers add LIST chunks, so the data offset is not fixed.
  * Anything that does not start with RIFF is taken as headerless s16le.
  */
-export function readPcm16(file: Uint8Array): Pcm16 {
+export const readPcm16 = (file: Uint8Array): Pcm16 => {
   if (file.length < 12 || fourcc(file, 0) !== "RIFF") {
     return { kind: "raw", data: file };
   }
@@ -55,6 +54,7 @@ export function readPcm16(file: Uint8Array): Pcm16 {
       if (bits !== 16) {
         throw new WavError(`fmt has ${bits} bits per sample, IEC 61937 needs 16`);
       }
+
       format = {
         channels: view.getUint16(body + 2, true),
         sampleRate: view.getUint32(body + 4, true),
@@ -71,4 +71,4 @@ export function readPcm16(file: Uint8Array): Pcm16 {
   }
 
   throw new WavError("no data chunk");
-}
+};

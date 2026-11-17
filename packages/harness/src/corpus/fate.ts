@@ -58,7 +58,7 @@ export type FateState =
   | { readonly kind: "corrupt"; readonly bad: readonly FateSample[] };
 
 /** Checks every pinned sample in `dir`. A file with the wrong hash is never used. */
-export function fateState(dir: string): FateState {
+export const fateState = (dir: string): FateState => {
   const missing = SAMPLE_NAMES.filter((name) => !existsSync(join(dir, name)));
 
   const bad = SAMPLE_NAMES.filter(
@@ -79,17 +79,17 @@ export function fateState(dir: string): FateState {
   }
 
   return { kind: "complete" };
-}
+};
 
 /**
  * Downloads every sample that is missing or wrong, then verifies it. Throws on the first sample
  * that cannot be fetched or does not match its pin: a failed fetch is never a silent skip.
  */
-export async function fetchFate(
+export const fetchFate = async (
   dir: string,
   mirror: string,
   log: (line: string) => void
-): Promise<void> {
+): Promise<void> => {
   mkdirSync(dir, { recursive: true });
   const base = mirror.replace(/\/+$/, "");
   const failures: string[] = [];
@@ -111,12 +111,14 @@ export async function fetchFate(
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
+
       const data = new Uint8Array(await response.arrayBuffer());
       const got = sha256(data);
 
       if (got !== want) {
         throw new Error(`sha256 ${got}, pinned ${want}`);
       }
+
       writeFileSync(`${file}.part`, data);
       renameSync(`${file}.part`, file);
       log(`${name}: fetched ${data.length} bytes, sha256 ok`);
@@ -131,4 +133,4 @@ export async function fetchFate(
         `(set HARAKIRI_FATE_MIRROR to use a mirror):\n  ${failures.join("\n  ")}`
     );
   }
-}
+};

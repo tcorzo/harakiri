@@ -17,29 +17,24 @@ const tag = (name: string, value: string | number) =>
 const xml = (root: string, lines: readonly string[]) =>
   `<?xml version="1.0" encoding="utf-8" standalone="yes"?>\n<${root}>\n${lines.join("\n")}\n</${root}>\n`;
 
-function common(meta: Metadata): string[] {
-  return [
-    tag("title", meta.title),
-    tag("originaltitle", meta.title),
-    tag("sorttitle", meta.title),
-    tag("year", meta.year),
-    tag("premiered", `${meta.year}-01-01`),
-    tag("plot", meta.plot),
-    ...meta.genres.map((genre) => tag("genre", genre)),
-    tag("studio", "harakiri corpus"),
-  ];
-}
+const common = (meta: Metadata): string[] => [
+  tag("title", meta.title),
+  tag("originaltitle", meta.title),
+  tag("sorttitle", meta.title),
+  tag("year", meta.year),
+  tag("premiered", `${meta.year}-01-01`),
+  tag("plot", meta.plot),
+  ...meta.genres.map((genre) => tag("genre", genre)),
+  tag("studio", "harakiri corpus"),
+];
 
-export function movieNfo(entry: MovieEntry): string {
-  return xml("movie", common(entry.meta));
-}
+export const movieNfo = (entry: MovieEntry): string => xml("movie", common(entry.meta));
 
-export function seriesNfo(meta: Metadata): string {
-  return xml("tvshow", [...common(meta), tag("season", 1), tag("status", "Ended")]);
-}
+export const seriesNfo = (meta: Metadata): string =>
+  xml("tvshow", [...common(meta), tag("season", 1), tag("status", "Ended")]);
 
-export function episodeNfo(entry: EpisodeEntry, seriesYear: number): string {
-  return xml("episodedetails", [
+export const episodeNfo = (entry: EpisodeEntry, seriesYear: number): string =>
+  xml("episodedetails", [
     tag("title", entry.title),
     tag("showtitle", entry.series),
     tag("season", entry.season),
@@ -47,16 +42,15 @@ export function episodeNfo(entry: EpisodeEntry, seriesYear: number): string {
     tag("aired", `${seriesYear}-01-${String(entry.episode).padStart(2, "0")}`),
     tag("plot", entry.plot),
   ]);
-}
 
 /** A colour pair from an index: distinct per item, the same on every run. */
-export function palette(index: number): { base: string; accent: string } {
+export const palette = (index: number): { base: string; accent: string } => {
   const hue = (index * 137.508) % 360; // golden angle
 
   return { base: hsl(hue, 0.45, 0.28), accent: hsl((hue + 160) % 360, 0.7, 0.6) };
-}
+};
 
-function hsl(h: number, s: number, l: number): string {
+const hsl = (h: number, s: number, l: number): string => {
   const k = (n: number) => (n + h / 30) % 12;
   const a = s * Math.min(l, 1 - l);
   const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
@@ -67,7 +61,7 @@ function hsl(h: number, s: number, l: number): string {
       .padStart(2, "0");
 
   return `0x${hex(f(0))}${hex(f(8))}${hex(f(4))}`;
-}
+};
 
 export type Artwork = "poster" | "backdrop" | "logo" | "thumb";
 
@@ -75,7 +69,7 @@ export type Artwork = "poster" | "backdrop" | "logo" | "thumb";
  * A lavfi graph for one artwork PNG: flat shapes so the files stay a few KB and the frames tell
  * items apart. Logos are transparent, as Jellyfin's clear logos are.
  */
-export function artworkGraph(kind: Artwork, index: number): string {
+export const artworkGraph = (kind: Artwork, index: number): string => {
   const { base, accent } = palette(index);
 
   const bar = (x: number, y: number, w: number, h: number, color: string, replace = false) =>
@@ -113,4 +107,4 @@ export function artworkGraph(kind: Artwork, index: number): string {
       ].join(",")
     )
     .exhaustive();
-}
+};

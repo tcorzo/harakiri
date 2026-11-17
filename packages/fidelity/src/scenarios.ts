@@ -137,13 +137,13 @@ const receiver = audioOutputs[0]?.output ?? { kind: "unknown", detail: "" };
 const hdrDisplay = displays[0]?.then ?? [];
 
 /** Plays one scenario through the engine: start, then what mpv would report. */
-export function simulate(
+export const simulate = (
   picture: PictureSource | null,
   sound: SoundSource | null,
   delivery: Delivery,
   output: AudioOutput,
   then: (sent: FidelityView) => readonly Observation[]
-): FidelityView {
+): FidelityView => {
   let state = startFidelity({ picture, sound, delivery, output });
 
   for (const observation of then(fidelityView(state))) {
@@ -151,7 +151,7 @@ export function simulate(
   }
 
   return fidelityView(state);
-}
+};
 
 export const soundCell = (track: SoundSource, output: (typeof audioOutputs)[number]) =>
   simulate(null, track, { kind: "direct" }, output.output, (sent) => output.then(sent, track));

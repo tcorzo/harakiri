@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { expectShortByAtMostOneMatFrame } from "./assertions";
 import { muxSpdif, remuxToMatroska, sha256 } from "./clips";
@@ -49,16 +49,16 @@ describe("FATE: HBR streams through the extractor and mpv", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  test.each(["master_audio_7.1_24bit.dts", "dtsx_7.1.4_24bit.dts"])(
+  it.each(["master_audio_7.1_24bit.dts", "dtsx_7.1.4_24bit.dts"])(
     "%s at dtshd_rate 768000 round-trips byte for byte in type IV bursts",
     (name) => {
       const bursts = scanBursts(spdif(sample(name), `${name}.spdif`, { dtshdRate: 768_000 }));
-      expect([...new Set(bursts.map((b) => `${b.dataType}/${b.subtype}`))]).toEqual(["17/4"]);
+      expect([...new Set(bursts.map((b) => `${b.dataType}/${b.subtype}`))]).toStrictEqual(["17/4"]);
       expect(sha256(elementaryStream(bursts).bytes)).toBe(sha256(readFileSync(sample(name))));
     }
   );
 
-  test("DTS-HD MA sent as core only (mpv's plain `dts` token) is caught", () => {
+  it("DTS-HD MA sent as core only (mpv's plain `dts` token) is caught", () => {
     const source = readFileSync(sample("master_audio_7.1_24bit.dts"));
 
     const extracted = elementaryStream(
@@ -70,14 +70,14 @@ describe("FATE: HBR streams through the extractor and mpv", () => {
     expect(sha256(extracted.bytes)).not.toBe(sha256(source));
   });
 
-  test("TrueHD Atmos yields a prefix of the source, short by the unflushed last MAT frame", () => {
+  it("TrueHD Atmos yields a prefix of the source, short by the unflushed last MAT frame", () => {
     const source = readFileSync(sample("atmos.thd"));
     const extracted = elementaryStream(scanBursts(spdif(sample("atmos.thd"), "atmos.spdif")));
     expect(extracted).toMatchObject({ codec: "truehd", partialTailBytes: 0 });
     expectShortByAtMostOneMatFrame(extracted.bytes, source);
   });
 
-  test.each([
+  it.each([
     { name: "master_audio_7.1_24bit.dts", dtshdRate: 768_000, format: "spdif-dtshd" },
     { name: "atmos.thd", dtshdRate: undefined, format: "spdif-truehd" },
   ])(
@@ -87,7 +87,7 @@ describe("FATE: HBR streams through the extractor and mpv", () => {
       remuxToMatroska(sample(name), mkv);
       const wav = join(dir, `${name}.wav`);
       const ao = captureWithMpv(mkv, wav);
-      expect(ao).toEqual({ sampleRate: 192_000, channels: 8, format });
+      expect(ao).toStrictEqual({ sampleRate: 192_000, channels: 8, format });
 
       const reference = spdif(
         mkv,

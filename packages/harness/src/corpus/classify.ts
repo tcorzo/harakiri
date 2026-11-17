@@ -50,7 +50,7 @@ const show = (v: string | number | null | undefined) =>
   v === null || v === undefined ? "null" : String(v);
 
 /** Compares one entry with the server's item; every field becomes a row. */
-export function compare(entry: Entry, item: Item | undefined): Row[] {
+export const compare = (entry: Entry, item: Item | undefined): Row[] => {
   const row = (
     field: string,
     declared: string | number | null | undefined,
@@ -102,7 +102,7 @@ export function compare(entry: Entry, item: Item | undefined): Row[] {
   });
 
   return rows;
-}
+};
 
 export interface ClassifyOptions {
   readonly corpus: string;
@@ -112,7 +112,7 @@ export interface ClassifyOptions {
   readonly log: (line: string) => void;
 }
 
-export async function classifyCorpus(options: ClassifyOptions): Promise<number> {
+export const classifyCorpus = async (options: ClassifyOptions): Promise<number> => {
   const { env } = process;
 
   const base =
@@ -122,7 +122,10 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
   const password = env.JELLYFIN_DEV_PASSWORD ?? "harakiri-dev";
   const client = `MediaBrowser Client="harakiri-dev", Device="corpus-classify", DeviceId="harakiri-dev-corpus-classify", Version="0"`;
 
-  async function call(path: string, init: RequestInit & { token?: string } = {}): Promise<unknown> {
+  const call = async (
+    path: string,
+    init: RequestInit & { token?: string } = {}
+  ): Promise<unknown> => {
     const auth = init.token ? `${client}, Token="${init.token}"` : client;
     let response: Response;
 
@@ -145,7 +148,7 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
     }
 
     return await response.json();
-  }
+  };
 
   const manifest = readManifest(options.corpus);
   const built = new Set(manifest.entries.map((e) => e.id));
@@ -204,7 +207,9 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
     await new Promise((r) => setTimeout(r, 2000));
   }
 
-  await call("Sessions/Logout", { method: "POST", token: auth.AccessToken }).catch(() => undefined);
+  await call("Sessions/Logout", { method: "POST", token: auth.AccessToken }).catch(() => {
+    /* empty */
+  });
 
   const rows = entries.flatMap((entry) => compare(entry, found.get(entry.id)));
   const bad = rows.filter((r) => !r.ok);
@@ -215,6 +220,7 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
       `| ${r.id} | ${r.field} | ${r.declared} | ${r.observed} | ${r.ok ? "yes" : "**NO**"} |`
     );
   }
+
   options.log(
     bad.length === 0
       ? `\nPASS: ${rows.length} checks on ${entries.length} entries match the catalog`
@@ -222,4 +228,4 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
   );
 
   return bad.length === 0 ? 0 : 1;
-}
+};

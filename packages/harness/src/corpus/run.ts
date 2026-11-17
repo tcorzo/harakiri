@@ -1,11 +1,11 @@
 import { spawn } from "node:child_process";
 
 /** Runs a tool to completion without blocking the event loop; throws with its stderr on failure. */
-export async function runAsync(
+export const runAsync = async (
   command: string,
   args: readonly string[],
   options: { timeoutMs?: number; env?: NodeJS.ProcessEnv } = {}
-): Promise<{ stdout: string; stderr: string }> {
+): Promise<{ stdout: string; stderr: string }> => {
   const timeoutMs = options.timeoutMs ?? 300_000;
 
   return await new Promise((resolve, reject) => {
@@ -41,10 +41,10 @@ export async function runAsync(
       }
     });
   });
-}
+};
 
 /** A tiny concurrency limiter: at most `limit` tasks run at once. */
-export function limiter(limit: number) {
+export const limiter = (limit: number) => {
   let active = 0;
   const queue: (() => void)[] = [];
 
@@ -52,25 +52,25 @@ export function limiter(limit: number) {
     if (active >= limit) {
       return;
     }
+
     const start = queue.shift();
 
     if (start) {
-      active++;
+      active += 1;
       start();
     }
   };
 
   return async <T>(task: () => Promise<T>): Promise<T> =>
     await new Promise<T>((resolve, reject) => {
-      queue.push(
-        async () =>
-          await task()
-            .then(resolve, reject)
-            .finally(() => {
-              active--;
-              next();
-            })
-      );
+      queue.push(async () => {
+        await task()
+          .then(resolve, reject)
+          .finally(() => {
+            active -= 1;
+            next();
+          });
+      });
       next();
     });
-}
+};

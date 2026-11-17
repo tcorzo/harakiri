@@ -57,7 +57,7 @@ const parser = or(
   )
 );
 
-async function gen(out: string, fate: string, requireFate: boolean): Promise<number> {
+const gen = async (out: string, fate: string, requireFate: boolean): Promise<number> => {
   intro(`corpus gen -> ${out}`);
   const t0 = performance.now();
 
@@ -79,9 +79,9 @@ async function gen(out: string, fate: string, requireFate: boolean): Promise<num
   );
 
   return 0;
-}
+};
 
-async function fetchFateCommand(dir: string, mirror: string): Promise<number> {
+const fetchFateCommand = async (dir: string, mirror: string): Promise<number> => {
   intro(`fetch FATE samples from ${mirror} -> ${dir}`);
   await fetchFate(resolve(dir), mirror, (line) => {
     log.step(line);
@@ -89,7 +89,7 @@ async function fetchFateCommand(dir: string, mirror: string): Promise<number> {
   outro("all FATE samples verified");
 
   return 0;
-}
+};
 
 const parsed = run(parser, { programName: "corpus", help: "both" });
 

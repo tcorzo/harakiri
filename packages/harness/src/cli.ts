@@ -15,7 +15,7 @@ const parser = command("doctor", object({ command: constant("doctor") }), {
   description: message`Check that the tools the validation harness drives are installed and new enough.`,
 });
 
-function report({ check, verdict }: CheckResult): void {
+const report = ({ check, verdict }: CheckResult): void => {
   const line = `${check.label}: ${verdict.detail}`;
   match(verdict.status)
     .with("ok", () => {
@@ -25,9 +25,9 @@ function report({ check, verdict }: CheckResult): void {
       check.required ? log.error(line) : log.warn(`${line} (optional)`);
     })
     .exhaustive();
-}
+};
 
-async function doctor(): Promise<number> {
+const doctor = async (): Promise<number> => {
   intro("harakiri-harness doctor");
   const results = runChecks(CHECKS);
 
@@ -47,7 +47,7 @@ async function doctor(): Promise<number> {
   );
 
   return failed.length === 0 ? 0 : 1;
-}
+};
 
 await configure({
   sinks: { console: getConsoleSink({ formatter: prettyFormatter }) },

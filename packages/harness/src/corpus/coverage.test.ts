@@ -22,7 +22,7 @@ test("the corpus carries every passthrough codec as Jellyfin reports it", () => 
     CATALOG.flatMap((e) => e.expect.audio.map((a) => [a.codec, a.profile].join(" ").trim()))
   );
 
-  expect(passthrough.filter((codec) => !covered.has(codec))).toEqual([]);
+  expect(passthrough.filter((codec) => !covered.has(codec))).toStrictEqual([]);
 });
 
 test("the corpus carries every HDR signalling case it can build", () => {
@@ -38,5 +38,5 @@ test("the corpus carries every HDR signalling case it can build", () => {
   ];
 
   const covered = new Set(CATALOG.map((e) => e.expect.video.range));
-  expect(ranges.filter((range) => !covered.has(range))).toEqual([]);
+  expect(ranges.filter((range) => !covered.has(range))).toStrictEqual([]);
 });

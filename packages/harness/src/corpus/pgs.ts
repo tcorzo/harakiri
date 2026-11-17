@@ -54,8 +54,8 @@ class Bytes {
   }
 }
 
-function segment(kind: number, pts: number, body: Uint8Array): Uint8Array {
-  return new Bytes()
+const segment = (kind: number, pts: number, body: Uint8Array): Uint8Array =>
+  new Bytes()
     .u8(0x50, 0x47) // "PG"
     .u32(pts)
     .u32(pts)
@@ -63,10 +63,9 @@ function segment(kind: number, pts: number, body: Uint8Array): Uint8Array {
     .u16(body.length)
     .bytes(body)
     .done();
-}
 
 /** One RLE-coded bitmap line, terminated by the end-of-line marker. */
-export function rleLine(pixels: readonly number[]): Uint8Array {
+export const rleLine = (pixels: readonly number[]): Uint8Array => {
   const out = new Bytes();
   let i = 0;
 
@@ -75,11 +74,13 @@ export function rleLine(pixels: readonly number[]): Uint8Array {
     let n = 1;
 
     while (i + n < pixels.length && pixels[i + n] === c && n < 16_383) {
-      n++;
+      n += 1;
     }
 
     if (c !== 0 && n <= 2) {
-      for (let k = 0; k < n; k++) out.u8(c);
+      for (let k = 0; k < n; k += 1) {
+        out.u8(c);
+      }
     } else if (c === 0) {
       if (n < 64) {
         out.u8(0, n);
@@ -91,20 +92,21 @@ export function rleLine(pixels: readonly number[]): Uint8Array {
     } else {
       out.u8(0, 0xc0 | (n >> 8), n & 0xff, c);
     }
+
     i += n;
   }
 
   return out.u8(0, 0).done();
-}
+};
 
 /** A white bar with a 2-px black border and a checker band: easy to see once rendered. */
-function bitmap(w: number, h: number): Uint8Array {
+const bitmap = (w: number, h: number): Uint8Array => {
   const out = new Bytes();
 
-  for (let y = 0; y < h; y++) {
+  for (let y = 0; y < h; y += 1) {
     const row: number[] = [];
 
-    for (let x = 0; x < w; x++) {
+    for (let x = 0; x < w; x += 1) {
       if (x < 2 || y < 2 || x >= w - 2 || y >= h - 2) {
         row.push(2);
       } else if (Math.floor(h / 3) <= y && y < Math.floor((2 * h) / 3)) {
@@ -118,9 +120,9 @@ function bitmap(w: number, h: number): Uint8Array {
   }
 
   return out.done();
-}
+};
 
-function displaySet(width: number, height: number, comp: number, start: number, end: number) {
+const displaySet = (width: number, height: number, comp: number, start: number, end: number) => {
   const ow = Math.floor(width / 2);
   const oh = Math.floor(height / 8);
   const ox = Math.floor((width - ow) / 2);
@@ -166,10 +168,10 @@ function displaySet(width: number, height: number, comp: number, start: number, 
     segment(WDS, end, window),
     segment(END, end, new Uint8Array()),
   ];
-}
+};
 
 /** A whole .sup stream for `cues` (seconds) on a `width`×`height` canvas. */
-export function writePgs(width: number, height: number, cues: readonly Cue[]): Uint8Array {
+export const writePgs = (width: number, height: number, cues: readonly Cue[]): Uint8Array => {
   const out = new Bytes();
   cues.forEach((cue, n) => {
     const ticks = (s: number) => Math.round(s * 90_000);
@@ -180,4 +182,4 @@ export function writePgs(width: number, height: number, cues: readonly Cue[]): U
   });
 
   return out.done();
-}
+};

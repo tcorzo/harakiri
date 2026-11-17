@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { AudioPassthrough } from "@harakiri/mpv";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { muxSpdif, sha256, synthesizeClip } from "./clips";
 import type { Clip, ClipCodec } from "./clips";
@@ -27,7 +27,7 @@ afterAll(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-function clip(codec: ClipCodec): Clip {
+const clip = (codec: ClipCodec): Clip => {
   const found = clips.get(codec);
 
   if (found === undefined) {
@@ -35,9 +35,9 @@ function clip(codec: ClipCodec): Clip {
   }
 
   return found;
-}
+};
 
-function capture(codec: ClipCodec, audioPassthrough?: AudioPassthrough) {
+const capture = (codec: ClipCodec, audioPassthrough?: AudioPassthrough) => {
   const wav = join(dir, `${codec}-mpv.wav`);
   const ao = captureWithMpv(clip(codec).mkv, wav, audioPassthrough);
   const pcm = readPcm16(readFileSync(wav));
@@ -50,25 +50,25 @@ function capture(codec: ClipCodec, audioPassthrough?: AudioPassthrough) {
     spdifReference: readPcm16(readFileSync(reference)).data,
     source: readFileSync(clip(codec).reference),
   };
-}
+};
 
 const kinds = (bursts: readonly Burst[]) => [
   ...new Set(bursts.map((b) => `${b.dataType}/${b.subtype}`)),
 ];
 
 describe("T1: the player's mpv argv writes the IEC 61937 stream unmodified", () => {
-  test.each([
+  it.each([
     { codec: "ac3", ao: { sampleRate: 48_000, channels: 2, format: "spdif-ac3" } },
     { codec: "dts", ao: { sampleRate: 48_000, channels: 2, format: "spdif-dts" } },
     { codec: "truehd", ao: { sampleRate: 192_000, channels: 8, format: "spdif-truehd" } },
   ] as const)("$codec capture equals FFmpeg's spdif output byte for byte", ({ codec, ao }) => {
     const run = capture(codec);
-    expect(run.ao).toEqual(ao);
+    expect(run.ao).toStrictEqual(ao);
     expect(run.pcm.kind).toBe("wav");
     expect(sha256(run.pcm.data)).toBe(sha256(run.spdifReference));
   });
 
-  test("ac3 and dts captures unwrap to the source elementary stream", () => {
+  it("ac3 and dts captures unwrap to the source elementary stream", () => {
     for (const codec of ["ac3", "dts"] as const) {
       const run = capture(codec);
       expect(sha256(elementaryStream(scanBursts(run.pcm.data)).bytes)).toBe(sha256(run.source));
@@ -78,18 +78,19 @@ describe("T1: the player's mpv argv writes the IEC 61937 stream unmodified", () 
   // Observed with mpv 0.41.0 / FFmpeg 8.1.3: from Matroska, mpv emits every E-AC-3 burst
   // except the last (the same .eac3 file played raw loses nothing). The bytes it does emit
   // are identical, so the tolerance is at most one trailing burst.
-  test("eac3 capture is FFmpeg's spdif output, at most its final burst short", () => {
+  it("eac3 capture is FFmpeg's spdif output, at most its final burst short", () => {
     const run = capture("eac3");
-    expect(run.ao).toEqual({ sampleRate: 192_000, channels: 2, format: "spdif-eac3" });
+    expect(run.ao).toStrictEqual({ sampleRate: 192_000, channels: 2, format: "spdif-eac3" });
     const reference = scanBursts(run.spdifReference);
     const captured = scanBursts(run.pcm.data);
-    expect([kinds(captured), kinds(reference)]).toEqual([["21/0"], ["21/0"]]);
+    expect([kinds(captured), kinds(reference)]).toStrictEqual([["21/0"], ["21/0"]]);
 
     const [first, second] = reference;
 
     if (first === undefined || second === undefined) {
       throw new Error("fewer than two bursts");
     }
+
     const missing = run.spdifReference.length - run.pcm.data.length;
     expect([0, second.offset - first.offset]).toContain(missing);
     expect(sha256(run.pcm.data)).toBe(sha256(run.spdifReference.subarray(0, run.pcm.data.length)));
@@ -100,9 +101,9 @@ describe("T1: the player's mpv argv writes the IEC 61937 stream unmodified", () 
     );
   });
 
-  test("without the codec in --audio-spdif mpv decodes to float PCM, which the harness refuses", () => {
+  it("without the codec in --audio-spdif mpv decodes to float PCM, which the harness refuses", () => {
     const wav = join(dir, "dts-decoded.wav");
-    expect(captureWithMpv(clip("dts").mkv, wav, ["ac3"])).toEqual({
+    expect(captureWithMpv(clip("dts").mkv, wav, ["ac3"])).toStrictEqual({
       sampleRate: 48_000,
       channels: 6,
       format: "float",

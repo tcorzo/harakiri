@@ -105,7 +105,7 @@ Dialogue: 0,0:00:00.50,0:00:02.50,Default,,0,0,0,,{\\an8}ASS styled line
 `;
 
 /** HDR10+ profile A metadata: two scenes with different peaks (hdr10plus_tool's JSON format). */
-export function hdr10plusJson(frames: number): string {
+export const hdr10plusJson = (frames: number): string => {
   const cut = Math.floor(frames / 2);
 
   const frame = (i: number) => {
@@ -136,7 +136,7 @@ export function hdr10plusJson(frames: number): string {
     SceneInfoSummary: { SceneFirstFrameIndex: [0, cut], SceneFrameNumbers: [cut, frames - cut] },
     ToolInfo: { Tool: "harakiri corpus", Version: "1" },
   });
-}
+};
 
 export interface GenerateOptions {
   readonly out: string;
@@ -174,7 +174,7 @@ const ManifestSchema = z.object({
   skipped: z.array(z.object({ id: z.string(), reason: z.string() })),
 });
 
-export function readManifest(dir: string): Manifest {
+export const readManifest = (dir: string): Manifest => {
   const file = join(dir, MANIFEST);
 
   if (!existsSync(file)) {
@@ -182,10 +182,10 @@ export function readManifest(dir: string): Manifest {
   }
 
   return ManifestSchema.parse(JSON.parse(readFileSync(file, "utf-8")));
-}
+};
 
-function describeFate(state: FateState, dir: string): string {
-  return match(state)
+const describeFate = (state: FateState, dir: string): string =>
+  match(state)
     .with({ kind: "complete" }, () => `all FATE samples verified in ${dir}`)
     .with({ kind: "absent" }, () => `no FATE samples in ${dir}`)
     .with({ kind: "partial" }, (s) => `FATE samples missing from ${dir}: ${s.missing.join(", ")}`)
@@ -194,20 +194,19 @@ function describeFate(state: FateState, dir: string): string {
       (s) => `FATE samples in ${dir} fail their sha256: ${s.bad.join(", ")}`
     )
     .exhaustive();
-}
 
 /** Empties a directory but keeps it, so a running container's bind mount stays valid. */
-function emptyDir(dir: string): void {
+const emptyDir = (dir: string): void => {
   mkdirSync(dir, { recursive: true });
 
   for (const name of readdirSync(dir)) {
     rmSync(join(dir, name), { recursive: true, force: true });
   }
-}
+};
 
 const sha256File = (path: string) => createHash("sha256").update(readFileSync(path)).digest("hex");
 
-export async function generateCorpus(options: GenerateOptions): Promise<Manifest> {
+export const generateCorpus = async (options: GenerateOptions): Promise<Manifest> => {
   const { out, fateDir, log } = options;
   const fate = fateState(fateDir);
   const withFate = fate.kind === "complete";
@@ -218,6 +217,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
     if (options.requireFate || fate.kind === "corrupt" || fate.kind === "partial") {
       throw new Error(`${detail}. Run: mise run media:fetch-fate`);
     }
+
     log(
       `FATE TIER NOT BUILT: ${detail}. TrueHD Atmos, E-AC3 JOC, DTS-HD MA, DTS:X, VC-1 and ` +
         `DV profile 7 items are left out. Run: mise run media:fetch-fate`
@@ -491,6 +491,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
                 "-o",
                 `${path}.hevc`,
               ]);
+
               const x265 = hdr10plus
                 ? `${params}:dhdr10-info=${await hdr10plusFile(seconds)}`
                 : params;
@@ -524,7 +525,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
     });
 
   /** Input args and per-output-stream codec args for one audio track. */
-  function audioArgs(track: AudioTrack, n: number, seconds: number, input: number) {
+  const audioArgs = (track: AudioTrack, n: number, seconds: number, input: number) => {
     const long = seconds > 60;
     const lavfi = (src: string) => ["-f", "lavfi", "-i", src];
     const codec = (...args: string[]) => args.map((a, i) => (i % 2 === 0 ? `${a}:a:${n}` : a));
@@ -569,9 +570,9 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
     }
 
     return { inputs, map: ["-map", `${input}:a:0`], codec: [...codecArgs, ...meta] };
-  }
+  };
 
-  async function buildEntry(entry: Entry): Promise<void> {
+  const buildEntry = async (entry: Entry): Promise<void> => {
     const { dir } = entryLocation(entry);
     mkdirSync(join(out, dir), { recursive: true });
     const dst = join(out, entryPath(entry));
@@ -588,7 +589,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
     const codecs: string[] = ["-c:v", "copy"];
     let input = 1;
     entry.audio.forEach((track, n) => {
-      const a = audioArgs(track, n, entry.seconds, input++);
+      const a = audioArgs(track, n, entry.seconds, (input += 1));
       args.push(...a.inputs);
       maps.push(...a.map);
       codecs.push(...a.codec);
@@ -596,13 +597,14 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
 
     for (const [n, sub] of entry.embeddedSubtitles.entries()) {
       args.push("-i", await subtitleFile(sub.format));
-      maps.push("-map", `${input++}:s:0`);
+      maps.push("-map", `${(input += 1)}:s:0`);
       codecs.push(`-metadata:s:s:${n}`, `language=${sub.language}`);
     }
 
     if (entry.embeddedSubtitles.length > 0) {
       codecs.push("-c:s", "copy");
     }
+
     const hevcTag = entry.video.kind === "dv" && entry.video.profile === "5" ? "dvh1" : "hvc1";
 
     const container = match(entry.container)
@@ -638,12 +640,12 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
         join(out, dir, `${stem}.${SIDECAR_LANGUAGE[sub.language]}.${sub.format}`)
       );
     }
-  }
+  };
 
   const art = async (kind: Artwork, index: number, path: string) =>
     await ff(["-f", "lavfi", "-i", artworkGraph(kind, index), "-frames:v", "1", ...OF, path]);
 
-  async function writeMetadata(entries: readonly Entry[]): Promise<void> {
+  const writeMetadata = async (entries: readonly Entry[]): Promise<void> => {
     const jobs: Promise<unknown>[] = [];
     entries.forEach((entry) => {
       const index = CATALOG.indexOf(entry);
@@ -667,6 +669,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
       if (!existsSync(dir)) {
         return;
       }
+
       writeFileSync(join(dir, "tvshow.nfo"), seriesNfo(meta));
 
       for (const kind of ["poster", "backdrop", "logo"] as const) {
@@ -674,7 +677,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
       }
     });
     await Promise.all(jobs);
-  }
+  };
 
   const chosen = CATALOG.filter((entry) => entry.tier === "base" || withFate);
 
@@ -714,10 +717,10 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
   writeFileSync(join(out, MANIFEST), `${JSON.stringify(manifest, null, 2)}\n`);
 
   return manifest;
-}
+};
 
 /** Bytes under `dir`, recursively. */
-export function treeBytes(dir: string): number {
+export const treeBytes = (dir: string): number => {
   let total = 0;
 
   for (const name of readdirSync(dir, { withFileTypes: true })) {
@@ -726,4 +729,4 @@ export function treeBytes(dir: string): number {
   }
 
   return total;
-}
+};

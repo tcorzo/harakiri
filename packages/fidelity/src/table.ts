@@ -14,7 +14,7 @@ const graphemes = new Intl.Segmenter();
 const width = (text: string): number => [...graphemes.segment(text)].length;
 
 /** A markdown table with padded columns, as the formatter writes it, so formatting changes nothing. */
-function table(head: readonly string[], rows: readonly (readonly string[])[]): string[] {
+const table = (head: readonly string[], rows: readonly (readonly string[])[]): string[] => {
   const widths = head.map((cell, column) =>
     Math.max(3, width(cell), ...rows.map((r) => width(r[column] ?? "")))
   );
@@ -23,7 +23,7 @@ function table(head: readonly string[], rows: readonly (readonly string[])[]): s
     `| ${cells.map((cell, column) => cell + " ".repeat((widths[column] ?? 0) - width(cell))).join(" | ")} |`;
 
   return [line(head), line(widths.map((w) => "-".repeat(w))), ...rows.map(line)];
-}
+};
 
 const marked = (view: FidelityView): string => {
   const fact = view.facts[0]?.text ?? "";
@@ -35,7 +35,7 @@ const why = (view: FidelityView): string =>
   view.downgrades.map((downgrade) => downgrade.message).join(" ") || "None";
 
 /** The compatibility and downgrade tables, produced by running every scenario through the engine. */
-export function renderTables(): string {
+export const renderTables = (): string => {
   const lines = [
     "# Compatibility and downgrades",
     "",
@@ -105,4 +105,4 @@ export function renderTables(): string {
   ];
 
   return lines.join("\n");
-}
+};
