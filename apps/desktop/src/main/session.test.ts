@@ -9,9 +9,10 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import path from "node:path";
 
-import { afterEach, beforeEach, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import { NewSession } from "../shared/bridge";
 import { createSessionStore } from "./session";
@@ -44,7 +45,7 @@ const expectedSession = {
 const prefixing: TokenCrypto = {
   isEncryptionAvailable: () => true,
   encryptString: (plain) => Buffer.from(`enc:${plain}`, "utf-8"),
-  decryptString: (encrypted) => encrypted.toString("utf-8").replace(/^enc:/, ""),
+  decryptString: (encrypted) => encrypted.toString("utf-8").replace(/^enc:/u, ""),
   getSelectedStorageBackend: () => "gnome_libsecret",
 };
 
@@ -62,114 +63,118 @@ const unavailable: TokenCrypto = {
 // What Electron reports on Linux with no keyring: "available", but with a hardcoded key.
 const basicText: TokenCrypto = { ...prefixing, getSelectedStorageBackend: () => "basic_text" };
 
-let dir: string;
+describe("session store", () => {
+  let dir: string;
 
-beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "harakiri-session-"));
-  writeFileSync(join(dir, "device-id"), DEVICE_ID);
-});
-
-afterEach(() => {
-  rmSync(dir, { recursive: true, force: true });
-});
-
-const store = (crypto: TokenCrypto, allowPlaintextToken = false) =>
-  createSessionStore({ dir, crypto, allowPlaintextToken });
-
-const readStored = (): unknown => JSON.parse(readFileSync(join(dir, "session.json"), "utf-8"));
-
-test("round-trips a session with the token encrypted on disk and main's device id", () => {
-  store(prefixing).save(newSession);
-
-  expect(readStored()).toEqual({
-    serverUrl: "http://127.0.0.1:8096/",
-    serverId: "server-1",
-    serverName: "Dev",
-    serverVersion: "10.11.0",
-    userId: USER_ID,
-    userName: "harakiri",
-    token: { kind: "encrypted", base64: Buffer.from("enc:secret-token").toString("base64") },
+  beforeEach(() => {
+    dir = mkdtempSync(path.join(tmpdir(), "harakiri-session-"));
+    writeFileSync(path.join(dir, "device-id"), DEVICE_ID);
   });
-  expect(store(prefixing).load()).toEqual(expectedSession);
-});
 
-test("a device id smuggled into the payload is replaced by main's", () => {
-  store(prefixing).save({ ...newSession, deviceId: "renderer-made" } as typeof newSession);
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
 
-  expect(store(prefixing).load()?.deviceId).toBe(DEVICE_ID);
-});
+  const store = (crypto: TokenCrypto, allowPlaintextToken = false) =>
+    createSessionStore({ dir, crypto, allowPlaintextToken });
 
-test("clear removes the stored session", () => {
-  const s = store(prefixing);
-  s.save(newSession);
-  s.clear();
+  const readStored = () =>
+    z.json().parse(JSON.parse(readFileSync(path.join(dir, "session.json"), "utf-8")));
 
-  expect(s.load()).toBeNull();
-  expect(store(prefixing).load()).toBeNull();
-});
+  it("round-trips a session with the token encrypted on disk and main's device id", () => {
+    store(prefixing).save(newSession);
 
-test("a corrupt file loads as null", () => {
-  writeFileSync(join(dir, "session.json"), "{not json");
+    expect(readStored()).toStrictEqual({
+      serverUrl: "http://127.0.0.1:8096/",
+      serverId: "server-1",
+      serverName: "Dev",
+      serverVersion: "10.11.0",
+      userId: USER_ID,
+      userName: "harakiri",
+      token: { kind: "encrypted", base64: Buffer.from("enc:secret-token").toString("base64") },
+    });
+    expect(store(prefixing).load()).toStrictEqual(expectedSession);
+  });
 
-  expect(store(prefixing).load()).toBeNull();
-});
+  it("a device id smuggled into the payload is replaced by main's", () => {
+    const smuggled = { ...newSession, deviceId: "renderer-made" };
+    store(prefixing).save(smuggled);
 
-test("an undecryptable token loads as null", () => {
-  store(prefixing).save(newSession);
+    expect(store(prefixing).load()?.deviceId).toBe(DEVICE_ID);
+  });
 
-  const locked: TokenCrypto = {
-    ...prefixing,
-    decryptString: () => {
-      throw new Error("keyring changed");
-    },
-  };
+  it("clear removes the stored session", () => {
+    const s = store(prefixing);
+    s.save(newSession);
+    s.clear();
 
-  expect(store(locked).load()).toBeNull();
-});
+    expect(s.load()).toBeNull();
+    expect(store(prefixing).load()).toBeNull();
+  });
 
-test("without a keyring the e2e store keeps the token in plain text", () => {
-  store(unavailable, true).save(newSession);
+  it("a corrupt file loads as null", () => {
+    writeFileSync(path.join(dir, "session.json"), "{not json");
 
-  expect(readStored()).toMatchObject({ token: { kind: "plain", value: "secret-token" } });
-  expect(store(unavailable, true).load()).toEqual(expectedSession);
-});
+    expect(store(prefixing).load()).toBeNull();
+  });
 
-test("without a keyring outside e2e the session lives in memory only", () => {
-  const s = store(unavailable);
-  s.save(newSession);
+  it("an undecryptable token loads as null", () => {
+    store(prefixing).save(newSession);
 
-  expect(s.load()).toEqual(expectedSession);
-  expect(() => readFileSync(join(dir, "session.json"))).toThrow(/ENOENT/);
-  expect(store(unavailable).load()).toBeNull();
-});
+    const locked: TokenCrypto = {
+      ...prefixing,
+      decryptString: () => {
+        throw new Error("keyring changed");
+      },
+    };
 
-test("the basic_text backend counts as no keyring: nothing is written", () => {
-  const s = store(basicText);
-  s.save(newSession);
+    expect(store(locked).load()).toBeNull();
+  });
 
-  expect(s.load()).toEqual(expectedSession);
-  expect(readdirSync(dir)).toEqual(["device-id"]);
-});
+  it("without a keyring the e2e store keeps the token in plain text", () => {
+    store(unavailable, true).save(newSession);
 
-test("a save replaces an existing file atomically with mode 0600 and leaves no temp file", () => {
-  writeFileSync(join(dir, "session.json"), "{}");
-  chmodSync(join(dir, "session.json"), 0o644);
+    expect(readStored()).toMatchObject({ token: { kind: "plain", value: "secret-token" } });
+    expect(store(unavailable, true).load()).toStrictEqual(expectedSession);
+  });
 
-  store(prefixing).save(newSession);
+  it("without a keyring outside e2e the session lives in memory only", () => {
+    const s = store(unavailable);
+    s.save(newSession);
 
-  expect(readdirSync(dir).toSorted()).toEqual(["device-id", "session.json"]);
-  expect(statSync(join(dir, "session.json")).mode & 0o777).toBe(0o600);
-  expect(store(prefixing).load()).toEqual(expectedSession);
-});
+    expect(s.load()).toStrictEqual(expectedSession);
+    expect(() => readFileSync(path.join(dir, "session.json"))).toThrow(/ENOENT/u);
+    expect(store(unavailable).load()).toBeNull();
+  });
 
-test("the device id is generated once, survives a restart and is written 0600", () => {
-  rmSync(join(dir, "device-id"));
-  const first = store(prefixing).deviceId();
-  const second = store(prefixing).deviceId();
+  it("the basic_text backend counts as no keyring: nothing is written", () => {
+    const s = store(basicText);
+    s.save(newSession);
 
-  expect(first).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
-  expect(second).toBe(first);
-  expect(readFileSync(join(dir, "device-id"), "utf-8")).toBe(first);
-  expect(statSync(join(dir, "device-id")).mode & 0o777).toBe(0o600);
-  expect(readdirSync(dir)).toEqual(["device-id"]);
+    expect(s.load()).toStrictEqual(expectedSession);
+    expect(readdirSync(dir)).toStrictEqual(["device-id"]);
+  });
+
+  it("a save replaces an existing file atomically with mode 0600 and leaves no temp file", () => {
+    writeFileSync(path.join(dir, "session.json"), "{}");
+    chmodSync(path.join(dir, "session.json"), 0o644);
+
+    store(prefixing).save(newSession);
+
+    expect(readdirSync(dir).toSorted()).toStrictEqual(["device-id", "session.json"]);
+    expect(statSync(path.join(dir, "session.json")).mode.toString(8).slice(-3)).toBe("600");
+    expect(store(prefixing).load()).toStrictEqual(expectedSession);
+  });
+
+  it("the device id is generated once, survives a restart and is written 0600", () => {
+    rmSync(path.join(dir, "device-id"));
+    const first = store(prefixing).deviceId();
+    const second = store(prefixing).deviceId();
+
+    expect(first).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u);
+    expect(second).toBe(first);
+    expect(readFileSync(path.join(dir, "device-id"), "utf-8")).toBe(first);
+    expect(statSync(path.join(dir, "device-id")).mode.toString(8).slice(-3)).toBe("600");
+    expect(readdirSync(dir)).toStrictEqual(["device-id"]);
+  });
 });

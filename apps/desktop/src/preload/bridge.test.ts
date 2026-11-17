@@ -1,167 +1,187 @@
 import { ItemId } from "@harakiri/jellyfin";
-import type { IpcRenderer, IpcRendererEvent } from "electron";
-import { expect, test } from "vitest";
+import type { JsonObject, JsonValue } from "type-fest";
+import { describe, expect, it } from "vitest";
 
 import { channels } from "../shared/bridge";
 import type { PlayerEvent } from "../shared/bridge";
 import { ServerStatusError } from "../shared/errors";
 import { createBridge } from "./bridge";
+import type { BridgeIpc, IpcListener } from "./bridge";
 
-function fakeIpc(replies: Record<string, unknown> = {}, failure?: (channel: string) => Error) {
-  const listeners = new Map<string, (event: IpcRendererEvent, payload: unknown) => void>();
+const fakeIpc = (
+  reply?: { readonly channel: string; readonly value: JsonValue },
+  failure?: (channel: string) => Error
+) => {
+  const listeners = new Map<string, IpcListener>();
   const invoked: unknown[][] = [];
 
-  const ipc = {
+  const ipc: BridgeIpc = {
     invoke: async (channel: string, ...args: unknown[]) => {
       invoked.push([channel, ...args]);
 
       return failure
         ? await Promise.reject(failure(channel))
-        : await Promise.resolve(replies[channel]);
+        : await Promise.resolve(reply?.channel === channel ? reply.value : undefined);
     },
-    on: (channel: string, listener: (event: IpcRendererEvent, payload: unknown) => void) => {
+    on: (channel, listener) => {
       listeners.set(channel, listener);
-
-      return ipc;
     },
-    removeListener: (channel: string) => {
+    removeListener: (channel) => {
       listeners.delete(channel);
-
-      return ipc;
     },
   };
 
-  const push = (channel: string, payload: unknown) =>
-    listeners.get(channel)?.({} as IpcRendererEvent, payload);
+  const push = (channel: string, payload: JsonObject) =>
+    listeners.get(channel)?.({ ports: [] }, payload);
 
-  return { ipc: ipc as unknown as IpcRenderer, invoked, push };
-}
+  return { ipc, invoked, push };
+};
 
 const warn = (): void => {};
 
-test("the test surface is exposed only for e2e", () => {
-  const { ipc } = fakeIpc();
+describe(createBridge, () => {
+  it("the test surface is exposed only for e2e", () => {
+    const { ipc } = fakeIpc();
 
-  expect(Object.keys(createBridge(ipc, { e2e: false, warn })).toSorted()).toEqual([
-    "deviceId",
-    "discover",
-    "player",
-    "session",
-    "updates",
-  ]);
-  expect(Object.keys(createBridge(ipc, { e2e: true, warn })).toSorted()).toEqual([
-    "deviceId",
-    "discover",
-    "player",
-    "session",
-    "test",
-    "updates",
-  ]);
-});
+    expect(Object.keys(createBridge(ipc, { e2e: false, warn })).toSorted()).toStrictEqual([
+      "deviceId",
+      "discover",
+      "player",
+      "session",
+      "updates",
+    ]);
+    expect(Object.keys(createBridge(ipc, { e2e: true, warn })).toSorted()).toStrictEqual([
+      "deviceId",
+      "discover",
+      "player",
+      "session",
+      "test",
+      "updates",
+    ]);
+  });
 
-test("a malformed player event is dropped and logged; a valid one reaches the listener", () => {
-  const { ipc, push } = fakeIpc();
-  const warnings: string[] = [];
-  const received: PlayerEvent[] = [];
-  const bridge = createBridge(ipc, { e2e: false, warn: (message) => warnings.push(message) });
-  bridge.player.onEvent((event) => received.push(event));
+  it("a malformed player event is dropped and logged; a valid one reaches the listener", () => {
+    const { ipc, push } = fakeIpc();
+    const warnings: string[] = [];
+    const received: PlayerEvent[] = [];
 
-  const playing = { facts: [], downgrades: [], transcodeReasons: [], unreadable: false };
-  push(channels.playerEvent, { ...playing, phase: "warp", itemId: "x", positionTicks: -1 });
-  // Main always states the server's decision; an event without it is a regression, not a default.
-  push(channels.playerEvent, { phase: "playing", itemId: "x", positionTicks: 10 });
-  push(channels.playerEvent, { ...playing, phase: "playing", itemId: "x", positionTicks: 10 });
+    const bridge = createBridge(ipc, {
+      e2e: false,
+      warn: (message) => {
+        warnings.push(message);
+      },
+    });
 
-  expect(warnings).toEqual([
-    "Dropped a malformed player event",
-    "Dropped a malformed player event",
-  ]);
-  expect(received).toEqual([
-    {
-      phase: "playing",
-      itemId: "x",
-      positionTicks: 10,
-      facts: [],
+    bridge.player.onEvent((event) => {
+      received.push(event);
+    });
+
+    const playing = { facts: [], downgrades: [], transcodeReasons: [], unreadable: false };
+    push(channels.playerEvent, { ...playing, phase: "warp", itemId: "x", positionTicks: -1 });
+    // Main always states the server's decision; an event without it is a regression, not a default.
+    push(channels.playerEvent, { phase: "playing", itemId: "x", positionTicks: 10 });
+    push(channels.playerEvent, { ...playing, phase: "playing", itemId: "x", positionTicks: 10 });
+
+    expect(warnings).toStrictEqual([
+      "Dropped a malformed player event",
+      "Dropped a malformed player event",
+    ]);
+    expect(received).toStrictEqual([
+      {
+        phase: "playing",
+        itemId: "x",
+        positionTicks: 10,
+        facts: [],
+        downgrades: [],
+        transcodeReasons: [],
+        unreadable: false,
+      },
+    ]);
+  });
+
+  it("a main-process error crosses unwrapped, and a server status keeps its status", async () => {
+    const { ipc } = fakeIpc(
+      undefined,
+      (channel) =>
+        new Error(
+          `Error invoking remote method '${channel}': ServerStatusError: The server answered 401 for /Items/x/PlaybackInfo`
+        )
+    );
+
+    const bridge = createBridge(ipc, { e2e: false, warn });
+
+    const prepare = async () =>
+      await bridge.player.prepare({ itemId: ItemId.parse("0123456789abcdef0123456789abcdef") });
+
+    await expect(prepare()).rejects.toBeInstanceOf(ServerStatusError);
+    await expect(prepare()).rejects.toMatchObject({ status: 401 });
+  });
+
+  it("prepare sends the request and parses the server's decision", async () => {
+    const report = {
+      facts: [
+        { text: "Dolby Vision mapped to HDR10", state: "mapped" },
+        { text: "TrueHD Atmos bitstream", state: "native" },
+      ],
       downgrades: [],
       transcodeReasons: [],
       unreadable: false,
-    },
-  ]);
-});
+    };
 
-test("a main-process error crosses unwrapped, and a server status keeps its status", async () => {
-  const { ipc } = fakeIpc(
-    {},
-    (channel) =>
-      new Error(
-        `Error invoking remote method '${channel}': ServerStatusError: The server answered 401 for /Items/x/PlaybackInfo`
-      )
-  );
+    const { ipc, invoked } = fakeIpc({ channel: channels.prepare, value: report });
+    const request = { itemId: ItemId.parse("0123456789abcdef0123456789abcdef") };
 
-  const bridge = createBridge(ipc, { e2e: false, warn });
-
-  const error: unknown = await bridge.player
-    .prepare({ itemId: ItemId.parse("0123456789abcdef0123456789abcdef") })
-    .catch((error_: unknown) => error_);
-
-  expect(error).toBeInstanceOf(ServerStatusError);
-  expect(error).toMatchObject({ status: 401 });
-});
-
-test("prepare sends the request and parses the server's decision", async () => {
-  const report = {
-    facts: [
-      { text: "Dolby Vision mapped to HDR10", state: "mapped" },
-      { text: "TrueHD Atmos bitstream", state: "native" },
-    ],
-    downgrades: [],
-    transcodeReasons: [],
-    unreadable: false,
-  };
-
-  const { ipc, invoked } = fakeIpc({ [channels.prepare]: report });
-  const request = { itemId: ItemId.parse("0123456789abcdef0123456789abcdef") };
-
-  await expect(createBridge(ipc, { e2e: false, warn }).player.prepare(request)).resolves.toEqual(
-    report
-  );
-  expect(invoked).toEqual([["player:prepare", { itemId: "0123456789abcdef0123456789abcdef" }]]);
-});
-
-test("a prepare reply with an unknown signal state is refused", async () => {
-  const { ipc } = fakeIpc({
-    [channels.prepare]: { facts: [{ text: "HDR10", state: "glorious" }], transcodeReasons: [] },
+    await expect(
+      createBridge(ipc, { e2e: false, warn }).player.prepare(request)
+    ).resolves.toStrictEqual(report);
+    expect(invoked).toStrictEqual([
+      ["player:prepare", { itemId: "0123456789abcdef0123456789abcdef" }],
+    ]);
   });
 
-  const request = { itemId: ItemId.parse("0123456789abcdef0123456789abcdef") };
+  it("a prepare reply with an unknown signal state is refused", async () => {
+    const { ipc } = fakeIpc({
+      channel: channels.prepare,
+      value: { facts: [{ text: "HDR10", state: "glorious" }], transcodeReasons: [] },
+    });
 
-  await expect(createBridge(ipc, { e2e: false, warn }).player.prepare(request)).rejects.toThrow(
-    /Invalid option/
-  );
-});
+    const request = { itemId: ItemId.parse("0123456789abcdef0123456789abcdef") };
 
-test("deviceId asks main and returns its id", async () => {
-  const { ipc, invoked } = fakeIpc({ [channels.deviceId]: "6f9619ff-8b86-4d01-b42d-00cf4fc964ff" });
-
-  await expect(createBridge(ipc, { e2e: false, warn }).deviceId()).resolves.toBe(
-    "6f9619ff-8b86-4d01-b42d-00cf4fc964ff"
-  );
-  expect(invoked).toEqual([["device:id"]]);
-});
-
-test("update status is parsed and restart invokes its channel", async () => {
-  const { ipc, invoked } = fakeIpc({
-    [channels.updateStatus]: { state: "ready", version: "0.3.0" },
+    await expect(createBridge(ipc, { e2e: false, warn }).player.prepare(request)).rejects.toThrow(
+      /Invalid option/u
+    );
   });
 
-  const bridge = createBridge(ipc, { e2e: false, warn });
+  it("deviceId asks main and returns its id", async () => {
+    const { ipc, invoked } = fakeIpc({
+      channel: channels.deviceId,
+      value: "6f9619ff-8b86-4d01-b42d-00cf4fc964ff",
+    });
 
-  await expect(bridge.updates.status()).resolves.toEqual({ state: "ready", version: "0.3.0" });
-  await bridge.updates.restart();
-  expect(invoked).toContainEqual([channels.updateRestart]);
+    await expect(createBridge(ipc, { e2e: false, warn }).deviceId()).resolves.toBe(
+      "6f9619ff-8b86-4d01-b42d-00cf4fc964ff"
+    );
+    expect(invoked).toStrictEqual([["device:id"]]);
+  });
 
-  const bad = fakeIpc({ [channels.updateStatus]: { state: "ready" } });
-  await expect(createBridge(bad.ipc, { e2e: false, warn }).updates.status()).rejects.toThrow(
-    /version/
-  );
+  it("parses the update status and restart invokes its channel", async () => {
+    const { ipc, invoked } = fakeIpc({
+      channel: channels.updateStatus,
+      value: { state: "ready", version: "0.3.0" },
+    });
+
+    const bridge = createBridge(ipc, { e2e: false, warn });
+
+    await expect(bridge.updates.status()).resolves.toStrictEqual({
+      state: "ready",
+      version: "0.3.0",
+    });
+    await bridge.updates.restart();
+    expect(invoked).toContainEqual([channels.updateRestart]);
+
+    const bad = fakeIpc({ channel: channels.updateStatus, value: { state: "ready" } });
+    await expect(createBridge(bad.ipc, { e2e: false, warn }).updates.status()).rejects.toThrow(
+      /version/u
+    );
+  });
 });
