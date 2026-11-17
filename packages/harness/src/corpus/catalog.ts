@@ -762,8 +762,13 @@ export const CATALOG: readonly Entry[] = [
   ),
 ];
 
+interface EntryLocation {
+  dir: string;
+  stem: string;
+}
+
 /** The folder under the corpus root, and the file name without extension. */
-export const entryLocation = (entry: Entry): { dir: string; stem: string } => {
+export const entryLocation = (entry: Entry): EntryLocation => {
   if (entry.kind === "movie") {
     const stem = `${entry.meta.title} (${entry.meta.year})`;
 

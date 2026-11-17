@@ -12,13 +12,13 @@ FFmpeg version: 8.0.1 (runtime 8.1.3)`;
 
 describe(parseVersion, () => {
   it("reads mpv and libplacebo versions from `mpv --version`", () => {
-    expect(parseVersion(MPV_VERSION, /^mpv v?/m)).toStrictEqual([0, 41, 0]);
-    expect(parseVersion(MPV_VERSION, /^libplacebo version: v?/m)).toStrictEqual([7, 360, 1]);
+    expect(parseVersion(MPV_VERSION, /^mpv v?/mu)).toStrictEqual([0, 41, 0]);
+    expect(parseVersion(MPV_VERSION, /^libplacebo version: v?/mu)).toStrictEqual([7, 360, 1]);
   });
 
   it("pads missing components with zero and returns null when the prefix is absent", () => {
-    expect(parseVersion("weston 15", /weston /)).toStrictEqual([15, 0, 0]);
-    expect(parseVersion("weston 15.0.1", /kwin /)).toBeNull();
+    expect(parseVersion("weston 15", /weston /u)).toStrictEqual([15, 0, 0]);
+    expect(parseVersion("weston 15.0.1", /kwin /u)).toBeNull();
   });
 });
 
@@ -31,7 +31,7 @@ describe(compareVersions, () => {
 });
 
 describe("check judges", () => {
-  const mpv = versionAtLeast(/^mpv v?/m, [0, 41, 0]);
+  const mpv = versionAtLeast(/^mpv v?/mu, [0, 41, 0]);
 
   it("accepts mpv 0.41.0 and flags 0.40.0 as outdated", () => {
     expect(mpv(exited(MPV_VERSION))).toStrictEqual({ status: "ok", detail: "0.41.0" });
@@ -52,7 +52,7 @@ describe("check judges", () => {
   it("names the encoders an ffmpeg listing lacks", () => {
     const encoders = listsAll(
       ["ac3", "eac3", "dca"],
-      (name) => new RegExp(`^\\s*\\S+\\s+${name}\\s`, "m")
+      (name) => new RegExp(`^\\s*\\S+\\s+${name}\\s`, "mu")
     );
 
     const listing = ` A....D ac3                  ATSC A/52A (AC-3)\n A....D eac3                 ATSC A/52 E-AC-3\n`;

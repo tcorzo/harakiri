@@ -20,7 +20,7 @@ export const audioOutputs: readonly {
   readonly name: string;
   readonly output: AudioOutput;
   /** What mpv reports once it plays to the output, given what harakiri sent it. */
-  readonly then: (sent: FidelityView, track: SoundSource) => readonly Observation[];
+  readonly observed: (sent: FidelityView, track: SoundSource) => readonly Observation[];
 }[] = [
   {
     name: "AV receiver over HDMI, passthrough on",
@@ -29,27 +29,27 @@ export const audioOutputs: readonly {
       name: "the receiver",
       bitstream: ["ac3", "eac3", "dts", "dts-hd", "truehd"],
     },
-    then: () => [],
+    observed: () => [],
   },
   {
     name: "TV over HDMI ARC",
     output: { kind: "known", name: "the TV", bitstream: ["ac3", "eac3"] },
-    then: () => [],
+    observed: () => [],
   },
   {
     name: "Older receiver (AC3 and DTS)",
     output: { kind: "known", name: "the receiver", bitstream: ["ac3", "dts"] },
-    then: () => [],
+    observed: () => [],
   },
   {
     name: "Analog output or headset (PCM only)",
     output: { kind: "known", name: "the headset", bitstream: [] },
-    then: () => [],
+    observed: () => [],
   },
   {
     name: "Output PipeWire cannot describe",
     output: { kind: "unknown", detail: "pactl failed" },
-    then: () => [],
+    observed: () => [],
   },
   {
     // What started harakiri: another app held the device, and a bitstream it listed went silent.
@@ -59,7 +59,7 @@ export const audioOutputs: readonly {
       name: "the receiver",
       bitstream: ["ac3", "eac3", "dts", "dts-hd", "truehd"],
     },
-    then: (sent, track) =>
+    observed: (sent, track) =>
       sent.bitstream.some((codec) => codec === track.carriage)
         ? [{ kind: "audioOutputFailed" }]
         : [],
@@ -67,7 +67,7 @@ export const audioOutputs: readonly {
   {
     name: "Output disconnected during playback",
     output: { kind: "known", name: "the headset", bitstream: [] },
-    then: () => [{ kind: "audioOutputFailed" }, { kind: "audioOutputFailed" }],
+    observed: () => [{ kind: "audioOutputFailed" }, { kind: "audioOutputFailed" }],
   },
 ];
 
@@ -82,19 +82,21 @@ export const pictures: readonly PictureSource[] = [
 ];
 
 /** Display and GPU setups, as what mpv reports on each. */
-export const displays: readonly { readonly name: string; readonly then: readonly Observation[] }[] =
-  [
-    { name: "HDR display, Vulkan", then: [{ kind: "displayTarget", hdr: true }] },
-    { name: "SDR display, Vulkan", then: [{ kind: "displayTarget", hdr: false }] },
-    {
-      name: "HDR display, no Vulkan driver",
-      then: [{ kind: "rendererFailed" }, { kind: "displayTarget", hdr: false }],
-    },
-    {
-      name: "No working GPU renderer",
-      then: [{ kind: "rendererFailed" }, { kind: "rendererFailed" }, { kind: "rendererFailed" }],
-    },
-  ];
+export const displays: readonly {
+  readonly name: string;
+  readonly observed: readonly Observation[];
+}[] = [
+  { name: "HDR display, Vulkan", observed: [{ kind: "displayTarget", hdr: true }] },
+  { name: "SDR display, Vulkan", observed: [{ kind: "displayTarget", hdr: false }] },
+  {
+    name: "HDR display, no Vulkan driver",
+    observed: [{ kind: "rendererFailed" }, { kind: "displayTarget", hdr: false }],
+  },
+  {
+    name: "No working GPU renderer",
+    observed: [{ kind: "rendererFailed" }, { kind: "rendererFailed" }, { kind: "rendererFailed" }],
+  },
+];
 
 /** How the server sends the file. */
 export const deliveries: readonly {
@@ -134,7 +136,7 @@ export const deliveries: readonly {
 ];
 
 const receiver = audioOutputs[0]?.output ?? { kind: "unknown", detail: "" };
-const hdrDisplay = displays[0]?.then ?? [];
+const hdrDisplay = displays[0]?.observed ?? [];
 
 /** Plays one scenario through the engine: start, then what mpv would report. */
 export const simulate = (
@@ -142,22 +144,22 @@ export const simulate = (
   sound: SoundSource | null,
   delivery: Delivery,
   output: AudioOutput,
-  then: (sent: FidelityView) => readonly Observation[]
+  observed: (sent: FidelityView) => readonly Observation[]
 ): FidelityView => {
   let state = startFidelity({ picture, sound, delivery, output });
 
-  for (const observation of then(fidelityView(state))) {
-    state = observe(state, observation).state;
+  for (const observation of observed(fidelityView(state))) {
+    ({ state } = observe(state, observation));
   }
 
   return fidelityView(state);
 };
 
 export const soundCell = (track: SoundSource, output: (typeof audioOutputs)[number]) =>
-  simulate(null, track, { kind: "direct" }, output.output, (sent) => output.then(sent, track));
+  simulate(null, track, { kind: "direct" }, output.output, (sent) => output.observed(sent, track));
 
 export const pictureCell = (picture: PictureSource, display: (typeof displays)[number]) =>
-  simulate(picture, null, { kind: "direct" }, receiver, () => display.then);
+  simulate(picture, null, { kind: "direct" }, receiver, () => display.observed);
 
 export const deliveryRow = (row: (typeof deliveries)[number]) =>
   simulate(row.picture, row.sound, row.delivery, receiver, () => hdrDisplay);

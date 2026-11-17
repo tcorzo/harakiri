@@ -33,13 +33,13 @@ export const captureWithMpv = (
 };
 
 export const parseAudioOutLine = (log: string): AudioOut => {
-  const found = /^AO: \[\w+\] (\d+)Hz \S+ (\d+)ch (\S+)$/m.exec(log);
+  const found = /^AO: \[\w+\] (?<rate>\d+)Hz \S+ (?<channels>\d+)ch (?<format>\S+)$/mu.exec(log);
 
   if (found === null) {
     throw new Error(`mpv printed no AO line:\n${log}`);
   }
 
-  const [, rate = "", channels = "", format = ""] = found;
+  const { rate = "", channels = "", format = "" } = found.groups ?? {};
 
   return { sampleRate: Number(rate), channels: Number(channels), format };
 };

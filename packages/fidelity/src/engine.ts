@@ -143,11 +143,13 @@ const learn = (state: FidelityState, observation: Observation): FidelityState =>
 const sameCodecs = (a: readonly BitstreamCodec[], b: readonly BitstreamCodec[]): boolean =>
   a.length === b.length && a.every((codec, index) => codec === b[index]);
 
+export interface Observed {
+  readonly state: FidelityState;
+  readonly actions: readonly Action[];
+}
+
 /** Folds in what the player saw, and returns what it must change in mpv to match. */
-export const observe = (
-  state: FidelityState,
-  observation: Observation
-): { readonly state: FidelityState; readonly actions: readonly Action[] } => {
+export const observe = (state: FidelityState, observation: Observation): Observed => {
   const before = fidelityView(state);
   const next = learn(state, observation);
   const after = fidelityView(next);

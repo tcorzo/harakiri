@@ -15,7 +15,7 @@ const WAVE_FORMAT_PCM = 0x00_01;
 const WAVE_FORMAT_EXTENSIBLE = 0xff_fe;
 
 const fourcc = (bytes: Uint8Array, at: number): string =>
-  String.fromCharCode(...bytes.subarray(at, at + 4));
+  String.fromCodePoint(...bytes.subarray(at, at + 4));
 
 /**
  * Returns the 16-bit little-endian sample bytes of a capture. A RIFF/WAVE file is

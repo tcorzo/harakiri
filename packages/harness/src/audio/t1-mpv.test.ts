@@ -1,6 +1,6 @@
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import path from "node:path";
 
 import type { AudioPassthrough } from "@harakiri/mpv";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -15,18 +15,6 @@ import { readPcm16, WavError } from "./wav";
 let dir: string;
 const clips = new Map<ClipCodec, Clip>();
 
-beforeAll(() => {
-  dir = mkdtempSync(join(tmpdir(), "harness-t1-"));
-
-  for (const codec of ["ac3", "eac3", "dts", "truehd"] as const) {
-    clips.set(codec, synthesizeClip(dir, codec));
-  }
-});
-
-afterAll(() => {
-  rmSync(dir, { recursive: true, force: true });
-});
-
 const clip = (codec: ClipCodec): Clip => {
   const found = clips.get(codec);
 
@@ -38,10 +26,10 @@ const clip = (codec: ClipCodec): Clip => {
 };
 
 const capture = (codec: ClipCodec, audioPassthrough?: AudioPassthrough) => {
-  const wav = join(dir, `${codec}-mpv.wav`);
+  const wav = path.join(dir, `${codec}-mpv.wav`);
   const ao = captureWithMpv(clip(codec).mkv, wav, audioPassthrough);
   const pcm = readPcm16(readFileSync(wav));
-  const reference = join(dir, `${codec}-ffmpeg.spdif`);
+  const reference = path.join(dir, `${codec}-ffmpeg.spdif`);
   muxSpdif(clip(codec).mkv, reference);
 
   return {
@@ -57,6 +45,18 @@ const kinds = (bursts: readonly Burst[]) => [
 ];
 
 describe("T1: the player's mpv argv writes the IEC 61937 stream unmodified", () => {
+  beforeAll(() => {
+    dir = mkdtempSync(path.join(tmpdir(), "harness-t1-"));
+
+    for (const codec of ["ac3", "eac3", "dts", "truehd"] as const) {
+      clips.set(codec, synthesizeClip(dir, codec));
+    }
+  });
+
+  afterAll(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
   it.each([
     { codec: "ac3", ao: { sampleRate: 48_000, channels: 2, format: "spdif-ac3" } },
     { codec: "dts", ao: { sampleRate: 48_000, channels: 2, format: "spdif-dts" } },
@@ -94,7 +94,12 @@ describe("T1: the player's mpv argv writes the IEC 61937 stream unmodified", () 
     const missing = run.spdifReference.length - run.pcm.data.length;
     expect([0, second.offset - first.offset]).toContain(missing);
     expect(sha256(run.pcm.data)).toBe(sha256(run.spdifReference.subarray(0, run.pcm.data.length)));
+  });
 
+  it("eac3 capture and FFmpeg's spdif output unwrap to the same elementary stream", () => {
+    const run = capture("eac3");
+    const reference = scanBursts(run.spdifReference);
+    const captured = scanBursts(run.pcm.data);
     expect(sha256(elementaryStream(reference).bytes)).toBe(sha256(run.source));
     expect(sha256(elementaryStream(captured).bytes)).toBe(
       sha256(elementaryStream(reference.slice(0, captured.length)).bytes)
@@ -102,7 +107,7 @@ describe("T1: the player's mpv argv writes the IEC 61937 stream unmodified", () 
   });
 
   it("without the codec in --audio-spdif mpv decodes to float PCM, which the harness refuses", () => {
-    const wav = join(dir, "dts-decoded.wav");
+    const wav = path.join(dir, "dts-decoded.wav");
     expect(captureWithMpv(clip("dts").mkv, wav, ["ac3"])).toStrictEqual({
       sampleRate: 48_000,
       channels: 6,

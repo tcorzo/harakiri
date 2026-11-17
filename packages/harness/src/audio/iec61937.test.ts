@@ -22,6 +22,13 @@ const burst = (
 
 const DTSHD_HEADER = [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfe, 0xfe];
 
+// 4000-byte units (2000 words): 30688-byte half frames are not a multiple, so units straddle both markers.
+const unit = (n: number) => [
+  0xf0 | (2000 >> 8),
+  2000 & 0xff,
+  ...Array.from({ length: 3998 }, () => n + 1),
+];
+
 describe(scanBursts, () => {
   it("finds an AC-3 burst after leading silence and restores big-endian payload", () => {
     const stream = Uint8Array.from([
@@ -121,13 +128,6 @@ describe(elementaryStream, () => {
 
     const MAT_MIDDLE = [0xc3, 0xc1, 0x42, 0x49, 0x3b, 0xfa, 0x82, 0x83, 0x49, 0x80, 0x77, 0xe0];
     const MAT_END = [0xc3, 0xc2, 0xc0, 0xc4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x97, 0x11];
-
-    // 4000-byte units (2000 words): 30688-byte half frames are not a multiple, so units straddle both markers.
-    const unit = (n: number) => [
-      0xf0 | (2000 >> 8),
-      2000 & 0xff,
-      ...Array.from({ length: 3998 }, () => n + 1),
-    ];
 
     const data = Array.from({ length: 31 }, (_, n) => unit(n)).flat();
 

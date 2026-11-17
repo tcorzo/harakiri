@@ -1,6 +1,6 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import path from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -25,24 +25,25 @@ if (fateDir === undefined || fateDir === "") {
   throw new Error(`HARAKIRI_FATE_DIR is unset: ${FETCH} (needs ${SAMPLES.join(", ")})`);
 }
 
-const missing = SAMPLES.filter((name) => !existsSync(join(fateDir, name)));
+const missing = SAMPLES.filter((name) => !existsSync(path.join(fateDir, name)));
 
 if (missing.length > 0) {
   throw new Error(`HARAKIRI_FATE_DIR=${fateDir} lacks ${missing.join(", ")}: ${FETCH}`);
 }
 
+const sample = (name: string) => path.join(fateDir, name);
+
 describe("FATE: HBR streams through the extractor and mpv", () => {
   let dir: string;
-  const sample = (name: string) => join(fateDir, name);
 
   const spdif = (input: string, out: string, options: { dtshdRate?: number } = {}) => {
-    muxSpdif(input, join(dir, out), options);
+    muxSpdif(input, path.join(dir, out), options);
 
-    return readPcm16(readFileSync(join(dir, out))).data;
+    return readPcm16(readFileSync(path.join(dir, out))).data;
   };
 
   beforeAll(() => {
-    dir = mkdtempSync(join(tmpdir(), "harness-fate-"));
+    dir = mkdtempSync(path.join(tmpdir(), "harness-fate-"));
   });
 
   afterAll(() => {
@@ -83,9 +84,9 @@ describe("FATE: HBR streams through the extractor and mpv", () => {
   ])(
     "mpv capture of $name equals FFmpeg's spdif output byte for byte",
     ({ name, dtshdRate, format }) => {
-      const mkv = join(dir, `${name}.mkv`);
+      const mkv = path.join(dir, `${name}.mkv`);
       remuxToMatroska(sample(name), mkv);
-      const wav = join(dir, `${name}.wav`);
+      const wav = path.join(dir, `${name}.wav`);
       const ao = captureWithMpv(mkv, wav);
       expect(ao).toStrictEqual({ sampleRate: 192_000, channels: 8, format });
 

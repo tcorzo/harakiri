@@ -8,6 +8,7 @@ export const runAsync = async (
 ): Promise<{ stdout: string; stderr: string }> => {
   const timeoutMs = options.timeoutMs ?? 300_000;
 
+  // oxlint-disable-next-line promise/avoid-new -- wraps the child_process event API, which has no promise form
   return await new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       stdio: ["ignore", "pipe", "pipe"],
@@ -16,9 +17,17 @@ export const runAsync = async (
 
     let stdout = "";
     let stderr = "";
-    child.stdout.setEncoding("utf-8").on("data", (chunk: string) => (stdout += chunk));
-    child.stderr.setEncoding("utf-8").on("data", (chunk: string) => (stderr += chunk));
-    const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
+    child.stdout.setEncoding("utf-8").on("data", (chunk: string) => {
+      stdout += chunk;
+    });
+    child.stderr.setEncoding("utf-8").on("data", (chunk: string) => {
+      stderr += chunk;
+    });
+
+    const timer = setTimeout(() => {
+      child.kill("SIGKILL");
+    }, timeoutMs);
+
     child.on("error", (error: NodeJS.ErrnoException) => {
       clearTimeout(timer);
       reject(
@@ -46,9 +55,9 @@ export const runAsync = async (
 /** A tiny concurrency limiter: at most `limit` tasks run at once. */
 export const limiter = (limit: number) => {
   let active = 0;
-  const queue: (() => void)[] = [];
+  const queue: (() => Promise<void>)[] = [];
 
-  const next = () => {
+  const dispatch = () => {
     if (active >= limit) {
       return;
     }
@@ -57,20 +66,24 @@ export const limiter = (limit: number) => {
 
     if (start) {
       active += 1;
-      start();
+      void start();
     }
   };
 
   return async <T>(task: () => Promise<T>): Promise<T> =>
+    // oxlint-disable-next-line promise/avoid-new -- the promise settles from the queue, not from one callback
     await new Promise<T>((resolve, reject) => {
       queue.push(async () => {
-        await task()
-          .then(resolve, reject)
-          .finally(() => {
-            active -= 1;
-            next();
-          });
+        try {
+          resolve(await task());
+        } catch (error) {
+          // oxlint-disable-next-line promise/prefer-promise-reject-errors -- hands the task's own rejection to its caller unchanged
+          reject(error);
+        } finally {
+          active -= 1;
+          dispatch();
+        }
       });
-      next();
+      dispatch();
     });
 };

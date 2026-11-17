@@ -79,6 +79,18 @@ const message = (reason: DowngradeReason, sound: SoundSource, to: Fact): string 
 const outputName = (output: AudioOutput): string | null =>
   output.kind === "known" ? output.name : null;
 
+const declineReason = (world: SoundWorld): DowngradeReason => {
+  if (world.bitstreamFailed) {
+    return { kind: "outputFailed", output: outputName(world.output) };
+  }
+
+  if (world.output.kind === "unknown") {
+    return { kind: "outputUnknown", detail: world.output.detail };
+  }
+
+  return { kind: "outputRefuses", output: world.output.name };
+};
+
 /** Decides how the selected track plays on this output, and why when it is less than its best. */
 export const soundPlan = (sound: SoundSource | null, world: SoundWorld): SoundResult => {
   const bitstream = bitstreamFor(sound, world);
@@ -115,13 +127,7 @@ export const soundPlan = (sound: SoundSource | null, world: SoundWorld): SoundRe
     return { bitstream, fact: best, downgrade: null };
   }
 
-  const reason: DowngradeReason = world.bitstreamFailed
-    ? { kind: "outputFailed", output: outputName(world.output) }
-    : world.output.kind === "unknown"
-      ? { kind: "outputUnknown", detail: world.output.detail }
-      : { kind: "outputRefuses", output: world.output.name };
-
-  return lowered(decoded(sound), reason);
+  return lowered(decoded(sound), declineReason(world));
 };
 
 /** Whether the selected track is going out as a bitstream right now. */

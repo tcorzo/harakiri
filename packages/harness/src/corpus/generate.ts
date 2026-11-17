@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { availableParallelism } from "node:os";
-import { join } from "node:path";
+import nodePath from "node:path";
 
 import { match, P } from "ts-pattern";
 import { z } from "zod";
@@ -175,7 +175,7 @@ const ManifestSchema = z.object({
 });
 
 export const readManifest = (dir: string): Manifest => {
-  const file = join(dir, MANIFEST);
+  const file = nodePath.join(dir, MANIFEST);
 
   if (!existsSync(file)) {
     throw new Error(`no corpus at ${dir}: run mise run media:gen`);
@@ -195,12 +195,14 @@ const describeFate = (state: FateState, dir: string): string =>
     )
     .exhaustive();
 
+const lavfi = (src: string) => ["-f", "lavfi", "-i", src];
+
 /** Empties a directory but keeps it, so a running container's bind mount stays valid. */
 const emptyDir = (dir: string): void => {
   mkdirSync(dir, { recursive: true });
 
   for (const name of readdirSync(dir)) {
-    rmSync(join(dir, name), { recursive: true, force: true });
+    rmSync(nodePath.join(dir, name), { recursive: true, force: true });
   }
 };
 
@@ -224,12 +226,12 @@ export const generateCorpus = async (options: GenerateOptions): Promise<Manifest
     );
   }
 
-  const work = join(out, ".work");
+  const work = nodePath.join(out, ".work");
   rmSync(work, { recursive: true, force: true });
   mkdirSync(work, { recursive: true });
-  emptyDir(join(out, "movies"));
-  emptyDir(join(out, "shows"));
-  rmSync(join(out, MANIFEST), { force: true });
+  emptyDir(nodePath.join(out, "movies"));
+  emptyDir(nodePath.join(out, "shows"));
+  rmSync(nodePath.join(out, MANIFEST), { force: true });
 
   const limit = limiter(options.concurrency ?? Math.max(2, Math.min(4, availableParallelism())));
 
@@ -249,12 +251,14 @@ export const generateCorpus = async (options: GenerateOptions): Promise<Manifest
   // Shared intermediates, built once however many entries need them.
   const memo = new Map<string, Promise<string>>();
 
-  const once = async (key: string, build: (path: string) => Promise<unknown>): Promise<string> => {
+  const once = async <R>(key: string, build: (path: string) => R | Promise<R>): Promise<string> => {
     let promise = memo.get(key);
 
     if (!promise) {
-      const path = join(work, key);
-      promise = build(path).then(() => path);
+      const path = nodePath.join(work, key);
+      promise = Promise.resolve()
+        .then(async () => await build(path))
+        .then(() => path);
       memo.set(key, promise);
     }
 
@@ -309,7 +313,7 @@ export const generateCorpus = async (options: GenerateOptions): Promise<Manifest
     ]);
 
   const hdr10plusFile = async (seconds: number) =>
-    await once(`hdr10plus-${seconds}.json`, async (path) => {
+    await once(`hdr10plus-${seconds}.json`, (path) => {
       writeFileSync(path, hdr10plusJson(seconds * FPS));
     });
 
@@ -503,12 +507,12 @@ export const generateCorpus = async (options: GenerateOptions): Promise<Manifest
       .with(
         { kind: "fate-video" },
         { kind: "fate-file" },
-        async ({ sample }) => await Promise.resolve(join(fateDir, sample))
+        async ({ sample }) => await Promise.resolve(nodePath.join(fateDir, sample))
       )
       .exhaustive();
 
   const subtitleFile = async (format: SubtitleTrack["format"]) =>
-    await once(`sub.${format}`, async (path) => {
+    await once(`sub.${format}`, (path) => {
       writeFileSync(
         path,
         match(format)
@@ -527,7 +531,6 @@ export const generateCorpus = async (options: GenerateOptions): Promise<Manifest
   /** Input args and per-output-stream codec args for one audio track. */
   const audioArgs = (track: AudioTrack, n: number, seconds: number, input: number) => {
     const long = seconds > 60;
-    const lavfi = (src: string) => ["-f", "lavfi", "-i", src];
     const codec = (...args: string[]) => args.map((a, i) => (i % 2 === 0 ? `${a}:a:${n}` : a));
     const recipe: AudioRecipe = track.recipe;
     const pitch = 440 + n * 110;
@@ -558,7 +561,7 @@ export const generateCorpus = async (options: GenerateOptions): Promise<Manifest
       // A FATE sample can be far shorter than the item (atmos.thd holds 0.1 s), so it loops to
       // fill it and the output's -t trims; each pass starts on the sample's own sync frame.
       .with({ fate: P.string }, ({ fate: sample }) => [
-        ["-stream_loop", "-1", "-i", join(fateDir, sample)],
+        ["-stream_loop", "-1", "-i", nodePath.join(fateDir, sample)],
         codec("-c", "copy"),
       ])
       .exhaustive();
@@ -574,8 +577,8 @@ export const generateCorpus = async (options: GenerateOptions): Promise<Manifest
 
   const buildEntry = async (entry: Entry): Promise<void> => {
     const { dir } = entryLocation(entry);
-    mkdirSync(join(out, dir), { recursive: true });
-    const dst = join(out, entryPath(entry));
+    mkdirSync(nodePath.join(out, dir), { recursive: true });
+    const dst = nodePath.join(out, entryPath(entry));
 
     if (entry.video.kind === "fate-file") {
       copyFileSync(await video(entry.video, entry.seconds), dst);
@@ -588,15 +591,20 @@ export const generateCorpus = async (options: GenerateOptions): Promise<Manifest
     const maps: string[] = ["-map", "0:v"];
     const codecs: string[] = ["-c:v", "copy"];
     let input = 1;
-    entry.audio.forEach((track, n) => {
+
+    for (const [n, track] of entry.audio.entries()) {
       const a = audioArgs(track, n, entry.seconds, (input += 1));
       args.push(...a.inputs);
       maps.push(...a.map);
       codecs.push(...a.codec);
-    });
+    }
 
-    for (const [n, sub] of entry.embeddedSubtitles.entries()) {
-      args.push("-i", await subtitleFile(sub.format));
+    const embedded = await Promise.all(
+      entry.embeddedSubtitles.map(async (sub) => ({ sub, file: await subtitleFile(sub.format) }))
+    );
+
+    for (const [n, { sub, file }] of embedded.entries()) {
+      args.push("-i", file);
       maps.push("-map", `${(input += 1)}:s:0`);
       codecs.push(`-metadata:s:s:${n}`, `language=${sub.language}`);
     }
@@ -633,11 +641,15 @@ export const generateCorpus = async (options: GenerateOptions): Promise<Manifest
       dst,
     ]);
 
-    for (const sub of entry.sidecarSubtitles) {
+    const sidecars = await Promise.all(
+      entry.sidecarSubtitles.map(async (sub) => ({ sub, file: await subtitleFile(sub.format) }))
+    );
+
+    for (const { sub, file } of sidecars) {
       const { stem } = entryLocation(entry);
       copyFileSync(
-        await subtitleFile(sub.format),
-        join(out, dir, `${stem}.${SIDECAR_LANGUAGE[sub.language]}.${sub.format}`)
+        file,
+        nodePath.join(out, dir, `${stem}.${SIDECAR_LANGUAGE[sub.language]}.${sub.format}`)
       );
     }
   };
@@ -647,10 +659,11 @@ export const generateCorpus = async (options: GenerateOptions): Promise<Manifest
 
   const writeMetadata = async (entries: readonly Entry[]): Promise<void> => {
     const jobs: Promise<unknown>[] = [];
-    entries.forEach((entry) => {
+
+    for (const entry of entries) {
       const index = CATALOG.indexOf(entry);
       const { dir, stem } = entryLocation(entry);
-      const at = (name: string) => join(out, dir, name);
+      const at = (name: string) => nodePath.join(out, dir, name);
 
       if (entry.kind === "movie") {
         writeFileSync(at("movie.nfo"), movieNfo(entry));
@@ -662,20 +675,22 @@ export const generateCorpus = async (options: GenerateOptions): Promise<Manifest
         writeFileSync(at(`${stem}.nfo`), episodeNfo(entry, SERIES[entry.series].year));
         jobs.push(art("thumb", index, at(`${stem}-thumb.png`)));
       }
-    });
-    Object.values(SERIES).forEach((meta, i) => {
-      const dir = join(out, "shows", meta.title);
+    }
+
+    for (const [i, meta] of Object.values(SERIES).entries()) {
+      const dir = nodePath.join(out, "shows", meta.title);
 
       if (!existsSync(dir)) {
-        return;
+        continue;
       }
 
-      writeFileSync(join(dir, "tvshow.nfo"), seriesNfo(meta));
+      writeFileSync(nodePath.join(dir, "tvshow.nfo"), seriesNfo(meta));
 
       for (const kind of ["poster", "backdrop", "logo"] as const) {
-        jobs.push(art(kind, 100 + i, join(dir, `${kind}.png`)));
+        jobs.push(art(kind, 100 + i, nodePath.join(dir, `${kind}.png`)));
       }
-    });
+    }
+
     await Promise.all(jobs);
   };
 
@@ -707,14 +722,14 @@ export const generateCorpus = async (options: GenerateOptions): Promise<Manifest
       return {
         id: entry.id,
         path,
-        bytes: statSync(join(out, path)).size,
-        sha256: sha256File(join(out, path)),
+        bytes: statSync(nodePath.join(out, path)).size,
+        sha256: sha256File(nodePath.join(out, path)),
       };
     }),
     skipped,
   };
 
-  writeFileSync(join(out, MANIFEST), `${JSON.stringify(manifest, null, 2)}\n`);
+  writeFileSync(nodePath.join(out, MANIFEST), `${JSON.stringify(manifest, null, 2)}\n`);
 
   return manifest;
 };
@@ -724,7 +739,7 @@ export const treeBytes = (dir: string): number => {
   let total = 0;
 
   for (const name of readdirSync(dir, { withFileTypes: true })) {
-    const path = join(dir, name.name);
+    const path = nodePath.join(dir, name.name);
     total += name.isDirectory() ? treeBytes(path) : statSync(path).size;
   }
 

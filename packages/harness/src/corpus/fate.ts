@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import nodePath from "node:path";
 
 import type { FateSample } from "./catalog";
 
@@ -59,11 +59,12 @@ export type FateState =
 
 /** Checks every pinned sample in `dir`. A file with the wrong hash is never used. */
 export const fateState = (dir: string): FateState => {
-  const missing = SAMPLE_NAMES.filter((name) => !existsSync(join(dir, name)));
+  const missing = SAMPLE_NAMES.filter((name) => !existsSync(nodePath.join(dir, name)));
 
   const bad = SAMPLE_NAMES.filter(
     (name) =>
-      !missing.includes(name) && sha256(readFileSync(join(dir, name))) !== FATE_SAMPLES[name].sha256
+      !missing.includes(name) &&
+      sha256(readFileSync(nodePath.join(dir, name))) !== FATE_SAMPLES[name].sha256
   );
 
   if (bad.length > 0) {
@@ -91,12 +92,12 @@ export const fetchFate = async (
   log: (line: string) => void
 ): Promise<void> => {
   mkdirSync(dir, { recursive: true });
-  const base = mirror.replace(/\/+$/, "");
+  const base = mirror.replace(/\/+$/u, "");
   const failures: string[] = [];
 
   for (const name of SAMPLE_NAMES) {
     const { path, sha256: want } = FATE_SAMPLES[name];
-    const file = join(dir, name);
+    const file = nodePath.join(dir, name);
 
     if (existsSync(file) && sha256(readFileSync(file)) === want) {
       log(`${name}: present, sha256 ok`);
@@ -106,12 +107,14 @@ export const fetchFate = async (
     const url = `${base}/${path}`;
 
     try {
+      // oxlint-disable-next-line eslint/no-await-in-loop -- samples download one at a time so the mirror sees one request and the log keeps its order
       const response = await fetch(url, { signal: AbortSignal.timeout(120_000) });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
 
+      // oxlint-disable-next-line eslint/no-await-in-loop -- samples download one at a time so the mirror sees one request and the log keeps its order
       const data = new Uint8Array(await response.arrayBuffer());
       const got = sha256(data);
 

@@ -11,7 +11,7 @@ const le32 = (n: number): number[] => [
   (n >>> 24) & 0xff,
 ];
 
-const ascii = (s: string): number[] => Array.from(s, (c) => c.charCodeAt(0));
+const ascii = (s: string): number[] => Array.from(s, (c) => c.codePointAt(0) ?? 0);
 
 const chunk = (id: string, body: number[]): number[] => [
   ...ascii(id),

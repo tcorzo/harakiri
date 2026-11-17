@@ -155,7 +155,7 @@ export const elementaryStream = (bursts: readonly Burst[]): ElementaryStream => 
     return stream === null ? [] : [{ stream, burst }];
   });
 
-  const first = carried[0];
+  const [first] = carried;
 
   if (first === undefined) {
     throw new Iec61937Error("no audio-carrying bursts");
@@ -306,14 +306,17 @@ const unwrapMatFrame = (burst: Burst): Uint8Array => {
   return concat(segments);
 };
 
+interface TrueHdAccessUnits {
+  bytes: Uint8Array;
+  partialTailBytes: number;
+}
+
 /**
  * Splits deframed MAT data into TrueHD access units. Each unit starts with a word whose
  * low 12 bits are its length in 16-bit words, which is never zero, so a zero word can
  * only be spdifenc's inter-unit padding.
  */
-const walkTrueHdAccessUnits = (
-  data: Uint8Array
-): { bytes: Uint8Array; partialTailBytes: number } => {
+const walkTrueHdAccessUnits = (data: Uint8Array): TrueHdAccessUnits => {
   const units: Uint8Array[] = [];
   let at = 0;
 

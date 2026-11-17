@@ -22,12 +22,16 @@ const report = ({ check, verdict }: CheckResult): void => {
       log.success(line);
     })
     .with("missing", "outdated", () => {
-      check.required ? log.error(line) : log.warn(`${line} (optional)`);
+      if (check.required) {
+        log.error(line);
+      } else {
+        log.warn(`${line} (optional)`);
+      }
     })
     .exhaustive();
 };
 
-const doctor = async (): Promise<number> => {
+const doctor = (): number => {
   intro("harakiri-harness doctor");
   const results = runChecks(CHECKS);
 
@@ -59,6 +63,6 @@ await configure({
 
 const parsed = run(parser, { programName: "harakiri-harness", help: "both" });
 
-process.exitCode = await match(parsed.command)
-  .with("doctor", async () => await doctor())
+process.exitCode = match(parsed.command)
+  .with("doctor", () => doctor())
   .exhaustive();

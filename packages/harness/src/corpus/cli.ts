@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // The synthetic media corpus: generate it, fetch the FATE tier, check a Jellyfin scan of it.
 // Run through mise so the pinned dovi_tool is on PATH: mise run media:gen | media:fetch-fate | test:corpus
-import { resolve } from "node:path";
+import path from "node:path";
 
 import { intro, log, outro } from "@clack/prompts";
 import { object, or } from "@optique/core/constructs";
@@ -16,9 +16,9 @@ import { classifyCorpus } from "./classify";
 import { DEFAULT_FATE_MIRROR, fetchFate } from "./fate";
 import { generateCorpus, treeBytes } from "./generate";
 
-const REPO = resolve(import.meta.dirname, "../../../..");
-const DEFAULT_OUT = process.env.HARAKIRI_CORPUS_DIR ?? resolve(REPO, ".cache/corpus");
-const DEFAULT_FATE = process.env.HARAKIRI_FATE_DIR ?? resolve(REPO, ".cache/fate");
+const REPO = path.resolve(import.meta.dirname, "../../../..");
+const DEFAULT_OUT = process.env.HARAKIRI_CORPUS_DIR ?? path.resolve(REPO, ".cache/corpus");
+const DEFAULT_FATE = process.env.HARAKIRI_FATE_DIR ?? path.resolve(REPO, ".cache/fate");
 
 const parser = or(
   command(
@@ -62,16 +62,20 @@ const gen = async (out: string, fate: string, requireFate: boolean): Promise<num
   const t0 = performance.now();
 
   const manifest = await generateCorpus({
-    out: resolve(out),
-    fateDir: resolve(fate),
+    out: path.resolve(out),
+    fateDir: path.resolve(fate),
     requireFate,
     log: (line) => {
-      line.startsWith("FATE TIER NOT BUILT") ? log.warn(line) : log.step(line);
+      if (line.startsWith("FATE TIER NOT BUILT")) {
+        log.warn(line);
+      } else {
+        log.step(line);
+      }
     },
   });
 
   const seconds = ((performance.now() - t0) / 1000).toFixed(1);
-  const mb = (treeBytes(resolve(out)) / 1e6).toFixed(1);
+  const mb = (treeBytes(path.resolve(out)) / 1e6).toFixed(1);
   outro(
     `${manifest.entries.length} media files, ${mb} MB, ${seconds}s${
       manifest.skipped.length > 0 ? `; ${manifest.skipped.length} FATE items left out` : ""
@@ -83,7 +87,7 @@ const gen = async (out: string, fate: string, requireFate: boolean): Promise<num
 
 const fetchFateCommand = async (dir: string, mirror: string): Promise<number> => {
   intro(`fetch FATE samples from ${mirror} -> ${dir}`);
-  await fetchFate(resolve(dir), mirror, (line) => {
+  await fetchFate(path.resolve(dir), mirror, (line) => {
     log.step(line);
   });
   outro("all FATE samples verified");
@@ -101,7 +105,7 @@ try {
       { command: "classify" },
       async (p) =>
         await classifyCorpus({
-          corpus: resolve(p.corpus),
+          corpus: path.resolve(p.corpus),
           server: p.server,
           waitSeconds: p.waitSeconds,
           log: (line) => {

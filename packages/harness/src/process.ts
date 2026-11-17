@@ -60,12 +60,17 @@ export const runTool = (
   };
 };
 
-export const describeFailure = (run: Exclude<ToolRun, { kind: "not-found" }>): string =>
-  run.kind === "exited"
-    ? `exited ${run.code}`
-    : run.timedOutAfterMs === null
-      ? `was killed by ${run.signal}`
-      : `timed out after ${run.timedOutAfterMs}ms and was killed by ${run.signal}`;
+export const describeFailure = (run: Exclude<ToolRun, { kind: "not-found" }>): string => {
+  if (run.kind === "exited") {
+    return `exited ${run.code}`;
+  }
+
+  if (run.timedOutAfterMs === null) {
+    return `was killed by ${run.signal}`;
+  }
+
+  return `timed out after ${run.timedOutAfterMs}ms and was killed by ${run.signal}`;
+};
 
 /** Runs a tool that must succeed; the error carries its stderr. */
 export const runToolOrThrow = (

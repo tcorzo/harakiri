@@ -63,20 +63,20 @@ export const listsAll =
       : { status: "missing", detail: `missing ${absent.join(", ")}` };
   };
 
-const ffmpegRow = (name: string) => new RegExp(`^\\s*\\S+\\s+${name}\\s`, "m");
+const ffmpegRow = (name: string) => new RegExp(`^\\s*\\S+\\s+${name}\\s`, "mu");
 
 export const CHECKS: readonly Check[] = [
   {
     label: "mpv",
     required: true,
     probe: ["mpv", "--version"],
-    judge: versionAtLeast(/^mpv v?/m, [0, 41, 0]),
+    judge: versionAtLeast(/^mpv v?/mu, [0, 41, 0]),
   },
   {
     label: "libplacebo (linked into mpv)",
     required: true,
     probe: ["mpv", "--version"],
-    judge: versionAtLeast(/^libplacebo version: v?/m, null),
+    judge: versionAtLeast(/^libplacebo version: v?/mu, null),
   },
   {
     label: "ffmpeg filter libplacebo",
@@ -89,7 +89,7 @@ export const CHECKS: readonly Check[] = [
     label: "ffmpeg bitstream filter dovi_rpu",
     required: true,
     probe: ["ffmpeg", "-hide_banner", "-bsfs"],
-    judge: listsAll(["dovi_rpu"], (name) => new RegExp(`^${name}$`, "m")),
+    judge: listsAll(["dovi_rpu"], (name) => new RegExp(`^${name}$`, "mu")),
   },
   {
     label: "ffmpeg encoders",
@@ -101,31 +101,31 @@ export const CHECKS: readonly Check[] = [
     label: "kwin_wayland",
     required: true,
     probe: ["kwin_wayland", "--version"],
-    judge: versionAtLeast(/kwin /, null),
+    judge: versionAtLeast(/kwin /u, null),
   },
   {
     label: "weston",
     required: true,
     probe: ["weston", "--version"],
-    judge: versionAtLeast(/weston /, [15, 0, 0]),
+    judge: versionAtLeast(/weston /u, [15, 0, 0]),
   },
   {
     label: "podman",
     required: false,
     probe: ["podman", "--version"],
-    judge: versionAtLeast(/podman version /, null),
+    judge: versionAtLeast(/podman version /u, null),
   },
   {
     label: "dovi_tool",
     required: true,
     probe: ["dovi_tool", "--version"],
-    judge: versionAtLeast(/dovi_tool /, null),
+    judge: versionAtLeast(/dovi_tool /u, null),
   },
   {
     label: "hdr10plus_tool",
     required: true,
     probe: ["hdr10plus_tool", "--version"],
-    judge: versionAtLeast(/hdr10plus_tool /, null),
+    judge: versionAtLeast(/hdr10plus_tool /u, null),
   },
 ];
 

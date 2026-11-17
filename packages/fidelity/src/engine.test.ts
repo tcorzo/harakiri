@@ -35,7 +35,7 @@ const run = (initial: ReturnType<typeof startFidelity>, ...observations: Observa
 
   for (const observation of observations) {
     const step = observe(state, observation);
-    state = step.state;
+    ({ state } = step);
     actions.push(...step.actions);
   }
 

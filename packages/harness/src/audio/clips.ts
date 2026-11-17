@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { join } from "node:path";
+import path from "node:path";
 
 import { runToolOrThrow } from "../process";
 
@@ -32,8 +32,8 @@ export interface Clip {
 
 export const synthesizeClip = (dir: string, codec: ClipCodec): Clip => {
   const { encode, rawFormat } = CLIP_CODECS[codec];
-  const mkv = join(dir, `${codec}.mkv`);
-  const reference = join(dir, `${codec}.${rawFormat}`);
+  const mkv = path.join(dir, `${codec}.mkv`);
+  const reference = path.join(dir, `${codec}.${rawFormat}`);
   ffmpeg([...SINE_5_1, ...encode, mkv]);
   ffmpeg(["-i", mkv, "-map", "0:a:0", "-c", "copy", "-f", rawFormat, reference]);
 
@@ -42,7 +42,7 @@ export const synthesizeClip = (dir: string, codec: ClipCodec): Clip => {
 
 /** A plain 16-bit PCM sine WAV: audio that carries no IEC 61937 bursts. */
 export const synthesizePcmWav = (dir: string): string => {
-  const wav = join(dir, "pcm-sine.wav");
+  const wav = path.join(dir, "pcm-sine.wav");
   ffmpeg([
     "-f",
     "lavfi",

@@ -56,7 +56,8 @@ class Bytes {
 
 const segment = (kind: number, pts: number, body: Uint8Array): Uint8Array =>
   new Bytes()
-    .u8(0x50, 0x47) // "PG"
+    // "PG" magic
+    .u8(0x50, 0x47)
     .u32(pts)
     .u32(pts)
     .u8(kind)
@@ -70,7 +71,7 @@ export const rleLine = (pixels: readonly number[]): Uint8Array => {
   let i = 0;
 
   while (i < pixels.length) {
-    const c = pixels[i]!;
+    const c = pixels[i] ?? 0;
     let n = 1;
 
     while (i + n < pixels.length && pixels[i + n] === c && n < 16_383) {
@@ -134,7 +135,8 @@ const displaySet = (width: number, height: number, comp: number, start: number, 
     .u16(width, height)
     .u8(0x10)
     .u16(comp)
-    .u8(0x80, 0, 0, 1) // epoch start, palette 0, one object
+    // epoch start, palette 0, one object
+    .u8(0x80, 0, 0, 1)
     .u16(0)
     .u8(0, 0)
     .u16(ox, oy)
@@ -145,7 +147,8 @@ const displaySet = (width: number, height: number, comp: number, start: number, 
 
   const object = new Bytes()
     .u16(0)
-    .u8(0, 0xc0) // version 0, first and last fragment
+    // version 0, first and last fragment
+    .u8(0, 0xc0)
     .u24(rle.length + 4)
     .u16(ow, oh)
     .bytes(rle)
@@ -170,16 +173,17 @@ const displaySet = (width: number, height: number, comp: number, start: number, 
   ];
 };
 
+const ticks = (s: number) => Math.round(s * 90_000);
+
 /** A whole .sup stream for `cues` (seconds) on a `width`×`height` canvas. */
 export const writePgs = (width: number, height: number, cues: readonly Cue[]): Uint8Array => {
   const out = new Bytes();
-  cues.forEach((cue, n) => {
-    const ticks = (s: number) => Math.round(s * 90_000);
 
+  for (const [n, cue] of cues.entries()) {
     for (const seg of displaySet(width, height, n * 2, ticks(cue.start), ticks(cue.end))) {
       out.bytes(seg);
     }
-  });
+  }
 
   return out.done();
 };
