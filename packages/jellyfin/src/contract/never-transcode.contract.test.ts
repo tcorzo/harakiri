@@ -209,6 +209,6 @@ describe(`${SERVER} never transcodes under harakiri's profile`, () => {
 
     // Another library has no known size, so there only the failures count.
     expect(failures).toEqual([]);
-    expect(verdicts.length).toBe(onCorpus ? corpus.entries.length : library.length);
+    expect(verdicts).toHaveLength(onCorpus ? corpus.entries.length : library.length);
   });
 });

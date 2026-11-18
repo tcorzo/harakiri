@@ -64,7 +64,7 @@ describe("T0: FFmpeg spdif muxer round trip through the extractor", () => {
   test("DTS core wrapped as type IV at mpv's 768 kHz rate uses subtype 4 and keeps every byte", () => {
     const { bursts, kinds, stream } = summarize(spdifOf("dts", { dtshdRate: 768_000 }));
     expect(kinds).toEqual(["17/4"]);
-    expect(bursts.length).toBe(summarize(spdifOf("dts")).bursts.length);
+    expect(bursts).toHaveLength(summarize(spdifOf("dts")).bursts.length);
     expect(stream.codec).toBe("dts-hd");
     expect(sha256(stream.bytes)).toBe(sha256(readFileSync(clip("dts").reference)));
   });
