@@ -105,13 +105,13 @@ test("clear removes the stored session", () => {
   s.clear();
 
   expect(s.load()).toBeNull();
-  expect(store(prefixing).load()).toBe(null);
+  expect(store(prefixing).load()).toBeNull();
 });
 
 test("a corrupt file loads as null", () => {
   writeFileSync(join(dir, "session.json"), "{not json");
 
-  expect(store(prefixing).load()).toBe(null);
+  expect(store(prefixing).load()).toBeNull();
 });
 
 test("an undecryptable token loads as null", () => {
@@ -124,7 +124,7 @@ test("an undecryptable token loads as null", () => {
     },
   };
 
-  expect(store(locked).load()).toBe(null);
+  expect(store(locked).load()).toBeNull();
 });
 
 test("without a keyring the e2e store keeps the token in plain text", () => {
@@ -140,7 +140,7 @@ test("without a keyring outside e2e the session lives in memory only", () => {
 
   expect(s.load()).toEqual(expectedSession);
   expect(() => readFileSync(join(dir, "session.json"))).toThrow(/ENOENT/);
-  expect(store(unavailable).load()).toBe(null);
+  expect(store(unavailable).load()).toBeNull();
 });
 
 test("the basic_text backend counts as no keyring: nothing is written", () => {

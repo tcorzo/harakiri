@@ -18,7 +18,7 @@ describe("parseVersion", () => {
 
   test("pads missing components with zero and returns null when the prefix is absent", () => {
     expect(parseVersion("weston 15", /weston /)).toEqual([15, 0, 0]);
-    expect(parseVersion("weston 15.0.1", /kwin /)).toBe(null);
+    expect(parseVersion("weston 15.0.1", /kwin /)).toBeNull();
   });
 });
 

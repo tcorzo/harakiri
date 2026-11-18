@@ -76,7 +76,7 @@ test("a single featured film never advances and has nothing up next", () => {
     since: 0,
     changedAt: 0,
   });
-  expect(upNext(0, 1)).toBe(null);
+  expect(upNext(0, 1)).toBeNull();
   expect(upNext(3, 4)).toBe(0);
 });
 

@@ -45,9 +45,9 @@ test("serverCandidates tries HTTPS and Jellyfin's port for an address typed with
   ]);
   expect(serverCandidates("https://films.example.org")).toEqual(["https://films.example.org/"]);
   expect(serverCandidates("http://nas/jellyfin")).toEqual(["http://nas/jellyfin/"]);
-  expect(serverCandidates("")).toBe(null);
-  expect(serverCandidates("ftp://nas")).toBe(null);
-  expect(serverCandidates("http://")).toBe(null);
+  expect(serverCandidates("")).toBeNull();
+  expect(serverCandidates("ftp://nas")).toBeNull();
+  expect(serverCandidates("http://")).toBeNull();
 });
 
 test("servers older than 10.10 are refused", () => {

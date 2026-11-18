@@ -53,6 +53,6 @@ test("mpvTrack maps a Jellyfin index, turns -1 off, and leaves an unknown choice
   expect(mpvTrack(subtitles, 1)).toBe(6);
   expect(mpvTrack(subtitles, 9)).toBe(3);
   expect(mpvTrack(subtitles, -1)).toBe(false);
-  expect(mpvTrack(subtitles, undefined)).toBe(undefined);
-  expect(mpvTrack(subtitles, 42)).toBe(undefined);
+  expect(mpvTrack(subtitles, undefined)).toBeUndefined();
+  expect(mpvTrack(subtitles, 42)).toBeUndefined();
 });
