@@ -125,7 +125,7 @@ describe(holdQuitUntilStopped, () => {
 
   it("exits after the cap when the player hangs", async () => {
     const { app, exits, quit } = fakeApp();
-    holdQuitUntilStopped(app, hang, 20);
+    holdQuitUntilStopped(app, hang, { capMs: 20 });
 
     quit();
     await delay(60);
@@ -157,11 +157,17 @@ describe(holdQuitUntilStopped, () => {
 
   it("still exits when afterStop throws", async () => {
     const { app, exits, quit } = fakeApp();
-    holdQuitUntilStopped(app, async () => await Promise.resolve(), {
-      afterStop: () => {
-        throw new Error("install failed");
+    holdQuitUntilStopped(
+      app,
+      async () => {
+        await Promise.resolve();
       },
-    });
+      {
+        afterStop: () => {
+          throw new Error("install failed");
+        },
+      }
+    );
 
     quit();
     await delay(0);

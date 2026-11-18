@@ -11,10 +11,29 @@ const log = getLogger(["harakiri", "updates", "electron-updater"]);
 
 // Passed as a property, never as the template: electron-updater's messages contain braces that
 // logtape would read as placeholders.
-const text = (message: unknown): string => String(message);
+const text = String;
+
+type Subscribe<Event extends string, Listener> = (event: Event, listener: Listener) => void;
+
+/** The part of `BaseUpdater` the adapter drives, so a test double needs no cast. */
+export type InstallingUpdater = Pick<
+  BaseUpdater,
+  | "autoDownload"
+  | "autoInstallOnAppQuit"
+  | "logger"
+  | "checkForUpdates"
+  | "downloadUpdate"
+  | "install"
+> & {
+  on: Subscribe<"update-available", (info: { readonly version: string }) => void> &
+    Subscribe<"update-not-available", () => void> &
+    Subscribe<"download-progress", (info: { readonly percent: number }) => void> &
+    Subscribe<"update-downloaded", (event: { readonly version: string }) => void> &
+    Subscribe<"error", (error: Error) => void>;
+};
 
 /** Wraps electron-updater so the update controller sees only the narrow `UpdaterLike`. */
-export function adaptUpdater(real: BaseUpdater): UpdaterLike {
+export const adaptUpdater = (real: InstallingUpdater): UpdaterLike => {
   real.autoDownload = false;
   real.autoInstallOnAppQuit = false;
   real.logger = {
@@ -33,11 +52,12 @@ export function adaptUpdater(real: BaseUpdater): UpdaterLike {
   let token: CancellationToken | undefined;
 
   return {
-    check: async () => await real.checkForUpdates(),
+    check: async () => {
+      await real.checkForUpdates();
+    },
     download: async () => {
       token = new CancellationTokenClass();
-
-      return await real.downloadUpdate(token);
+      await real.downloadUpdate(token);
     },
     cancelDownload: () => {
       token?.cancel();
@@ -70,10 +90,10 @@ export function adaptUpdater(real: BaseUpdater): UpdaterLike {
       });
     },
   };
-}
+};
 
 /** The packaged AppImage updater. Lazy: nothing touches `autoUpdater` until this is called. */
-export function electronUpdater(): UpdaterLike {
+export const electronUpdater = (): UpdaterLike => {
   const updater = pkg.autoUpdater;
 
   if (!(updater instanceof BaseUpdaterClass)) {
@@ -81,4 +101,4 @@ export function electronUpdater(): UpdaterLike {
   }
 
   return adaptUpdater(updater);
-}
+};

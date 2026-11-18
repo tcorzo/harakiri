@@ -72,6 +72,10 @@ const focusExistingWindow = (): void => {
   window.focus();
 };
 
+interface StartedUpdates {
+  updates?: Updates;
+}
+
 const logger = getLogger(["harakiri", "app"]);
 
 /** Logs what a terminal used to be the only witness of: crashes and the renderer's console. */
@@ -120,8 +124,13 @@ const main = async (): Promise<void> => {
   logProcessTrouble();
 
   killOnExit(player.mpvPid);
-  let updates: Updates | undefined;
-  holdQuitUntilStopped(app, player.stop, { afterStop: () => updates?.installIfReady() });
+  // Set once the app is ready; a quit before that has nothing to install.
+  const started: StartedUpdates = {};
+  holdQuitUntilStopped(app, player.stop, {
+    afterStop: () => {
+      started.updates?.installIfReady();
+    },
+  });
   app.on("second-instance", focusExistingWindow);
   app.on("web-contents-created", (_event, contents) => {
     confineWebContents(contents, isAppUrl);
@@ -138,8 +147,9 @@ const main = async (): Promise<void> => {
   });
 
   await app.whenReady();
+
   // electron-updater requests through Electron's net stack, which needs ready.
-  updates = startUpdates({
+  const updates = startUpdates({
     appImage: ownAppImage({
       appImage: env.APPIMAGE,
       appDir: env.APPDIR,
@@ -154,6 +164,8 @@ const main = async (): Promise<void> => {
       app.quit();
     },
   });
+
+  started.updates = updates;
   installContentSecurityPolicy(session.defaultSession, isAppUrl, contentSecurityPolicy(appUrl));
   registerIpc(isAppUrl, updates);
   createWindow();

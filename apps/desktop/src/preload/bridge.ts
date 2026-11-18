@@ -66,7 +66,9 @@ export const createBridge = (ipc: BridgeIpc, options: BridgeOptions): HarakiriBr
     },
     updates: {
       status: async () => await invoke(channels.updateStatus, UpdateStatus),
-      restart: async () => await invoke(channels.updateRestart, z.undefined()),
+      restart: async () => {
+        await invoke(channels.updateRestart, z.undefined());
+      },
     },
     discover: async () => await invoke(channels.discover, z.array(DiscoveredServer)),
     player: {
