@@ -59,7 +59,9 @@ export async function stubServer(routes: Readonly<Record<string, StubReply>>): P
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const bound: string | AddressInfo | null = server.address();
 
-  if (bound === null || typeof bound === "string") throw new Error("The stub is not on a TCP port");
+  if (bound === null || typeof bound === "string") {
+    throw new Error("The stub is not on a TCP port");
+  }
   const { port } = bound;
 
   return {

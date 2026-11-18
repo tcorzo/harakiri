@@ -13,7 +13,9 @@ function fakeMpv(props: Record<string, unknown>, react: (name: string, value: un
 
   const mpv: FidelityMpv = {
     getProperty: async <T>(name: string, schema: z.ZodType<T>) => {
-      if (!(name in props)) throw new Error("property unavailable");
+      if (!(name in props)) {
+        throw new Error("property unavailable");
+      }
 
       return schema.parse(props[name]);
     },
@@ -39,7 +41,9 @@ const start = () =>
 const watches: FidelityWatch[] = [];
 
 afterEach(() => {
-  for (const watch of watches.splice(0)) watch.stop();
+  for (const watch of watches.splice(0)) {
+    watch.stop();
+  }
 });
 
 function watcherOn(mpv: FidelityMpv, options: { paused?: boolean } = {}) {
@@ -60,7 +64,9 @@ function watcherOn(mpv: FidelityMpv, options: { paused?: boolean } = {}) {
 }
 
 async function samples(watcher: FidelityWatch, count: number) {
-  for (let i = 0; i < count; i += 1) await watcher.sample();
+  for (let i = 0; i < count; i += 1) {
+    await watcher.sample();
+  }
 }
 
 test("a bitstream whose output keeps dying is switched to decoding, and the track reopened", async () => {
@@ -70,10 +76,13 @@ test("a bitstream whose output keeps dying is switched to decoding, and the trac
   };
 
   const { mpv, sets } = fakeMpv(props, (name, value) => {
-    if (name === "aid" && value === 1 && props["audio-spdif"] === "")
+    if (name === "aid" && value === 1 && props["audio-spdif"] === "") {
       props["current-ao"] = "pipewire";
+    }
 
-    if (name === "audio-spdif") props["audio-spdif"] = value;
+    if (name === "audio-spdif") {
+      props["audio-spdif"] = value;
+    }
   });
 
   const { watcher, changes } = watcherOn(mpv);
@@ -102,8 +111,11 @@ test("one dropped sample out of four is a reopen, not a failure", async () => {
   const { watcher } = watcherOn(mpv);
 
   for (const open of [true, false, true, true, false, true, true, true]) {
-    if (open) props["current-ao"] = "pipewire";
-    else delete props["current-ao"];
+    if (open) {
+      props["current-ao"] = "pipewire";
+    } else {
+      delete props["current-ao"];
+    }
     await watcher.sample();
   }
 

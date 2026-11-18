@@ -27,7 +27,9 @@ export function openRunLog(
     .toReversed()
     .slice(keep);
 
-  for (const name of stale) rmSync(join(dir, name), { force: true });
+  for (const name of stale) {
+    rmSync(join(dir, name), { force: true });
+  }
 
   const format = getTextFormatter({ timestamp: "date-time-tz" });
 

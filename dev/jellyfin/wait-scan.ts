@@ -28,7 +28,9 @@ async function get<T>(path: string): Promise<T> {
   try {
     return await api<T>("GET", path, { token: auth.token });
   } catch (e) {
-    if (!String(e).includes("-> 401")) throw e;
+    if (!String(e).includes("-> 401")) {
+      throw e;
+    }
     auth = await login();
 
     return api<T>("GET", path, { token: auth.token });
@@ -73,8 +75,9 @@ while (Date.now() < deadline) {
     `[${new Date().toISOString()} +${elapsed}m] scan ${scan?.State ?? "?"} ${pct}% | movies ${c.MovieCount} series ${c.SeriesCount} episodes ${c.EpisodeCount}`
   );
 
-  if (scan?.State === "Running") seenRunning = true;
-  else if (seenRunning || Date.now() - start > IDLE_GRACE_MS) {
+  if (scan?.State === "Running") {
+    seenRunning = true;
+  } else if (seenRunning || Date.now() - start > IDLE_GRACE_MS) {
     finished = true;
     console.log(
       `scan idle, last result: ${scan?.LastExecutionResult?.Status ?? "none"} at ${scan?.LastExecutionResult?.EndTimeUtc ?? "-"}`
@@ -85,7 +88,9 @@ while (Date.now() < deadline) {
   await Bun.sleep(POLL_MS);
 }
 
-if (!finished) console.log(`timeout after ${timeoutMin}m, scan still running; counts so far:`);
+if (!finished) {
+  console.log(`timeout after ${timeoutMin}m, scan still running; counts so far:`);
+}
 
 const c = await counts();
 

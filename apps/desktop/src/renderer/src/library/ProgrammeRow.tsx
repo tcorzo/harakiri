@@ -79,7 +79,9 @@ export const ProgrammeRow = memo(function ProgrammeRow({
     initialOffset: () => {
       const place = useLit.getState().place;
 
-      if (place?.section !== sectionId) return 0;
+      if (place?.section !== sectionId) {
+        return 0;
+      }
       const at = entries.findIndex((entry) => entry.id === place.entry);
 
       return at === -1 ? 0 : at * pitchRem * rem;
@@ -105,7 +107,9 @@ export const ProgrammeRow = memo(function ProgrammeRow({
             {virtualizer.getVirtualItems().map((item) => {
               const entry = entries[item.index];
 
-              if (entry === undefined) return null;
+              if (entry === undefined) {
+                return null;
+              }
 
               return (
                 <div

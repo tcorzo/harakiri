@@ -62,7 +62,9 @@ export function compare(entry: Entry, item: Item | undefined): Row[] {
     ok: show(declared) === show(observed),
   });
 
-  if (!item) return [row("item", entryPath(entry), "not found on the server")];
+  if (!item) {
+    return [row("item", entryPath(entry), "not found on the server")];
+  }
 
   const streams = (item.MediaSources?.[0]?.MediaStreams ?? []).toSorted(
     (a, b) => a.Index - b.Index
@@ -139,7 +141,9 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
       );
     }
 
-    if (!response.ok) throw new Error(`${init.method ?? "GET"} ${path}: HTTP ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`${init.method ?? "GET"} ${path}: HTTP ${response.status}`);
+    }
 
     return response.json();
   }
@@ -206,10 +210,11 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
   const bad = rows.filter((r) => !r.ok);
   options.log("\n| entry | field | declared | Jellyfin | ok |\n| --- | --- | --- | --- | --- |");
 
-  for (const r of rows)
+  for (const r of rows) {
     options.log(
       `| ${r.id} | ${r.field} | ${r.declared} | ${r.observed} | ${r.ok ? "yes" : "**NO**"} |`
     );
+  }
   options.log(
     bad.length === 0
       ? `\nPASS: ${rows.length} checks on ${entries.length} entries match the catalog`

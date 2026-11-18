@@ -19,7 +19,9 @@ function startResponder(replies: string[]): Promise<{ port: number; probes: stri
   socket.on("message", (message, from) => {
     probes.push(message.toString("utf8"));
 
-    for (const reply of replies) socket.send(reply, from.port, from.address);
+    for (const reply of replies) {
+      socket.send(reply, from.port, from.address);
+    }
   });
 
   return new Promise((resolve) => {

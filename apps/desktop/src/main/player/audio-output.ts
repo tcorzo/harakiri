@@ -31,7 +31,9 @@ export function outputFromPactl(info: unknown, sinks: unknown): AudioOutput {
   const name = ServerInfo.parse(info).default_sink_name;
   const sink = Sinks.parse(sinks).find((s) => s.name === name);
 
-  if (sink === undefined) return { kind: "unknown", detail: `default sink ${name} is not listed` };
+  if (sink === undefined) {
+    return { kind: "unknown", detail: `default sink ${name} is not listed` };
+  }
 
   return {
     kind: "known",

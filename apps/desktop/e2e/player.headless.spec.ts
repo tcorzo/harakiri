@@ -168,7 +168,9 @@ test("a second play replaces the first: one mpv, and the first reports stopped",
 }) => {
   const [first, second] = await jellyfin.pickItems(ITEMS.sdrH264Short, 2);
 
-  if (!first || !second) throw new Error("pickItems returned fewer items than asked");
+  if (!first || !second) {
+    throw new Error("pickItems returned fewer items than asked");
+  }
   await preserveUserData(first.id);
   await preserveUserData(second.id);
   const { page } = await launch();

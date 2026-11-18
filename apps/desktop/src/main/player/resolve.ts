@@ -88,11 +88,15 @@ export function resolve(
   request: ResolveRequest,
   server: ServerUrl
 ): Resolution {
-  if (response.ErrorCode) throw new Error(ERRORS[response.ErrorCode]);
+  if (response.ErrorCode) {
+    throw new Error(ERRORS[response.ErrorCode]);
+  }
   const sources = response.MediaSources ?? [];
   const source = sources.find((s) => s.Id === request.mediaSourceId) ?? sources[0];
 
-  if (!source?.Id) throw new Error("The server returned no media source");
+  if (!source?.Id) {
+    throw new Error("The server returned no media source");
+  }
 
   const transcodingUrl = source.TranscodingUrl ?? undefined;
   const method: PlayMethod = transcodingUrl === undefined ? "DirectPlay" : "Transcode";
@@ -144,7 +148,9 @@ export interface ProgrammeEntry {
 }
 
 const runtime = (ticks: number | null | undefined): string | undefined => {
-  if (!ticks) return undefined;
+  if (!ticks) {
+    return undefined;
+  }
   const minutes = Math.round(ticks / 600_000_000);
   const hours = Math.floor(minutes / 60);
 

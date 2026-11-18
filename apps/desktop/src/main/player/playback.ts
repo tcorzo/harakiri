@@ -150,7 +150,9 @@ function jellyfinClient(session: Session, auth: string): Client {
   // ky 2 consumes an error response's body before the generated client reads it, which loses the
   // status behind "body already used". The status crosses IPC, so a 401 reads as signed out.
   client.interceptors.response.use((response) => {
-    if (!response.ok) throw new ServerStatusError(response.status, response.url);
+    if (!response.ok) {
+      throw new ServerStatusError(response.status, response.url);
+    }
 
     return response;
   });
@@ -316,7 +318,9 @@ export async function startPlayback(
     const message = error instanceof Error ? error.message : String(error);
     logger.error("Playback of {itemId} failed to start: {message}", { itemId, message });
 
-    if (mpv) await mpv.quit();
+    if (mpv) {
+      await mpv.quit();
+    }
     send({ ...base, phase: "error", positionTicks: startTicks, error: message });
     throw error;
   }
@@ -330,7 +334,9 @@ export async function startPlayback(
 async function addSidecarSubtitles(mpv: MpvClient, resolution: Resolution): Promise<void> {
   const files = resolution.tracks.subtitleFiles;
 
-  if (files.length === 0) return;
+  if (files.length === 0) {
+    return;
+  }
 
   for (const [index, url] of files.entries()) {
     try {
@@ -343,7 +349,9 @@ async function addSidecarSubtitles(mpv: MpvClient, resolution: Resolution): Prom
     }
   }
 
-  if (resolution.sid === undefined) return;
+  if (resolution.sid === undefined) {
+    return;
+  }
   // If mpv died meanwhile, its exit already ends playback with an error.
   await mpv
     .setProperty("sid", resolution.sid === false ? "no" : resolution.sid)
@@ -392,10 +400,11 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
   });
 
   const reportProgress = () => {
-    if (started)
+    if (started) {
       void report("progress", () =>
         reportPlaybackProgress({ client, throwOnError: true, body: progressBody() })
       );
+    }
   };
 
   let watch: FidelityWatch | undefined;
@@ -410,14 +419,18 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
   // A new audio track may bitstream where the last could not, or the reverse, so mpv is told
   // what it may bitstream for it before it opens the track. A transcode plays the server's sound.
   const beforeAudioTrack = async (id: number | false) => {
-    if (watch === undefined || resolution.method === "Transcode") return;
+    if (watch === undefined || resolution.method === "Transcode") {
+      return;
+    }
     const index = resolution.tracks.audio.find((track) => track.mpvId === id)?.index;
     const sound = id === false ? null : fileStreams(resolution.source, index).sound;
     await watch.selectSound(sound);
   };
 
   const emit = () => {
-    if (finished) return;
+    if (finished) {
+      return;
+    }
     send({
       ...base,
       ...signalNow(),
@@ -429,7 +442,9 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
   const overlay = (ass: string | undefined) => {
     const key = ass ?? "";
 
-    if (key === lastOverlay) return;
+    if (key === lastOverlay) {
+      return;
+    }
     lastOverlay = key;
 
     const args =
@@ -486,14 +501,18 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
       .with({ type: "pause" }, ({ paused }) => mpv.setProperty("pause", paused))
       .with({ type: "seek" }, ({ seconds }) => mpv.command("seek", seconds, "relative"))
       .with({ type: "track" }, async ({ property, id }) => {
-        if (property === "aid") await beforeAudioTrack(id);
+        if (property === "aid") {
+          await beforeAudioTrack(id);
+        }
         await mpv.setProperty(property, id === false ? "no" : id);
       })
       .with({ type: "stop" }, () => finish({ phase: "stopped" }))
       .exhaustive();
 
   function dispatch(input: ControlsInput) {
-    if (finished) return;
+    if (finished) {
+      return;
+    }
     const next = step(controls, input, rows);
     controls = next.state;
 
@@ -503,7 +522,9 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
       });
     }
 
-    if (input.type === "action") scheduleHide();
+    if (input.type === "action") {
+      scheduleHide();
+    }
     render();
   }
 
@@ -511,7 +532,9 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
     finished ??= (async () => {
       clearTimeout(hideTimer);
 
-      for (const timer of timers) clearInterval(timer);
+      for (const timer of timers) {
+        clearInterval(timer);
+      }
       watch?.stop();
 
       // At eof mpv has already unloaded the file, and the last time-pos notification can lag
@@ -550,19 +573,31 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
 
   const loaded = new Promise<void>((resolveLoaded, rejectLoaded) => {
     mpv.onEvent((event: MpvEvent) => {
-      if (event.event === "file-loaded") resolveLoaded();
+      if (event.event === "file-loaded") {
+        resolveLoaded();
+      }
 
-      if (event.event === "playback-restart" && started) reportProgress();
+      if (event.event === "playback-restart" && started) {
+        reportProgress();
+      }
 
-      if (event.event !== "end-file") return;
+      if (event.event !== "end-file") {
+        return;
+      }
       const end = endFile.safeParse(event);
 
-      if (!end.success) return;
+      if (!end.success) {
+        return;
+      }
       const { reason, file_error: fileError } = end.data;
 
-      if (reason === "eof") void finish({ phase: "ended" });
+      if (reason === "eof") {
+        void finish({ phase: "ended" });
+      }
 
-      if (reason === "error") fail(`mpv could not play the file: ${fileError ?? "unknown error"}`);
+      if (reason === "error") {
+        fail(`mpv could not play the file: ${fileError ?? "unknown error"}`);
+      }
     });
     void mpv.exited.then((exit) =>
       fail(`mpv exited unexpectedly (code ${exit.code ?? exit.signal})`)
@@ -570,28 +605,41 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
 
     // Before the file loads, startPlayback owns the failure and its error event.
     const fail = (error: string) => {
-      if (started) void finish({ phase: "error", error });
-      else rejectLoaded(new Error(error));
+      if (started) {
+        void finish({ phase: "error", error });
+      } else {
+        rejectLoaded(new Error(error));
+      }
     };
   });
 
   loaded.catch(() => {});
 
   mpv.onClientMessage(([target, raw]) => {
-    if (target !== "harakiri") return;
+    if (target !== "harakiri") {
+      return;
+    }
     const action = parsePlayerAction(raw);
 
-    if (action) dispatch({ type: "action", action });
+    if (action) {
+      dispatch({ type: "action", action });
+    }
   });
   await Promise.all([
     mpv.observeProperty("time-pos", z.number(), (value) => {
-      if (value !== undefined) position = value;
+      if (value !== undefined) {
+        position = value;
+      }
     }),
     mpv.observeProperty("duration", z.number(), (value) => {
-      if (value !== undefined) duration = value;
+      if (value !== undefined) {
+        duration = value;
+      }
     }),
     mpv.observeProperty("pause", z.boolean(), (value) => {
-      if (value === undefined || value === controls.paused) return;
+      if (value === undefined || value === controls.paused) {
+        return;
+      }
       dispatch({ type: "paused", paused: value });
       reportProgress();
       emit();
@@ -618,11 +666,17 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
   mpv.onEvent((event) => {
     const log = logMessage.safeParse(event);
 
-    if (!log.success) return;
+    if (!log.success) {
+      return;
+    }
 
-    if (log.data.prefix.startsWith("ao")) watch?.audioOutputWarning();
+    if (log.data.prefix.startsWith("ao")) {
+      watch?.audioOutputWarning();
+    }
 
-    if (log.data.prefix.startsWith("vo") && log.data.level !== "warn") watch?.rendererError();
+    if (log.data.prefix.startsWith("vo") && log.data.level !== "warn") {
+      watch?.rendererError();
+    }
   });
   await mpv.command("request_log_messages", "warn");
   await mpv.command("loadfile", resolution.url);
@@ -632,10 +686,11 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
 
   await addSidecarSubtitles(mpv, resolution);
 
-  if (!finished)
+  if (!finished) {
     await report("start", () =>
       reportPlaybackStart({ client, throwOnError: true, body: progressBody() })
     );
+  }
   emit();
   scheduleHide();
   render();
@@ -643,7 +698,9 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
     setInterval(() => {
       emit();
 
-      if (controls.visible) render();
+      if (controls.visible) {
+        render();
+      }
     }, EVENT_EVERY_MS),
     setInterval(reportProgress, PROGRESS_EVERY_MS)
   );
@@ -661,7 +718,9 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
     pid: () => (mpvAlive ? mpv.pid : undefined),
     stop: () => finish({ phase: "stopped" }),
     async probe() {
-      if (finished) return { running: false };
+      if (finished) {
+        return { running: false };
+      }
 
       const [path, timePos, pause, aid, sid, audioCodec, audioFormat, videoGamma, videoPrimaries] =
         await Promise.all([

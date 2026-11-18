@@ -6,7 +6,9 @@ import type { UpdateStatus } from "../../../shared/bridge";
 export function versionLine(version: string, status: UpdateStatus | undefined): string {
   const base = `Version ${version}`;
 
-  if (status === undefined) return base;
+  if (status === undefined) {
+    return base;
+  }
 
   const state = match(status)
     .with({ state: "unsupported" }, () => undefined)

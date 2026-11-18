@@ -61,9 +61,13 @@ export function buildPlaybackArgs(config: PlaybackConfig = {}): string[] {
     ["ytdl", "no"],
   ];
 
-  if (passthrough !== "none") options.push(["audio-spdif", [...new Set(passthrough)].join(",")]);
+  if (passthrough !== "none") {
+    options.push(["audio-spdif", [...new Set(passthrough)].join(",")]);
+  }
 
-  if (config.audioDevice !== undefined) options.push(["audio-device", config.audioDevice]);
+  if (config.audioDevice !== undefined) {
+    options.push(["audio-device", config.audioDevice]);
+  }
 
   return options.map(([name, value]) => `--${name}=${value}`);
 }

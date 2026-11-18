@@ -33,12 +33,16 @@ const TRANSCODE_FIXTURE = "transcode-bitrate";
 const fixtures = process.argv.slice(2).map((arg) => {
   const [name, itemId] = arg.split("=");
 
-  if (!name || !itemId) throw new Error(`expected name=itemId, got ${arg}`);
+  if (!name || !itemId) {
+    throw new Error(`expected name=itemId, got ${arg}`);
+  }
 
   return { name, itemId: ItemId.parse(itemId) };
 });
 
-if (fixtures.length === 0) throw new Error("pass at least one fixture as name=itemId");
+if (fixtures.length === 0) {
+  throw new Error("pass at least one fixture as name=itemId");
+}
 
 const anonymous = createClient({ baseUrl: server, auth: () => authorizationHeader(identity) });
 
@@ -68,7 +72,9 @@ const record = async (name: string, itemId: ItemId, maxBitrate?: number) => {
   if (maxBitrate !== undefined) {
     body.MaxStreamingBitrate = maxBitrate;
 
-    if (body.DeviceProfile) body.DeviceProfile.MaxStreamingBitrate = maxBitrate;
+    if (body.DeviceProfile) {
+      body.DeviceProfile.MaxStreamingBitrate = maxBitrate;
+    }
   }
 
   const { data } = await getPostedPlaybackInfo({
@@ -87,5 +93,6 @@ const record = async (name: string, itemId: ItemId, maxBitrate?: number) => {
   console.log(`${name}: ${data.MediaSources?.[0]?.Name ?? "?"}`);
 };
 
-for (const { name, itemId } of fixtures)
+for (const { name, itemId } of fixtures) {
   await record(name, itemId, name === TRANSCODE_FIXTURE ? 200_000 : undefined);
+}

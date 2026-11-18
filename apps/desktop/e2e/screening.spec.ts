@@ -115,7 +115,9 @@ test("Play from the title page: House, Programme, Picture, then mpv plays the it
   // Three skips forward of 30 s, then Back in mpv, as a remote pointed at the player would.
   const from = running.timePos ?? 60;
 
-  for (let i = 0; i < 3; i += 1) await pressKey(userDataDir, "RIGHT");
+  for (let i = 0; i < 3; i += 1) {
+    await pressKey(userDataDir, "RIGHT");
+  }
   await probeUntil(page, (p) => (p.timePos ?? 0) >= from + 85);
   await pressKey(userDataDir, "ESC");
   const stopped = await playerEventUntil(page, (event) => event.phase === "stopped");

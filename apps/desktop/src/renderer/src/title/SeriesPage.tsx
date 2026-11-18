@@ -167,13 +167,16 @@ export function SeriesPage({
   const pick = (index: number): void => {
     const chosen = seasons[index];
 
-    if (chosen !== undefined) seriesPlace.set(series.id, { season: chosen.id, episode: null });
+    if (chosen !== undefined) {
+      seriesPlace.set(series.id, { season: chosen.id, episode: null });
+    }
     startTransition(() => setPicked(index));
   };
 
   const rememberEpisode = (episode: Entry): void => {
-    if (season !== undefined)
+    if (season !== undefined) {
       seriesPlace.set(series.id, { season: season.id, episode: episode.id });
+    }
   };
 
   const open = (episode: Entry): void =>
@@ -203,8 +206,9 @@ export function SeriesPage({
                   label={`${next.progress === null ? "Play" : "Resume"} ${episodeCode(next) ?? ""} ${next.title}`}
                   onPress={() => {
                     // Back from the player lands on Play, which by then offers what comes next.
-                    if (season !== undefined)
+                    if (season !== undefined) {
                       seriesPlace.set(series.id, { season: season.id, episode: null });
+                    }
                     void navigate({
                       to: "/screening/$id",
                       params: { id: next.id },

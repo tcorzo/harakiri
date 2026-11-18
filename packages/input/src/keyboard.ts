@@ -35,11 +35,15 @@ export function keyToAction(
 ): Action | undefined {
   const binding = Object.hasOwn(keyBindings, key) ? keyBindings[key] : undefined;
 
-  if (binding === undefined || (editing && !binding.whileEditing)) return undefined;
+  if (binding === undefined || (editing && !binding.whileEditing)) {
+    return undefined;
+  }
 
   // Holding a direction scrolls, as the gamepad repeats it; remotes repeat every key on a long
   // press, and a held Select or Back must act once, not start a film and then back out of it.
-  if (repeat && !isDirection(binding.action)) return undefined;
+  if (repeat && !isDirection(binding.action)) {
+    return undefined;
+  }
 
   return binding.action;
 }
@@ -64,11 +68,17 @@ const textInputTypes: ReadonlySet<string> = new Set([
 
 /** Whether keys pressed on `target` are typing, which is what `keyToAction`'s `editing` means. */
 export function isEditing(target: FocusTarget | null | undefined): boolean {
-  if (target == null) return false;
+  if (target == null) {
+    return false;
+  }
 
-  if (target.isContentEditable === true) return true;
+  if (target.isContentEditable === true) {
+    return true;
+  }
 
-  if (target.readOnly === true) return false;
+  if (target.readOnly === true) {
+    return false;
+  }
   const tag = target.tagName.toUpperCase();
 
   return tag === "TEXTAREA" || (tag === "INPUT" && textInputTypes.has(target.type ?? "text"));

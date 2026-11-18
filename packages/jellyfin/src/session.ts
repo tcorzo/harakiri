@@ -87,21 +87,30 @@ const toSession = async (
 
   // Without throwOnError the generated client reports a network failure as a missing response.
   for (const answer of answers) {
-    if (answer.response === undefined)
+    if (answer.response === undefined) {
       return { kind: "unreachable", message: describe(answer.error) };
+    }
   }
 
   const authStatus = auth.response?.status ?? 0;
 
-  if (authStatus === 401) return { kind: "wrong-credentials" };
+  if (authStatus === 401) {
+    return { kind: "wrong-credentials" };
+  }
 
-  if (auth.response?.ok !== true) return { kind: "rejected", status: authStatus };
+  if (auth.response?.ok !== true) {
+    return { kind: "rejected", status: authStatus };
+  }
 
-  if (info.response?.ok !== true) return { kind: "rejected", status: info.response?.status ?? 0 };
+  if (info.response?.ok !== true) {
+    return { kind: "rejected", status: info.response?.status ?? 0 };
+  }
   const signedIn = SignedIn.safeParse(auth.data);
   const serverInfo = ServerInfo.safeParse(info.data);
 
-  if (!signedIn.success || !serverInfo.success) return { kind: "rejected", status: authStatus };
+  if (!signedIn.success || !serverInfo.success) {
+    return { kind: "rejected", status: authStatus };
+  }
 
   return {
     kind: "signed-in",

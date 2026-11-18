@@ -68,7 +68,9 @@ type GuardedContents = Pick<WebContents, "on" | "setWindowOpenHandler">;
 /** Keeps a web view on the app: no navigation away, no new windows, no embedded webviews. */
 export function confineWebContents(contents: GuardedContents, isAppUrl: AppUrlCheck): void {
   contents.on("will-navigate", (event) => {
-    if (!isAppUrl(event.url)) event.preventDefault();
+    if (!isAppUrl(event.url)) {
+      event.preventDefault();
+    }
   });
   contents.on("will-attach-webview", (event) => event.preventDefault());
   contents.setWindowOpenHandler(() => ({ action: "deny" }));
@@ -89,7 +91,9 @@ export function fromAppOnly<Args extends unknown[], Result>(
   return (event, ...args) => {
     const url = event.senderFrame?.url;
 
-    if (url === undefined || !isAppUrl(url)) throw new ForeignSenderError(url);
+    if (url === undefined || !isAppUrl(url)) {
+      throw new ForeignSenderError(url);
+    }
 
     return handler(event, ...args);
   };

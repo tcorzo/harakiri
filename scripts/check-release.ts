@@ -59,11 +59,15 @@ const specifiers = (source: string): Set<string> => {
 };
 
 const packageOf = (spec: string): string | undefined => {
-  if (spec.startsWith(".") || spec.startsWith("/") || spec.startsWith("node:")) return undefined;
+  if (spec.startsWith(".") || spec.startsWith("/") || spec.startsWith("node:")) {
+    return undefined;
+  }
   const parts = spec.split("/");
   const name = spec.startsWith("@") ? parts.slice(0, 2).join("/") : (parts[0] ?? spec);
 
-  if (name === "electron" || builtinModules.includes(name)) return undefined;
+  if (name === "electron" || builtinModules.includes(name)) {
+    return undefined;
+  }
 
   return name;
 };
@@ -145,7 +149,9 @@ try {
     for (const spec of specifiers(readFileSync(js, "utf8"))) {
       const pkg = packageOf(spec);
 
-      if (pkg) needed.add(pkg);
+      if (pkg) {
+        needed.add(pkg);
+      }
     }
   }
 

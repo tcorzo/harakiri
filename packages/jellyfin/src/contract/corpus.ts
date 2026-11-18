@@ -82,7 +82,9 @@ export const loadCorpus = async (): Promise<Corpus> => {
 export const corpusEntry = (corpus: Corpus, id: string): CorpusEntry => {
   const entry = corpus.entries.find((candidate) => candidate.id === id);
 
-  if (!entry) throw new Error(`the corpus catalog has no entry ${id}`);
+  if (!entry) {
+    throw new Error(`the corpus catalog has no entry ${id}`);
+  }
 
   return entry;
 };
@@ -111,14 +113,18 @@ export const matchCorpus = <T extends { readonly path: string }>(
 
   const matched = new Set(byEntry.values());
 
-  if (items.length === 0 || items.some((item) => !matched.has(item))) return undefined;
+  if (items.length === 0 || items.some((item) => !matched.has(item))) {
+    return undefined;
+  }
 
   return {
     present: corpus.entries.filter((entry) => byEntry.get(entry)),
     item: (entry) => {
       const item = byEntry.get(entry);
 
-      if (item) return item;
+      if (item) {
+        return item;
+      }
 
       const fix =
         entry.tier === "fate"

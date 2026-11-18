@@ -76,7 +76,9 @@ const audioOutput = () => {
 function deps(): Omit<PlaybackDeps, "audioOutput"> {
   const session = loadSession();
 
-  if (!session) throw new Error("Not signed in");
+  if (!session) {
+    throw new Error("Not signed in");
+  }
   const { deviceId: _ownDeviceIdFromSession, ...identity } = clientIdentity(session.deviceId);
 
   return {
@@ -109,10 +111,14 @@ export function forgetPrepared(): void {
 async function takePrepared(request: PlayRequest, session: Session): Promise<Prepared | undefined> {
   const kept = pending;
 
-  if (kept === undefined || kept.key !== requestKey(request, session)) return undefined;
+  if (kept === undefined || kept.key !== requestKey(request, session)) {
+    return undefined;
+  }
   pending = undefined;
 
-  if (Date.now() - kept.at > PREPARED_FOR_MS) return undefined;
+  if (Date.now() - kept.at > PREPARED_FOR_MS) {
+    return undefined;
+  }
 
   return kept.result.catch(() => undefined);
 }
@@ -126,7 +132,9 @@ export function play(request: PlayRequest, send: (event: PlayerEvent) => void): 
     const playback = await startPlayback(request, send, playbackDeps, prepared);
     current = playback;
     void playback.done.then(() => {
-      if (current === playback) current = undefined;
+      if (current === playback) {
+        current = undefined;
+      }
     });
   });
 }

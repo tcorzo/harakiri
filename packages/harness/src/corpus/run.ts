@@ -30,13 +30,15 @@ export function runAsync(
     child.on("close", (code, signal) => {
       clearTimeout(timer);
 
-      if (code === 0) resolve({ stdout, stderr });
-      else
+      if (code === 0) {
+        resolve({ stdout, stderr });
+      } else {
         reject(
           new Error(
             `${command} ${args.join(" ")} ${signal ? `was killed by ${signal}` : `exited ${code}`}:\n${stderr}`
           )
         );
+      }
     });
   });
 }
@@ -47,7 +49,9 @@ export function limiter(limit: number) {
   const queue: (() => void)[] = [];
 
   const next = () => {
-    if (active >= limit) return;
+    if (active >= limit) {
+      return;
+    }
     const start = queue.shift();
 
     if (start) {

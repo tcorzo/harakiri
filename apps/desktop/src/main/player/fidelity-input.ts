@@ -76,7 +76,9 @@ const touchesPicture = (reason: string): boolean =>
  * reason touches it, and otherwise encodes to the first listed codec. An H.264 encode is SDR.
  */
 export function deliveryOf(resolution: Resolution, file: FileStreams): Delivery {
-  if (resolution.method !== "Transcode") return { kind: "direct" };
+  if (resolution.method !== "Transcode") {
+    return { kind: "direct" };
+  }
   const query = new URL(resolution.url).searchParams;
   const list = (name: string) => (query.get(name) ?? "").toLowerCase().split(",").filter(Boolean);
 

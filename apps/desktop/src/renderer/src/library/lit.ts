@@ -53,7 +53,9 @@ export const useLit = create<LitState>()((set) => ({
   travelling: false,
   enter: (section) =>
     set((state) => {
-      if (state.section.id === section.id) return state;
+      if (state.section.id === section.id) {
+        return state;
+      }
       const now = Date.now();
 
       return { section, movedAt: now, travelling: now - state.movedAt < travelMs };
@@ -91,11 +93,17 @@ export function restoreKeys(
 ): string[] {
   const keys: string[] = [];
 
-  if (place !== null) keys.push(cardKey(place.section, place.entry), rowKey(place.section));
+  if (place !== null) {
+    keys.push(cardKey(place.section, place.entry), rowKey(place.section));
+  }
 
-  if (hero) keys.push("hero-play");
+  if (hero) {
+    keys.push("hero-play");
+  }
 
-  if (firstSection !== undefined) keys.push(rowKey(firstSection));
+  if (firstSection !== undefined) {
+    keys.push(rowKey(firstSection));
+  }
 
   return keys;
 }

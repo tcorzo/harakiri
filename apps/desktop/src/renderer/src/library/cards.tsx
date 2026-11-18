@@ -24,7 +24,9 @@ function Picture({
   readonly widthRem: number;
   readonly className: string;
 }) {
-  if (image === null) return <div aria-hidden="true" className={`${className} bg-ink-raised`} />;
+  if (image === null) {
+    return <div aria-hidden="true" className={`${className} bg-ink-raised`} />;
+  }
 
   return (
     <img

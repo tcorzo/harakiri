@@ -51,7 +51,9 @@ export function parseInboundLine(line: string): InboundMessage {
   const json: unknown = JSON.parse(line);
   const event = otherEventSchema.safeParse(json);
 
-  if (!event.success) return { kind: "reply", reply: replySchema.parse(json) };
+  if (!event.success) {
+    return { kind: "reply", reply: replySchema.parse(json) };
+  }
 
   switch (event.data.event) {
     case "property-change":
@@ -87,7 +89,9 @@ export function createLineSplitter(onLine: (line: string) => void): (chunk: stri
       const line = buffer.slice(0, newline);
       buffer = buffer.slice(newline + 1);
 
-      if (line.trim() !== "") onLine(line);
+      if (line.trim() !== "") {
+        onLine(line);
+      }
       newline = buffer.indexOf("\n");
     }
   };

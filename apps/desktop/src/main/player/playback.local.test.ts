@@ -53,7 +53,9 @@ class FakeJellyfin {
     await new Promise<void>((resolve) => this.server.listen(0, "127.0.0.1", resolve));
     const address = this.server.address();
 
-    if (address === null || typeof address === "string") throw new Error("not a TCP server");
+    if (address === null || typeof address === "string") {
+      throw new Error("not a TCP server");
+    }
 
     return `http://127.0.0.1:${address.port}`;
   }
@@ -72,7 +74,9 @@ class FakeJellyfin {
     req.setEncoding("utf8");
     let text = "";
 
-    for await (const chunk of req) text += String(chunk);
+    for await (const chunk of req) {
+      text += String(chunk);
+    }
     const url = req.url ?? "";
     const authorized = (req.headers.authorization ?? "").includes(`Token="${TOKEN}"`);
     this.requests.push({
@@ -82,16 +86,23 @@ class FakeJellyfin {
       body: text ? (JSON.parse(text) as unknown) : undefined,
     });
 
-    if (!authorized) return void res.writeHead(401).end();
+    if (!authorized) {
+      return void res.writeHead(401).end();
+    }
 
     const path = url.split("?")[0];
 
-    if (path === `/Items/${ITEM}/PlaybackInfo`) return json(res, this.playbackInfo());
+    if (path === `/Items/${ITEM}/PlaybackInfo`) {
+      return json(res, this.playbackInfo());
+    }
 
-    if (path === `/Items/${ITEM}` && this.stallItem) return;
+    if (path === `/Items/${ITEM}` && this.stallItem) {
+      return;
+    }
 
-    if (path === `/Items/${ITEM}`)
+    if (path === `/Items/${ITEM}`) {
       return json(res, { Name: "Synthetic", Type: "Movie", RunTimeTicks: this.runTimeTicks });
+    }
 
     if (path === "/Sessions/Playing/Stopped") {
       await new Promise((resolve) => setTimeout(resolve, this.stopDelayMs));
@@ -100,16 +111,23 @@ class FakeJellyfin {
       return void res.writeHead(204).end();
     }
 
-    if (path?.startsWith("/Sessions/Playing")) return void res.writeHead(204).end();
+    if (path?.startsWith("/Sessions/Playing")) {
+      return void res.writeHead(204).end();
+    }
 
-    if (path === SUBTITLE_PATH && this.stallSidecar) return;
+    if (path === SUBTITLE_PATH && this.stallSidecar) {
+      return;
+    }
 
-    if (path === SUBTITLE_PATH)
+    if (path === SUBTITLE_PATH) {
       return void res
         .writeHead(200, { "Content-Type": "application/x-subrip" })
         .end("1\n00:00:00,000 --> 00:00:30,000\nSidecar\n");
+    }
 
-    if (path === `/Videos/${ITEM}/stream`) return serveFile(req, res, await readFile(this.media));
+    if (path === `/Videos/${ITEM}/stream`) {
+      return serveFile(req, res, await readFile(this.media));
+    }
     res.writeHead(404).end();
   }
 
@@ -171,10 +189,14 @@ function mpvChild(): { pid: number; cmdline: string } {
     try {
       const ppid = readFileSync(`/proc/${pid}/stat`, "utf8").split(") ")[1]?.split(" ")[1];
 
-      if (Number(ppid) !== process.pid) continue;
+      if (Number(ppid) !== process.pid) {
+        continue;
+      }
       const cmdline = readFileSync(`/proc/${pid}/cmdline`, "utf8");
 
-      if (cmdline.split("\0")[0]?.endsWith("mpv")) return { pid: Number(pid), cmdline };
+      if (cmdline.split("\0")[0]?.endsWith("mpv")) {
+        return { pid: Number(pid), cmdline };
+      }
     } catch {
       // The process exited while we looked.
     }
@@ -194,7 +216,9 @@ async function until(
   while (Date.now() < deadline) {
     last = await playback.probe();
 
-    if (check(last)) return last;
+    if (check(last)) {
+      return last;
+    }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
@@ -336,7 +360,9 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
     const at = new Map<string, number>();
     const watched = events.push.bind(events);
     events.push = (...added: PlayerEvent[]) => {
-      for (const event of added) at.set(event.phase, Date.now());
+      for (const event of added) {
+        at.set(event.phase, Date.now());
+      }
 
       return watched(...added);
     };

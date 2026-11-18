@@ -31,7 +31,7 @@ export function runTool(
     killSignal: "SIGKILL",
   });
 
-  if (result.signal !== null)
+  if (result.signal !== null) {
     return {
       kind: "killed",
       signal: result.signal,
@@ -42,10 +42,12 @@ export function runTool(
       stdout: result.stdout,
       stderr: result.stderr,
     };
+  }
 
   if (result.error !== undefined) {
-    if ("code" in result.error && result.error.code === "ENOENT")
+    if ("code" in result.error && result.error.code === "ENOENT") {
       return { kind: "not-found", command };
+    }
     throw result.error;
   }
 
@@ -73,10 +75,13 @@ export function runToolOrThrow(
 ): { stdout: string; stderr: string } {
   const run = runTool(command, args, timeoutMs);
 
-  if (run.kind === "not-found") throw new Error(`${command} is not on PATH`);
+  if (run.kind === "not-found") {
+    throw new Error(`${command} is not on PATH`);
+  }
 
-  if (run.kind === "killed" || run.code !== 0)
+  if (run.kind === "killed" || run.code !== 0) {
     throw new Error(`${command} ${args.join(" ")} ${describeFailure(run)}:\n${run.stderr}`);
+  }
 
   return run;
 }

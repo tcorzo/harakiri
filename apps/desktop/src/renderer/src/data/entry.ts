@@ -130,10 +130,13 @@ export function programmeNotes(
 ): NoteFact[] {
   const facts: NoteFact[] = [];
 
-  if (entry.year !== null) facts.push({ text: String(entry.year) });
+  if (entry.year !== null) {
+    facts.push({ text: String(entry.year) });
+  }
 
-  if (entry.minutes !== null && entry.kind !== "Series")
+  if (entry.minutes !== null && entry.kind !== "Series") {
     facts.push({ text: `${entry.minutes} min` });
+  }
 
   if (fidelity !== null) {
     const { picture, sound } = fidelity;
@@ -158,13 +161,17 @@ export function programmeNotes(
 export function episodeCode(entry: Entry): string | null {
   const s = entry.series;
 
-  if (s === null || s.season === null || s.episode === null) return null;
+  if (s === null || s.season === null || s.episode === null) {
+    return null;
+  }
 
   return `S${String(s.season).padStart(2, "0")} E${String(s.episode).padStart(2, "0")}`;
 }
 
 export function minutesLeft(entry: Entry): number | null {
-  if (entry.progress === null || entry.minutes === null) return null;
+  if (entry.progress === null || entry.minutes === null) {
+    return null;
+  }
 
   return Math.max(1, Math.round(entry.minutes * (1 - entry.progress)));
 }

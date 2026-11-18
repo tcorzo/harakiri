@@ -20,7 +20,9 @@ export function mpvProcesses(userDataDir: string): MpvProcess[] {
   const found: MpvProcess[] = [];
 
   for (const entry of readdirSync("/proc")) {
-    if (!/^\d+$/.test(entry)) continue;
+    if (!/^\d+$/.test(entry)) {
+      continue;
+    }
     let argv: string[];
 
     try {
@@ -29,7 +31,9 @@ export function mpvProcesses(userDataDir: string): MpvProcess[] {
       continue;
     }
 
-    if (!argv.includes(configArg)) continue;
+    if (!argv.includes(configArg)) {
+      continue;
+    }
     const ipc = argv.find((arg) => arg.startsWith("--input-ipc-server="));
     found.push({ pid: Number(entry), ipcSocket: ipc?.slice("--input-ipc-server=".length) });
   }
@@ -83,11 +87,16 @@ export async function mpvCommand(userDataDir: string, ...command: JsonValue[]): 
       createInterface({ input: socket }).on("line", (line) => {
         const message = Reply.safeParse(JSON.parse(line));
 
-        if (!message.success || message.data.request_id !== requestId) return;
+        if (!message.success || message.data.request_id !== requestId) {
+          return;
+        }
         clearTimeout(timer);
 
-        if (message.data.error === "success") resolve(message.data.data);
-        else reject(new Error(`mpv ${JSON.stringify(command)}: ${message.data.error}`));
+        if (message.data.error === "success") {
+          resolve(message.data.data);
+        } else {
+          reject(new Error(`mpv ${JSON.stringify(command)}: ${message.data.error}`));
+        }
       });
     });
 
@@ -111,7 +120,9 @@ export function lavapipeDeviceUuid(): string {
   const list = execFileSync("mpv", ["--no-config", "--vulkan-device=help"], { encoding: "utf8" });
   const uuid = /'llvmpipe[^']*'.*UUID ([0-9a-f-]{36})/.exec(list)?.[1];
 
-  if (uuid === undefined) throw new Error(`mpv lists no lavapipe Vulkan device:\n${list}`);
+  if (uuid === undefined) {
+    throw new Error(`mpv lists no lavapipe Vulkan device:\n${list}`);
+  }
 
   return uuid;
 }

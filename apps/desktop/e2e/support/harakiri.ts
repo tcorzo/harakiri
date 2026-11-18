@@ -115,7 +115,9 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
     // A leak fails the test and is killed, so it cannot leak into the next one.
     const leaked = await waitForNoMpv(userDataDir, 5000);
 
-    for (const { pid } of leaked) process.kill(pid, "SIGKILL");
+    for (const { pid } of leaked) {
+      process.kill(pid, "SIGKILL");
+    }
 
     if (leaked.length > 0) {
       throw new Error(`mpv outlived the app: pids ${leaked.map(({ pid }) => pid).join(", ")}`);
@@ -125,12 +127,16 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
   preserveUserData: async ({ jellyfin, apps }, use) => {
     const saved = new Map<ItemId, UserData>();
     await use(async (itemId) => {
-      if (!saved.has(itemId)) saved.set(itemId, await jellyfin.userData(itemId));
+      if (!saved.has(itemId)) {
+        saved.set(itemId, await jellyfin.userData(itemId));
+      }
     });
     // An app quitting mid-playback reports a stop, which would overwrite a restored resume point.
     await closeAll(apps);
 
-    for (const [itemId, data] of saved) await jellyfin.setUserData(itemId, data);
+    for (const [itemId, data] of saved) {
+      await jellyfin.setUserData(itemId, data);
+    }
   },
 
   revokeAppDevice: [
@@ -139,14 +145,20 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
       await closeAll(apps);
       const file = join(userDataDir, "device-id");
 
-      if (!existsSync(file)) return;
+      if (!existsSync(file)) {
+        return;
+      }
       const deviceId = readFileSync(file, "utf8").trim();
 
       // A seeded profile shares the worker's device, which the worker fixture signs out itself.
-      if (deviceId === account.deviceId) return;
+      if (deviceId === account.deviceId) {
+        return;
+      }
 
       // An app that never signed in left nothing on the server.
-      if ((await jellyfin.deviceIds()).includes(deviceId)) await jellyfin.deleteDevice(deviceId);
+      if ((await jellyfin.deviceIds()).includes(deviceId)) {
+        await jellyfin.deleteDevice(deviceId);
+      }
     },
     { auto: true },
   ],
@@ -208,7 +220,9 @@ export function focusedControl(page: Page): Promise<FocusedControl | null> {
   return page.evaluate(() => {
     const el = document.activeElement;
 
-    if (!(el instanceof HTMLElement) || el === document.body) return null;
+    if (!(el instanceof HTMLElement) || el === document.body) {
+      return null;
+    }
 
     const label =
       el.getAttribute("aria-label") ??
@@ -221,7 +235,9 @@ export function focusedControl(page: Page): Promise<FocusedControl | null> {
     for (let node: Element | null = el; node !== null; node = node.parentElement) {
       const style = getComputedStyle(node);
 
-      if (style.visibility === "hidden" || style.display === "none") opacity = 0;
+      if (style.visibility === "hidden" || style.display === "none") {
+        opacity = 0;
+      }
       opacity *= Number(style.opacity);
     }
 
@@ -265,7 +281,9 @@ export async function expectFocus(
     50
   );
 
-  if (found === null) throw new Error("unreachable: until() returned without a focused control");
+  if (found === null) {
+    throw new Error("unreachable: until() returned without a focused control");
+  }
 
   return found;
 }
@@ -306,8 +324,9 @@ export async function waitForNoMpv(userDataDir: string, timeoutMs: number) {
 export async function probe(page: Page): Promise<PlayerProbe> {
   return PlayerProbe.parse(
     await page.evaluate(() => {
-      if (!window.harakiri.test)
+      if (!window.harakiri.test) {
         throw new Error("window.harakiri.test is missing without HARAKIRI_E2E=1");
+      }
 
       return window.harakiri.test.probe();
     })
@@ -358,7 +377,9 @@ export async function playerEventUntil(
 
   const found = events.find(predicate);
 
-  if (!found) throw new Error("unreachable: until() returned without a match");
+  if (!found) {
+    throw new Error("unreachable: until() returned without a match");
+  }
 
   return found;
 }

@@ -31,7 +31,9 @@ async function startScreening(page: Page, shown: ShownItem, userDataDir: string)
   await probeUntil(page, (p) => (p.timePos ?? 0) >= (started.timePos ?? 0) + 1);
   const [mpv, ...others] = mpvProcesses(userDataDir);
 
-  if (mpv === undefined || others.length > 0) throw new Error("Expected exactly one mpv");
+  if (mpv === undefined || others.length > 0) {
+    throw new Error("Expected exactly one mpv");
+  }
 
   return mpv.pid;
 }
@@ -77,7 +79,9 @@ test("while mpv plays, every pad button reaches nothing in the renderer; once it
   // A would press Play again, B would stop mpv from the renderer, the d-pad would move focus.
   const buttons: Button[] = ["a", "b", "y", "view", "start", "up", "down", "left", "right"];
 
-  for (const button of buttons) await tap(page, button);
+  for (const button of buttons) {
+    await tap(page, button);
+  }
   await setAxis(page, 0, 0.9);
   await setAxis(page, 0, 0);
   await setAxis(page, 1, 0.9);

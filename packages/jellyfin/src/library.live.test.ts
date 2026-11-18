@@ -55,10 +55,11 @@ const reachable = await fetch(new URL("System/Info/Public", server), {
   .then((response) => response.ok)
   .catch(() => false);
 
-if (!reachable)
+if (!reachable) {
   throw new Error(
     `the Jellyfin at ${server} is unreachable: set JELLYFIN_DEV_URL (and JELLYFIN_DEV_USER, JELLYFIN_DEV_PASSWORD) to your server, or run \`mise run jellyfin:up\` for the dev container`
   );
+}
 
 const catalog = await loadCorpus();
 
@@ -94,8 +95,9 @@ describe(`the Jellyfin at ${server}`, () => {
   beforeAll(async () => {
     const signIn = await authenticate(server, USER, PASSWORD, identity);
 
-    if (signIn.kind !== "signed-in")
+    if (signIn.kind !== "signed-in") {
       throw new Error(`dev sign-in failed: ${JSON.stringify(signIn)}`);
+    }
     session = signIn.session;
     ctx = {
       client: createJellyfinClient(server, identity, session.accessToken),
@@ -111,10 +113,14 @@ describe(`the Jellyfin at ${server}`, () => {
   const movies = () => corpus?.present.filter((entry) => entry.kind === "movie") ?? [];
 
   const pick = (id: string, fallback: () => LibraryItem | undefined, what: string) => {
-    if (corpus) return corpus.item(corpusEntry(catalog, id));
+    if (corpus) {
+      return corpus.item(corpusEntry(catalog, id));
+    }
     const item = fallback();
 
-    if (!item) throw new Error(`${server} holds no ${what}`);
+    if (!item) {
+      throw new Error(`${server} holds no ${what}`);
+    }
 
     return item;
   };

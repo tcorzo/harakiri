@@ -59,10 +59,14 @@ export function holdQuitUntilStopped(
   app.on("before-quit", (event) => {
     event.preventDefault();
 
-    if (stopping) return;
+    if (stopping) {
+      return;
+    }
     stopping = true;
     void stopWithin(stop, capMs).then((outcome) => {
-      if (outcome === "timed-out") logger.warn("mpv did not stop within {capMs} ms", { capMs });
+      if (outcome === "timed-out") {
+        logger.warn("mpv did not stop within {capMs} ms", { capMs });
+      }
 
       try {
         options.afterStop?.();
@@ -80,7 +84,9 @@ export function killOnExit(livePid: () => number | undefined): void {
   process.on("exit", () => {
     const pid = livePid();
 
-    if (pid === undefined || pid <= 0) return;
+    if (pid === undefined || pid <= 0) {
+      return;
+    }
 
     try {
       process.kill(pid, "SIGKILL");
@@ -110,15 +116,21 @@ export function removeStaleMpvDirs(options: {
   }
 
   for (const name of names) {
-    if (!name.startsWith("harakiri-mpv-")) continue;
+    if (!name.startsWith("harakiri-mpv-")) {
+      continue;
+    }
     const path = join(options.dir, name);
 
     try {
       const stat = statSync(path);
 
-      if (!stat.isDirectory() || stat.uid !== options.uid) continue;
+      if (!stat.isDirectory() || stat.uid !== options.uid) {
+        continue;
+      }
 
-      if (options.now - stat.mtimeMs < options.minAgeMs) continue;
+      if (options.now - stat.mtimeMs < options.minAgeMs) {
+        continue;
+      }
       rmSync(path, { recursive: true, force: true });
       removed.push(path);
     } catch (error) {

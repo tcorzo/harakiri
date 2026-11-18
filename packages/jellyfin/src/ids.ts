@@ -34,7 +34,9 @@ export const ServerUrl = z
     url.search = "";
     url.hash = "";
 
-    if (!url.pathname.endsWith("/")) url.pathname = `${url.pathname}/`;
+    if (!url.pathname.endsWith("/")) {
+      url.pathname = `${url.pathname}/`;
+    }
 
     return url.href;
   })

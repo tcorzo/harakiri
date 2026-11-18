@@ -20,12 +20,16 @@ export interface Cue {
 class Bytes {
   readonly #parts: number[] = [];
   u8(...values: number[]): this {
-    for (const v of values) this.#parts.push(v & 0xff);
+    for (const v of values) {
+      this.#parts.push(v & 0xff);
+    }
 
     return this;
   }
   u16(...values: number[]): this {
-    for (const v of values) this.u8(v >> 8, v);
+    for (const v of values) {
+      this.u8(v >> 8, v);
+    }
 
     return this;
   }
@@ -36,7 +40,9 @@ class Bytes {
     return this.u8(v >>> 24, v >>> 16, v >>> 8, v);
   }
   bytes(data: Uint8Array): this {
-    for (const v of data) this.#parts.push(v);
+    for (const v of data) {
+      this.#parts.push(v);
+    }
 
     return this;
   }
@@ -68,14 +74,23 @@ export function rleLine(pixels: readonly number[]): Uint8Array {
     const c = pixels[i]!;
     let n = 1;
 
-    while (i + n < pixels.length && pixels[i + n] === c && n < 16383) n++;
+    while (i + n < pixels.length && pixels[i + n] === c && n < 16383) {
+      n++;
+    }
 
-    if (c !== 0 && n <= 2) for (let k = 0; k < n; k++) out.u8(c);
-    else if (c === 0) {
-      if (n < 64) out.u8(0, n);
-      else out.u8(0, 0x40 | (n >> 8), n & 0xff);
-    } else if (n < 64) out.u8(0, 0x80 | n, c);
-    else out.u8(0, 0xc0 | (n >> 8), n & 0xff, c);
+    if (c !== 0 && n <= 2) {
+      for (let k = 0; k < n; k++) out.u8(c);
+    } else if (c === 0) {
+      if (n < 64) {
+        out.u8(0, n);
+      } else {
+        out.u8(0, 0x40 | (n >> 8), n & 0xff);
+      }
+    } else if (n < 64) {
+      out.u8(0, 0x80 | n, c);
+    } else {
+      out.u8(0, 0xc0 | (n >> 8), n & 0xff, c);
+    }
     i += n;
   }
 
@@ -90,10 +105,13 @@ function bitmap(w: number, h: number): Uint8Array {
     const row: number[] = [];
 
     for (let x = 0; x < w; x++) {
-      if (x < 2 || y < 2 || x >= w - 2 || y >= h - 2) row.push(2);
-      else if (Math.floor(h / 3) <= y && y < Math.floor((2 * h) / 3))
+      if (x < 2 || y < 2 || x >= w - 2 || y >= h - 2) {
+        row.push(2);
+      } else if (Math.floor(h / 3) <= y && y < Math.floor((2 * h) / 3)) {
         row.push((Math.floor(x / 8) + Math.floor(y / 8)) % 2 === 0 ? 1 : 2);
-      else row.push(1);
+      } else {
+        row.push(1);
+      }
     }
 
     out.bytes(rleLine(row));
@@ -156,8 +174,9 @@ export function writePgs(width: number, height: number, cues: readonly Cue[]): U
   cues.forEach((cue, n) => {
     const ticks = (s: number) => Math.round(s * 90_000);
 
-    for (const seg of displaySet(width, height, n * 2, ticks(cue.start), ticks(cue.end)))
+    for (const seg of displaySet(width, height, n * 2, ticks(cue.start), ticks(cue.end))) {
       out.bytes(seg);
+    }
   });
 
   return out.done();

@@ -21,14 +21,18 @@ const centre = (page: Page, key: string | null) =>
   page.evaluate((label) => {
     const board = document.querySelector('fieldset[aria-label="On-screen keyboard"]');
 
-    if (board === null) return null;
+    if (board === null) {
+      return null;
+    }
 
     const el =
       label === null
         ? document.activeElement
         : [...board.querySelectorAll("button")].find((b) => b.getAttribute("aria-label") === label);
 
-    if (!(el instanceof HTMLElement) || !board.contains(el)) return null;
+    if (!(el instanceof HTMLElement) || !board.contains(el)) {
+      return null;
+    }
     const r = el.getBoundingClientRect();
 
     return { x: r.left + r.width / 2, y: r.top + r.height / 2, h: r.height, w: r.width };
@@ -42,10 +46,14 @@ export async function typeOnScreen(page: Page, dpad: Dpad, keys: readonly string
   for (const key of keys) {
     const target = await centre(page, key);
 
-    if (target === null) throw new Error(`The on-screen keyboard has no key "${key}"`);
+    if (target === null) {
+      throw new Error(`The on-screen keyboard has no key "${key}"`);
+    }
 
     for (let steps = 0; ; steps += 1) {
-      if (steps > 24) throw new Error(`Could not reach key "${key}" in 24 moves`);
+      if (steps > 24) {
+        throw new Error(`Could not reach key "${key}" in 24 moves`);
+      }
       const at: Box | null = await centre(page, null);
 
       if (at === null) {
@@ -57,7 +65,9 @@ export async function typeOnScreen(page: Page, dpad: Dpad, keys: readonly string
       const dy = target.y - at.y;
       const dx = target.x - at.x;
 
-      if (Math.abs(dy) < at.h / 2 && Math.abs(dx) < at.w / 2) break;
+      if (Math.abs(dy) < at.h / 2 && Math.abs(dx) < at.w / 2) {
+        break;
+      }
       const before = (await focusedControl(page))?.name;
       await dpad.move(
         Math.abs(dy) >= at.h / 2 ? (dy < 0 ? "up" : "down") : dx < 0 ? "left" : "right"
@@ -104,7 +114,9 @@ export const arrowKeys = (page: Page): Dpad => ({
 /** Moves focus up until it rests on the text field labelled `label`, as the d-pad leaves a keyboard. */
 export async function focusField(page: Page, label: string): Promise<void> {
   for (let i = 0; i < 4; i += 1) {
-    if ((await focusedControl(page))?.name === label) return;
+    if ((await focusedControl(page))?.name === label) {
+      return;
+    }
     await page.keyboard.press("ArrowUp");
   }
 

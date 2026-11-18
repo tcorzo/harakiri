@@ -24,10 +24,14 @@ export type HeroEvent =
   | { readonly type: "restart"; readonly now: number };
 
 export function heroCycle(state: HeroCycle, event: HeroEvent): HeroCycle {
-  if (event.type === "restart") return { ...state, since: event.now };
+  if (event.type === "restart") {
+    return { ...state, since: event.now };
+  }
   const due = event.type === "next" || (event.auto && event.now - state.since >= heroHoldMs);
 
-  if (!due || event.count < 2) return state;
+  if (!due || event.count < 2) {
+    return state;
+  }
 
   return { index: (state.index + 1) % event.count, since: event.now, changedAt: event.now };
 }
@@ -85,11 +89,15 @@ export function useHeroCycle(ids: readonly string[], holding: boolean) {
   }, [heroId]);
 
   useEffect(() => {
-    if (holding) send({ type: "restart", now: Math.max(Date.now(), lastInput) });
+    if (holding) {
+      send({ type: "restart", now: Math.max(Date.now(), lastInput) });
+    }
   }, [holding, lastInput]);
 
   useEffect(() => {
-    if (!auto || count < 2) return () => {};
+    if (!auto || count < 2) {
+      return () => {};
+    }
 
     let timer = 0;
 
@@ -98,8 +106,11 @@ export function useHeroCycle(ids: readonly string[], holding: boolean) {
         () => {
           // A timer can fire a little before the hold is up; a tick then changes nothing and
           // `since` stays put, so nothing would arm it again. Wait out the rest instead.
-          if (Date.now() - state.since < heroHoldMs) arm();
-          else send({ type: "tick", now: Date.now(), count, auto });
+          if (Date.now() - state.since < heroHoldMs) {
+            arm();
+          } else {
+            send({ type: "tick", now: Date.now(), count, auto });
+          }
         },
         Math.max(0, state.since + heroHoldMs - Date.now())
       );

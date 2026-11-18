@@ -19,12 +19,16 @@ const fixtures = process.argv.slice(2).map((arg) => {
   const split = arg.indexOf("=");
   const [name, term] = [arg.slice(0, split), arg.slice(split + 1)];
 
-  if (split < 1 || term === "") throw new Error(`expected name=searchTerm, got ${arg}`);
+  if (split < 1 || term === "") {
+    throw new Error(`expected name=searchTerm, got ${arg}`);
+  }
 
   return { name, term };
 });
 
-if (fixtures.length === 0) throw new Error("pass at least one fixture as name=searchTerm");
+if (fixtures.length === 0) {
+  throw new Error("pass at least one fixture as name=searchTerm");
+}
 
 const STREAM_FIELDS = [
   "Index",
@@ -72,7 +76,9 @@ const call = async (path: string, init: RequestInit = {}, token?: string): Promi
     headers: { "Content-Type": "application/json", Authorization: authorization },
   });
 
-  if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
+  if (!response.ok) {
+    throw new Error(`${path}: HTTP ${response.status}`);
+  }
   const body: unknown = await response.json();
 
   return body;

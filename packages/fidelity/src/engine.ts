@@ -67,12 +67,16 @@ function transcoded<T extends { readonly label: string }>(
   best: (stream: T) => Fact,
   delivery: Delivery
 ): Downgrade | null {
-  if (delivery.kind !== "transcode" || source === null) return null;
+  if (delivery.kind !== "transcode" || source === null) {
+    return null;
+  }
   const none = leg === "sound" ? "No sound" : "No picture";
   const from = best(source).text;
   const to = output === null ? none : best(output).text;
 
-  if (from === to) return null;
+  if (from === to) {
+    return null;
+  }
   const why = delivery.reasons.length === 0 ? "" : ` (${delivery.reasons.join(", ")})`;
   const into = output === null ? "nothing" : output.label;
 
@@ -111,7 +115,9 @@ function learn(state: FidelityState, observation: Observation): FidelityState {
       .with({ kind: "audioOutputFailed" }, (): FidelityState => {
         const sound = played(state).sound;
 
-        if (sound === null) return state;
+        if (sound === null) {
+          return state;
+        }
 
         // A failed bitstream steps down to decoding; failed decoding leaves nothing below it.
         const soundWorld = isBitstreaming(sound, state.soundWorld)

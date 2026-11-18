@@ -33,7 +33,9 @@ export function signedIn(session: Session): SignedIn {
     // request surfaces as "body already used" with the status lost. Raise the status here, as the
     // response arrives, so a revoked token (401) reads as signed out, not as a dead server.
     client.interceptors.response.use((response) => {
-      if (!response.ok) throw new ServerStatusError(response.status, response.url);
+      if (!response.ok) {
+        throw new ServerStatusError(response.status, response.url);
+      }
 
       return response;
     });
@@ -48,7 +50,9 @@ export function signedIn(session: Session): SignedIn {
 export function useSignedIn(): SignedIn {
   const { data } = useSuspenseQuery(sessionQuery);
 
-  if (data === null) throw new Error("useSignedIn outside the signed-in layout");
+  if (data === null) {
+    throw new Error("useSignedIn outside the signed-in layout");
+  }
 
   return signedIn(data);
 }

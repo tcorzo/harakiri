@@ -63,7 +63,9 @@ export async function setButton(page: Page, button: Button, pressed: boolean): P
     async ([index, down]) => {
       const pad = window.harakiriE2ePad;
 
-      if (pad === undefined) throw new Error("plugPad() first");
+      if (pad === undefined) {
+        throw new Error("plugPad() first");
+      }
       pad.buttons[index] = { pressed: down, touched: down, value: down ? 1 : 0 };
       pad.timestamp += 1;
       await new Promise(requestAnimationFrame);
@@ -79,7 +81,9 @@ export async function setAxis(page: Page, axis: 0 | 1, value: number): Promise<v
     async ([index, to]) => {
       const pad = window.harakiriE2ePad;
 
-      if (pad === undefined) throw new Error("plugPad() first");
+      if (pad === undefined) {
+        throw new Error("plugPad() first");
+      }
       pad.axes[index] = to;
       pad.timestamp += 1;
       await new Promise(requestAnimationFrame);

@@ -145,7 +145,9 @@ export function simulate(
 ): FidelityView {
   let state = startFidelity({ picture, sound, delivery, output });
 
-  for (const observation of then(fidelityView(state))) state = observe(state, observation).state;
+  for (const observation of then(fidelityView(state))) {
+    state = observe(state, observation).state;
+  }
 
   return fidelityView(state);
 }

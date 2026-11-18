@@ -19,7 +19,9 @@ async function expectLibrary(page: Page, jellyfin: Jellyfin): Promise<void> {
   expect(focus.route).toBe("/library");
   const [newest] = await jellyfin.latest();
 
-  if (newest === undefined) throw new Error("The library has nothing recently added");
+  if (newest === undefined) {
+    throw new Error("The library has nothing recently added");
+  }
   await expect(
     page.getByRole("region", { name: "Recently Added", exact: true }).getByRole("button").first()
   ).toHaveAccessibleName(cardName(newest.Name));
@@ -510,7 +512,9 @@ test.describe("with no server answering discovery", () => {
         await expect(page.getByRole("alert")).toHaveText(c.message(address));
         await expect(main(page, "Find your server")).toBeVisible();
 
-        if (stub !== undefined) expect(stub.seen).toContain("GET /System/Info/Public");
+        if (stub !== undefined) {
+          expect(stub.seen).toContain("GET /System/Info/Public");
+        }
         // Focus stays on the keyboard, so the owner can correct the address at once.
         expect((await expectFocus(page, "Connect")).route).toBe("/onboarding");
 

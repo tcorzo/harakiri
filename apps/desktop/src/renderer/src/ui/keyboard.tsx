@@ -156,11 +156,17 @@ export function Keyboard({
   // input hub on the window, which would read Backspace as Back. Space is left to the hub: there,
   // as everywhere else, it is Select, and presses the focused key.
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>): void => {
-    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
 
-    if (event.key === "Backspace") onChange(value.slice(0, -1));
-    else if (event.key.length === 1 && event.key !== " ") onChange(value + event.key);
-    else return;
+    if (event.key === "Backspace") {
+      onChange(value.slice(0, -1));
+    } else if (event.key.length === 1 && event.key !== " ") {
+      onChange(value + event.key);
+    } else {
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
   };
@@ -223,7 +229,9 @@ export function EntryField({
         autoCapitalize="off"
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key !== "Enter") return;
+          if (event.key !== "Enter") {
+            return;
+          }
           // The field owns this Enter: the hub must not also read it as Select, or it presses
           // whatever the next step focuses (its first key) in the same keystroke.
           event.preventDefault();

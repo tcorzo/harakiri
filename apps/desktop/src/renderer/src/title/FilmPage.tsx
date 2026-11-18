@@ -20,7 +20,9 @@ const languages = new Intl.DisplayNames(["en"], { type: "language" });
 function languageOf(stream: MediaStream): string {
   const code = stream.Language;
 
-  if (code == null || code === "" || code === "und") return "Unknown language";
+  if (code == null || code === "" || code === "und") {
+    return "Unknown language";
+  }
 
   try {
     return languages.of(code) ?? code;
@@ -74,19 +76,27 @@ function subtitleTracks(streams: readonly MediaStream[]): TrackOption[] {
 
 /** "Finn the Human (voice)" becomes "Name, voice of Finn the Human", so a comma-separated cast never reads "voice" as another name. */
 function creditOf(name: string, role: string | null | undefined): string {
-  if (role == null || role === "") return name;
+  if (role == null || role === "") {
+    return name;
+  }
   const part = role.replace(/\s*\((voice|uncredited)\)/gi, "").trim();
 
-  if (/\(voice\)/i.test(role)) return `${name}, voice of ${part}`;
+  if (/\(voice\)/i.test(role)) {
+    return `${name}, voice of ${part}`;
+  }
 
   return /\(uncredited\)/i.test(role) ? `${name} as ${part} (uncredited)` : `${name} as ${part}`;
 }
 
 /** The synopsis whole when it fits, otherwise cut at the last sentence that does. */
 function synopsis(text: string | null, max = 420): string {
-  if (text === null) return "No synopsis on the server.";
+  if (text === null) {
+    return "No synopsis on the server.";
+  }
 
-  if (text.length <= max) return text;
+  if (text.length <= max) {
+    return text;
+  }
   const cut = text.slice(0, max);
   const end = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
 

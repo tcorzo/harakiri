@@ -29,7 +29,9 @@ const noPad: PadSnapshot = { buttons: [], axes: [] };
 async function pressFocused(): Promise<void> {
   const key = getCurrentFocusKey();
 
-  if (!doesFocusableExist(key)) return;
+  if (!doesFocusableExist(key)) {
+    return;
+  }
   const { node } = await SpatialNavigation.getNodeLayoutByFocusKey(key);
   node.click();
 }
@@ -38,11 +40,15 @@ function perform(action: Action): void {
   touch();
   match(action)
     .with("up", "down", "left", "right", (direction) => {
-      if (!guardNavigation(direction)) void navigateByDirection(direction);
+      if (!guardNavigation(direction)) {
+        void navigateByDirection(direction);
+      }
     })
     .with("select", () => void pressFocused())
     .with("back", () => {
-      if (!dispatch("back")) window.history.back();
+      if (!dispatch("back")) {
+        window.history.back();
+      }
     })
     .with("menu", "playPause", (other) => void dispatch(other))
     .exhaustive();
@@ -60,7 +66,9 @@ export function useInputHub(): void {
       const editing = isEditing(document.activeElement);
       const action = keyToAction(event.key, { editing });
 
-      if (action === undefined) return;
+      if (action === undefined) {
+        return;
+      }
 
       // Held directions repeat; a held Select or Back acts once, and its repeats must not reach the
       // button's native Enter either (the same rule as keyToAction's `repeat`).
@@ -72,7 +80,9 @@ export function useInputHub(): void {
 
       const routed = route(inputMode.getState().mode, "keyboard", action);
 
-      if (routed === undefined) return;
+      if (routed === undefined) {
+        return;
+      }
       event.preventDefault();
       perform(routed);
     };
@@ -97,7 +107,9 @@ export function useInputHub(): void {
       for (const action of step.actions) {
         const routed = route(mode, "gamepad", action);
 
-        if (routed !== undefined) perform(routed);
+        if (routed !== undefined) {
+          perform(routed);
+        }
       }
 
       frame = requestAnimationFrame(poll);

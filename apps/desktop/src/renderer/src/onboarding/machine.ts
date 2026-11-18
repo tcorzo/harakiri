@@ -86,7 +86,9 @@ function baseUrl(url: URL): string {
 export function serverCandidates(typed: string): readonly string[] | null {
   const trimmed = typed.trim();
 
-  if (trimmed === "") return null;
+  if (trimmed === "") {
+    return null;
+  }
   const typedScheme = scheme.test(trimmed);
   let url: URL;
 
@@ -96,15 +98,23 @@ export function serverCandidates(typed: string): readonly string[] | null {
     return null;
   }
 
-  if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return null;
+  }
 
-  if (url.hostname === "") return null;
+  if (url.hostname === "") {
+    return null;
+  }
 
-  if (typedScheme) return [baseUrl(url)];
+  if (typedScheme) {
+    return [baseUrl(url)];
+  }
   const secure = new URL(url);
   secure.protocol = "https:";
 
-  if (url.port === "") url.port = defaultPort;
+  if (url.port === "") {
+    url.port = defaultPort;
+  }
 
   return [baseUrl(secure), baseUrl(url)];
 }
@@ -115,7 +125,9 @@ export const minimumServer = { major: 10, minor: 10 } as const;
 export function isServerSupported(version: string): boolean {
   const found = /^(\d+)\.(\d+)/.exec(version);
 
-  if (found === null) return false;
+  if (found === null) {
+    return false;
+  }
   const major = Number(found[1]);
   const minor = Number(found[2]);
 

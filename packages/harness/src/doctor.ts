@@ -28,11 +28,14 @@ export function versionAtLeast(prefix: RegExp, min: Version | null): Check["judg
   return (run) => {
     const text = output(run);
 
-    if (text === null) return notRunnable(run);
+    if (text === null) {
+      return notRunnable(run);
+    }
     const found = parseVersion(text, prefix);
 
-    if (found === null)
+    if (found === null) {
       return { status: "missing", detail: `no version matching ${prefix.source}` };
+    }
 
     if (min !== null && compareVersions(found, min) < 0) {
       return { status: "outdated", detail: `${formatVersion(found)} < ${formatVersion(min)}` };
@@ -47,7 +50,9 @@ export function listsAll(names: readonly string[], row: (name: string) => RegExp
   return (run) => {
     const text = output(run);
 
-    if (text === null) return notRunnable(run);
+    if (text === null) {
+      return notRunnable(run);
+    }
     const absent = names.filter((name) => !row(name).test(text));
 
     return absent.length === 0

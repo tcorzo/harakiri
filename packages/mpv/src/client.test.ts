@@ -89,7 +89,9 @@ describe("spawnMpv", () => {
 
     const loaded = new Promise<void>((resolve) => {
       client.onEvent((event) => {
-        if (event.event === "file-loaded") resolve();
+        if (event.event === "file-loaded") {
+          resolve();
+        }
       });
     });
 
@@ -182,7 +184,9 @@ describe("spawnMpv", () => {
       .find((arg) => arg.startsWith("--input-ipc-server="))
       ?.slice("--input-ipc-server=".length);
 
-    if (socket === undefined) throw new Error("mpv was spawned without an IPC socket");
+    if (socket === undefined) {
+      throw new Error("mpv was spawned without an IPC socket");
+    }
     expect(existsSync(dirname(socket))).toBe(true);
     await client.quit();
     expect(existsSync(dirname(socket))).toBe(false);
@@ -277,7 +281,9 @@ describe("a failed command never carries its arguments", () => {
 
     const failed = new Promise<void>((resolve) => {
       client.onEvent((event) => {
-        if (event.event === "end-file") resolve();
+        if (event.event === "end-file") {
+          resolve();
+        }
       });
     });
 

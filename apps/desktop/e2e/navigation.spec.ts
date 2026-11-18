@@ -18,7 +18,9 @@ import { heroPlay, leadContinueWatching, main, openLibrary } from "./support/lib
 function heroTitle(focus: FocusedControl): string {
   const title = heroPlay.exec(focus.name)?.[2];
 
-  if (title === undefined) throw new Error(`Focus is not on the hero's Play: ${focus.name}`);
+  if (title === undefined) {
+    throw new Error(`Focus is not on the hero's Play: ${focus.name}`);
+  }
 
   return title;
 }
@@ -39,7 +41,9 @@ async function downTo(
   for (let i = 0; i < 6; i += 1) {
     const focus = await expectFocus(page);
 
-    if (focus.section === section) return focus;
+    if (focus.section === section) {
+      return focus;
+    }
     await move();
   }
 
@@ -57,7 +61,9 @@ test("the arrow keys walk the hero, the rows and the title pages, and focus is n
   const latest = await jellyfin.latest();
   const picked = latest[3];
 
-  if (picked === undefined) throw new Error("The dev library has fewer than 4 recent titles");
+  if (picked === undefined) {
+    throw new Error("The dev library has fewer than 4 recent titles");
+  }
   const { page } = await launch();
 
   const hero = heroTitle(await openLibrary(page));
@@ -138,7 +144,9 @@ test("the gamepad walks the same way: d-pad, stick, A, B, and a held d-pad repea
   const nth = (i: number): ShownItem => {
     const item = latest[i];
 
-    if (item === undefined) throw new Error(`Recently Added has no title ${i}`);
+    if (item === undefined) {
+      throw new Error(`Recently Added has no title ${i}`);
+    }
 
     return item;
   };
@@ -202,7 +210,9 @@ test("holding Down keeps the focused card on screen at every step", async ({ lau
   const seen: (FocusedControl | null)[] = [];
   const deadline = Date.now() + 1200;
 
-  while (Date.now() < deadline) seen.push(await focusedControl(page));
+  while (Date.now() < deadline) {
+    seen.push(await focusedControl(page));
+  }
   await setButton(page, "down", false);
 
   // Focus lost to nothing counts as off screen too.

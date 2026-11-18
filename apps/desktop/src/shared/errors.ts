@@ -23,7 +23,9 @@ const statusMessage = /^The server answered (\d{3}) for (\S+)$/;
  * unwraps it, and rebuilds a `ServerStatusError` so the renderer still knows the status.
  */
 export function fromIpc(error: unknown): unknown {
-  if (!(error instanceof Error)) return error;
+  if (!(error instanceof Error)) {
+    return error;
+  }
   const message = error.message.replace(ipcWrapper, "");
   const status = statusMessage.exec(message);
 

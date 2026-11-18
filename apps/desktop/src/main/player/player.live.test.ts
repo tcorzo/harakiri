@@ -39,10 +39,11 @@ const reachable = await fetch(`${SERVER}/System/Info/Public`, { signal: AbortSig
   .then((response) => response.ok)
   .catch(() => false);
 
-if (!reachable)
+if (!reachable) {
   throw new Error(
     `the Jellyfin at ${SERVER} is unreachable: set JELLYFIN_DEV_URL (and JELLYFIN_DEV_USER, JELLYFIN_DEV_PASSWORD) to your server, or run \`mise run jellyfin:up\` for the dev container`
   );
+}
 
 const clientHeader = (token?: string) =>
   `MediaBrowser Client="harakiri-test", Device="vitest", DeviceId="${DEVICE_ID}", Version="0"${token ? `, Token="${token}"` : ""}`;
@@ -56,7 +57,9 @@ async function api<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}
     },
   });
 
-  if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
+  if (!response.ok) {
+    throw new Error(`${path}: HTTP ${response.status}`);
+  }
   const body = await response.text();
 
   return schema.parse(body ? JSON.parse(body) : undefined);
@@ -158,7 +161,9 @@ const pickItem = (
 ): Item => {
   const item = corpus ? corpus.item(corpusEntry(catalog, id)) : items.find(fits);
 
-  if (!item) throw new Error(`the library at ${SERVER} has no ${what}`);
+  if (!item) {
+    throw new Error(`the library at ${SERVER} has no ${what}`);
+  }
 
   return item;
 };
@@ -180,11 +185,15 @@ function mpvSocket(): string {
     try {
       const ppid = readFileSync(`/proc/${pid}/stat`, "utf8").split(") ")[1]?.split(" ")[1];
 
-      if (Number(ppid) !== process.pid) continue;
+      if (Number(ppid) !== process.pid) {
+        continue;
+      }
       const args = readFileSync(`/proc/${pid}/cmdline`, "utf8").split("\0");
       const socket = args.find((arg) => arg.startsWith("--input-ipc-server="));
 
-      if (socket) return socket.slice("--input-ipc-server=".length);
+      if (socket) {
+        return socket.slice("--input-ipc-server=".length);
+      }
     } catch {
       // The process exited while we looked.
     }
@@ -206,11 +215,16 @@ function mpvCommand(...command: unknown[]): Promise<unknown> {
       for (const line of buffer.split("\n").slice(0, -1)) {
         const message = MpvReply.parse(JSON.parse(line));
 
-        if (message.request_id !== 7) continue;
+        if (message.request_id !== 7) {
+          continue;
+        }
         socket.end();
 
-        if (message.error === "success") resolve(message.data);
-        else reject(new Error(`${JSON.stringify(command)}: ${message.error}`));
+        if (message.error === "success") {
+          resolve(message.data);
+        } else {
+          reject(new Error(`${JSON.stringify(command)}: ${message.error}`));
+        }
       }
 
       buffer = buffer.slice(buffer.lastIndexOf("\n") + 1);
@@ -230,7 +244,9 @@ async function until(
   while (Date.now() < deadline) {
     last = await probe();
 
-    if (check(last)) return last;
+    if (check(last)) {
+      return last;
+    }
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
 
@@ -249,7 +265,9 @@ const freshUserData = (): string => {
 afterAll(async () => {
   await stop();
 
-  for (const dir of userDataDirs) rmSync(dir, { recursive: true, force: true });
+  for (const dir of userDataDirs) {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 describe(`player against the dev Jellyfin at ${SERVER}`, () => {
@@ -357,7 +375,9 @@ describe(`player against the dev Jellyfin at ${SERVER}`, () => {
       const secondAudio = streams.filter((s) => s.Type === "Audio").toSorted(byIndex)[1];
       const sidecar = sidecars.toSorted(byIndex)[0];
 
-      if (!secondAudio || !sidecar) throw new Error("unreachable: checked by the find above");
+      if (!secondAudio || !sidecar) {
+        throw new Error("unreachable: checked by the find above");
+      }
 
       const counts = {
         audio: streams.filter((s) => s.Type === "Audio").length,

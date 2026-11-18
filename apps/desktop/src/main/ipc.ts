@@ -52,10 +52,14 @@ export function registerIpc(
     const { sender } = event;
     // Reply to the requesting renderer: while mpv is fullscreen no Electron window has focus.
     await play(request, (playerEvent) => {
-      if (!sender.isDestroyed()) sender.send(channels.playerEvent, playerEvent);
+      if (!sender.isDestroyed()) {
+        sender.send(channels.playerEvent, playerEvent);
+      }
     });
   });
   handle(channels.stop, () => stop());
 
-  if (isE2E) handle(channels.testProbe, () => probe());
+  if (isE2E) {
+    handle(channels.testProbe, () => probe());
+  }
 }

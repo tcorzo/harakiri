@@ -21,10 +21,11 @@ import {
 // reports every item that would not direct play.
 const unreachable = await serverUnreachable();
 
-if (unreachable)
+if (unreachable) {
   throw new Error(
     `${unreachable}: set JELLYFIN_DEV_URL (and JELLYFIN_DEV_USER, JELLYFIN_DEV_PASSWORD) to your server, or run \`mise run jellyfin:up\` for the dev container`
   );
+}
 
 const corpus = await loadCorpus();
 
@@ -67,8 +68,9 @@ type Subject = readonly [name: string, item: () => LibraryItem, entry: CorpusEnt
 
 const firstOfEachClass = new Map<string, LibraryItem>();
 
-for (const item of library)
+for (const item of library) {
   if (!firstOfEachClass.has(streamClass(item))) firstOfEachClass.set(streamClass(item), item);
+}
 
 const subjects: readonly Subject[] = onCorpus
   ? corpus.entries.map((entry): Subject => [entry.id, () => onCorpus.item(entry), entry])
@@ -107,10 +109,14 @@ describe(`${SERVER} never transcodes under harakiri's profile`, () => {
 
   describe("negative controls", () => {
     const pick = (id: string, fallback: () => LibraryItem | undefined, what: string) => {
-      if (onCorpus) return onCorpus.item(corpusEntry(corpus, id));
+      if (onCorpus) {
+        return onCorpus.item(corpusEntry(corpus, id));
+      }
       const item = fallback();
 
-      if (!item) throw new Error(`${SERVER} holds no ${what}, which this control needs`);
+      if (!item) {
+        throw new Error(`${SERVER} holds no ${what}, which this control needs`);
+      }
 
       return item;
     };

@@ -20,15 +20,20 @@ const SERVER = E2E_CONTAINER_ENV.JELLYFIN_DEV_URL;
 
 /** Why the corpus must be (re)generated before the server can scan it, or null when it is current. */
 function staleness(): string | null {
-  if (!existsSync(resolve(CORPUS_DIR, MANIFEST))) return `no corpus in ${CORPUS_DIR}`;
+  if (!existsSync(resolve(CORPUS_DIR, MANIFEST))) {
+    return `no corpus in ${CORPUS_DIR}`;
+  }
   const manifest = readManifest(CORPUS_DIR);
   const built = new Set(manifest.entries.map((entry) => entry.id));
   const missing = CATALOG.filter((entry) => entry.tier === "base" && !built.has(entry.id));
 
-  if (missing.length > 0) return `the corpus lacks ${missing.map((entry) => entry.id).join(", ")}`;
+  if (missing.length > 0) {
+    return `the corpus lacks ${missing.map((entry) => entry.id).join(", ")}`;
+  }
 
-  if (!manifest.fate && fateState(FATE_DIR).kind === "complete")
+  if (!manifest.fate && fateState(FATE_DIR).kind === "complete") {
     return "the FATE samples arrived after the corpus was built";
+  }
 
   return null;
 }
@@ -56,7 +61,9 @@ async function get(path: string, token: string): Promise<unknown> {
     headers: { Authorization: `${AUTH}, Token="${token}"` },
   });
 
-  if (!response.ok) throw new Error(`GET ${path}: HTTP ${response.status}`);
+  if (!response.ok) {
+    throw new Error(`GET ${path}: HTTP ${response.status}`);
+  }
 
   return response.json();
 }
@@ -72,7 +79,9 @@ async function waitForScan(expected: number, timeoutMs = 180_000): Promise<void>
     }),
   });
 
-  if (!signIn.ok) throw new Error(`Signing in to the e2e Jellyfin: HTTP ${signIn.status}`);
+  if (!signIn.ok) {
+    throw new Error(`Signing in to the e2e Jellyfin: HTTP ${signIn.status}`);
+  }
   const { AccessToken: token } = z.object({ AccessToken: z.string() }).parse(await signIn.json());
   const deadline = Date.now() + timeoutMs;
   let last = "";
@@ -89,7 +98,9 @@ async function waitForScan(expected: number, timeoutMs = 180_000): Promise<void>
     const scan = tasks.find((task) => task.Key === "RefreshLibrary")?.State ?? "missing";
     const found = counts.MovieCount + counts.EpisodeCount;
 
-    if (found === expected && scan === "Idle") return;
+    if (found === expected && scan === "Idle") {
+      return;
+    }
     last = `${found} of ${expected} items, scan ${scan}`;
     await sleep(500);
   }
@@ -105,7 +116,9 @@ async function waitForScan(expected: number, timeoutMs = 180_000): Promise<void>
  * them first, and without them the TrueHD Atmos test fails naming `mise run media:fetch-fate`.
  */
 export default async function globalSetup(): Promise<void> {
-  if (REAL_SERVER !== undefined && REAL_SERVER !== "") return;
+  if (REAL_SERVER !== undefined && REAL_SERVER !== "") {
+    return;
+  }
 
   if (spawnSync("podman", ["--version"]).error !== undefined) {
     throw new Error(

@@ -25,7 +25,7 @@ const entry = toEntry({ Id: "0123456789abcdef0123456789abcdef", Name: "Film", Ty
 const listeners = new Set<(event: PlayerEvent) => void>();
 
 const emit = (phase: PlayerEvent["phase"], itemId = entry.id) => {
-  for (const listener of listeners)
+  for (const listener of listeners) {
     listener({
       phase,
       itemId,
@@ -35,6 +35,7 @@ const emit = (phase: PlayerEvent["phase"], itemId = entry.id) => {
       transcodeReasons: [],
       unreadable: false,
     });
+  }
 };
 
 Object.defineProperty(window, "harakiri", {

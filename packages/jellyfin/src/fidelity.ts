@@ -122,14 +122,22 @@ const resolutionOf = (stream: MediaStream): Resolution | null => {
   const width = stream.Width ?? 0;
   const height = stream.Height ?? 0;
 
-  if (width === 0 && height === 0) return null;
+  if (width === 0 && height === 0) {
+    return null;
+  }
 
   // Width first: scope films are letterboxed (3840x1600 is still 4K).
-  if (width >= 3200 || height >= 1800) return "4K";
+  if (width >= 3200 || height >= 1800) {
+    return "4K";
+  }
 
-  if (width >= 1800 || height >= 1000) return "1080p";
+  if (width >= 1800 || height >= 1000) {
+    return "1080p";
+  }
 
-  if (width >= 1200 || height >= 700) return "720p";
+  if (width >= 1200 || height >= 700) {
+    return "720p";
+  }
 
   return "SD";
 };
@@ -155,10 +163,13 @@ const pictureOf = (stream: MediaStream): PictureClass => {
   const resolution = resolutionOf(stream);
 
   const plain = (): PictureClass => {
-    if (stream.VideoRange !== "HDR") return { range: "SDR", resolution, delivery: "native" };
+    if (stream.VideoRange !== "HDR") {
+      return { range: "SDR", resolution, delivery: "native" };
+    }
 
-    if (stream.ColorTransfer === "arib-std-b67")
+    if (stream.ColorTransfer === "arib-std-b67") {
       return { range: "HLG", resolution, delivery: "mapped" };
+    }
 
     return { range: "HDR10", resolution, delivery: "native" };
   };
@@ -204,29 +215,49 @@ const soundFormatOf = (stream: MediaStream): SoundFormat => {
   const profile = stream.Profile ?? "";
   const atmos = stream.AudioSpatialFormat === "DolbyAtmos" || profile.includes("Atmos");
 
-  if (codec === "truehd") return atmos ? "TrueHD Atmos" : "TrueHD";
+  if (codec === "truehd") {
+    return atmos ? "TrueHD Atmos" : "TrueHD";
+  }
 
-  if (codec === "eac3") return atmos ? "E-AC3 Atmos" : "E-AC3";
+  if (codec === "eac3") {
+    return atmos ? "E-AC3 Atmos" : "E-AC3";
+  }
 
-  if (codec === "ac3") return "AC3";
+  if (codec === "ac3") {
+    return "AC3";
+  }
 
   if (codec === "dts") {
-    if (stream.AudioSpatialFormat === "DTSX" || profile.includes("DTS:X")) return "DTS:X";
+    if (stream.AudioSpatialFormat === "DTSX" || profile.includes("DTS:X")) {
+      return "DTS:X";
+    }
 
-    if (profile.includes("MA")) return "DTS-HD MA";
+    if (profile.includes("MA")) {
+      return "DTS-HD MA";
+    }
 
-    if (profile.includes("HRA")) return "DTS-HD HRA";
+    if (profile.includes("HRA")) {
+      return "DTS-HD HRA";
+    }
 
     return "DTS";
   }
 
-  if (codec.startsWith("pcm")) return "PCM";
+  if (codec.startsWith("pcm")) {
+    return "PCM";
+  }
 
-  if (codec === "flac") return "FLAC";
+  if (codec === "flac") {
+    return "FLAC";
+  }
 
-  if (codec === "opus") return "Opus";
+  if (codec === "opus") {
+    return "Opus";
+  }
 
-  if (codec === "aac") return "AAC";
+  if (codec === "aac") {
+    return "AAC";
+  }
 
   return "Other";
 };
@@ -234,10 +265,14 @@ const soundFormatOf = (stream: MediaStream): SoundFormat => {
 const channelsOf = (stream: MediaStream): string | null => {
   const layout = (stream.ChannelLayout ?? "").replace(/\(.*\)$/, "");
 
-  if (/^\d+\.\d(\.\d)?$/.test(layout)) return layout;
+  if (/^\d+\.\d(\.\d)?$/.test(layout)) {
+    return layout;
+  }
   const named = NAMED_LAYOUTS[layout];
 
-  if (named !== undefined) return named;
+  if (named !== undefined) {
+    return named;
+  }
 
   return CHANNELS_BY_COUNT[stream.Channels ?? 0] ?? null;
 };
@@ -276,18 +311,25 @@ const soundLabel = (sound: SoundClass): string =>
   sound.format === "Other" ? sound.codec.toUpperCase() : sound.format;
 
 const pictureSignal = (picture: PictureClass): string => {
-  if (picture.delivery === "native") return picture.range;
+  if (picture.delivery === "native") {
+    return picture.range;
+  }
 
-  if (picture.range === "Dolby Vision" && picture.playback === "base-layer-only")
+  if (picture.range === "Dolby Vision" && picture.playback === "base-layer-only") {
     return "Dolby Vision base layer mapped to HDR10";
+  }
 
   return `${picture.range} mapped to HDR10`;
 };
 
 const soundSignal = (sound: SoundClass): string => {
-  if (sound.delivery === "decoded") return `${soundLabel(sound)} decoded to PCM`;
+  if (sound.delivery === "decoded") {
+    return `${soundLabel(sound)} decoded to PCM`;
+  }
 
-  if (sound.format === "PCM") return "PCM";
+  if (sound.format === "PCM") {
+    return "PCM";
+  }
 
   return `${soundLabel(sound)} bitstream`;
 };
@@ -307,7 +349,9 @@ export const classifyFidelity = (
   const streams = source?.MediaStreams ?? [];
   const video = streams.find((stream) => stream.Type === "Video");
 
-  if (video === undefined) return null;
+  if (video === undefined) {
+    return null;
+  }
   const picture = pictureOf(video);
   const tracks = streams.filter((stream) => stream.Type === "Audio").map(soundOf);
 
@@ -320,7 +364,9 @@ export const classifyFidelity = (
   const pictureNote = join(picture.resolution, pictureLabel(picture));
   const signal: SignalFact[] = [{ text: pictureSignal(picture), state: picture.delivery }];
 
-  if (sound !== null) signal.push({ text: soundSignal(sound), state: sound.delivery });
+  if (sound !== null) {
+    signal.push({ text: soundSignal(sound), state: sound.delivery });
+  }
 
   return {
     picture,

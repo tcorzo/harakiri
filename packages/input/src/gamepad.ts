@@ -64,13 +64,17 @@ function contacts(prev: PadState, pad: PadSnapshot): ReadonlyMap<Action, Contact
   const active = new Map<Action, Contact>();
 
   for (const [index, action] of buttonActions) {
-    if (pad.buttons[index]?.pressed === true) active.set(action, { stick: false });
+    if (pad.buttons[index]?.pressed === true) {
+      active.set(action, { stick: false });
+    }
   }
 
   for (const { axis, sign, action } of axisActions) {
     const threshold = prev.get(action)?.stick === true ? stickExit : stickEnter;
 
-    if ((pad.axes[axis] ?? 0) * sign >= threshold) active.set(action, { stick: true });
+    if ((pad.axes[axis] ?? 0) * sign >= threshold) {
+      active.set(action, { stick: true });
+    }
   }
 
   return active;
@@ -93,7 +97,9 @@ export function stepPad(
   for (const action of actions) {
     const contact = active.get(action);
 
-    if (contact === undefined) continue;
+    if (contact === undefined) {
+      continue;
+    }
     const hold = prev.get(action);
 
     if (hold === undefined) {
@@ -111,7 +117,9 @@ export function stepPad(
 
     state.set(action, { ...hold, stick: contact.stick, firedAt: repeats ? now : hold.firedAt });
 
-    if (repeats) fired.push(action);
+    if (repeats) {
+      fired.push(action);
+    }
   }
 
   return { state, actions: fired };

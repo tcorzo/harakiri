@@ -74,9 +74,13 @@ export function mpvTrack(
   tracks: readonly Track[],
   index: number | null | undefined
 ): number | false | undefined {
-  if (index === null || index === undefined) return undefined;
+  if (index === null || index === undefined) {
+    return undefined;
+  }
 
-  if (index < 0) return false;
+  if (index < 0) {
+    return false;
+  }
 
   return tracks.find((track) => track.index === index)?.mpvId;
 }

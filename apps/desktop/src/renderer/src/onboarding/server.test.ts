@@ -16,7 +16,9 @@ function network(answers: Record<string, object>): void {
     const url = new URL(input instanceof Request ? input.url : input);
     const body = answers[url.origin];
 
-    if (body === undefined) throw new TypeError("Failed to fetch");
+    if (body === undefined) {
+      throw new TypeError("Failed to fetch");
+    }
 
     return Response.json(body);
   });

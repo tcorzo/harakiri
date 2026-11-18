@@ -55,7 +55,9 @@ export function ownAppImage(where: {
 }): string | undefined {
   const { appImage, appDir, execPath } = where;
 
-  if (appImage === undefined || appDir === undefined) return undefined;
+  if (appImage === undefined || appDir === undefined) {
+    return undefined;
+  }
 
   return execPath.startsWith(`${appDir}/`) ? appImage : undefined;
 }
@@ -111,7 +113,9 @@ export function startUpdates(deps: UpdateDeps): Updates {
     updater.download().catch((error: unknown) => {
       swallow("download")(error);
 
-      if (status.state !== "downloading") return;
+      if (status.state !== "downloading") {
+        return;
+      }
       const message = messageOf(error);
       set({ state: "failed", message });
       log.warn("update download failed: {message}", { message });
@@ -121,7 +125,9 @@ export function startUpdates(deps: UpdateDeps): Updates {
   updater.onAvailable((version) => {
     set({ state: "available", version });
 
-    if (!deps.isPlaying()) download(version);
+    if (!deps.isPlaying()) {
+      download(version);
+    }
   });
   updater.onNotAvailable(() => set({ state: "idle" }));
   updater.onProgress((percent) => {
@@ -134,7 +140,9 @@ export function startUpdates(deps: UpdateDeps): Updates {
 
   check();
   setInterval(() => {
-    if (status.state !== "downloading" && status.state !== "ready") check();
+    if (status.state !== "downloading" && status.state !== "ready") {
+      check();
+    }
   }, deps.checkEveryMs ?? CHECK_EVERY_MS);
   setInterval(() => {
     if (status.state === "available" && !deps.isPlaying()) {
@@ -154,14 +162,20 @@ export function startUpdates(deps: UpdateDeps): Updates {
   return {
     status: () => status,
     restart: () => {
-      if (status.state !== "ready") return;
+      if (status.state !== "ready") {
+        return;
+      }
       relaunch = true;
       deps.quit();
     },
     installIfReady: () => {
-      if (status.state !== "ready") return;
+      if (status.state !== "ready") {
+        return;
+      }
 
-      if (relaunch) deps.releaseLock();
+      if (relaunch) {
+        deps.releaseLock();
+      }
 
       try {
         updater.install(relaunch);

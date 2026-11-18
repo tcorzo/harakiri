@@ -207,7 +207,9 @@ async function connectWhenReady(
     try {
       return await connectOnce(path);
     } catch (error) {
-      if (hasExited()) throw error;
+      if (hasExited()) {
+        throw error;
+      }
 
       if (Date.now() > deadline) {
         throw new Error(`mpv IPC socket ${path} not ready after ${timeoutMs}ms`, { cause: error });
@@ -257,12 +259,17 @@ function createClient({
   const settle = (reply: Reply) => {
     const request = pending.get(reply.request_id);
 
-    if (!request) return;
+    if (!request) {
+      return;
+    }
     pending.delete(reply.request_id);
     clearTimeout(request.timer);
 
-    if (reply.error === "success") request.resolve(reply.data);
-    else request.reject(new MpvCommandError([request.command], reply.error));
+    if (reply.error === "success") {
+      request.resolve(reply.data);
+    } else {
+      request.reject(new MpvCommandError([request.command], reply.error));
+    }
   };
 
   const dispatch = (message: InboundMessage) => {
@@ -273,11 +280,15 @@ function createClient({
         propertyHandlers.get(message.change.id)?.(message.change.data);
         break;
       case "client-message":
-        for (const listener of clientMessageListeners) listener(message.args);
+        for (const listener of clientMessageListeners) {
+          listener(message.args);
+        }
         break;
     }
 
-    for (const listener of eventListeners) listener(message.event);
+    for (const listener of eventListeners) {
+      listener(message.event);
+    }
   };
 
   socket.setEncoding("utf8");
@@ -316,7 +327,9 @@ function createClient({
   void exited.then(() => socket.destroy());
 
   const command = (...args: JsonValue[]): Promise<unknown> => {
-    if (closed) return Promise.reject(new MpvClosedError());
+    if (closed) {
+      return Promise.reject(new MpvClosedError());
+    }
     const requestId = nextRequestId++;
 
     return new Promise((resolve, reject) => {
@@ -360,15 +373,19 @@ function createClient({
     async observeProperty(name, schema, onChange) {
       const id = nextObserveId++;
       propertyHandlers.set(id, (data) => {
-        if (data === undefined) return onChange(undefined);
+        if (data === undefined) {
+          return onChange(undefined);
+        }
         const parsed = schema.safeParse(data);
 
-        if (parsed.success) onChange(parsed.data);
-        else
+        if (parsed.success) {
+          onChange(parsed.data);
+        } else {
           logger.error("mpv property {name} failed validation: {error}", {
             name,
             error: parsed.error,
           });
+        }
       });
 
       try {
@@ -379,7 +396,9 @@ function createClient({
       }
 
       return () => {
-        if (!propertyHandlers.delete(id)) return;
+        if (!propertyHandlers.delete(id)) {
+          return;
+        }
         command("unobserve_property", id).catch(() => {});
       };
     },

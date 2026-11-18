@@ -32,7 +32,9 @@ export function discoverServers(options: DiscoveryOptions = {}): Promise<Discove
     let done = false;
 
     const finish = (): void => {
-      if (done) return;
+      if (done) {
+        return;
+      }
       done = true;
       clearTimeout(timer);
       socket.close();
@@ -62,7 +64,9 @@ export function discoverServers(options: DiscoveryOptions = {}): Promise<Discove
         return;
       }
 
-      if (!servers.has(parsed.data.id)) servers.set(parsed.data.id, parsed.data);
+      if (!servers.has(parsed.data.id)) {
+        servers.set(parsed.data.id, parsed.data);
+      }
     });
     socket.on("error", (error) => {
       logger.warn("Server discovery failed: {error}", { error });

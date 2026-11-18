@@ -205,7 +205,9 @@ export function ScreeningScreen() {
 
   /** A token the server refused is not a failed screening: the owner has to sign in again. */
   const failWith = (error: unknown): void => {
-    if (classifyFailure(error).kind !== "signedOut") return fail(messageOf(error));
+    if (classifyFailure(error).kind !== "signedOut") {
+      return fail(messageOf(error));
+    }
     inputMode.getState().setMode("ui");
     setOutcome({ kind: "signedOut", error });
   };
@@ -228,16 +230,23 @@ export function ScreeningScreen() {
   };
 
   const offerNext = async (): Promise<void> => {
-    if (entry.kind !== "Episode" || entry.series === null) return leaveAfterPlayback();
+    if (entry.kind !== "Episode" || entry.series === null) {
+      return leaveAfterPlayback();
+    }
 
     const next = await queryClient
       .fetchQuery(nextEpisodeQuery(ctx, entry.series.id, entry.id))
       .catch(() => null);
 
-    if (!mounted.current) return;
+    if (!mounted.current) {
+      return;
+    }
 
-    if (next === null) leaveAfterPlayback();
-    else setOutcome({ kind: "next", next });
+    if (next === null) {
+      leaveAfterPlayback();
+    } else {
+      setOutcome({ kind: "next", next });
+    }
   };
 
   const playNext = (next: Entry): void => {
@@ -253,7 +262,9 @@ export function ScreeningScreen() {
   };
 
   const onPlayerEvent = useEffectEvent((next: PlayerEvent) => {
-    if (next.itemId !== id) return;
+    if (next.itemId !== id) {
+      return;
+    }
     setEvent(next);
 
     // The server stores the resume point after these arrive; the refetch waits for `reported`.
@@ -261,7 +272,9 @@ export function ScreeningScreen() {
       refetchWhenReported(queryClient, ctx, entry);
     }
 
-    if (next.phase === "stopped") leaveAfterPlayback();
+    if (next.phase === "stopped") {
+      leaveAfterPlayback();
+    }
 
     if (next.phase === "ended") {
       inputMode.getState().setMode("ui");
@@ -269,7 +282,9 @@ export function ScreeningScreen() {
       void offerNext();
     }
 
-    if (next.phase === "error") fail(next.error ?? "The player stopped with an error.");
+    if (next.phase === "error") {
+      fail(next.error ?? "The player stopped with an error.");
+    }
   });
 
   const handOff = useEffectEvent(() => {
@@ -278,10 +293,14 @@ export function ScreeningScreen() {
       .play(request)
       .then(() => {
         // Only now does mpv have the file and the gamepad; until then the renderer keeps it.
-        if (mounted.current) inputMode.getState().setMode("player");
+        if (mounted.current) {
+          inputMode.getState().setMode("player");
+        }
       })
       .catch((error: unknown) => {
-        if (mounted.current) failWith(error);
+        if (mounted.current) {
+          failWith(error);
+        }
       });
   });
 
@@ -293,10 +312,14 @@ export function ScreeningScreen() {
     window.harakiri.player
       .prepare(request)
       .then((decided) => {
-        if (mounted.current) setReport(decided);
+        if (mounted.current) {
+          setReport(decided);
+        }
       })
       .catch((error: unknown) => {
-        if (mounted.current) failWith(error);
+        if (mounted.current) {
+          failWith(error);
+        }
       });
     const house = window.setTimeout(() => setHouseDone(true), handoffTiming.houseMs);
 
@@ -312,7 +335,9 @@ export function ScreeningScreen() {
   // The programme slug holds once both the house has dimmed and the server has answered.
   const slugReady = houseDone && report !== null && outcome.kind === "running";
   useEffect(() => {
-    if (!slugReady) return () => {};
+    if (!slugReady) {
+      return () => {};
+    }
 
     setElapsed("slug");
     const picture = window.setTimeout(() => handOff(), handoffTiming.slugMs);
@@ -321,19 +346,27 @@ export function ScreeningScreen() {
   }, [slugReady]);
 
   useEffect(() => {
-    if (outcome.kind === "failed") focusFirst("screening-back");
+    if (outcome.kind === "failed") {
+      focusFirst("screening-back");
+    }
   }, [outcome.kind]);
 
   // Before the picture starts, Back cancels the screening; once mpv has it, Back asks mpv to stop.
   // Once the file has ended, mpv is gone and Back leaves.
   useActionHandler("back", () => {
-    if (outcome.kind === "next" || outcome.kind === "ended") leaveAfterPlayback();
-    else if (outcome.kind === "failed" || elapsed !== "picture") cancel();
-    else void window.harakiri.player.stop().catch(() => leaveAfterPlayback());
+    if (outcome.kind === "next" || outcome.kind === "ended") {
+      leaveAfterPlayback();
+    } else if (outcome.kind === "failed" || elapsed !== "picture") {
+      cancel();
+    } else {
+      void window.harakiri.player.stop().catch(() => leaveAfterPlayback());
+    }
   });
 
   // The route's error screen says the server signed this device out and offers to sign in again.
-  if (outcome.kind === "signedOut") throw outcome.error;
+  if (outcome.kind === "signedOut") {
+    throw outcome.error;
+  }
 
   const name = entry.kind === "Episode" && entry.series !== null ? entry.series.name : entry.title;
   const code = episodeCode(entry);

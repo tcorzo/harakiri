@@ -40,7 +40,9 @@ export async function checkServer(
       checks.map(async (check) => {
         const result = await check;
 
-        if (!result.ok) throw new Error(result.problem.kind);
+        if (!result.ok) {
+          throw new Error(result.problem.kind);
+        }
 
         return result;
       })
@@ -58,7 +60,9 @@ const invalid: Checked = { ok: false, problem: { kind: "invalid" } };
 async function checkOne(queryClient: QueryClient, url: string): Promise<Checked> {
   const server = ServerUrl.safeParse(url);
 
-  if (!server.success) return invalid;
+  if (!server.success) {
+    return invalid;
+  }
   let info;
 
   try {
@@ -157,7 +161,9 @@ export async function runQuickConnect(
   while (!signal.aborted) {
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
 
-    if (signal.aborted) return;
+    if (signal.aborted) {
+      return;
+    }
     let approved: boolean;
 
     try {

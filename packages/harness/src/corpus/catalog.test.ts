@@ -48,7 +48,9 @@ describe("the corpus catalog", () => {
   });
 
   test("the declared audio matches the recipe's track count", () => {
-    for (const e of CATALOG) expect(e.expect.audio).toHaveLength(e.audio.length);
+    for (const e of CATALOG) {
+      expect(e.expect.audio).toHaveLength(e.audio.length);
+    }
   });
 });
 

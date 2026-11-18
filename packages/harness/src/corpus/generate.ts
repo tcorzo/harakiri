@@ -185,7 +185,9 @@ const ManifestSchema = z.object({
 export function readManifest(dir: string): Manifest {
   const file = join(dir, MANIFEST);
 
-  if (!existsSync(file)) throw new Error(`no corpus at ${dir}: run mise run media:gen`);
+  if (!existsSync(file)) {
+    throw new Error(`no corpus at ${dir}: run mise run media:gen`);
+  }
 
   return ManifestSchema.parse(JSON.parse(readFileSync(file, "utf8")));
 }
@@ -206,7 +208,9 @@ function describeFate(state: FateState, dir: string): string {
 function emptyDir(dir: string): void {
   mkdirSync(dir, { recursive: true });
 
-  for (const name of readdirSync(dir)) rmSync(join(dir, name), { recursive: true, force: true });
+  for (const name of readdirSync(dir)) {
+    rmSync(join(dir, name), { recursive: true, force: true });
+  }
 }
 
 const sha256File = (path: string) => createHash("sha256").update(readFileSync(path)).digest("hex");
@@ -219,8 +223,9 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
   if (!withFate) {
     const detail = describeFate(fate, fateDir);
 
-    if (options.requireFate || fate.kind === "corrupt" || fate.kind === "partial")
+    if (options.requireFate || fate.kind === "corrupt" || fate.kind === "partial") {
       throw new Error(`${detail}. Run: mise run media:fetch-fate`);
+    }
     log(
       `FATE TIER NOT BUILT: ${detail}. TrueHD Atmos, E-AC3 JOC, DTS-HD MA, DTS:X, VC-1 and ` +
         `DV profile 7 items are left out. Run: mise run media:fetch-fate`
@@ -512,7 +517,9 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
 
     const meta = [`-metadata:s:a:${n}`, `language=${track.language}`];
 
-    if (track.title !== undefined) meta.push(`-metadata:s:a:${n}`, `title=${track.title}`);
+    if (track.title !== undefined) {
+      meta.push(`-metadata:s:a:${n}`, `title=${track.title}`);
+    }
 
     return { inputs, map: ["-map", `${input}:a:0`], codec: [...codecArgs, ...meta] };
   }
@@ -546,7 +553,9 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
       codecs.push(`-metadata:s:s:${n}`, `language=${sub.language}`);
     }
 
-    if (entry.embeddedSubtitles.length > 0) codecs.push("-c:s", "copy");
+    if (entry.embeddedSubtitles.length > 0) {
+      codecs.push("-c:s", "copy");
+    }
     const hevcTag = entry.video.kind === "dv" && entry.video.profile === "5" ? "dvh1" : "hvc1";
 
     const container = match(entry.container)
@@ -597,8 +606,9 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
       if (entry.kind === "movie") {
         writeFileSync(at("movie.nfo"), movieNfo(entry));
 
-        for (const kind of ["poster", "backdrop", "logo"] as const)
+        for (const kind of ["poster", "backdrop", "logo"] as const) {
           jobs.push(art(kind, index, at(`${kind}.png`)));
+        }
       } else {
         writeFileSync(at(`${stem}.nfo`), episodeNfo(entry, SERIES[entry.series].year));
         jobs.push(art("thumb", index, at(`${stem}-thumb.png`)));
@@ -607,11 +617,14 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
     Object.values(SERIES).forEach((meta, i) => {
       const dir = join(out, "shows", meta.title);
 
-      if (!existsSync(dir)) return;
+      if (!existsSync(dir)) {
+        return;
+      }
       writeFileSync(join(dir, "tvshow.nfo"), seriesNfo(meta));
 
-      for (const kind of ["poster", "backdrop", "logo"] as const)
+      for (const kind of ["poster", "backdrop", "logo"] as const) {
         jobs.push(art(kind, 100 + i, join(dir, `${kind}.png`)));
+      }
     });
     await Promise.all(jobs);
   }

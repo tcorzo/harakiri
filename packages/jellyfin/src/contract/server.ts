@@ -43,7 +43,9 @@ export const signIn = async (): Promise<ContractSession> => {
 
   const result = await authenticate(SERVER, USER, PASSWORD, identity);
 
-  if (result.kind !== "signed-in") throw new Error(`dev sign-in failed: ${JSON.stringify(result)}`);
+  if (result.kind !== "signed-in") {
+    throw new Error(`dev sign-in failed: ${JSON.stringify(result)}`);
+  }
   const client = createJellyfinClient(SERVER, identity, result.session.accessToken);
   client.setConfig({ timeout: 30_000, retry: 0 });
 
@@ -73,7 +75,9 @@ const label = (item: {
   ParentIndexNumber?: number | null;
   IndexNumber?: number | null;
 }): string => {
-  if (item.Type !== "Episode") return item.Name ?? "?";
+  if (item.Type !== "Episode") {
+    return item.Name ?? "?";
+  }
   const pad = (n: number | null | undefined) => String(n ?? 0).padStart(2, "0");
 
   return `${item.SeriesName} S${pad(item.ParentIndexNumber)}E${pad(item.IndexNumber)}`;
@@ -106,7 +110,9 @@ export const libraryItems = async ({
     for (const item of data.Items ?? []) {
       const sources = item.MediaSources ?? [];
 
-      if (sources.length === 0 || !item.Path) continue;
+      if (sources.length === 0 || !item.Path) {
+        continue;
+      }
       items.push({
         id: ItemId.parse(item.Id),
         name: label(item),
@@ -116,7 +122,9 @@ export const libraryItems = async ({
       });
     }
 
-    if (start + PAGE >= (data.TotalRecordCount ?? 0)) return items;
+    if (start + PAGE >= (data.TotalRecordCount ?? 0)) {
+      return items;
+    }
   }
 };
 
@@ -146,7 +154,9 @@ export const decide = (response: PlaybackInfoResponse): Decision => {
 
   const chosen = sources[0];
 
-  if (chosen?.SupportsDirectPlay === true) return { kind: "direct-play", source: chosen };
+  if (chosen?.SupportsDirectPlay === true) {
+    return { kind: "direct-play", source: chosen };
+  }
 
   return {
     kind: "refused",
@@ -157,10 +167,13 @@ export const decide = (response: PlaybackInfoResponse): Decision => {
 };
 
 export const describeDecision = (decision: Decision): string => {
-  if (decision.kind === "direct-play") return "direct play";
+  if (decision.kind === "direct-play") {
+    return "direct play";
+  }
 
-  if (decision.kind === "transcode")
+  if (decision.kind === "transcode") {
     return `transcode (${decision.reasons.join(",") || "no TranscodeReasons"})`;
+  }
 
   return `refused (${decision.detail})`;
 };
@@ -175,7 +188,9 @@ export const mapLimit = async <T, R>(
   const queue = inputs.entries();
 
   const worker = async () => {
-    for (const [index, input] of queue) results[index] = await run(input);
+    for (const [index, input] of queue) {
+      results[index] = await run(input);
+    }
   };
 
   await Promise.all(Array.from({ length: Math.min(limit, inputs.length) }, worker));

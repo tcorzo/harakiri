@@ -25,10 +25,13 @@ function fourcc(bytes: Uint8Array, at: number): string {
  * Anything that does not start with RIFF is taken as headerless s16le.
  */
 export function readPcm16(file: Uint8Array): Pcm16 {
-  if (file.length < 12 || fourcc(file, 0) !== "RIFF") return { kind: "raw", data: file };
+  if (file.length < 12 || fourcc(file, 0) !== "RIFF") {
+    return { kind: "raw", data: file };
+  }
 
-  if (fourcc(file, 8) !== "WAVE")
+  if (fourcc(file, 8) !== "WAVE") {
     throw new WavError(`RIFF form type is ${fourcc(file, 8)}, not WAVE`);
+  }
 
   const view = new DataView(file.buffer, file.byteOffset, file.byteLength);
   let format: { channels: number; sampleRate: number } | undefined;
@@ -49,13 +52,17 @@ export function readPcm16(file: Uint8Array): Pcm16 {
         throw new WavError(`fmt tag 0x${tag.toString(16)} is not integer PCM`);
       }
 
-      if (bits !== 16) throw new WavError(`fmt has ${bits} bits per sample, IEC 61937 needs 16`);
+      if (bits !== 16) {
+        throw new WavError(`fmt has ${bits} bits per sample, IEC 61937 needs 16`);
+      }
       format = {
         channels: view.getUint16(body + 2, true),
         sampleRate: view.getUint32(body + 4, true),
       };
     } else if (id === "data") {
-      if (format === undefined) throw new WavError("data chunk precedes fmt chunk");
+      if (format === undefined) {
+        throw new WavError("data chunk precedes fmt chunk");
+      }
 
       return { kind: "wav", ...format, data: file.subarray(body, body + size) };
     }

@@ -149,7 +149,9 @@ export function watchFidelity(
     const view = fidelityView(state);
     const next = JSON.stringify(view);
 
-    if (next === shown) return;
+    if (next === shown) {
+      return;
+    }
     shown = next;
 
     for (const downgrade of view.downgrades) {
@@ -193,7 +195,9 @@ export function watchFidelity(
 
     const view = fidelityView(state);
 
-    if (!options.video || view.renderer === "none") return;
+    if (!options.video || view.renderer === "none") {
+      return;
+    }
 
     if (settling > 0) {
       settling -= 1;
@@ -213,13 +217,19 @@ export function watchFidelity(
       return;
     }
 
-    if (vo === undefined) return;
+    if (vo === undefined) {
+      return;
+    }
     const target = await optional(mpv, "video-target-params", TargetParams);
 
-    if (target === undefined) return;
+    if (target === undefined) {
+      return;
+    }
     const hdr = HDR_GAMMAS.has(target.gamma);
 
-    if (hdr === display) return;
+    if (hdr === display) {
+      return;
+    }
     display = hdr;
     await learn({ kind: "displayTarget", hdr }, false);
   };

@@ -56,16 +56,21 @@ const mock = setupServer(
       auth: request.headers.get("Authorization"),
     });
 
-    if (url.pathname === "/Items") return HttpResponse.json(itemsBody);
+    if (url.pathname === "/Items") {
+      return HttpResponse.json(itemsBody);
+    }
 
-    if (url.pathname === "/Items/Latest" || url.pathname === "/Users/Public")
+    if (url.pathname === "/Items/Latest" || url.pathname === "/Users/Public") {
       return HttpResponse.json([]);
+    }
 
-    if (url.pathname === "/System/Info/Public")
+    if (url.pathname === "/System/Info/Public") {
       return HttpResponse.json({ ServerName: "jf", Version: "12.4.0" });
+    }
 
-    if (url.pathname.startsWith("/Items/"))
+    if (url.pathname.startsWith("/Items/")) {
       return HttpResponse.json({ Id: SERIES, Name: "Fixture Film" });
+    }
 
     return HttpResponse.json({ Items: [] });
   })

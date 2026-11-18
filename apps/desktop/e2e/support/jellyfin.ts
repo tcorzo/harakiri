@@ -160,7 +160,9 @@ export function spokenTitle(item: ShownItem): string {
 export function minutesLeft(item: ShownItem): number | null {
   const percent = item.UserData?.PlayedPercentage ?? null;
 
-  if (percent === null || percent <= 0 || percent >= 100 || item.RunTimeTicks == null) return null;
+  if (percent === null || percent <= 0 || percent >= 100 || item.RunTimeTicks == null) {
+    return null;
+  }
   const minutes = Math.round(item.RunTimeTicks / TICKS_PER_MINUTE);
 
   return Math.max(1, Math.round(minutes * (1 - percent / 100)));
@@ -235,25 +237,38 @@ export const ITEMS = {
 const isAtmos = (stream: Stream) => (stream.Profile ?? "").includes("Atmos");
 
 function matchItem(item: z.infer<typeof Item>, criteria: ItemCriteria): PickedItem | undefined {
-  if (!criteria.types.some((type) => type === item.Type)) return undefined;
+  if (!criteria.types.some((type) => type === item.Type)) {
+    return undefined;
+  }
   const runTimeTicks = item.RunTimeTicks ?? 0;
   const minutes = runTimeTicks / TICKS_PER_SECOND / 60;
 
-  if (criteria.minutes && (minutes < criteria.minutes[0] || minutes > criteria.minutes[1]))
+  if (criteria.minutes && (minutes < criteria.minutes[0] || minutes > criteria.minutes[1])) {
     return undefined;
+  }
   const [source] = item.MediaSources;
 
-  if (!source) return undefined;
+  if (!source) {
+    return undefined;
+  }
   const video = source.MediaStreams.find((stream) => stream.Type === "Video");
 
-  if (!video) return undefined;
+  if (!video) {
+    return undefined;
+  }
   const wanted = criteria.video;
 
-  if (wanted?.codec !== undefined && video.Codec !== wanted.codec) return undefined;
+  if (wanted?.codec !== undefined && video.Codec !== wanted.codec) {
+    return undefined;
+  }
 
-  if (wanted?.ranges && !wanted.ranges.includes(video.VideoRangeType ?? "")) return undefined;
+  if (wanted?.ranges && !wanted.ranges.includes(video.VideoRangeType ?? "")) {
+    return undefined;
+  }
 
-  if (wanted?.dvProfile !== undefined && video.DvProfile !== wanted.dvProfile) return undefined;
+  if (wanted?.dvProfile !== undefined && video.DvProfile !== wanted.dvProfile) {
+    return undefined;
+  }
   const audioWanted = criteria.audio;
 
   const audio = audioWanted
@@ -265,7 +280,9 @@ function matchItem(item: z.infer<typeof Item>, criteria: ItemCriteria): PickedIt
       )
     : undefined;
 
-  if (audioWanted && !audio) return undefined;
+  if (audioWanted && !audio) {
+    return undefined;
+  }
 
   return {
     id: ItemId.parse(item.Id),
@@ -294,7 +311,9 @@ function pickFromCorpus(
   return wanted.map((entryId) => {
     const entry = CATALOG.find((candidate) => candidate.id === entryId);
 
-    if (entry === undefined) throw new Error(`The catalog has no "${entryId}"`);
+    if (entry === undefined) {
+      throw new Error(`The catalog has no "${entryId}"`);
+    }
     const item = items.find((candidate) => candidate.Path === containerPath(entry));
 
     if (item === undefined) {
@@ -333,7 +352,9 @@ export class Jellyfin {
       headers: { Authorization: this.#auth, "Content-Type": "application/json" },
     });
 
-    if (!response.ok) throw new Error(`${init.method ?? "GET"} ${path}: HTTP ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`${init.method ?? "GET"} ${path}: HTTP ${response.status}`);
+    }
 
     return response.status === 204 ? undefined : response.json();
   }
@@ -391,7 +412,9 @@ export class Jellyfin {
       .object({ Items: z.array(Item) })
       .parse(await this.#request(`Items?${query.toString()}`));
 
-    if (this.#backend.kind === "corpus") return pickFromCorpus(Items, criteria, count);
+    if (this.#backend.kind === "corpus") {
+      return pickFromCorpus(Items, criteria, count);
+    }
 
     const picked = Items.flatMap((item) => matchItem(item, criteria) ?? [])
       .toSorted((a, b) => a.runTimeTicks - b.runTimeTicks || a.id.localeCompare(b.id))
@@ -407,7 +430,9 @@ export class Jellyfin {
   async pickItem(criteria: ItemCriteria): Promise<PickedItem> {
     const [item] = await this.pickItems(criteria, 1);
 
-    if (!item) throw new Error(`The library has no ${criteria.label}`);
+    if (!item) {
+      throw new Error(`The library has no ${criteria.label}`);
+    }
 
     return item;
   }
@@ -452,7 +477,9 @@ export class Jellyfin {
       }
     );
 
-    if (!response.ok) throw new Error(`QuickConnect/Authorize: HTTP ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`QuickConnect/Authorize: HTTP ${response.status}`);
+    }
   }
 
   /** Forgets a device and revokes its token (admin only): how a test cleans up an app that signed in itself. */

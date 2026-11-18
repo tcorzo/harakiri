@@ -46,9 +46,13 @@ const mock = setupServer(
     await record(request);
     const { Pw } = z.object({ Pw: z.string() }).parse(received.at(-1)?.body);
 
-    if (Pw === "right") return HttpResponse.json(signedIn);
+    if (Pw === "right") {
+      return HttpResponse.json(signedIn);
+    }
 
-    if (Pw === "rejected") return new HttpResponse(null, { status: 403 });
+    if (Pw === "rejected") {
+      return new HttpResponse(null, { status: 403 });
+    }
 
     return new HttpResponse("Error processing request.", { status: 401 });
   }),

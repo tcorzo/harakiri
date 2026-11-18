@@ -157,7 +157,9 @@ export function elementaryStream(bursts: readonly Burst[]): ElementaryStream {
 
   const first = carried[0];
 
-  if (first === undefined) throw new Iec61937Error("no audio-carrying bursts");
+  if (first === undefined) {
+    throw new Iec61937Error("no audio-carrying bursts");
+  }
   const other = carried.find((c) => c.stream !== first.stream);
 
   if (other !== undefined) {
@@ -322,8 +324,9 @@ function walkTrueHdAccessUnits(data: Uint8Array): { bytes: Uint8Array; partialTa
 
     const length = (word & 0x0fff) * 2;
 
-    if (at + length > data.length)
+    if (at + length > data.length) {
       return { bytes: concat(units), partialTailBytes: data.length - at };
+    }
     units.push(data.subarray(at, at + length));
     at += length;
   }

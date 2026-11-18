@@ -92,7 +92,9 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
   }
 
   function deviceId(): DeviceId {
-    if (cachedDeviceId !== undefined) return cachedDeviceId;
+    if (cachedDeviceId !== undefined) {
+      return cachedDeviceId;
+    }
 
     try {
       cachedDeviceId = DeviceId.parse(z.uuid().parse(readFileSync(deviceIdFile, "utf8").trim()));
@@ -105,14 +107,18 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
   }
 
   function readToken(token: StoredSession["token"]): string {
-    if (token.kind === "plain") return token.value;
+    if (token.kind === "plain") {
+      return token.value;
+    }
 
     return options.crypto.decryptString(Buffer.from(token.base64, "base64"));
   }
 
   return {
     load() {
-      if (memorySession !== null) return memorySession;
+      if (memorySession !== null) {
+        return memorySession;
+      }
       let raw: string;
 
       try {

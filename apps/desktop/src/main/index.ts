@@ -21,7 +21,9 @@ import { electronUpdater } from "./updater";
 import { ownAppImage, startUpdates, type Updates } from "./updates";
 
 // Electron keys the single-instance lock on userData, so this must run before the lock.
-if (env.HARAKIRI_USER_DATA !== undefined) app.setPath("userData", env.HARAKIRI_USER_DATA);
+if (env.HARAKIRI_USER_DATA !== undefined) {
+  app.setPath("userData", env.HARAKIRI_USER_DATA);
+}
 
 const appUrl =
   process.env["ELECTRON_RENDERER_URL"] ??
@@ -53,9 +55,13 @@ function createWindow(): void {
 function focusExistingWindow(): void {
   const [window] = BrowserWindow.getAllWindows();
 
-  if (window === undefined) return;
+  if (window === undefined) {
+    return;
+  }
 
-  if (window.isMinimized()) window.restore();
+  if (window.isMinimized()) {
+    window.restore();
+  }
   window.show();
   window.focus();
 }
@@ -75,7 +81,9 @@ function logProcessTrouble(): void {
   });
   app.on("web-contents-created", (_event, contents) => {
     contents.on("console-message", ({ level, message, sourceId, lineNumber }) => {
-      if (level !== "warning" && level !== "error") return;
+      if (level !== "warning" && level !== "error") {
+        return;
+      }
       logger[level]("Renderer console: {message} ({sourceId}:{lineNumber})", {
         message,
         sourceId,

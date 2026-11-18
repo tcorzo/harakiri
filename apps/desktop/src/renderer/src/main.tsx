@@ -47,7 +47,9 @@ declare module "@tanstack/react-router" {
 
 const root = document.getElementById("root");
 
-if (root === null) throw new Error("index.html is missing #root");
+if (root === null) {
+  throw new Error("index.html is missing #root");
+}
 
 createRoot(root).render(
   <StrictMode>

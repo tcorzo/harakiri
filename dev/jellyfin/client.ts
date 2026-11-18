@@ -38,7 +38,9 @@ export async function api<T = unknown>(
   const deadline = Date.now() + UNAVAILABLE_RETRY_MS;
   let res = await send();
 
-  if (res.status === 503) console.log(`${method} ${path} -> 503, server still starting; retrying`);
+  if (res.status === 503) {
+    console.log(`${method} ${path} -> 503, server still starting; retrying`);
+  }
 
   while (res.status === 503 && Date.now() < deadline) {
     await res.body?.cancel();
@@ -70,7 +72,9 @@ export async function waitForServer(
         "/System/Info/Public"
       );
 
-      if (typeof info?.Version === "string") return info;
+      if (typeof info?.Version === "string") {
+        return info;
+      }
       last = `not started yet: ${JSON.stringify(info)?.slice(0, 120)}`;
     } catch (e) {
       last = String(e);

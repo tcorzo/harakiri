@@ -96,7 +96,9 @@ function useProgramme(): readonly PlannedRow[] | null {
     return nextUp.data?.filter((entry) => !resuming.has(entry.id));
   }, [resume.data, nextUp.data]);
 
-  if ([resume, nextUp, recent, sections].some((query) => query.isPending)) return null;
+  if ([resume, nextUp, recent, sections].some((query) => query.isPending)) {
+    return null;
+  }
   // Rebuilt each render, which is cheap: the rows themselves are memoized on stable data.
   const rows: PlannedRow[] = [];
 
@@ -105,9 +107,11 @@ function useProgramme(): readonly PlannedRow[] | null {
     query: { readonly data: readonly Entry[] | undefined; readonly refetch: () => unknown },
     shape: RowShape
   ): void => {
-    if (query.data === undefined) rows.push(failed(section, query.refetch));
-    else if (query.data.length > 0)
+    if (query.data === undefined) {
+      rows.push(failed(section, query.refetch));
+    } else if (query.data.length > 0) {
       rows.push({ kind: "entries", section, entries: query.data, ...shape });
+    }
   };
 
   add({ id: "resume", name: "Continue Watching" }, resume, still);
@@ -118,13 +122,14 @@ function useProgramme(): readonly PlannedRow[] | null {
     rows.push(failed({ id: "genres", name: "Programme" }, sections.refetch));
   } else {
     for (const section of sections.data) {
-      if (section.entries.length > 0)
+      if (section.entries.length > 0) {
         rows.push({
           kind: "entries",
           section: { id: section.id, name: section.title },
           entries: section.entries,
           ...poster,
         });
+      }
     }
   }
 
@@ -134,7 +139,9 @@ function useProgramme(): readonly PlannedRow[] | null {
 function rowTop(rows: readonly PlannedRow[], index: number): number {
   let top = 0;
 
-  for (const row of rows.slice(0, Math.max(0, index - 1))) top += row.heightRem + rowChromeRem;
+  for (const row of rows.slice(0, Math.max(0, index - 1))) {
+    top += row.heightRem + rowChromeRem;
+  }
 
   return top;
 }
@@ -185,9 +192,13 @@ const Programme = memo(function Programme({
         // Only a card the owner rests on is worth fetching in full.
         void queryClient.prefetchQuery(rawItemQuery(ctx, entry.id));
 
-        if (entry.kind === "Series") void queryClient.prefetchQuery(seasonsQuery(ctx, entry.id));
+        if (entry.kind === "Series") {
+          void queryClient.prefetchQuery(seasonsQuery(ctx, entry.id));
+        }
 
-        if (entry.backdrop !== null) preload(backdropUrl(server, entry.backdrop), { as: "image" });
+        if (entry.backdrop !== null) {
+          preload(backdropUrl(server, entry.backdrop), { as: "image" });
+        }
       }, relightRestMs);
     },
     [ctx, queryClient, server]
@@ -196,13 +207,19 @@ const Programme = memo(function Programme({
   // Up from the first row returns to the stage, which the spatial search cannot see while it is hidden.
   const first = rows[0]?.section.id;
   useNavigationGuard((direction) => {
-    if (direction !== "up" || !hero || first === undefined) return false;
+    if (direction !== "up" || !hero || first === undefined) {
+      return false;
+    }
     // Typed as a string, but null while nothing has focus.
     const key: string | null = getCurrentFocusKey();
 
-    if (key === null) return false;
+    if (key === null) {
+      return false;
+    }
 
-    if (!key.startsWith(cardKey(first, "")) && key !== retryKey(first)) return false;
+    if (!key.startsWith(cardKey(first, "")) && key !== retryKey(first)) {
+      return false;
+    }
 
     return focusFirst("hero-play");
   });
@@ -210,11 +227,15 @@ const Programme = memo(function Programme({
   // Returning from a title page lands back on the card the owner left, found by id.
   const restored = useRef(false);
   useEffect(() => {
-    if (restored.current) return;
+    if (restored.current) {
+      return;
+    }
     restored.current = true;
     const { place } = useLit.getState();
 
-    if (place !== null || !hero) focusFirst(...restoreKeys(place, hero, first));
+    if (place !== null || !hero) {
+      focusFirst(...restoreKeys(place, hero, first));
+    }
   }, [hero, first]);
 
   return (
@@ -387,22 +408,32 @@ export function LibraryScreen() {
   useActionHandler("menu", () => void navigate({ to: "/settings" }));
   // Back from the rows returns to tonight's screening rather than leaving the app.
   useActionHandler("back", () => {
-    if (!holding && hero !== null) focusFirst("hero-play");
+    if (!holding && hero !== null) {
+      focusFirst("hero-play");
+    }
   });
 
   useEffect(() => {
-    if (useLit.getState().place !== null) return;
+    if (useLit.getState().place !== null) {
+      return;
+    }
     useLit.setState({ entry: null, section: tonight });
     focusFirst("hero-play");
   }, []);
 
-  if (next?.backdrop != null) preload(backdropUrl(server, next.backdrop), { as: "image" });
+  if (next?.backdrop != null) {
+    preload(backdropUrl(server, next.backdrop), { as: "image" });
+  }
 
-  if (hero === null && rows !== null && rows.length === 0) return <EmptyLibrary />;
+  if (hero === null && rows !== null && rows.length === 0) {
+    return <EmptyLibrary />;
+  }
 
   const playHero = (): void => {
     // A press in the instant the film changed was meant for the film that just left.
-    if (hero === null || !cycle.settled()) return;
+    if (hero === null || !cycle.settled()) {
+      return;
+    }
     void navigate({
       to: "/screening/$id",
       params: { id: hero.id },
@@ -411,7 +442,9 @@ export function LibraryScreen() {
   };
 
   const lightHero = (): void => {
-    if (hero === null) return;
+    if (hero === null) {
+      return;
+    }
     window.clearTimeout(relightTimer);
     useLit.setState({ place: null });
     light(hero, tonight);

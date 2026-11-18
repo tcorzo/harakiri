@@ -12,7 +12,9 @@ export function stationOf(
   elapsed: "house" | "slug" | "picture",
   event: PlayerEvent | null
 ): Station {
-  if (elapsed === "picture" || event !== null) return "Picture";
+  if (elapsed === "picture" || event !== null) {
+    return "Picture";
+  }
 
   return elapsed === "house" ? "House" : "Programme";
 }

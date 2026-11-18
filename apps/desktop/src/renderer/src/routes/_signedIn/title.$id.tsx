@@ -23,8 +23,9 @@ export const Route = createFileRoute("/_signedIn/title/$id")({
 
       const season = seasons[initialSeason(params.id, seasons)];
 
-      if (season !== undefined)
+      if (season !== undefined) {
         await queryClient.ensureQueryData(episodesQuery(signedIn, params.id, season.id));
+      }
     }
   },
   component: TitleScreen,

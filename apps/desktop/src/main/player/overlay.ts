@@ -128,7 +128,9 @@ const menuPanel = (menu: NonNullable<ControlsView["menu"]>): string[] => {
     const index = start + offset;
 
     if (offset === 0 || rows[index - 1]?.property !== row.property) {
-      if (offset > 0) y += 14;
+      if (offset > 0) {
+        y += 14;
+      }
       events.push(
         text(MENU_LEFT + 32, y, STYLE.label, row.property === "aid" ? "SOUND" : "SUBTITLES")
       );
@@ -140,10 +142,14 @@ const menuPanel = (menu: NonNullable<ControlsView["menu"]>): string[] => {
     const focused = index === cursor;
     const active = row.id === (row.property === "aid" ? menu.aid : menu.sid);
 
-    if (focused) events.push(rect(MENU_LEFT + 32, y + 4, 4, 38, PAPER));
+    if (focused) {
+      events.push(rect(MENU_LEFT + 32, y + 4, 4, 38, PAPER));
+    }
     events.push(text(MENU_LEFT + 52, y, focused ? STYLE.rowFocused : STYLE.row, row.label));
 
-    if (active) events.push(rect(RIGHT - 48, y + 17, 10, 10, PAPER));
+    if (active) {
+      events.push(rect(RIGHT - 48, y + 17, 10, 10, PAPER));
+    }
     y += 48;
   });
 

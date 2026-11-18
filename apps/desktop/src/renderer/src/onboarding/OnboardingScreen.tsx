@@ -189,10 +189,14 @@ function DiscoveredList({ onPick }: { readonly onPick: (address: string) => void
   // A server found while the owner sits untouched takes focus, as does one found by "Search again";
   // one that answers while they are already typing an address must not pull focus out of the keyboard.
   useEffect(() => {
-    if (firstAddress === undefined) return;
+    if (firstAddress === undefined) {
+      return;
+    }
     const untouched = activity.getState().at < shownAt;
 
-    if (untouched || getCurrentFocusKey() === searchAgainKey) focusFirst("server-found-0");
+    if (untouched || getCurrentFocusKey() === searchAgainKey) {
+      focusFirst("server-found-0");
+    }
   }, [firstAddress, shownAt]);
 
   return (
@@ -244,7 +248,9 @@ function ServerStep({ state, send }: Flow) {
     send(event);
     const urls = serverCandidates(typed);
 
-    if (urls === null) return;
+    if (urls === null) {
+      return;
+    }
     const result = await checkServer(queryClient, urls);
     send(
       result.ok
@@ -315,7 +321,9 @@ function ChooseUser({
   const ready = users.status !== "pending";
 
   useEffect(() => {
-    if (ready) focusFirst("user-0");
+    if (ready) {
+      focusFirst("user-0");
+    }
   }, [ready]);
 
   const listed = users.data ?? [];
@@ -454,10 +462,15 @@ function SignIn({
   useEffect(() => {
     let live = true;
     void signIn(server, identity, username, password).then(async (result) => {
-      if (!live) return;
+      if (!live) {
+        return;
+      }
 
-      if (result.ok) await finish(result.session);
-      else send({ type: "signInFailed", problem: result.problem });
+      if (result.ok) {
+        await finish(result.session);
+      } else {
+        send({ type: "signInFailed", problem: result.problem });
+      }
     });
 
     return () => {
@@ -478,7 +491,9 @@ function QuickConnectStep({
   useEffect(() => {
     const abort = new AbortController();
     void runQuickConnect(server, identity, abort.signal, (outcome) => {
-      if (abort.signal.aborted) return;
+      if (abort.signal.aborted) {
+        return;
+      }
       match(outcome)
         .with({ kind: "code" }, (o) => send({ type: "quickConnectCode", code: o.code }))
         .with({ kind: "failed" }, (o) => send({ type: "quickConnectFailed", problem: o.problem }))
@@ -550,7 +565,9 @@ export function OnboardingScreen() {
   const resumeUrls = resumeCheck?.urls;
 
   useEffect(() => {
-    if (resumeAddress === undefined || resumeUrls === undefined) return;
+    if (resumeAddress === undefined || resumeUrls === undefined) {
+      return;
+    }
     void checkServer(queryClient, resumeUrls).then((result) =>
       send(
         result.ok

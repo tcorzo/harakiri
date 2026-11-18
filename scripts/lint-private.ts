@@ -89,18 +89,24 @@ const rules = [...GENERIC, ...denied()];
 const judge = (line: string): string | undefined => {
   const hits = rules.filter(({ pattern }) => pattern.test(line)).map(({ name }) => name);
 
-  if (hits.length === 0) return undefined;
+  if (hits.length === 0) {
+    return undefined;
+  }
   const what = [...new Set(hits)].join(", ");
 
-  if (!ALLOW.test(line)) return `${what}, without an allow-private exception`;
+  if (!ALLOW.test(line)) {
+    return `${what}, without an allow-private exception`;
+  }
   const allow = ALLOW_FULL.exec(line)?.groups;
   const date = allow?.["date"];
 
-  if (date === undefined || !isRealDate(date))
+  if (date === undefined || !isRealDate(date)) {
     return "malformed exception; write // allow-private: <reason> (expires YYYY-MM-DD, approved-by <name>)";
+  }
 
-  if (date < today)
+  if (date < today) {
     return `exception expired on ${date} (approved by ${allow?.["name"]}); remove the data or renew the approval`;
+  }
 
   return undefined;
 };
@@ -110,19 +116,25 @@ const problems: string[] = [];
 for (const file of files) {
   const text = readText(file);
 
-  if (text === undefined) continue;
+  if (text === undefined) {
+    continue;
+  }
 
   for (const [index, line] of text.split("\n").entries()) {
     const why = judge(line);
 
-    if (why) problems.push(`${file}:${index + 1}: ${line.trim().slice(0, 160)}\n  ${why}`);
+    if (why) {
+      problems.push(`${file}:${index + 1}: ${line.trim().slice(0, 160)}\n  ${why}`);
+    }
   }
 }
 
 if (problems.length > 0) {
   console.error(`lint-private: ${problems.length} line(s) with workstation or library data\n`);
 
-  for (const problem of problems) console.error(`${problem}\n`);
+  for (const problem of problems) {
+    console.error(`${problem}\n`);
+  }
   console.error(`Rule: ${RULE}`);
   process.exit(1);
 }

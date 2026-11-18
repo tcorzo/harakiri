@@ -16,7 +16,9 @@ export function backdropUrl(server: ServerUrl, image: ImageRef): string {
 export function Backdrop({ url }: { readonly url: string | null }) {
   const [layers, setLayers] = useState<readonly (string | null)[]>([url]);
 
-  if (layers.at(-1) !== url) setLayers([layers.at(-1) ?? null, url]);
+  if (layers.at(-1) !== url) {
+    setLayers([layers.at(-1) ?? null, url]);
+  }
 
   return (
     <div aria-hidden="true" className="bg-ink absolute inset-0 overflow-hidden">

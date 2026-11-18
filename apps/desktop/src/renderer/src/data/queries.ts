@@ -119,10 +119,14 @@ export function refetchWhenReported(queryClient: QueryClient, ctx: SignedIn, ent
   const keys = playedKeys(ctx, entry);
 
   const unsubscribe = window.harakiri.player.onEvent((event) => {
-    if (event.itemId !== entry.id || event.phase !== "reported") return;
+    if (event.itemId !== entry.id || event.phase !== "reported") {
+      return;
+    }
     unsubscribe();
 
-    for (const queryKey of keys) void queryClient.invalidateQueries({ queryKey });
+    for (const queryKey of keys) {
+      void queryClient.invalidateQueries({ queryKey });
+    }
   });
 }
 

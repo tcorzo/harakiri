@@ -13,7 +13,9 @@ const stacks: Record<Handled, (() => void)[]> = { back: [], menu: [], playPause:
 export function dispatch(action: Handled): boolean {
   const handler = stacks[action].at(-1);
 
-  if (handler === undefined) return false;
+  if (handler === undefined) {
+    return false;
+  }
   handler();
 
   return true;

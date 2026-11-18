@@ -15,8 +15,9 @@ export async function setHttpHeaders(
 ): Promise<void> {
   const fields = Object.entries(headers).map(([name, value]) => {
     // The value is never echoed: it is usually the secret.
-    if (!TOKEN.test(name) || /[\r\n]/.test(value))
+    if (!TOKEN.test(name) || /[\r\n]/.test(value)) {
       throw new TypeError(`invalid HTTP header ${JSON.stringify(name)}`);
+    }
 
     return `${name}: ${value}`;
   });
