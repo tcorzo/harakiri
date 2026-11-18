@@ -12,6 +12,7 @@ function fakeUpdater() {
   } = {};
   const calls = { check: 0, download: 0, installs: [] as boolean[] };
   let checkResult: () => Promise<unknown> = () => Promise.resolve();
+  let downloadResult: () => Promise<unknown> = () => Promise.resolve();
   let installResult: () => boolean = () => true;
   const updater: UpdaterLike = {
     check: () => {
@@ -20,7 +21,7 @@ function fakeUpdater() {
     },
     download: () => {
       calls.download += 1;
-      return Promise.resolve();
+      return downloadResult();
     },
     install: (relaunch) => {
       calls.installs.push(relaunch);
@@ -48,6 +49,9 @@ function fakeUpdater() {
     calls,
     failChecks: (e: Error) => {
       checkResult = () => Promise.reject(e);
+    },
+    failDownloads: (e: Error) => {
+      downloadResult = () => Promise.reject(e);
     },
     failInstall: () => {
       installResult = () => {
@@ -176,4 +180,15 @@ test("an install that throws marks the update failed", () => {
   fake.on.downloaded?.("0.3.0");
   expect(() => updates.installIfReady()).not.toThrow();
   expect(updates.status()).toEqual({ state: "failed", message: "EACCES" });
+});
+
+test("a download that rejects without an error event fails and is retried", async () => {
+  const fake = fakeUpdater();
+  fake.failDownloads(new Error("ECONNRESET"));
+  const updates = start(fake);
+  fake.on.available?.("0.3.0");
+  await vi.advanceTimersByTimeAsync(0);
+  expect(updates.status()).toEqual({ state: "failed", message: "ECONNRESET" });
+  await vi.advanceTimersByTimeAsync(21_600_000);
+  expect(fake.calls.check).toBe(2);
 });

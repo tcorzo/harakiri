@@ -58,7 +58,13 @@ export function startUpdates(deps: UpdateDeps): Updates {
 
   const download = (version: string): void => {
     set({ state: "downloading", version, percent: 0 });
-    updater.download().catch(swallow("download"));
+    updater.download().catch((error: unknown) => {
+      swallow("download")(error);
+      if (status.state !== "downloading") return;
+      const message = error instanceof Error ? error.message : String(error);
+      set({ state: "failed", message });
+      log.warn("update download failed: {message}", { message });
+    });
   };
 
   updater.onAvailable((version) => {
