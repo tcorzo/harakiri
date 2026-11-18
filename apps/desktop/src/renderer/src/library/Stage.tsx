@@ -1,7 +1,9 @@
 import type { ServerUrl } from "@harakiri/jellyfin";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
+import type { ReactNode } from "react";
 
-import { imageUrl, programmeNotes, type Entry, type ImageRef } from "../data/entry";
+import { imageUrl, programmeNotes } from "../data/entry";
+import type { Entry, ImageRef } from "../data/entry";
 import { ProgrammeNotes, SectionTab, SeenMark } from "../ui/marks";
 
 export function backdropUrl(server: ServerUrl, image: ImageRef): string {

@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 
-import { type TestProjectInlineConfiguration, configDefaults, defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
+import type { TestProjectInlineConfiguration } from "vitest/config";
 
 import desktop from "./apps/desktop/vitest.config";
 import harness from "./packages/harness/vitest.config";

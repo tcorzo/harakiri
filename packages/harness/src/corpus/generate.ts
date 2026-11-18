@@ -15,20 +15,12 @@ import { join } from "node:path";
 import { match, P } from "ts-pattern";
 import { z } from "zod";
 
-import {
-  CATALOG,
-  entryLocation,
-  entryPath,
-  SERIES,
-  SIDECAR_LANGUAGE,
-  type AudioRecipe,
-  type AudioTrack,
-  type Entry,
-  type SubtitleTrack,
-  type VideoRecipe,
-} from "./catalog";
-import { fateState, type FateState } from "./fate";
-import { artworkGraph, episodeNfo, movieNfo, seriesNfo, type Artwork } from "./metadata";
+import { CATALOG, entryLocation, entryPath, SERIES, SIDECAR_LANGUAGE } from "./catalog";
+import type { AudioRecipe, AudioTrack, Entry, SubtitleTrack, VideoRecipe } from "./catalog";
+import { fateState } from "./fate";
+import type { FateState } from "./fate";
+import { artworkGraph, episodeNfo, movieNfo, seriesNfo } from "./metadata";
+import type { Artwork } from "./metadata";
 import { writePgs } from "./pgs";
 import { limiter, runAsync } from "./run";
 

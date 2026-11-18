@@ -6,7 +6,8 @@ import type {
   PlaybackInfoDto,
   PlaybackInfoResponse,
 } from "../generated/types.gen";
-import { DeviceId, ItemId, ServerUrl, type UserId } from "../ids";
+import { DeviceId, ItemId, ServerUrl } from "../ids";
+import type { UserId } from "../ids";
 import { authenticate, createJellyfinClient } from "../session";
 
 export const SERVER = ServerUrl.parse(process.env["JELLYFIN_DEV_URL"] ?? "http://127.0.0.1:8096");

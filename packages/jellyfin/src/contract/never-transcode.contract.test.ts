@@ -2,9 +2,9 @@ import { afterAll, describe, expect, test } from "vitest";
 
 import { ServerVersion, playbackInfoRequest } from "../device-profile";
 import type { DeviceProfile, MediaSourceInfo, MediaStream } from "../generated/types.gen";
-import { type CorpusEntry, corpusEntry, loadCorpus, matchCorpus } from "./corpus";
+import { corpusEntry, loadCorpus, matchCorpus } from "./corpus";
+import type { CorpusEntry } from "./corpus";
 import {
-  type LibraryItem,
   SERVER,
   decide,
   describeDecision,
@@ -14,6 +14,7 @@ import {
   serverUnreachable,
   signIn,
 } from "./server";
+import type { LibraryItem } from "./server";
 
 // The contract tier (`mise run test:contract`), kept out of `mise run test`. It fails, never
 // skips, when the server is down. On the generated corpus every assertion is exact; pointed at

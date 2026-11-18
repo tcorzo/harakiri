@@ -18,7 +18,8 @@ import {
   installContentSecurityPolicy,
 } from "./security";
 import { electronUpdater } from "./updater";
-import { ownAppImage, startUpdates, type Updates } from "./updates";
+import { ownAppImage, startUpdates } from "./updates";
+import type { Updates } from "./updates";
 
 // Electron keys the single-instance lock on userData, so this must run before the lock.
 if (env.HARAKIRI_USER_DATA !== undefined) {

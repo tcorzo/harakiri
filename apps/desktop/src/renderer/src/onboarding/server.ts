@@ -6,19 +6,14 @@ import {
   quickConnectEnabled as serverQuickConnectEnabled,
   serverInfoQuery,
   ServerUrl,
-  type ClientIdentity,
-  type SignInResult,
 } from "@harakiri/jellyfin";
+import type { ClientIdentity, SignInResult } from "@harakiri/jellyfin";
 import type { QueryClient } from "@tanstack/react-query";
 import { match } from "ts-pattern";
 
 import type { Session } from "../../../shared/bridge";
-import {
-  isServerSupported,
-  type ServerInfo,
-  type ServerProblem,
-  type SignInProblem,
-} from "./machine";
+import { isServerSupported } from "./machine";
+import type { ServerInfo, ServerProblem, SignInProblem } from "./machine";
 
 export type Checked =
   | { readonly ok: true; readonly info: ServerInfo }

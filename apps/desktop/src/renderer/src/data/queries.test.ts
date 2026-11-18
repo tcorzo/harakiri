@@ -2,7 +2,8 @@ import { ItemId } from "@harakiri/jellyfin";
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, expect, test, vi } from "vitest";
 
-import { type PlayerEvent, Session } from "../../../shared/bridge";
+import { Session } from "../../../shared/bridge";
+import type { PlayerEvent } from "../../../shared/bridge";
 import { toEntry } from "./entry";
 import { refetchWhenReported } from "./queries";
 import { signedIn } from "./session";

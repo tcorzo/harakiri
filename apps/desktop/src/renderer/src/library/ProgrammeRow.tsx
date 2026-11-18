@@ -1,14 +1,16 @@
 import type { ServerUrl } from "@harakiri/jellyfin";
 import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-navigation";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { memo, useRef, type ComponentType, type ReactNode } from "react";
+import { memo, useRef } from "react";
+import type { ComponentType, ReactNode } from "react";
 
 import type { Entry } from "../data/entry";
 import { QuietAction } from "../ui/actions";
 import { Notice, rootRem, SectionHead } from "../ui/marks";
 import type { CardProps } from "./cards";
 import { useReducedMotion } from "./heroCycle";
-import { cardKey, rowKey, useLit, type Section } from "./lit";
+import { cardKey, rowKey, useLit } from "./lit";
+import type { Section } from "./lit";
 import { numberFor } from "./sections";
 
 export interface ProgrammeRowProps {

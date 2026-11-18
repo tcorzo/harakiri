@@ -1,5 +1,6 @@
 import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-navigation";
-import { useState, type KeyboardEvent } from "react";
+import { useState } from "react";
+import type { KeyboardEvent } from "react";
 import { match } from "ts-pattern";
 
 type Layout = "address" | "text";

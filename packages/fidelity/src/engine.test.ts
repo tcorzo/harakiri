@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import { type FidelityStart, fidelityView, observe, startFidelity } from "./engine";
+import { fidelityView, observe, startFidelity } from "./engine";
+import type { FidelityStart } from "./engine";
 import type { AudioOutput, Observation, PictureSource, SoundSource } from "./model";
 
 const dvP5: PictureSource = { range: "Dolby Vision", label: "Dolby Vision" };

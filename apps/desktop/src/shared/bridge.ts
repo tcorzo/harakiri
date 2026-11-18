@@ -1,14 +1,15 @@
-import { type Downgrade as FidelityDowngrade, renderers } from "@harakiri/fidelity";
+import { renderers } from "@harakiri/fidelity";
+import type { Downgrade as FidelityDowngrade } from "@harakiri/fidelity";
 import {
   AccessToken,
   DeviceId,
   ItemId,
   MediaSourceId,
   ServerUrl,
-  type SignalFact as FidelityFact,
   signalStates,
   UserId,
 } from "@harakiri/jellyfin";
+import type { SignalFact as FidelityFact } from "@harakiri/jellyfin";
 import { z } from "zod";
 
 export const channels = {

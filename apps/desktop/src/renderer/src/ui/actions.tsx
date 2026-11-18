@@ -1,7 +1,5 @@
-import {
-  useFocusable,
-  type FocusableComponentLayout,
-} from "@noriginmedia/norigin-spatial-navigation";
+import { useFocusable } from "@noriginmedia/norigin-spatial-navigation";
+import type { FocusableComponentLayout } from "@noriginmedia/norigin-spatial-navigation";
 import type { ReactNode } from "react";
 
 interface ActionProps {

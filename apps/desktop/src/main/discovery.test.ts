@@ -1,5 +1,6 @@
 // @vitest-environment node
-import { createSocket, type Socket } from "node:dgram";
+import { createSocket } from "node:dgram";
+import type { Socket } from "node:dgram";
 
 import { afterEach, expect, test } from "vitest";
 

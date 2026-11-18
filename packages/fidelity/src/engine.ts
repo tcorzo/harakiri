@@ -12,8 +12,10 @@ import type {
   Renderer,
   SoundSource,
 } from "./model";
-import { bestPictureFact, nextRenderer, type PictureWorld, picturePlan } from "./picture";
-import { bestSoundFact, isBitstreaming, soundPlan, type SoundWorld } from "./sound";
+import { bestPictureFact, nextRenderer, picturePlan } from "./picture";
+import type { PictureWorld } from "./picture";
+import { bestSoundFact, isBitstreaming, soundPlan } from "./sound";
+import type { SoundWorld } from "./sound";
 
 /**
  * What is known about one playback: the file, how the server sends it, and what the output path

@@ -8,13 +8,15 @@ import {
   resumeQuery,
   seasonsQuery as seasons,
   sectionsQuery,
-  type ItemId,
-  type ProgrammeSection,
 } from "@harakiri/jellyfin";
-import { getEpisodes, getItems, type BaseItemDto } from "@harakiri/jellyfin/generated";
-import { type QueryClient, queryOptions } from "@tanstack/react-query";
+import type { ItemId, ProgrammeSection } from "@harakiri/jellyfin";
+import { getEpisodes, getItems } from "@harakiri/jellyfin/generated";
+import type { BaseItemDto } from "@harakiri/jellyfin/generated";
+import { queryOptions } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 
-import { toEntry, type Entry } from "./entry";
+import { toEntry } from "./entry";
+import type { Entry } from "./entry";
 import type { SignedIn } from "./session";
 
 const entries = (items: readonly BaseItemDto[]): Entry[] => items.map(toEntry);

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-import { CATALOG, entryPath, type Entry } from "./catalog";
+import { CATALOG, entryPath } from "./catalog";
+import type { Entry } from "./catalog";
 import { readManifest } from "./generate";
 
 /**

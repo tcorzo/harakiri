@@ -5,8 +5,10 @@ import { join } from "node:path";
 import type { AudioPassthrough } from "@harakiri/mpv";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
-import { type Clip, type ClipCodec, muxSpdif, sha256, synthesizeClip } from "./clips";
-import { type Burst, elementaryStream, scanBursts } from "./iec61937";
+import { muxSpdif, sha256, synthesizeClip } from "./clips";
+import type { Clip, ClipCodec } from "./clips";
+import { elementaryStream, scanBursts } from "./iec61937";
+import type { Burst } from "./iec61937";
 import { captureWithMpv } from "./mpv-capture";
 import { readPcm16, WavError } from "./wav";
 

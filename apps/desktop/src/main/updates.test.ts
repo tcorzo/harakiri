@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { type UpdateDeps, type UpdaterLike, ownAppImage, startUpdates } from "./updates";
+import { ownAppImage, startUpdates } from "./updates";
+import type { UpdateDeps, UpdaterLike } from "./updates";
 
 function fakeUpdater() {
   const on: {

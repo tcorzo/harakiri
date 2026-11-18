@@ -10,22 +10,22 @@ import {
   configure,
   defaultTextFormatter,
   getLogger,
-  type LogRecord,
   reset as resetLogging,
 } from "@logtape/logtape";
+import type { LogRecord } from "@logtape/logtape";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 import { z } from "zod";
 
-import { buildPlaybackArgs, type MpvConfig } from "./args";
+import { buildPlaybackArgs } from "./args";
+import type { MpvConfig } from "./args";
 import {
-  type JsonValue,
   MpvClosedError,
   MpvCommandError,
   MpvTimeoutError,
   redactSecrets,
   spawnMpv,
-  type MpvClient,
 } from "./client";
+import type { JsonValue, MpvClient } from "./client";
 import { setHttpHeaders } from "./http";
 import { createLineSplitter } from "./protocol";
 

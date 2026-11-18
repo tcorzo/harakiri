@@ -14,15 +14,8 @@ import { clientIdentity } from "../../shared/identity";
 import { isE2E } from "../env";
 import { loadSession } from "../session";
 import { AudioOutputJson, readAudioOutput } from "./audio-output";
-import {
-  type Playback,
-  type PlaybackDeps,
-  type Prepared,
-  preparePlayback,
-  signalReport,
-  startingFidelity,
-  startPlayback,
-} from "./playback";
+import { preparePlayback, signalReport, startingFidelity, startPlayback } from "./playback";
+import type { Playback, PlaybackDeps, Prepared } from "./playback";
 
 let current: Playback | undefined;
 let queue: Promise<unknown> = Promise.resolve();

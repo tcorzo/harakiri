@@ -6,9 +6,11 @@ import type { Page } from "@playwright/test";
 import type { Backend } from "./support/backend";
 import { padDpad, plugPad, tap } from "./support/gamepad";
 import { cardName, expect, expectFocus, test } from "./support/harakiri";
-import { type Jellyfin, publicInfo } from "./support/jellyfin";
+import { publicInfo } from "./support/jellyfin";
+import type { Jellyfin } from "./support/jellyfin";
 import { arrowKeys, focusField, keysFor, typeOnScreen } from "./support/keyboard";
-import { deadAddress, reply, type Stub, stubServer } from "./support/stub";
+import { deadAddress, reply, stubServer } from "./support/stub";
+import type { Stub } from "./support/stub";
 
 const main = (page: Page, name: string) => page.getByRole("main", { name, exact: true });
 

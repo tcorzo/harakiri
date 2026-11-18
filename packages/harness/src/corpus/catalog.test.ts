@@ -5,7 +5,8 @@ import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
 import { runToolOrThrow } from "../process";
-import { CATALOG, entryPath, LONG_SECONDS, type MovieEntry } from "./catalog";
+import { CATALOG, entryPath, LONG_SECONDS } from "./catalog";
+import type { MovieEntry } from "./catalog";
 import { movieNfo } from "./metadata";
 import { rleLine, writePgs } from "./pgs";
 

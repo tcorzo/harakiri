@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 
-import { CATALOG, type VideoRangeType } from "./catalog";
+import { CATALOG } from "./catalog";
+import type { VideoRangeType } from "./catalog";
 
 // What the contract and live tiers prove is only as wide as the corpus: these are the cases the
 // census found in real libraries (docs/research/07-media-census.md) that the corpus can build.

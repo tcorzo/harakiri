@@ -1,10 +1,12 @@
-import { type IpcMainInvokeEvent, ipcMain } from "electron";
+import { ipcMain } from "electron";
+import type { IpcMainInvokeEvent } from "electron";
 
 import { channels, NewSession, PlayRequest } from "../shared/bridge";
 import { discoverServers } from "./discovery";
 import { env, isE2E } from "./env";
 import { forgetPrepared, play, prepare, probe, stop } from "./player/index";
-import { type AppUrlCheck, fromAppOnly } from "./security";
+import { fromAppOnly } from "./security";
+import type { AppUrlCheck } from "./security";
 import { clearSession, deviceId, loadSession, saveSession } from "./session";
 import type { Updates } from "./updates";
 

@@ -1,10 +1,5 @@
-import {
-  classifyFidelity,
-  imageUrl as serverImageUrl,
-  type Fidelity,
-  ItemId,
-  type ServerUrl,
-} from "@harakiri/jellyfin";
+import { classifyFidelity, imageUrl as serverImageUrl, ItemId } from "@harakiri/jellyfin";
+import type { Fidelity, ServerUrl } from "@harakiri/jellyfin";
 import type { BaseItemDto, ImageType } from "@harakiri/jellyfin/generated";
 
 import type { SignalState } from "../../../shared/bridge";

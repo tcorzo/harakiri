@@ -1,14 +1,12 @@
 import type { ItemId, ServerUrl } from "@harakiri/jellyfin";
-import {
-  FocusContext,
-  useFocusable,
-  type FocusableComponentLayout,
-} from "@noriginmedia/norigin-spatial-navigation";
+import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-navigation";
+import type { FocusableComponentLayout } from "@noriginmedia/norigin-spatial-navigation";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useTransition } from "react";
 
-import { episodeCode, programmeNotes, type Entry } from "../data/entry";
+import { episodeCode, programmeNotes } from "../data/entry";
+import type { Entry } from "../data/entry";
 import { episodesQuery, seasonsQuery } from "../data/queries";
 import { useSignedIn } from "../data/session";
 import { Backdrop, backdropUrl, InkField, Margin, TitleMark } from "../library/Stage";

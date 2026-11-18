@@ -3,16 +3,10 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import {
-  type AudioOutput,
-  type FidelityState,
-  type FidelityView,
-  fidelityView,
-  startFidelity,
-} from "@harakiri/fidelity";
+import { fidelityView, startFidelity } from "@harakiri/fidelity";
+import type { AudioOutput, FidelityState, FidelityView } from "@harakiri/fidelity";
 import {
   AccessToken,
-  type ClientIdentity,
   DeviceId,
   ItemId,
   joinFacts,
@@ -23,6 +17,7 @@ import {
   authorizationHeader,
   playbackInfoRequest,
 } from "@harakiri/jellyfin";
+import type { ClientIdentity } from "@harakiri/jellyfin";
 import {
   getItem,
   getPostedPlaybackInfo,
@@ -30,15 +25,10 @@ import {
   reportPlaybackStart,
   reportPlaybackStopped,
 } from "@harakiri/jellyfin/generated";
-import { type Client, createClient } from "@harakiri/jellyfin/generated/client";
-import {
-  type AudioPassthrough,
-  buildPlaybackArgs,
-  type MpvClient,
-  type MpvEvent,
-  setHttpHeaders,
-  spawnMpv,
-} from "@harakiri/mpv";
+import { createClient } from "@harakiri/jellyfin/generated/client";
+import type { Client } from "@harakiri/jellyfin/generated/client";
+import { buildPlaybackArgs, setHttpHeaders, spawnMpv } from "@harakiri/mpv";
+import type { AudioPassthrough, MpvClient, MpvEvent } from "@harakiri/mpv";
 import { getLogger } from "@logtape/logtape";
 import { match } from "ts-pattern";
 import { z } from "zod";
@@ -52,20 +42,15 @@ import type {
   SignalReport,
 } from "../../shared/bridge";
 import { ServerStatusError } from "../../shared/errors";
-import {
-  type Command,
-  type ControlsInput,
-  type ControlsState,
-  initialControls,
-  menuRows,
-  parsePlayerAction,
-  step,
-} from "./controls";
+import { initialControls, menuRows, parsePlayerAction, step } from "./controls";
+import type { Command, ControlsInput, ControlsState } from "./controls";
 import { deliveryOf, fileStreams } from "./fidelity-input";
-import { type FidelityWatch, watchFidelity } from "./fidelity-watch";
+import { watchFidelity } from "./fidelity-watch";
+import type { FidelityWatch } from "./fidelity-watch";
 import { inputConf } from "./input-conf";
 import { OVERLAY_HEIGHT, OVERLAY_WIDTH, renderControls } from "./overlay";
-import { programmeEntry, type ProgrammeEntry, type Resolution, resolve } from "./resolve";
+import { programmeEntry, resolve } from "./resolve";
+import type { ProgrammeEntry, Resolution } from "./resolve";
 
 const logger = getLogger(["harakiri", "player"]);
 

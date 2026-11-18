@@ -1,15 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import {
-  idlePad,
-  isEditing,
-  keyToAction,
-  route,
-  seedHeld,
-  stepPad,
-  type PadSnapshot,
-  type PadState,
-} from "./index";
+import { idlePad, isEditing, keyToAction, route, seedHeld, stepPad } from "./index";
+import type { PadSnapshot, PadState } from "./index";
 
 const timing = { delayMs: 400, intervalMs: 100 };
 

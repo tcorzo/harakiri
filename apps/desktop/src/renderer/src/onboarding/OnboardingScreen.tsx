@@ -1,4 +1,5 @@
-import { publicUsersQuery, ServerUrl, type ClientIdentity } from "@harakiri/jellyfin";
+import { publicUsersQuery, ServerUrl } from "@harakiri/jellyfin";
+import type { ClientIdentity } from "@harakiri/jellyfin";
 import {
   FocusContext,
   getCurrentFocusKey,
@@ -6,7 +7,8 @@ import {
 } from "@noriginmedia/norigin-spatial-navigation";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { useEffect, useReducer, useState, type ReactNode } from "react";
+import { useEffect, useReducer, useState } from "react";
+import type { ReactNode } from "react";
 import { match } from "ts-pattern";
 
 import type { Session } from "../../../shared/bridge";
@@ -18,17 +20,14 @@ import { ListAction, QuietAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
 import { EntryField, firstKey, Keyboard } from "../ui/keyboard";
 import { Notice, SectionTab } from "../ui/marks";
-import {
-  initialOnboarding,
-  minimumServer,
-  onboarding,
-  serverCandidates,
-  type OnboardingEvent,
-  type OnboardingState,
-  type QuickConnectProblem,
-  type ServerInfo,
-  type ServerProblem,
-  type SignInProblem,
+import { initialOnboarding, minimumServer, onboarding, serverCandidates } from "./machine";
+import type {
+  OnboardingEvent,
+  OnboardingState,
+  QuickConnectProblem,
+  ServerInfo,
+  ServerProblem,
+  SignInProblem,
 } from "./machine";
 import { checkServer, quickConnectEnabled, runQuickConnect, signIn } from "./server";
 

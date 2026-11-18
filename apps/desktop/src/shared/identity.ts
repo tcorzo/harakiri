@@ -1,4 +1,5 @@
-import { type ClientIdentity, DeviceId } from "@harakiri/jellyfin";
+import { DeviceId } from "@harakiri/jellyfin";
+import type { ClientIdentity } from "@harakiri/jellyfin";
 
 /** Replaced at build time with apps/desktop/package.json's version, in every bundle and in vitest. */
 declare const HARAKIRI_APP_VERSION: string | undefined;

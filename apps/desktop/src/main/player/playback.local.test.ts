@@ -2,7 +2,8 @@
 import { execFile } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { createServer } from "node:http";
+import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -10,16 +11,14 @@ import { inspect } from "node:util";
 
 import { ItemId } from "@harakiri/jellyfin";
 import { PRD_PASSTHROUGH } from "@harakiri/mpv";
-import {
-  configure,
-  defaultTextFormatter,
-  type LogRecord,
-  reset as resetLogging,
-} from "@logtape/logtape";
+import { configure, defaultTextFormatter, reset as resetLogging } from "@logtape/logtape";
+import type { LogRecord } from "@logtape/logtape";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import { type PlayerEvent, type PlayerProbe, Session } from "../../shared/bridge";
-import { type Playback, preparePlayback, startPlayback } from "./playback";
+import { Session } from "../../shared/bridge";
+import type { PlayerEvent, PlayerProbe } from "../../shared/bridge";
+import { preparePlayback, startPlayback } from "./playback";
+import type { Playback } from "./playback";
 
 const TOKEN = "fakeToken7c1d9e";
 const ITEM = "0123456789abcdef0123456789abcdef";

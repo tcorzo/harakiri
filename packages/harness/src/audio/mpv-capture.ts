@@ -1,4 +1,5 @@
-import { type AudioPassthrough, buildPlaybackArgs, configArg } from "@harakiri/mpv";
+import { buildPlaybackArgs, configArg } from "@harakiri/mpv";
+import type { AudioPassthrough } from "@harakiri/mpv";
 
 import { runToolOrThrow } from "../process";
 

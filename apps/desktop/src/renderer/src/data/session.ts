@@ -1,4 +1,5 @@
-import { createJellyfinClient, type LibraryContext, type ServerUrl } from "@harakiri/jellyfin";
+import { createJellyfinClient } from "@harakiri/jellyfin";
+import type { LibraryContext, ServerUrl } from "@harakiri/jellyfin";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
 import type { Session } from "../../../shared/bridge";

@@ -14,7 +14,8 @@ import { join } from "node:path";
 import { afterEach, beforeEach, expect, test } from "vitest";
 
 import { NewSession } from "../shared/bridge";
-import { createSessionStore, type TokenCrypto } from "./session";
+import { createSessionStore } from "./session";
+import type { TokenCrypto } from "./session";
 
 const DEVICE_ID = "6f9619ff-8b86-4d01-b42d-00cf4fc964ff";
 const USER_ID = "4c1b0a6e2f3d4e5f8a9b0c1d2e3f4a5b";

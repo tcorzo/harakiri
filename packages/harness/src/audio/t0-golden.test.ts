@@ -5,14 +5,8 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import { expectShortByAtMostOneMatFrame } from "./assertions";
-import {
-  type Clip,
-  type ClipCodec,
-  muxSpdif,
-  sha256,
-  synthesizeClip,
-  synthesizePcmWav,
-} from "./clips";
+import { muxSpdif, sha256, synthesizeClip, synthesizePcmWav } from "./clips";
+import type { Clip, ClipCodec } from "./clips";
 import { elementaryStream, Iec61937Error, scanBursts } from "./iec61937";
 import { readPcm16 } from "./wav";
 

@@ -5,11 +5,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { ItemId, joinFacts } from "@harakiri/jellyfin";
-import { type CorpusMatch, corpusEntry, loadCorpus, matchCorpus } from "@harakiri/jellyfin/corpus";
+import { corpusEntry, loadCorpus, matchCorpus } from "@harakiri/jellyfin/corpus";
+import type { CorpusMatch } from "@harakiri/jellyfin/corpus";
 import { afterAll, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
 
-import { type PlayerEvent, type PlayerProbe, Session } from "../../shared/bridge";
+import { Session } from "../../shared/bridge";
+import type { PlayerEvent, PlayerProbe } from "../../shared/bridge";
 
 const harness = vi.hoisted(() => {
   process.env["HARAKIRI_E2E"] = "1";

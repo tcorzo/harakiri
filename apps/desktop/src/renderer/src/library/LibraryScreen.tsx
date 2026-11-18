@@ -1,4 +1,5 @@
-import { ItemId, type ServerUrl } from "@harakiri/jellyfin";
+import { ItemId } from "@harakiri/jellyfin";
+import type { ServerUrl } from "@harakiri/jellyfin";
 import {
   FocusContext,
   getCurrentFocusKey,
@@ -6,10 +7,12 @@ import {
 } from "@noriginmedia/norigin-spatial-navigation";
 import { useQueries, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { memo, useCallback, useEffect, useMemo, useRef, type ComponentType } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import type { ComponentType } from "react";
 import { preload } from "react-dom";
 
-import { imageUrl, type Entry } from "../data/entry";
+import { imageUrl } from "../data/entry";
+import type { Entry } from "../data/entry";
 import {
   catalogueQuery,
   continueQuery,
@@ -26,9 +29,11 @@ import { useActionHandler, useNavigationGuard } from "../input/handlers";
 import { PlayAction, QuietAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
 import { catalogueLabel, remPx } from "../ui/marks";
-import { PosterCard, StillCard, type CardProps } from "./cards";
+import { PosterCard, StillCard } from "./cards";
+import type { CardProps } from "./cards";
 import { heroHoldMs, upNext, useHeroCycle } from "./heroCycle";
-import { cardKey, restoreKeys, tonight, useLit, type Section } from "./lit";
+import { cardKey, restoreKeys, tonight, useLit } from "./lit";
+import type { Section } from "./lit";
 import { FailedRow, ProgrammeRow, retryKey } from "./ProgrammeRow";
 import { numberFor } from "./sections";
 import { Backdrop, backdropUrl, EntryNotes, InkField, Margin, TitleMark } from "./Stage";

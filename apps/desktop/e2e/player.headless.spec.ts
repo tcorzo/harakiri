@@ -14,7 +14,8 @@ import {
   test,
   until,
 } from "./support/harakiri";
-import { ITEMS, TICKS_PER_SECOND, type PickedItem } from "./support/jellyfin";
+import { ITEMS, TICKS_PER_SECOND } from "./support/jellyfin";
+import type { PickedItem } from "./support/jellyfin";
 import { mpvProcesses, pressKey } from "./support/mpv";
 
 // mpv decodes for real but shows and plays nothing: fast and deterministic. The default for the fixture.

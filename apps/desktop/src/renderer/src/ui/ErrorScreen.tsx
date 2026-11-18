@@ -1,9 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter, type ErrorComponentProps } from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
+import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { match } from "ts-pattern";
 
-import { classifyFailure, type Failure } from "../data/errors";
+import { classifyFailure } from "../data/errors";
+import type { Failure } from "../data/errors";
 import { forgetSession } from "../data/forget";
 import { sessionQuery } from "../data/session";
 import { QuietAction } from "./actions";

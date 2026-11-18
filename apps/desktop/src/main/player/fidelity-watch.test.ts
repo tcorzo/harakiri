@@ -1,8 +1,10 @@
-import { type AudioOutput, startFidelity } from "@harakiri/fidelity";
+import { startFidelity } from "@harakiri/fidelity";
+import type { AudioOutput } from "@harakiri/fidelity";
 import { afterEach, expect, test } from "vitest";
 import type { z } from "zod";
 
-import { type FidelityMpv, type FidelityWatch, watchFidelity } from "./fidelity-watch";
+import { watchFidelity } from "./fidelity-watch";
+import type { FidelityMpv, FidelityWatch } from "./fidelity-watch";
 
 /**
  * Stands in for mpv. Properties absent from `props` read as unavailable, as mpv reports a dead

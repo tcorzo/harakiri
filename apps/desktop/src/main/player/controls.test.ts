@@ -1,15 +1,8 @@
 // @vitest-environment node
 import { describe, expect, test } from "vitest";
 
-import {
-  type ControlsInput,
-  type ControlsState,
-  initialControls,
-  menuRows,
-  parsePlayerAction,
-  type PlayerAction,
-  step,
-} from "./controls";
+import { initialControls, menuRows, parsePlayerAction, step } from "./controls";
+import type { ControlsInput, ControlsState, PlayerAction } from "./controls";
 
 const rows = menuRows({
   audio: [

@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
-import { createConnection, type Socket } from "node:net";
+import { createConnection } from "node:net";
+import type { Socket } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
@@ -9,16 +10,10 @@ import { setTimeout as delay } from "node:timers/promises";
 import { getLogger } from "@logtape/logtape";
 import type { z } from "zod";
 
-import { configArg, type MpvConfig } from "./args";
-import {
-  createLineSplitter,
-  encodeRequest,
-  parseInboundLine,
-  type InboundMessage,
-  type JsonValue,
-  type MpvEvent,
-  type Reply,
-} from "./protocol";
+import { configArg } from "./args";
+import type { MpvConfig } from "./args";
+import { createLineSplitter, encodeRequest, parseInboundLine } from "./protocol";
+import type { InboundMessage, JsonValue, MpvEvent, Reply } from "./protocol";
 
 const logger = getLogger(["harakiri", "mpv"]);
 

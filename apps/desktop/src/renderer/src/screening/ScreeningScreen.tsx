@@ -5,7 +5,8 @@ import { getRouteApi, useRouter } from "@tanstack/react-router";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import type { PlayerEvent, PlayRequest, SignalFact, SignalReport } from "../../../shared/bridge";
-import { episodeCode, markedState, type Entry } from "../data/entry";
+import { episodeCode, markedState } from "../data/entry";
+import type { Entry } from "../data/entry";
 import { classifyFailure } from "../data/errors";
 import { catalogueQuery, nextEpisodeQuery, refetchWhenReported, titleQuery } from "../data/queries";
 import { useSignedIn } from "../data/session";
@@ -16,7 +17,8 @@ import { backdropUrl } from "../library/Stage";
 import { PlayAction, QuietAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
 import { catalogueLabel, Notice, StateMark } from "../ui/marks";
-import { handoffTiming, stationOf, stations, type Station } from "./stations";
+import { handoffTiming, stationOf, stations } from "./stations";
+import type { Station } from "./stations";
 
 const route = getRouteApi("/_signedIn/screening/$id");
 

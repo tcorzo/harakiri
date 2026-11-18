@@ -8,7 +8,8 @@ import { command, constant } from "@optique/core/primitives";
 import { run } from "@optique/run";
 import { match } from "ts-pattern";
 
-import { CHECKS, requiredFailures, runChecks, type CheckResult } from "./doctor";
+import { CHECKS, requiredFailures, runChecks } from "./doctor";
+import type { CheckResult } from "./doctor";
 
 const parser = command("doctor", object({ command: constant("doctor") }), {
   description: message`Check that the tools the validation harness drives are installed and new enough.`,

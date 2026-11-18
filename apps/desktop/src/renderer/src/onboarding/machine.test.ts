@@ -1,15 +1,8 @@
 import { AccessToken, DeviceId, ServerUrl, UserId } from "@harakiri/jellyfin";
 import { expect, test } from "vitest";
 
-import {
-  initialOnboarding,
-  isServerSupported,
-  serverCandidates,
-  onboarding,
-  type OnboardingEvent,
-  type OnboardingState,
-  type ServerInfo,
-} from "./machine";
+import { initialOnboarding, isServerSupported, serverCandidates, onboarding } from "./machine";
+import type { OnboardingEvent, OnboardingState, ServerInfo } from "./machine";
 
 const server: ServerInfo = {
   url: "http://127.0.0.1:8096/",

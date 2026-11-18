@@ -3,7 +3,8 @@ import { join, resolve } from "node:path";
 
 import type { Page } from "@playwright/test";
 
-import { type Button, plugPad, setAxis, setButton, tap } from "./support/gamepad";
+import { plugPad, setAxis, setButton, tap } from "./support/gamepad";
+import type { Button } from "./support/gamepad";
 import {
   cardName,
   expect,
@@ -17,7 +18,8 @@ import {
   until,
   waitForNoMpv,
 } from "./support/harakiri";
-import { type ShownItem, spokenTitle } from "./support/jellyfin";
+import { spokenTitle } from "./support/jellyfin";
+import type { ShownItem } from "./support/jellyfin";
 import { leadContinueWatching, main, openFirstResumed } from "./support/library";
 import { mpvProcesses, pressKey } from "./support/mpv";
 

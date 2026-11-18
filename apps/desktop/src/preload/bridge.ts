@@ -5,13 +5,13 @@ import { z } from "zod";
 import {
   channels,
   DiscoveredServer,
-  type HarakiriBridge,
   PlayerEvent,
   PlayerProbe,
   Session,
   SignalReport,
   UpdateStatus,
 } from "../shared/bridge";
+import type { HarakiriBridge } from "../shared/bridge";
 import { fromIpc } from "../shared/errors";
 
 export interface BridgeOptions {

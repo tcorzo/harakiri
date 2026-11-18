@@ -1,9 +1,11 @@
 // @vitest-environment node
-import { type AudioOutput, fidelityView } from "@harakiri/fidelity";
+import { fidelityView } from "@harakiri/fidelity";
+import type { AudioOutput } from "@harakiri/fidelity";
 import { ServerUrl } from "@harakiri/jellyfin";
 import { expect, test } from "vitest";
 
-import { type FixtureName, playbackInfo } from "./fixtures/load";
+import { playbackInfo } from "./fixtures/load";
+import type { FixtureName } from "./fixtures/load";
 import { startingFidelity } from "./playback";
 import { resolve } from "./resolve";
 

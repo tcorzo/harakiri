@@ -1,7 +1,8 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import { classifyFidelity } from "./fidelity";
-import { type Client, createClient } from "./generated/client";
+import { createClient } from "./generated/client";
+import type { Client } from "./generated/client";
 import {
   getEpisodes,
   getItem,

@@ -5,18 +5,18 @@ import { join, resolve } from "node:path";
 import {
   authenticate,
   authorizationHeader,
-  type ClientIdentity,
   DeviceId,
   ItemId,
   MediaSourceId,
-  type ServerUrl,
-  type SessionData,
 } from "@harakiri/jellyfin";
+import type { ClientIdentity, ServerUrl, SessionData } from "@harakiri/jellyfin";
 import { z } from "zod";
 
-import { CATALOG, type Entry, entryPath } from "../../../../packages/harness/src/corpus/catalog";
+import { CATALOG, entryPath } from "../../../../packages/harness/src/corpus/catalog";
+import type { Entry } from "../../../../packages/harness/src/corpus/catalog";
 import { clientIdentity } from "../../src/shared/identity";
-import { type Backend, CORPUS_DIR } from "./backend";
+import { CORPUS_DIR } from "./backend";
+import type { Backend } from "./backend";
 
 export const TICKS_PER_SECOND = 10_000_000;
 

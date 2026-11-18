@@ -1,7 +1,8 @@
 import { closeSync, mkdirSync, openSync, readdirSync, rmSync, writeSync } from "node:fs";
 import { join } from "node:path";
 
-import { getTextFormatter, type Sink } from "@logtape/logtape";
+import { getTextFormatter } from "@logtape/logtape";
+import type { Sink } from "@logtape/logtape";
 
 /** Each run's log is named for its start time, so a name sorts with its age. */
 const runLogName = /^harakiri-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}(-\d+)?\.log$/;

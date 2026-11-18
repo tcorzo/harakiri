@@ -1,13 +1,7 @@
 import { match } from "ts-pattern";
 
-import {
-  type Downgrade,
-  type DowngradeReason,
-  type Fact,
-  type PictureSource,
-  type Renderer,
-  renderers,
-} from "./model";
+import { renderers } from "./model";
+import type { Downgrade, DowngradeReason, Fact, PictureSource, Renderer } from "./model";
 
 /** What is known about the picture path. */
 export interface PictureWorld {

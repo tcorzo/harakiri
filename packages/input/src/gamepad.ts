@@ -1,4 +1,5 @@
-import { actions, isDirection, type Action } from "./action";
+import { actions, isDirection } from "./action";
+import type { Action } from "./action";
 
 /** The slice of the DOM `Gamepad` this module reads, so a real pad or a plain object both fit. */
 export interface PadSnapshot {

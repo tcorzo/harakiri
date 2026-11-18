@@ -1,4 +1,5 @@
-import { ItemId, MediaSourceId, type ServerUrl, staticStreamUrl } from "@harakiri/jellyfin";
+import { ItemId, MediaSourceId, staticStreamUrl } from "@harakiri/jellyfin";
+import type { ServerUrl } from "@harakiri/jellyfin";
 import type {
   BaseItemDto,
   MediaSourceInfo,
@@ -6,7 +7,8 @@ import type {
   TranscodeReason,
 } from "@harakiri/jellyfin/generated";
 
-import { mpvTrack, type PlayMethod, type TrackTable, trackTable } from "./tracks";
+import { mpvTrack, trackTable } from "./tracks";
+import type { PlayMethod, TrackTable } from "./tracks";
 
 const REASONS: Readonly<Record<TranscodeReason, string>> = {
   ContainerNotSupported: "Container not supported",

@@ -6,12 +6,13 @@ import {
   escapeRegExp,
   expect,
   expectFocus,
-  type FocusedControl,
   focusedControl,
   test,
   until,
 } from "./support/harakiri";
-import { minutesLeft, type ShownItem, spokenTitle } from "./support/jellyfin";
+import type { FocusedControl } from "./support/harakiri";
+import { minutesLeft, spokenTitle } from "./support/jellyfin";
+import type { ShownItem } from "./support/jellyfin";
 import { heroPlay, leadContinueWatching, main, openLibrary } from "./support/library";
 
 /** The film on tonight's screening, read off its focused Play or Resume. */

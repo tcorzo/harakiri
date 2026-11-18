@@ -2,7 +2,8 @@
 import { expect, test } from "vitest";
 
 import type { MenuRow } from "./controls";
-import { type ControlsView, renderControls } from "./overlay";
+import { renderControls } from "./overlay";
+import type { ControlsView } from "./overlay";
 
 const playing: ControlsView = {
   title: "Fixture Film",

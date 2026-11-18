@@ -5,12 +5,14 @@ import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-naviga
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { episodeCode, minutesLeft, programmeNotes, type Entry } from "../data/entry";
+import { episodeCode, minutesLeft, programmeNotes } from "../data/entry";
+import type { Entry } from "../data/entry";
 import { Backdrop, backdropUrl, InkField, Margin, TitleMark } from "../library/Stage";
 import { PlayAction, QuietAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
 import { ProgrammeNotes } from "../ui/marks";
-import { TrackPicker, type TrackOption } from "./TrackPicker";
+import { TrackPicker } from "./TrackPicker";
+import type { TrackOption } from "./TrackPicker";
 
 /** Jellyfin's index for "no subtitles". */
 const subtitlesOff = -1;

@@ -1,12 +1,11 @@
-import {
-  type Action,
-  type FidelityState,
-  type FidelityView,
-  fidelityView,
-  type Observation,
-  observe,
-  type Renderer,
-  type SoundSource,
+import { fidelityView, observe } from "@harakiri/fidelity";
+import type {
+  Action,
+  FidelityState,
+  FidelityView,
+  Observation,
+  Renderer,
+  SoundSource,
 } from "@harakiri/fidelity";
 import { getLogger } from "@logtape/logtape";
 import { match } from "ts-pattern";

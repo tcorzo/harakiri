@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 
-import { type JsonValue, MpvCommandError } from "./client";
+import { MpvCommandError } from "./client";
+import type { JsonValue } from "./client";
 import { setHttpHeaders } from "./http";
 
 test("a header mpv rejects fails without quoting the secret", async () => {

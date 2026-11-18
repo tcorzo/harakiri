@@ -1,4 +1,5 @@
-import { type FidelityView, fidelityView, observe, startFidelity } from "./engine";
+import { fidelityView, observe, startFidelity } from "./engine";
+import type { FidelityView } from "./engine";
 import type { AudioOutput, Delivery, Observation, PictureSource, SoundSource } from "./model";
 
 /** Sound tracks as the library has them (docs/research/07-media-census.md). */

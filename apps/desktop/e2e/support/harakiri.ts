@@ -5,16 +5,15 @@ import { join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 import type { ItemId, SessionData } from "@harakiri/jellyfin";
-import { _electron, test as base, type ElectronApplication, type Page } from "@playwright/test";
+import { _electron, test as base } from "@playwright/test";
+import type { ElectronApplication, Page } from "@playwright/test";
 
-import {
-  type HarakiriBridge,
-  PlayerEvent,
-  PlayerProbe,
-  type PlayRequest,
-} from "../../src/shared/bridge";
-import { type Backend, resolveBackend } from "./backend";
-import { Jellyfin, seedSession, signInAccount, type UserData } from "./jellyfin";
+import { PlayerEvent, PlayerProbe } from "../../src/shared/bridge";
+import type { HarakiriBridge, PlayRequest } from "../../src/shared/bridge";
+import { resolveBackend } from "./backend";
+import type { Backend } from "./backend";
+import { Jellyfin, seedSession, signInAccount } from "./jellyfin";
+import type { UserData } from "./jellyfin";
 import { mpvProcesses } from "./mpv";
 
 declare global {

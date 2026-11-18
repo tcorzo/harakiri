@@ -6,10 +6,8 @@ import {
   seedHeld,
   route,
   stepPad,
-  type Action,
-  type PadSnapshot,
-  type PadState,
 } from "@harakiri/input";
+import type { Action, PadSnapshot, PadState } from "@harakiri/input";
 import {
   doesFocusableExist,
   getCurrentFocusKey,

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-import { type Client, createClient } from "./generated/client";
+import { createClient } from "./generated/client";
+import type { Client } from "./generated/client";
 import {
   authenticateUserByName,
   authenticateWithQuickConnect as quickConnectAuthenticate,
@@ -10,7 +11,8 @@ import {
   initiateQuickConnect as quickConnectInitiate,
 } from "./generated/sdk.gen";
 import { AccessToken, DeviceId, ServerUrl, UserId } from "./ids";
-import { type ClientIdentity, authorizationHeader } from "./stream-url";
+import { authorizationHeader } from "./stream-url";
+import type { ClientIdentity } from "./stream-url";
 
 /** Everything the desktop app's Session needs, with ids branded. */
 export type SessionData = {

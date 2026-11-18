@@ -1,7 +1,8 @@
 import type { ServerUrl } from "@harakiri/jellyfin";
 import { useFocusable } from "@noriginmedia/norigin-spatial-navigation";
 
-import { episodeCode, imageUrl, minutesLeft, type Entry, type ImageRef } from "../data/entry";
+import { episodeCode, imageUrl, minutesLeft } from "../data/entry";
+import type { Entry, ImageRef } from "../data/entry";
 import { catalogueLabel, remPx, SeenMark } from "../ui/marks";
 
 export interface CardProps {

@@ -1,4 +1,5 @@
-import { type Action, isDirection } from "./action";
+import { isDirection } from "./action";
+import type { Action } from "./action";
 
 interface KeyBinding {
   readonly action: Action;

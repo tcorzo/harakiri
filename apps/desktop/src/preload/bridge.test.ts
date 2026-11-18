@@ -2,7 +2,8 @@ import { ItemId } from "@harakiri/jellyfin";
 import type { IpcRenderer, IpcRendererEvent } from "electron";
 import { expect, test } from "vitest";
 
-import { channels, type PlayerEvent } from "../shared/bridge";
+import { channels } from "../shared/bridge";
+import type { PlayerEvent } from "../shared/bridge";
 import { ServerStatusError } from "../shared/errors";
 import { createBridge } from "./bridge";
 

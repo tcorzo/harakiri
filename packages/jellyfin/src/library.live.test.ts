@@ -2,18 +2,13 @@
 import { QueryClient } from "@tanstack/react-query";
 import { beforeAll, describe, expect, test } from "vitest";
 
-import {
-  type Corpus,
-  type CorpusMatch,
-  corpusEntry,
-  loadCorpus,
-  matchCorpus,
-} from "./contract/corpus";
-import { type LibraryItem, libraryItems } from "./contract/server";
+import { corpusEntry, loadCorpus, matchCorpus } from "./contract/corpus";
+import type { Corpus, CorpusMatch } from "./contract/corpus";
+import { libraryItems } from "./contract/server";
+import type { LibraryItem } from "./contract/server";
 import { classifyFidelity } from "./fidelity";
 import { DeviceId, ItemId, ServerUrl } from "./ids";
 import {
-  type LibraryContext,
   episodesQuery,
   heroQuery,
   itemQuery,
@@ -25,14 +20,15 @@ import {
   sectionsQuery,
   serverInfoQuery,
 } from "./library";
+import type { LibraryContext } from "./library";
 import {
-  type SessionData,
   authenticate,
   createJellyfinClient,
   initiateQuickConnect,
   pollQuickConnect,
   quickConnectEnabled,
 } from "./session";
+import type { SessionData } from "./session";
 
 // The dev Jellyfin from dev/jellyfin/COMMANDS.txt, or any server named by the JELLYFIN_DEV_*
 // variables dev/jellyfin/client.ts reads.

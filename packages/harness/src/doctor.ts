@@ -1,5 +1,7 @@
-import { describeFailure, runTool, type ToolRun } from "./process";
-import { compareVersions, formatVersion, parseVersion, type Version } from "./version";
+import { describeFailure, runTool } from "./process";
+import type { ToolRun } from "./process";
+import { compareVersions, formatVersion, parseVersion } from "./version";
+import type { Version } from "./version";
 
 export type Verdict =
   | { readonly status: "ok"; readonly detail: string }
