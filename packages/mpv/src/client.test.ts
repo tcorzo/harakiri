@@ -41,6 +41,7 @@ async function start(
 ): Promise<MpvClient> {
   const client = await spawnMpv({ config: "none", ...options, args });
   clients.push(client);
+
   return client;
 }
 
@@ -85,11 +86,13 @@ describe("spawnMpv", () => {
 
   test("reports the duration of a loaded clip", async () => {
     const client = await start();
+
     const loaded = new Promise<void>((resolve) => {
       client.onEvent((event) => {
         if (event.event === "file-loaded") resolve();
       });
     });
+
     await client.command("loadfile", clip);
     await loaded;
     expect(await client.getProperty("duration", z.number())).toBeCloseTo(2, 1);
@@ -98,9 +101,11 @@ describe("spawnMpv", () => {
   test("observes property changes until unsubscribed", async () => {
     const client = await start();
     const seen: (boolean | undefined)[] = [];
+
     const unsubscribe = await client.observeProperty("pause", z.boolean(), (value) => {
       seen.push(value);
     });
+
     await client.setProperty("pause", true);
     await client.command("cycle", "pause");
     await expect.poll(() => seen).toEqual([false, true, false]);
@@ -113,9 +118,11 @@ describe("spawnMpv", () => {
 
   test("delivers script-message as a client-message with literal args", async () => {
     const client = await start();
+
     const received = new Promise<readonly string[]>((resolve) => {
       client.onClientMessage(resolve);
     });
+
     await client.command("script-message", "harakiri", "up");
     expect(await received).toEqual(["harakiri", "up"]);
   });
@@ -170,9 +177,11 @@ describe("spawnMpv", () => {
 
   test("quit resolves only after the socket dir is gone", async () => {
     const client = await start();
+
     const socket = cmdline(client.pid)
       .find((arg) => arg.startsWith("--input-ipc-server="))
       ?.slice("--input-ipc-server=".length);
+
     if (socket === undefined) throw new Error("mpv was spawned without an IPC socket");
     expect(existsSync(dirname(socket))).toBe(true);
     await client.quit();
@@ -181,6 +190,7 @@ describe("spawnMpv", () => {
 
   test("the config dir comes first in argv and its mpv.conf applies", async () => {
     const dir = await mkdtemp(join(tmpdir(), "harakiri-mpv-config-"));
+
     try {
       await writeFile(join(dir, "mpv.conf"), "volume=37\n");
       const client = await start(headless, { config: { dir } });
@@ -235,6 +245,7 @@ describe("a failed command never carries its arguments", () => {
   /** Everything a caller could print: the message, the error as a value, and its own fields. */
   function printed(error: unknown): string {
     getLogger(["harakiri", "test"]).error("mpv failed: {error}", { error });
+
     return [
       String(error),
       inspect(error, { depth: Infinity }),
@@ -248,6 +259,7 @@ describe("a failed command never carries its arguments", () => {
     records.length = 0;
     const client = await start();
     const url = `http://127.0.0.1:1/videos/x/master.m3u8?api_key=${TOKEN}&PlaySessionId=p`;
+
     const error: unknown = await client
       .command("loadfile", url, "no-such-flag")
       .catch((caught: unknown) => caught);
@@ -262,11 +274,13 @@ describe("a failed command never carries its arguments", () => {
     records.length = 0;
     const client = await start([...buildPlaybackArgs(), ...headless, "--msg-level=all=v"]);
     await setHttpHeaders(client, { Authorization: `MediaBrowser Token="${TOKEN}", Client="x"` });
+
     const failed = new Promise<void>((resolve) => {
       client.onEvent((event) => {
         if (event.event === "end-file") resolve();
       });
     });
+
     await client.command("loadfile", `http://127.0.0.1:1/v.mkv?api_key=${TOKEN}&static=true`);
     await failed;
     await client
@@ -287,6 +301,7 @@ describe("a failed command never carries its arguments", () => {
     const client = await start(headless, { requestTimeoutMs: 200 });
     process.kill(client.pid, "SIGSTOP");
     const url = `http://127.0.0.1:1/Videos/x/Subtitles/0/0/Stream.subrip?ApiKey=${TOKEN}`;
+
     const error: unknown = await client
       .command("sub-add", url, "auto", "External 1")
       .catch((caught: unknown) => caught);

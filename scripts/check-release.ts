@@ -19,16 +19,19 @@ import { join, resolve } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 const dist = process.env.HARAKIRI_DIST ?? join(root, "apps/desktop/dist");
 const mainOut = join(root, "apps/desktop/out/main");
+
 const version =
   process.argv[2] ??
   JSON.parse(readFileSync(join(root, "apps/desktop/package.json"), "utf8")).version;
 
 let failed = false;
 const pass = (check: string) => console.log(`ok: ${check}`);
+
 const fail = (check: string, why: string) => {
   failed = true;
   console.log(`FAIL: ${check}: ${why}`);
 };
+
 const check = (name: string, why: string | undefined) => (why ? fail(name, why) : pass(name));
 
 type Meta = {
@@ -45,11 +48,13 @@ const walk = (dir: string): string[] =>
 
 const specifiers = (source: string): Set<string> => {
   const found = new Set<string>();
+
   for (const m of source.matchAll(
     /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*)["']([^"']+)["']/g
   )) {
     found.add(m[1] ?? "");
   }
+
   return found;
 };
 
@@ -57,7 +62,9 @@ const packageOf = (spec: string): string | undefined => {
   if (spec.startsWith(".") || spec.startsWith("/") || spec.startsWith("node:")) return undefined;
   const parts = spec.split("/");
   const name = spec.startsWith("@") ? parts.slice(0, 2).join("/") : (parts[0] ?? spec);
+
   if (name === "electron" || builtinModules.includes(name)) return undefined;
+
   return name;
 };
 
@@ -76,22 +83,26 @@ check(
 );
 
 const file = entry?.url ? join(dist, entry.url) : undefined;
+
 if (!file || !existsSync(file)) {
   fail("artifact", `${file ?? "files[0].url missing"} does not exist`);
   process.exit(1);
 }
+
 check(
   "artifact",
   meta.path === entry.url ? undefined : `path ${meta.path} differs from files[0].url ${entry.url}`
 );
 
 const digest = createHash("sha512").update(readFileSync(file)).digest("base64");
+
 check(
   "sha512",
   entry.sha512 === digest && meta.sha512 === digest
     ? undefined
     : `file is ${digest}, files[0] says ${entry.sha512}, top level says ${meta.sha512}`
 );
+
 check(
   "size",
   entry.size === statSync(file).size
@@ -100,6 +111,7 @@ check(
 );
 
 const tmp = mkdtempSync(join(tmpdir(), "harakiri-release-"));
+
 try {
   // --appimage-extract works without FUSE.
   execFileSync(file, ["--appimage-extract", "resources/*"], { cwd: tmp, stdio: "ignore" });
@@ -109,6 +121,7 @@ try {
     string,
     unknown
   >;
+
   const feedProblems = [
     feed.provider !== "github" && `provider is ${String(feed.provider)}`,
     feed.owner !== "tcorzo" && `owner is ${String(feed.owner)}`,
@@ -117,6 +130,7 @@ try {
       `updaterCacheDirName is ${String(feed.updaterCacheDirName)}`,
     "token" in feed && "app-update.yml has a token key",
   ].filter(Boolean);
+
   check("feed", feedProblems.length ? feedProblems.join("; ") : undefined);
 
   const asar = execFileSync(
@@ -124,13 +138,17 @@ try {
     ["x", "--package", "@electron/asar@3.4.1", "asar", "list", join(resources, "app.asar")],
     { encoding: "utf8", maxBuffer: 1 << 28 }
   );
+
   const needed = new Set<string>();
+
   for (const js of walk(mainOut).filter((f) => f.endsWith(".js"))) {
     for (const spec of specifiers(readFileSync(js, "utf8"))) {
       const pkg = packageOf(spec);
+
       if (pkg) needed.add(pkg);
     }
   }
+
   const missing = [...needed].filter((pkg) => !asar.includes(`/node_modules/${pkg}/package.json`));
   check(
     "runtime deps",

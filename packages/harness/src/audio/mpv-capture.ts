@@ -27,12 +27,15 @@ export function captureWithMpv(
     "--vo=null",
     input,
   ]);
+
   return parseAudioOutLine(`${stdout}\n${stderr}`);
 }
 
 export function parseAudioOutLine(log: string): AudioOut {
   const found = /^AO: \[\w+\] (\d+)Hz \S+ (\d+)ch (\S+)$/m.exec(log);
+
   if (found === null) throw new Error(`mpv printed no AO line:\n${log}`);
   const [, rate = "", channels = "", format = ""] = found;
+
   return { sampleRate: Number(rate), channels: Number(channels), format };
 }

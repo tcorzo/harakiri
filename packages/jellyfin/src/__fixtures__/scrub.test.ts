@@ -31,6 +31,7 @@ describe("scrubSource", () => {
       },
       "dv5-eac3"
     );
+
     expect(scrubbed).toEqual({
       Id: "3653ee5a956c9868ec7fdf0caff8a2cb",
       Path: "/media/movies/fixture-dv5-eac3.mkv",
@@ -61,6 +62,7 @@ describe("scrubSource", () => {
       },
       "transcode-bitrate"
     );
+
     expect(scrubbed).toEqual({
       PlaySessionId: "e885ab483b5abe4a5dc3457e102ff5c1",
       MediaSources: [
@@ -99,10 +101,12 @@ test("scrubText drops credits, release tags, encoder credits and dubbing studios
 test("every recorded MediaSource fixture is already scrubbed", () => {
   const names = readdirSync(new URL(".", import.meta.url)).filter((file) => file.endsWith(".json"));
   expect(names).toHaveLength(18);
+
   for (const file of names) {
     const json = z
       .record(z.string(), z.unknown())
       .parse(JSON.parse(readFileSync(new URL(file, import.meta.url), "utf8")));
+
     expect({ file, json }).toEqual({ file, json: scrubSource(json, file.slice(0, -5)) });
   }
 });

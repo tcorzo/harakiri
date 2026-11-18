@@ -21,10 +21,12 @@ function ServerStep() {
   useEffect(() => {
     seen.typed = value;
   }, [value]);
+
   const { ref, focusKey } = useFocusable<object, HTMLDivElement>({
     focusKey: "page",
     trackChildren: true,
   });
+
   return (
     <FocusContext.Provider value={focusKey}>
       <div ref={ref}>
@@ -60,6 +62,7 @@ function layOut(): void {
   place(screen.getByRole("textbox"), { x: 400, y: 100, width: 1000, height: 80 });
   const board = screen.getByRole("group", { name: "On-screen keyboard" });
   place(board, { x: 400, y: 250, width: 1000, height: 400 });
+
   // Four rows of ten keys, then the wide row of five.
   for (const [i, key] of [...board.querySelectorAll("button")].entries()) {
     place(
@@ -75,6 +78,7 @@ async function press(direction: "up" | "down" | "left" | "right"): Promise<strin
   await act(async () => {
     await navigateByDirection(direction);
   });
+
   return getCurrentFocusKey();
 }
 

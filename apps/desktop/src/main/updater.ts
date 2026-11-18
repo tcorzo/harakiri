@@ -30,6 +30,7 @@ export function adaptUpdater(real: BaseUpdater): UpdaterLike {
     check: () => real.checkForUpdates(),
     download: () => {
       token = new CancellationTokenClass();
+
       return real.downloadUpdate(token);
     },
     cancelDownload: () => {
@@ -58,8 +59,10 @@ export function adaptUpdater(real: BaseUpdater): UpdaterLike {
 /** The packaged AppImage updater. Lazy: nothing touches `autoUpdater` until this is called. */
 export function electronUpdater(): UpdaterLike {
   const updater = pkg.autoUpdater;
+
   if (!(updater instanceof BaseUpdaterClass)) {
     throw new Error("electron-updater did not pick an installing updater on this platform");
   }
+
   return adaptUpdater(updater);
 }

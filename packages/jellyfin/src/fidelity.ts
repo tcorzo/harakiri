@@ -61,6 +61,7 @@ export type SoundClass = {
 
 /** How a leg of the signal path reaches the TV or receiver (PRD signal-path vocabulary). */
 export const signalStates = ["native", "mapped", "decoded"] as const;
+
 export type SignalState = (typeof signalStates)[number];
 
 /** One leg of the signal path with how it reaches the TV or receiver. */
@@ -120,11 +121,16 @@ const NAMED_LAYOUTS: Record<string, string> = { mono: "1.0", stereo: "2.0", quad
 const resolutionOf = (stream: MediaStream): Resolution | null => {
   const width = stream.Width ?? 0;
   const height = stream.Height ?? 0;
+
   if (width === 0 && height === 0) return null;
+
   // Width first: scope films are letterboxed (3840x1600 is still 4K).
   if (width >= 3200 || height >= 1800) return "4K";
+
   if (width >= 1800 || height >= 1000) return "1080p";
+
   if (width >= 1200 || height >= 700) return "720p";
+
   return "SD";
 };
 
@@ -147,13 +153,18 @@ const dolbyVision = (
 // record (a stale DV header on an SDR stream) falls back to the plain range.
 const pictureOf = (stream: MediaStream): PictureClass => {
   const resolution = resolutionOf(stream);
+
   const plain = (): PictureClass => {
     if (stream.VideoRange !== "HDR") return { range: "SDR", resolution, delivery: "native" };
+
     if (stream.ColorTransfer === "arib-std-b67")
       return { range: "HLG", resolution, delivery: "mapped" };
+
     return { range: "HDR10", resolution, delivery: "native" };
   };
+
   const rangeType = stream.VideoRangeType ?? "Unknown";
+
   switch (rangeType) {
     case "SDR":
       return { range: "SDR", resolution, delivery: "native" };
@@ -182,6 +193,7 @@ const pictureOf = (stream: MediaStream): PictureClass => {
       return plain();
     default: {
       const unhandled: never = rangeType;
+
       return unhandled;
     }
   }
@@ -191,32 +203,48 @@ const soundFormatOf = (stream: MediaStream): SoundFormat => {
   const codec = (stream.Codec ?? "").toLowerCase();
   const profile = stream.Profile ?? "";
   const atmos = stream.AudioSpatialFormat === "DolbyAtmos" || profile.includes("Atmos");
+
   if (codec === "truehd") return atmos ? "TrueHD Atmos" : "TrueHD";
+
   if (codec === "eac3") return atmos ? "E-AC3 Atmos" : "E-AC3";
+
   if (codec === "ac3") return "AC3";
+
   if (codec === "dts") {
     if (stream.AudioSpatialFormat === "DTSX" || profile.includes("DTS:X")) return "DTS:X";
+
     if (profile.includes("MA")) return "DTS-HD MA";
+
     if (profile.includes("HRA")) return "DTS-HD HRA";
+
     return "DTS";
   }
+
   if (codec.startsWith("pcm")) return "PCM";
+
   if (codec === "flac") return "FLAC";
+
   if (codec === "opus") return "Opus";
+
   if (codec === "aac") return "AAC";
+
   return "Other";
 };
 
 const channelsOf = (stream: MediaStream): string | null => {
   const layout = (stream.ChannelLayout ?? "").replace(/\(.*\)$/, "");
+
   if (/^\d+\.\d(\.\d)?$/.test(layout)) return layout;
   const named = NAMED_LAYOUTS[layout];
+
   if (named !== undefined) return named;
+
   return CHANNELS_BY_COUNT[stream.Channels ?? 0] ?? null;
 };
 
 const soundOf = (stream: MediaStream): SoundClass => {
   const format = soundFormatOf(stream);
+
   return {
     format,
     codec: stream.Codec ?? "",
@@ -249,14 +277,18 @@ const soundLabel = (sound: SoundClass): string =>
 
 const pictureSignal = (picture: PictureClass): string => {
   if (picture.delivery === "native") return picture.range;
+
   if (picture.range === "Dolby Vision" && picture.playback === "base-layer-only")
     return "Dolby Vision base layer mapped to HDR10";
+
   return `${picture.range} mapped to HDR10`;
 };
 
 const soundSignal = (sound: SoundClass): string => {
   if (sound.delivery === "decoded") return `${soundLabel(sound)} decoded to PCM`;
+
   if (sound.format === "PCM") return "PCM";
+
   return `${soundLabel(sound)} bitstream`;
 };
 
@@ -274,17 +306,22 @@ export const classifyFidelity = (
 ): Fidelity | null => {
   const streams = source?.MediaStreams ?? [];
   const video = streams.find((stream) => stream.Type === "Video");
+
   if (video === undefined) return null;
   const picture = pictureOf(video);
   const tracks = streams.filter((stream) => stream.Type === "Audio").map(soundOf);
+
   const chosen =
     options.audioStreamIndex === undefined
       ? tracks.toSorted(compareSound)[0]
       : tracks.find((track) => track.streamIndex === options.audioStreamIndex);
+
   const sound = chosen ?? null;
   const pictureNote = join(picture.resolution, pictureLabel(picture));
   const signal: SignalFact[] = [{ text: pictureSignal(picture), state: picture.delivery }];
+
   if (sound !== null) signal.push({ text: soundSignal(sound), state: sound.delivery });
+
   return {
     picture,
     sound,

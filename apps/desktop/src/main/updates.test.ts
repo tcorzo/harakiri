@@ -11,18 +11,22 @@ function fakeUpdater() {
     downloaded?: (v: string) => void;
     error?: (e: Error) => void;
   } = {};
+
   const calls = { check: 0, download: 0, cancel: 0, installs: [] as boolean[] };
   let checkResult: () => Promise<unknown> = () => Promise.resolve();
   let downloadResult: () => Promise<unknown> = () => Promise.resolve();
   let installResult: () => boolean = () => true;
   let cancelHook: () => void = () => {};
+
   const updater: UpdaterLike = {
     check: () => {
       calls.check += 1;
+
       return checkResult();
     },
     download: () => {
       calls.download += 1;
+
       return downloadResult();
     },
     cancelDownload: () => {
@@ -31,6 +35,7 @@ function fakeUpdater() {
     },
     install: (relaunch) => {
       calls.installs.push(relaunch);
+
       return installResult();
     },
     onAvailable: (l) => {
@@ -49,6 +54,7 @@ function fakeUpdater() {
       on.error = l;
     },
   };
+
   return {
     updater,
     on,
@@ -102,6 +108,7 @@ test("unsupported without an AppImage, and electron-updater is never created", (
     releaseLock: () => {},
     quit: () => {},
   });
+
   expect(updates.status()).toEqual({ state: "unsupported" });
   expect(() => updates.installIfReady()).not.toThrow();
 });
@@ -262,6 +269,7 @@ test("a download is not cancelled while nothing plays", async () => {
 test("a throwing createUpdater reports failed and leaves the app running", () => {
   const quit = vi.fn<() => void>();
   const releaseLock = vi.fn<() => void>();
+
   const updates = startUpdates({
     appImage: "/apps/harakiri-x86_64.AppImage",
     createUpdater: () => {
@@ -271,6 +279,7 @@ test("a throwing createUpdater reports failed and leaves the app running", () =>
     releaseLock,
     quit,
   });
+
   expect(updates.status()).toEqual({
     state: "failed",
     message: "electron-updater did not pick an installing updater on this platform",

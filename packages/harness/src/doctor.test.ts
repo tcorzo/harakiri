@@ -54,6 +54,7 @@ describe("check judges", () => {
       ["ac3", "eac3", "dca"],
       (name) => new RegExp(`^\\s*\\S+\\s+${name}\\s`, "m")
     );
+
     const listing = ` A....D ac3                  ATSC A/52A (AC-3)\n A....D eac3                 ATSC A/52 E-AC-3\n`;
     expect(encoders(exited(listing))).toEqual({ status: "missing", detail: "missing dca" });
     expect(encoders(exited(`${listing} A..X.D dca                  DCA\n`))).toEqual({

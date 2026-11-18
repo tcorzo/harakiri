@@ -12,6 +12,7 @@ const dts: SoundSource = { carriage: "dts", label: "DTS 5.1" };
 const flac: SoundSource = { carriage: "decode", label: "FLAC 2.0" };
 
 const usbInterface: AudioOutput = { kind: "known", name: "USB interface", bitstream: [] };
+
 const receiver: AudioOutput = {
   kind: "known",
   name: "AV receiver",
@@ -30,11 +31,13 @@ const start = (overrides: Partial<FidelityStart> = {}) =>
 function run(initial: ReturnType<typeof startFidelity>, ...observations: Observation[]) {
   let state = initial;
   const actions = [];
+
   for (const observation of observations) {
     const step = observe(state, observation);
     state = step.state;
     actions.push(...step.actions);
   }
+
   return { view: fidelityView(state), actions };
 }
 
@@ -108,6 +111,7 @@ describe("sound", () => {
       { kind: "audioOutputFailed" },
       { kind: "soundTrack", sound: dtsHd }
     );
+
     expect(actions).toEqual([{ kind: "setBitstream", codecs: [] }]);
     expect(view.facts[1]).toEqual({ text: "DTS-HD MA 7.1 decoded to PCM", state: "decoded" });
   });
@@ -150,6 +154,7 @@ describe("picture", () => {
       { kind: "rendererFailed" },
       { kind: "rendererFailed" }
     );
+
     expect(all.actions).toEqual([
       { kind: "setRenderer", renderer: "opengl" },
       { kind: "setRenderer", renderer: "opengl-legacy" },
@@ -177,6 +182,7 @@ describe("delivery", () => {
         },
       })
     );
+
     expect(view.facts).toEqual([
       { text: "SDR", state: "native" },
       { text: "AAC 5.1 decoded to PCM", state: "decoded" },

@@ -39,6 +39,7 @@ import {
 const server = ServerUrl.parse(process.env["JELLYFIN_DEV_URL"] ?? "http://127.0.0.1:8096");
 const USER = process.env["JELLYFIN_DEV_USER"] ?? "harakiri";
 const PASSWORD = process.env["JELLYFIN_DEV_PASSWORD"] ?? "harakiri-dev";
+
 const identity = {
   client: "harakiri-test",
   device: "vitest",
@@ -53,6 +54,7 @@ const reachable = await fetch(new URL("System/Info/Public", server), {
 })
   .then((response) => response.ok)
   .catch(() => false);
+
 if (!reachable)
   throw new Error(
     `the Jellyfin at ${server} is unreachable: set JELLYFIN_DEV_URL (and JELLYFIN_DEV_USER, JELLYFIN_DEV_PASSWORD) to your server, or run \`mise run jellyfin:up\` for the dev container`
@@ -65,11 +67,14 @@ const corpusSections = (present: Corpus["entries"]) => {
   const series = new Set(
     present.flatMap((entry) => (entry.kind === "episode" ? [entry.series] : []))
   );
+
   const genres = [
     ...present.flatMap((entry) => (entry.kind === "movie" ? entry.meta.genres : [])),
     ...[...series].flatMap((name) => catalog.series[name]?.genres ?? []),
   ];
+
   const counts = Map.groupBy(genres, (genre) => genre);
+
   return [...counts]
     .map(([genre, all]) => [genre, all.length] as const)
     .toSorted(([a, left], [b, right]) => right - left || a.localeCompare(b))
@@ -88,6 +93,7 @@ describe(`the Jellyfin at ${server}`, () => {
   let corpus: CorpusMatch<LibraryItem> | undefined;
   beforeAll(async () => {
     const signIn = await authenticate(server, USER, PASSWORD, identity);
+
     if (signIn.kind !== "signed-in")
       throw new Error(`dev sign-in failed: ${JSON.stringify(signIn)}`);
     session = signIn.session;
@@ -103,12 +109,16 @@ describe(`the Jellyfin at ${server}`, () => {
   });
   const fresh = () => new QueryClient();
   const movies = () => corpus?.present.filter((entry) => entry.kind === "movie") ?? [];
+
   const pick = (id: string, fallback: () => LibraryItem | undefined, what: string) => {
     if (corpus) return corpus.item(corpusEntry(catalog, id));
     const item = fallback();
+
     if (!item) throw new Error(`${server} holds no ${what}`);
+
     return item;
   };
+
   const rangeOf = (item: LibraryItem) =>
     item.sources[0]?.MediaStreams?.find((stream) => stream.Type === "Video")?.VideoRangeType ?? "";
 
@@ -153,13 +163,16 @@ describe(`the Jellyfin at ${server}`, () => {
     expect(films).toHaveLength(corpus ? Math.min(5, movies().length) : Math.min(5, films.length));
     const libraryMovies = new Set(library.filter((i) => i.type === "Movie").map((i) => i.id));
     expect(films.filter((film) => !libraryMovies.has(ItemId.parse(film.Id)))).toEqual([]);
+
     for (const film of films) {
       expect(film.BackdropImageTags?.length).toBe(1);
       expect(typeof film.ImageTags?.["Logo"]).toBe("string");
     }
+
     const ranges = films.map(
       (film) => classifyFidelity(film.MediaSources?.[0])?.picture.range ?? "SDR"
     );
+
     const firstSdr = ranges.indexOf("SDR");
     expect(
       firstSdr === -1 ? [] : ranges.slice(firstSdr).filter((range) => range !== "SDR")
@@ -178,9 +191,11 @@ describe(`the Jellyfin at ${server}`, () => {
 
   test("latestQuery: films and shows, a row of at most sixteen", async () => {
     const items = await fresh().fetchQuery(latestQuery(ctx));
+
     const series = new Set(
       corpus?.present.flatMap((entry) => (entry.kind === "episode" ? [entry.series] : []))
     );
+
     const titles = new Set([...movies().map((entry) => entry.name), ...series]);
     const names = items.map((item) => item.Name ?? "");
     expect(items).toHaveLength(Math.min(16, corpus ? titles.size : items.length));
@@ -193,6 +208,7 @@ describe(`the Jellyfin at ${server}`, () => {
     const shape = sections.map((section) => [section.title, section.items.length] as const);
     expect(shape).toEqual(corpus ? corpusSections(corpus.present) : shape);
     expect(sections.length).toBeLessThanOrEqual(6);
+
     for (const section of sections) {
       expect(section.items.length).toBeLessThanOrEqual(20);
       expect(section.items.filter((item) => !item.Genres?.includes(section.title))).toEqual([]);
@@ -205,6 +221,7 @@ describe(`the Jellyfin at ${server}`, () => {
       () => library.find((i) => i.type === "Movie" && rangeOf(i).startsWith("DOVI")),
       "Dolby Vision film"
     );
+
     const entry = corpus ? corpusEntry(catalog, "dv-p8.1-hevc-mp4") : undefined;
     const item = await fresh().fetchQuery(itemQuery(ctx, picked.id));
     const notes = classifyFidelity(item.MediaSources?.[0])?.notes ?? "";
@@ -227,15 +244,19 @@ describe(`the Jellyfin at ${server}`, () => {
       () => library.find((i) => i.type === "Episode"),
       "episode"
     );
+
     const episode = await fresh().fetchQuery(itemQuery(ctx, picked.id));
     const seriesId = ItemId.parse(episode.SeriesId);
     const seasons = await fresh().fetchQuery(seasonsQuery(ctx, seriesId));
     expect(seasons.map((season) => season.Id)).toContain(episode.SeasonId);
+
     const episodes = await fresh().fetchQuery(
       episodesQuery(ctx, seriesId, ItemId.parse(episode.SeasonId))
     );
+
     expect(episodes.map((item) => item.Id)).toContain(picked.id);
     const entry = corpus ? corpusEntry(catalog, "dv-p5-hevc-episode") : undefined;
+
     const siblings = corpus?.present.filter(
       (other) =>
         entry?.kind === "episode" &&
@@ -243,6 +264,7 @@ describe(`the Jellyfin at ${server}`, () => {
         other.series === entry.series &&
         other.season === entry.season
     );
+
     expect(episodes).toHaveLength(siblings ? siblings.length : episodes.length);
   });
 });

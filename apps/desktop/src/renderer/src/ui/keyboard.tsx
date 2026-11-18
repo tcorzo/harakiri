@@ -3,6 +3,7 @@ import { useState, type KeyboardEvent } from "react";
 import { match } from "ts-pattern";
 
 type Layout = "address" | "text";
+
 type Case = "lower" | "upper" | "symbols";
 
 type Key =
@@ -19,6 +20,7 @@ const letters: Record<Exclude<Case, "symbols">, string[]> = {
   lower: ["1234567890", "qwertyuiop", "asdfghjkl-", "zxcvbnm._@"],
   upper: ["1234567890", "QWERTYUIOP", "ASDFGHJKL-", "ZXCVBNM._@"],
 };
+
 const symbols = ["1234567890", "!#$%&*()+=", "?/:;'\"<>[]", "~^`|\\{},._"];
 
 function grid(layout: Layout, letterCase: Case): Key[][] {
@@ -34,7 +36,9 @@ function grid(layout: Layout, letterCase: Case): Key[][] {
       ],
     ];
   }
+
   const rows = letterCase === "symbols" ? symbols : letters[letterCase];
+
   return [
     ...rows.map(chars),
     [
@@ -81,6 +85,7 @@ interface KeyCapProps {
 
 function KeyCap({ focusKey, label, spoken, wide, primary, onPress, onKeyDown }: KeyCapProps) {
   const { ref } = useFocusable<object, HTMLButtonElement>({ focusKey });
+
   return (
     <button
       ref={ref}
@@ -122,6 +127,7 @@ export function Keyboard({
   focusKey,
 }: KeyboardProps) {
   const [letterCase, setLetterCase] = useState<Case>("lower");
+
   const { ref, focusKey: context } = useFocusable<object, HTMLFieldSetElement>({
     focusKey,
     // Without listed directions norigin holds every edge and the board traps focus. Up must reach
@@ -131,6 +137,7 @@ export function Keyboard({
     focusBoundaryDirections: ["right", "down"],
     saveLastFocusedChild: true,
   });
+
   const rows = grid(layout, letterCase);
 
   const press = (key: Key): void => {
@@ -150,6 +157,7 @@ export function Keyboard({
   // as everywhere else, it is Select, and presses the focused key.
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>): void => {
     if (event.ctrlKey || event.metaKey || event.altKey) return;
+
     if (event.key === "Backspace") onChange(value.slice(0, -1));
     else if (event.key.length === 1 && event.key !== " ") onChange(value + event.key);
     else return;
@@ -200,6 +208,7 @@ export function EntryField({
   readonly onSubmit: () => void;
 }) {
   const { ref } = useFocusable<object, HTMLInputElement>({ focusKey });
+
   return (
     <label className="flex flex-col gap-2">
       <span className="text-caption text-paper-dim stretch-condensed font-[600] tracking-[0.12em] uppercase">

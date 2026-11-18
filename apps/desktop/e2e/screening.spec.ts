@@ -33,12 +33,15 @@ async function recordStations(page: Page): Promise<void> {
   await page.evaluate(() => {
     const seen: StationSeen[] = [];
     window.harakiriE2eStations = seen;
+
     const record = (): void => {
       const station = document.querySelector("main[data-station]")?.getAttribute("data-station");
+
       if (station != null && seen.at(-1)?.station !== station) {
         seen.push({ station, at: performance.now() });
       }
     };
+
     new MutationObserver(record).observe(document.body, {
       subtree: true,
       childList: true,
@@ -101,14 +104,17 @@ test("Play from the title page: House, Programme, Picture, then mpv plays the it
   const seen = await page.evaluate(() => window.harakiriE2eStations ?? []);
   expect(seen.map((s) => s.station)).toEqual(["House", "Programme", "Picture"]);
   const [house, programme, picture] = seen;
+
   if (house === undefined || programme === undefined || picture === undefined) {
     throw new Error("unreachable: three stations were asserted above");
   }
+
   expect(programme.at - house.at).toBeGreaterThanOrEqual(1100);
   expect(picture.at - programme.at).toBeGreaterThanOrEqual(2900);
 
   // Three skips forward of 30 s, then Back in mpv, as a remote pointed at the player would.
   const from = running.timePos ?? 60;
+
   for (let i = 0; i < 3; i += 1) await pressKey(userDataDir, "RIGHT");
   await probeUntil(page, (p) => (p.timePos ?? 0) >= from + 85);
   await pressKey(userDataDir, "ESC");
@@ -124,6 +130,7 @@ test("Play from the title page: House, Programme, Picture, then mpv plays the it
     (data) => (data.UserData?.PlaybackPositionTicks ?? 0) >= ticks(from + 85),
     5000
   );
+
   const leftAfter = minutesLeft(saved);
   expect(leftAfter).not.toBeNull();
   expect(leftAfter).not.toBe(leftBefore);
@@ -136,10 +143,12 @@ test("Play from the title page: House, Programme, Picture, then mpv plays the it
   await page.keyboard.press("Escape");
   const card = await expectFocus(page, cardName(spokenTitle(saved)));
   expect(card.section).toBe("Continue Watching");
+
   const first = page
     .getByRole("region", { name: "Continue Watching", exact: true })
     .getByRole("button")
     .first();
+
   await expect(first).toHaveAccessibleName(cardName(spokenTitle(saved)));
   await expect(first).toContainText(`${leftAfter} min left`);
   expect((await jellyfin.resumeIds())[0]).toBe(item.id);

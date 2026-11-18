@@ -100,9 +100,11 @@ test("paused under a server transcode: an amber square leads the fact line and i
 
 test("a downgrade leads the fact line with the amber square; a native play has none", () => {
   const lines = renderControls({ ...playing, downgraded: true }).split("\n");
+
   const fact = lines.findIndex((line) =>
     line.endsWith("Dolby Vision mapped to HDR10 · TrueHD Atmos bitstream")
   );
+
   expect(lines[fact - 1]).toBe(
     "{\\an7\\pos(96,902)\\bord0\\shad0\\blur0\\1c&H43C2F7&\\1a&H00&\\p1}m 0 0 l 18 0 18 18 0 18{\\p0}"
   );
@@ -137,6 +139,7 @@ test("a long subtitle list scrolls so the cursor stays in a nine-row window", ()
     id: i + 1,
     label: `Subtitle ${i + 1}`,
   }));
+
   const ass = renderControls({ ...playing, menu: { rows: many, cursor: 20, aid: 1, sid: 21 } });
   const labels = [...ass.matchAll(/\}(Subtitle \d+)$/gm)].map((m) => m[1]);
   expect(labels).toEqual([

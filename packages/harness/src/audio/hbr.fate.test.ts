@@ -20,17 +20,22 @@ import { readPcm16 } from "./wav";
 const fateDir = process.env["HARAKIRI_FATE_DIR"];
 const SAMPLES = ["master_audio_7.1_24bit.dts", "dtsx_7.1.4_24bit.dts", "atmos.thd"];
 const FETCH = "run `mise run media:fetch-fate` and export HARAKIRI_FATE_DIR to its directory";
+
 if (fateDir === undefined || fateDir === "")
   throw new Error(`HARAKIRI_FATE_DIR is unset: ${FETCH} (needs ${SAMPLES.join(", ")})`);
+
 const missing = SAMPLES.filter((name) => !existsSync(join(fateDir, name)));
+
 if (missing.length > 0)
   throw new Error(`HARAKIRI_FATE_DIR=${fateDir} lacks ${missing.join(", ")}: ${FETCH}`);
 
 describe("FATE: HBR streams through the extractor and mpv", () => {
   let dir: string;
   const sample = (name: string) => join(fateDir, name);
+
   const spdif = (input: string, out: string, options: { dtshdRate?: number } = {}) => {
     muxSpdif(input, join(dir, out), options);
+
     return readPcm16(readFileSync(join(dir, out))).data;
   };
 
@@ -50,9 +55,11 @@ describe("FATE: HBR streams through the extractor and mpv", () => {
 
   test("DTS-HD MA sent as core only (mpv's plain `dts` token) is caught", () => {
     const source = readFileSync(sample("master_audio_7.1_24bit.dts"));
+
     const extracted = elementaryStream(
       scanBursts(spdif(sample("master_audio_7.1_24bit.dts"), "ma-core.spdif"))
     );
+
     expect(extracted.codec).toBe("dts");
     expect(extracted.bytes.length).toBeLessThan(source.length);
     expect(sha256(extracted.bytes)).not.toBe(sha256(source));
@@ -76,11 +83,13 @@ describe("FATE: HBR streams through the extractor and mpv", () => {
       const wav = join(dir, `${name}.wav`);
       const ao = captureWithMpv(mkv, wav);
       expect(ao).toEqual({ sampleRate: 192000, channels: 8, format });
+
       const reference = spdif(
         mkv,
         `${name}.mkv.spdif`,
         dtshdRate === undefined ? {} : { dtshdRate }
       );
+
       expect(sha256(readPcm16(readFileSync(wav)).data)).toBe(sha256(reference));
     }
   );

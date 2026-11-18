@@ -8,11 +8,13 @@ import { startingFidelity } from "./playback";
 import { resolve } from "./resolve";
 
 const server = ServerUrl.parse("http://jf.test");
+
 const receiver: AudioOutput = {
   kind: "known",
   name: "AV receiver",
   bitstream: ["ac3", "eac3", "dts", "dts-hd", "truehd"],
 };
+
 const usbInterface: AudioOutput = { kind: "known", name: "USB interface", bitstream: [] };
 
 const viewOf = (
@@ -71,6 +73,7 @@ test("a source the server never probed states no facts it cannot back", () => {
     { itemId: "0123456789abcdef0123456789abcdef" },
     server
   );
+
   const view = fidelityView(startingFidelity(resolution, receiver));
   expect([view.downgrades, view.facts]).toEqual([
     [],

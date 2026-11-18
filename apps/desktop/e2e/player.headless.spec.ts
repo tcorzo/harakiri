@@ -69,6 +69,7 @@ test("plays from a start position over a direct Jellyfin stream and reports it",
     () => jellyfin.nowPlaying(),
     (session) => session?.NowPlayingItem?.Id === item.id
   );
+
   expect(server?.PlayState?.PlayMethod).toBe("DirectPlay");
 });
 
@@ -139,12 +140,14 @@ test("stopping saves the resume position on the server", async ({
   const stopped = await playerEventUntil(page, (event) => event.phase === "stopped");
   expect((await probe(page)).running).toBe(false);
   expect(stopped.positionTicks).toBeGreaterThanOrEqual(ticks(203));
+
   const saved = await until(
     "Jellyfin stores the resume point",
     () => jellyfin.userData(item.id),
     (data) => data.PlaybackPositionTicks > 0,
     5000
   );
+
   expect(Math.abs(saved.PlaybackPositionTicks - stopped.positionTicks)).toBeLessThanOrEqual(
     ticks(3)
   );
@@ -164,6 +167,7 @@ test("a second play replaces the first: one mpv, and the first reports stopped",
   preserveUserData,
 }) => {
   const [first, second] = await jellyfin.pickItems(ITEMS.sdrH264Short, 2);
+
   if (!first || !second) throw new Error("pickItems returned fewer items than asked");
   await preserveUserData(first.id);
   await preserveUserData(second.id);
@@ -179,10 +183,12 @@ test("a second play replaces the first: one mpv, and the first reports stopped",
   const now = await probeUntil(page, (p) => p.running && (p.timePos ?? 0) >= 61);
   expect(now.path).toContain(`/Videos/${second.id}/stream`);
   expect(mpvProcesses(userDataDir)).toHaveLength(1);
+
   const stoppedFirst = await playerEventUntil(
     page,
     (event) => event.phase === "stopped" && event.itemId === first.id
   );
+
   expect(stoppedFirst.positionTicks).toBeGreaterThanOrEqual(ticks(60));
   const events = await playerEvents(page);
   expect(events.some((e) => e.itemId === second.id && e.phase === "stopped")).toBe(false);

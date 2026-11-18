@@ -49,6 +49,7 @@ test("mpvTrack maps a Jellyfin index, turns -1 off, and leaves an unknown choice
     "DirectPlay",
     "http://jf.test/"
   );
+
   expect(mpvTrack(subtitles, 1)).toBe(6);
   expect(mpvTrack(subtitles, 9)).toBe(3);
   expect(mpvTrack(subtitles, -1)).toBe(false);

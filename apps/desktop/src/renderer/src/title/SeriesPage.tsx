@@ -38,6 +38,7 @@ function SeasonTab({
     focusKey: `season-${index}`,
     onFocus: onPick,
   });
+
   return (
     <button
       ref={ref}
@@ -70,7 +71,9 @@ function EpisodeLine({
       onFocus();
     },
   });
+
   const number = episode.series?.episode;
+
   return (
     <button
       ref={ref}
@@ -108,14 +111,17 @@ function EpisodeLine({
 
 function firstUnwatched(seasons: readonly Entry[]): number {
   const found = seasons.findIndex((season) => (season.unplayedCount ?? 0) > 0);
+
   return found === -1 ? 0 : found;
 }
 
 /** The season a series page opens on: the one the owner last had, else the first with unwatched episodes. */
 export function initialSeason(seriesId: ItemId, seasons: readonly Entry[]): number {
   const remembered = seriesPlace.get(seriesId);
+
   const given =
     remembered === undefined ? -1 : seasons.findIndex((season) => season.id === remembered.season);
+
   return given === -1 ? firstUnwatched(seasons) : given;
 }
 
@@ -134,13 +140,16 @@ export function SeriesPage({
   const [picked, setPicked] = useState(() => initialSeason(series.id, seasons));
   const [, startTransition] = useTransition();
   const season = seasons[picked] ?? seasons[0];
+
   // No placeholder: while another season loads, its Play must not start the previous season's episode.
   const episodes = useQuery({
     ...episodesQuery(ctx, series.id, season?.id ?? series.id),
     enabled: season !== undefined,
   });
+
   const list = episodes.data ?? [];
   const next = list.find((episode) => !episode.played) ?? list[0];
+
   const { ref, focusKey } = useFocusable<object, HTMLElement>({
     focusKey: "series-page",
     trackChildren: true,
@@ -157,13 +166,16 @@ export function SeriesPage({
 
   const pick = (index: number): void => {
     const chosen = seasons[index];
+
     if (chosen !== undefined) seriesPlace.set(series.id, { season: chosen.id, episode: null });
     startTransition(() => setPicked(index));
   };
+
   const rememberEpisode = (episode: Entry): void => {
     if (season !== undefined)
       seriesPlace.set(series.id, { season: season.id, episode: episode.id });
   };
+
   const open = (episode: Entry): void =>
     void navigate({ to: "/title/$id", params: { id: episode.id } });
 

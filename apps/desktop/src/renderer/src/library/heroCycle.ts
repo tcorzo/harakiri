@@ -26,7 +26,9 @@ export type HeroEvent =
 export function heroCycle(state: HeroCycle, event: HeroEvent): HeroCycle {
   if (event.type === "restart") return { ...state, since: event.now };
   const due = event.type === "next" || (event.auto && event.now - state.since >= heroHoldMs);
+
   if (!due || event.count < 2) return state;
+
   return { index: (state.index + 1) % event.count, since: event.now, changedAt: event.now };
 }
 
@@ -44,6 +46,7 @@ const reducedMotionQuery = "(prefers-reduced-motion: reduce)";
 function subscribeReducedMotion(onChange: () => void): () => void {
   const list = window.matchMedia(reducedMotionQuery);
   list.addEventListener("change", onChange);
+
   return () => list.removeEventListener("change", onChange);
 }
 
@@ -63,6 +66,7 @@ export function useHeroCycle(ids: readonly string[], holding: boolean) {
   const count = ids.length;
   const reducedMotion = useReducedMotion();
   const auto = holding && !reducedMotion;
+
   // Resumes the film that was on stage when the owner left, which was already settled. It is found
   // by id: the featured list is shuffled, and a refetch puts it in another order.
   const [state, send] = useReducer(heroCycle, undefined, () => ({
@@ -70,6 +74,7 @@ export function useHeroCycle(ids: readonly string[], holding: boolean) {
     since: Date.now(),
     changedAt: 0,
   }));
+
   const index = count === 0 ? 0 : state.index % count;
   const heroId = ids[index] ?? null;
 
@@ -85,7 +90,9 @@ export function useHeroCycle(ids: readonly string[], holding: boolean) {
 
   useEffect(() => {
     if (!auto || count < 2) return () => {};
+
     let timer = 0;
+
     const arm = (): void => {
       timer = window.setTimeout(
         () => {
@@ -97,7 +104,9 @@ export function useHeroCycle(ids: readonly string[], holding: boolean) {
         Math.max(0, state.since + heroHoldMs - Date.now())
       );
     };
+
     arm();
+
     return () => window.clearTimeout(timer);
   }, [auto, count, state.since]);
 

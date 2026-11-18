@@ -10,9 +10,11 @@ import { type FidelityMpv, type FidelityWatch, watchFidelity } from "./fidelity-
  */
 function fakeMpv(props: Record<string, unknown>, react: (name: string, value: unknown) => void) {
   const sets: [string, unknown][] = [];
+
   const mpv: FidelityMpv = {
     getProperty: async <T>(name: string, schema: z.ZodType<T>) => {
       if (!(name in props)) throw new Error("property unavailable");
+
       return schema.parse(props[name]);
     },
     setProperty: async (name, value) => {
@@ -20,10 +22,12 @@ function fakeMpv(props: Record<string, unknown>, react: (name: string, value: un
       react(name, value);
     },
   };
+
   return { mpv, sets };
 }
 
 const receiver: AudioOutput = { kind: "known", name: "AV receiver", bitstream: ["eac3", "truehd"] };
+
 const start = () =>
   startFidelity({
     picture: { range: "HDR10", label: "HDR10" },
@@ -33,12 +37,14 @@ const start = () =>
   });
 
 const watches: FidelityWatch[] = [];
+
 afterEach(() => {
   for (const watch of watches.splice(0)) watch.stop();
 });
 
 function watcherOn(mpv: FidelityMpv, options: { paused?: boolean } = {}) {
   const changes: string[][] = [];
+
   const watcher = watchFidelity(mpv, start(), {
     aid: () => 1,
     paused: () => options.paused ?? false,
@@ -47,7 +53,9 @@ function watcherOn(mpv: FidelityMpv, options: { paused?: boolean } = {}) {
     intervalMs: 60_000,
     onChange: (view) => changes.push(view.facts.map((fact) => fact.text)),
   });
+
   watches.push(watcher);
+
   return { watcher, changes };
 }
 
@@ -60,11 +68,14 @@ test("a bitstream whose output keeps dying is switched to decoding, and the trac
     "current-vo": "gpu-next",
     "video-target-params": { gamma: "pq" },
   };
+
   const { mpv, sets } = fakeMpv(props, (name, value) => {
     if (name === "aid" && value === 1 && props["audio-spdif"] === "")
       props["current-ao"] = "pipewire";
+
     if (name === "audio-spdif") props["audio-spdif"] = value;
   });
+
   const { watcher, changes } = watcherOn(mpv);
 
   await samples(watcher, 3);
@@ -89,11 +100,13 @@ test("one dropped sample out of four is a reopen, not a failure", async () => {
   const props: Record<string, unknown> = { "current-vo": "gpu-next" };
   const { mpv, sets } = fakeMpv(props, () => {});
   const { watcher } = watcherOn(mpv);
+
   for (const open of [true, false, true, true, false, true, true, true]) {
     if (open) props["current-ao"] = "pipewire";
     else delete props["current-ao"];
     await watcher.sample();
   }
+
   expect(sets).toEqual([]);
 });
 
@@ -101,10 +114,12 @@ test("an output that reopens between samples is caught by mpv's warnings", async
   const props: Record<string, unknown> = { "current-ao": "pipewire", "current-vo": "gpu-next" };
   const { mpv, sets } = fakeMpv(props, () => {});
   const { watcher } = watcherOn(mpv);
+
   for (let i = 0; i < 4; i += 1) {
     watcher.audioOutputWarning();
     await watcher.sample();
   }
+
   expect(sets[0]).toEqual(["audio-spdif", ""]);
 });
 
@@ -124,12 +139,14 @@ test("a renderer that cannot start gives way to OpenGL, which then shows the pic
       { id: 2, type: "video", albumart: true },
     ],
   };
+
   const { mpv, sets } = fakeMpv(props, (name, value) => {
     if (name === "vid" && value === 1) {
       props["current-vo"] = "gpu-next";
       props["video-target-params"] = { gamma: "bt.1886" };
     }
   });
+
   const { watcher, changes } = watcherOn(mpv);
 
   watcher.rendererError();
@@ -153,6 +170,7 @@ test("an HDR display leaves the picture as it is, and an SDR one is reported", a
     "current-vo": "gpu-next",
     "video-target-params": { gamma: "pq" },
   };
+
   const { mpv } = fakeMpv(props, () => {});
   const { watcher } = watcherOn(mpv);
   await samples(watcher, 2);

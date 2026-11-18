@@ -15,7 +15,9 @@ export function backdropUrl(server: ServerUrl, image: ImageRef): string {
 /** Cross-fades from the previous backdrop to the new one so a re-light never flashes to black. */
 export function Backdrop({ url }: { readonly url: string | null }) {
   const [layers, setLayers] = useState<readonly (string | null)[]>([url]);
+
   if (layers.at(-1) !== url) setLayers([layers.at(-1) ?? null, url]);
+
   return (
     <div aria-hidden="true" className="bg-ink absolute inset-0 overflow-hidden">
       {layers.map((layer, i) =>
@@ -95,6 +97,7 @@ export function TitleMark({
   readonly compact: boolean;
 }) {
   const name = entry.kind === "Episode" && entry.series !== null ? entry.series.name : entry.title;
+
   if (entry.logo !== null) {
     return (
       <h1 className="m-0">
@@ -112,6 +115,7 @@ export function TitleMark({
       </h1>
     );
   }
+
   return (
     <h1
       className={`stretch-extra-wide m-0 max-w-[38vw] font-[820] text-balance ${

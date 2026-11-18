@@ -18,14 +18,19 @@ function table(head: readonly string[], rows: readonly (readonly string[])[]): s
   const widths = head.map((cell, column) =>
     Math.max(3, width(cell), ...rows.map((r) => width(r[column] ?? "")))
   );
+
   const line = (cells: readonly string[]) =>
     `| ${cells.map((cell, column) => cell + " ".repeat((widths[column] ?? 0) - width(cell))).join(" | ")} |`;
+
   return [line(head), line(widths.map((w) => "-".repeat(w))), ...rows.map(line)];
 }
+
 const marked = (view: FidelityView): string => {
   const fact = view.facts[0]?.text ?? "";
+
   return view.downgrades.length === 0 ? fact : `${fact} ⬇`;
 };
+
 const why = (view: FidelityView): string =>
   view.downgrades.map((downgrade) => downgrade.message).join(" ") || "None";
 
@@ -55,6 +60,7 @@ export function renderTables(): string {
       soundTracks.flatMap((track) =>
         audioOutputs.flatMap((output) => {
           const view = soundCell(track, output);
+
           return view.downgrades.length === 0 ? [] : [[track.label, output.name, why(view)]];
         })
       )
@@ -77,6 +83,7 @@ export function renderTables(): string {
       pictures.flatMap((picture) =>
         displays.flatMap((display) => {
           const view = pictureCell(picture, display);
+
           return view.downgrades.length === 0 ? [] : [[picture.label, display.name, why(view)]];
         })
       )
@@ -90,10 +97,12 @@ export function renderTables(): string {
       ["Delivery", "Plays as", "Downgrades"],
       deliveries.map((delivery) => {
         const view = deliveryRow(delivery);
+
         return [delivery.name, view.facts.map((f) => f.text).join(" · "), why(view)];
       })
     ),
     "",
   ];
+
   return lines.join("\n");
 }

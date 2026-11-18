@@ -80,15 +80,18 @@ const clamp = (value: number, max: number) => Math.min(Math.max(value, 0), Math.
 
 const openMenu = (state: ControlsState, rows: readonly MenuRow[]): ControlsState => {
   const current = rows.findIndex((row) => row.property === "aid" && row.id === state.aid);
+
   return { ...state, menu: { cursor: Math.max(current, 0) } };
 };
 
 const onAction = (state: ControlsState, action: PlayerAction, rows: readonly MenuRow[]): Step => {
   const shown = { ...state, visible: true };
+
   const togglePause: Step = {
     state: shown,
     commands: [{ type: "pause", paused: !state.paused }],
   };
+
   return match({ menu: state.menu, action })
     .with({ action: "stop" }, () => ({ state: shown, commands: [{ type: "stop" } as const] }))
     .with({ action: "playPause" }, () => togglePause)
@@ -130,6 +133,7 @@ const onAction = (state: ControlsState, action: PlayerAction, rows: readonly Men
     }))
     .with({ menu: P.nonNullable, action: "select" }, ({ menu }) => {
       const row = rows[menu.cursor];
+
       return {
         state: { ...shown, menu: null },
         commands: row ? [{ type: "track", property: row.property, id: row.id } as const] : [],

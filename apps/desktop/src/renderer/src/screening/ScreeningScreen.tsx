@@ -35,6 +35,7 @@ const messageOf = (error: unknown): string =>
 
 function StationRule({ current }: { readonly current: Station }) {
   const at = stations.indexOf(current);
+
   return (
     <ol aria-label="Handoff" className="m-0 flex list-none gap-10 p-0">
       {stations.map((station, i) => (
@@ -62,6 +63,7 @@ function StationRule({ current }: { readonly current: Station }) {
  */
 export function SignalSlug({ facts }: { readonly facts: readonly SignalFact[] }) {
   const path = joinFacts(facts);
+
   return (
     <p
       aria-label={`Signal path: ${path}`}
@@ -69,6 +71,7 @@ export function SignalSlug({ facts }: { readonly facts: readonly SignalFact[] })
     >
       {facts.map((fact, i) => {
         const state = markedState(fact.state);
+
         return (
           <span key={fact.text} className="flex items-baseline gap-6">
             {i > 0 ? (
@@ -99,6 +102,7 @@ export function ServerDecision({ report }: { readonly report: SignalReport }) {
       </Notice>
     );
   }
+
   if (report.transcodeReasons.length > 0) {
     return (
       <>
@@ -107,11 +111,13 @@ export function ServerDecision({ report }: { readonly report: SignalReport }) {
       </>
     );
   }
+
   if (report.facts.length === 0) {
     return (
       <p className="text-heading text-paper-dim m-0">The server has not described this file yet.</p>
     );
   }
+
   return <SignalSlug facts={report.facts} />;
 }
 
@@ -129,6 +135,7 @@ function NextEpisode({
   useEffect(() => {
     focusFirst("screening-play-next");
   }, []);
+
   return (
     <FocusContext.Provider value={focusKey}>
       <div ref={ref} className="flex flex-col gap-6">
@@ -167,6 +174,7 @@ export function ScreeningScreen() {
   const { data: numbers } = useSuspenseQuery(catalogueQuery(ctx));
   const { entry, item } = data;
   const sourceId = item.MediaSources?.[0]?.Id;
+
   const [request] = useState<PlayRequest>(() => ({
     itemId: id,
     ...(sourceId == null ? {} : { mediaSourceId: MediaSourceId.parse(sourceId) }),
@@ -174,6 +182,7 @@ export function ScreeningScreen() {
     ...(search.audio === undefined ? {} : { audioStreamIndex: search.audio }),
     ...(search.subtitle === undefined ? {} : { subtitleStreamIndex: search.subtitle }),
   }));
+
   const [houseDone, setHouseDone] = useState(false);
   const [elapsed, setElapsed] = useState<"house" | "slug" | "picture">("house");
   const [report, setReport] = useState<SignalReport | null>(null);
@@ -182,6 +191,7 @@ export function ScreeningScreen() {
   const mounted = useRef(true);
   const station = stationOf(elapsed, event);
   const number = numberFor(numbers, entry);
+
   const { ref, focusKey } = useFocusable<object, HTMLElement>({
     focusKey: "screening",
     trackChildren: true,
@@ -209,6 +219,7 @@ export function ScreeningScreen() {
   /** After playback: the title page, which refetches the resume point once the server holds it. */
   const leaveAfterPlayback = (): void => {
     inputMode.getState().setMode("ui");
+
     if (search.after === "title") {
       void router.navigate({ to: "/title/$id", params: { id }, replace: true });
     } else {
@@ -218,10 +229,13 @@ export function ScreeningScreen() {
 
   const offerNext = async (): Promise<void> => {
     if (entry.kind !== "Episode" || entry.series === null) return leaveAfterPlayback();
+
     const next = await queryClient
       .fetchQuery(nextEpisodeQuery(ctx, entry.series.id, entry.id))
       .catch(() => null);
+
     if (!mounted.current) return;
+
     if (next === null) leaveAfterPlayback();
     else setOutcome({ kind: "next", next });
   };
@@ -241,16 +255,20 @@ export function ScreeningScreen() {
   const onPlayerEvent = useEffectEvent((next: PlayerEvent) => {
     if (next.itemId !== id) return;
     setEvent(next);
+
     // The server stores the resume point after these arrive; the refetch waits for `reported`.
     if (next.phase === "stopped" || next.phase === "ended") {
       refetchWhenReported(queryClient, ctx, entry);
     }
+
     if (next.phase === "stopped") leaveAfterPlayback();
+
     if (next.phase === "ended") {
       inputMode.getState().setMode("ui");
       setOutcome({ kind: "ended" });
       void offerNext();
     }
+
     if (next.phase === "error") fail(next.error ?? "The player stopped with an error.");
   });
 
@@ -281,6 +299,7 @@ export function ScreeningScreen() {
         if (mounted.current) failWith(error);
       });
     const house = window.setTimeout(() => setHouseDone(true), handoffTiming.houseMs);
+
     return () => {
       mounted.current = false;
       window.clearTimeout(house);
@@ -294,8 +313,10 @@ export function ScreeningScreen() {
   const slugReady = houseDone && report !== null && outcome.kind === "running";
   useEffect(() => {
     if (!slugReady) return () => {};
+
     setElapsed("slug");
     const picture = window.setTimeout(() => handOff(), handoffTiming.slugMs);
+
     return () => window.clearTimeout(picture);
   }, [slugReady]);
 

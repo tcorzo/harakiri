@@ -2,8 +2,10 @@
 
 export const BASE =
   process.env.JELLYFIN_DEV_URL ?? `http://127.0.0.1:${process.env.JELLYFIN_DEV_PORT ?? "8096"}`;
+
 export const USER = process.env.JELLYFIN_DEV_USER ?? "harakiri";
 export const PASSWORD = process.env.JELLYFIN_DEV_PASSWORD ?? "harakiri-dev";
+
 export const USING_DEFAULT_CREDS =
   !process.env.JELLYFIN_DEV_USER || !process.env.JELLYFIN_DEV_PASSWORD;
 
@@ -22,6 +24,7 @@ export async function api<T = unknown>(
   opts: { token?: string; body?: unknown } = {}
 ): Promise<T> {
   const auth = opts.token ? `${CLIENT_AUTH}, Token="${opts.token}"` : CLIENT_AUTH;
+
   const send = () =>
     fetch(BASE + path, {
       method,
@@ -31,18 +34,24 @@ export async function api<T = unknown>(
       },
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     });
+
   const deadline = Date.now() + UNAVAILABLE_RETRY_MS;
   let res = await send();
+
   if (res.status === 503) console.log(`${method} ${path} -> 503, server still starting; retrying`);
+
   while (res.status === 503 && Date.now() < deadline) {
     await res.body?.cancel();
     await Bun.sleep(1000);
     res = await send();
   }
+
   if (!res.ok) {
     throw new Error(`${method} ${path} -> ${res.status} ${await res.text().catch(() => "")}`);
   }
+
   const text = await res.text();
+
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
@@ -51,6 +60,7 @@ export async function waitForServer(
 ): Promise<{ StartupWizardCompleted: boolean; Version: string }> {
   const deadline = Date.now() + timeoutMs;
   let last = "";
+
   while (Date.now() < deadline) {
     try {
       // While a fresh server starts, a transient host answers 200 in camelCase ("version"), then
@@ -59,13 +69,16 @@ export async function waitForServer(
         "GET",
         "/System/Info/Public"
       );
+
       if (typeof info?.Version === "string") return info;
       last = `not started yet: ${JSON.stringify(info)?.slice(0, 120)}`;
     } catch (e) {
       last = String(e);
     }
+
     await Bun.sleep(2000);
   }
+
   throw new Error(`server at ${BASE} not ready after ${timeoutMs}ms: ${last}`);
 }
 
@@ -77,5 +90,6 @@ export async function login(): Promise<{ token: string; userId: string }> {
       body: { Username: USER, Pw: PASSWORD },
     }
   );
+
   return { token: r.AccessToken, userId: r.User.Id };
 }

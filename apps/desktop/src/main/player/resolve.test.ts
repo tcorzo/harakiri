@@ -16,6 +16,7 @@ describe("resolve", () => {
       { itemId: "fe56760a326f401c35863368589d15f1", audioStreamIndex: 3, subtitleStreamIndex: 1 },
       server
     );
+
     expect(resolution).toMatchObject({
       method: "DirectPlay",
       url: "http://jf.test/Videos/fe56760a326f401c35863368589d15f1/stream?static=true&MediaSourceId=fe56760a326f401c35863368589d15f1",
@@ -33,11 +34,13 @@ describe("resolve", () => {
   test("without choices it follows the server defaults, and -1 turns subtitles off", () => {
     const defaults = resolve(dvTruehd, { itemId: "fe56760a326f401c35863368589d15f1" }, server);
     expect([defaults.aid, defaults.sid, defaults.audioStreamIndex]).toEqual([3, 5, 5]);
+
     const off = resolve(
       dvTruehd,
       { itemId: "fe56760a326f401c35863368589d15f1", subtitleStreamIndex: -1 },
       server
     );
+
     expect(off.sid).toBe(false);
   });
 
@@ -69,6 +72,7 @@ describe("resolve", () => {
       { itemId: "0123456789abcdef0123456789abcdef" },
       server
     );
+
     expect([resolution.unreadable, resolution.method]).toEqual([true, "Transcode"]);
   });
 
@@ -81,6 +85,7 @@ describe("resolve", () => {
       { itemId: "0123456789abcdef0123456789abcdef" },
       server
     );
+
     expect([resolution.unreadable, resolution.method]).toEqual([false, "DirectPlay"]);
   });
 

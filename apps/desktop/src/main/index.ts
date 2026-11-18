@@ -26,6 +26,7 @@ if (env.HARAKIRI_USER_DATA !== undefined) app.setPath("userData", env.HARAKIRI_U
 const appUrl =
   process.env["ELECTRON_RENDERER_URL"] ??
   pathToFileURL(join(import.meta.dirname, "../renderer/index.html")).href;
+
 const isAppUrl = appUrlCheck(appUrl);
 
 function createWindow(): void {
@@ -43,6 +44,7 @@ function createWindow(): void {
       additionalArguments: isE2E ? ["--harakiri-e2e"] : [],
     },
   });
+
   window.once("ready-to-show", () => window.show());
   window.on("closed", () => void player.stop());
   void window.loadURL(appUrl);
@@ -50,7 +52,9 @@ function createWindow(): void {
 
 function focusExistingWindow(): void {
   const [window] = BrowserWindow.getAllWindows();
+
   if (window === undefined) return;
+
   if (window.isMinimized()) window.restore();
   window.show();
   window.focus();

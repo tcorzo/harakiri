@@ -13,15 +13,18 @@ export async function stopWithin(
   capMs: number
 ): Promise<"stopped" | "timed-out" | "failed"> {
   let timer: NodeJS.Timeout | undefined;
+
   const timeout = new Promise<"timed-out">((resolve) => {
     timer = setTimeout(() => resolve("timed-out"), capMs);
   });
+
   try {
     return await Promise.race([
       stop().then(
         () => "stopped" as const,
         (error: unknown) => {
           logger.error("Stopping playback on quit failed: {error}", { error });
+
           return "failed" as const;
         }
       ),
@@ -55,15 +58,18 @@ export function holdQuitUntilStopped(
   let stopping = false;
   app.on("before-quit", (event) => {
     event.preventDefault();
+
     if (stopping) return;
     stopping = true;
     void stopWithin(stop, capMs).then((outcome) => {
       if (outcome === "timed-out") logger.warn("mpv did not stop within {capMs} ms", { capMs });
+
       try {
         options.afterStop?.();
       } catch (error) {
         logger.error("Installing the update on quit failed: {error}", { error });
       }
+
       app.exit(0);
     });
   });
@@ -73,7 +79,9 @@ export function holdQuitUntilStopped(
 export function killOnExit(livePid: () => number | undefined): void {
   process.on("exit", () => {
     const pid = livePid();
+
     if (pid === undefined || pid <= 0) return;
+
     try {
       process.kill(pid, "SIGKILL");
     } catch {
@@ -94,17 +102,22 @@ export function removeStaleMpvDirs(options: {
 }): string[] {
   const removed: string[] = [];
   let names: string[];
+
   try {
     names = readdirSync(options.dir);
   } catch {
     return removed;
   }
+
   for (const name of names) {
     if (!name.startsWith("harakiri-mpv-")) continue;
     const path = join(options.dir, name);
+
     try {
       const stat = statSync(path);
+
       if (!stat.isDirectory() || stat.uid !== options.uid) continue;
+
       if (options.now - stat.mtimeMs < options.minAgeMs) continue;
       rmSync(path, { recursive: true, force: true });
       removed.push(path);
@@ -112,5 +125,6 @@ export function removeStaleMpvDirs(options: {
       logger.warn("Could not remove stale mpv dir {path}: {error}", { path, error });
     }
   }
+
   return removed;
 }

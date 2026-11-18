@@ -57,8 +57,10 @@ export const ProgrammeRow = memo(function ProgrammeRow({
     focusKey: rowKey(sectionId),
     saveLastFocusedChild: true,
   });
+
   const scroller = useRef<HTMLDivElement>(null);
   const rem = rootRem();
+
   // No React Compiler in this build, so the virtualizer's unmemoizable API is fine.
   // oxlint-disable-next-line react/incompatible-library
   const virtualizer = useVirtualizer({
@@ -76,11 +78,14 @@ export const ProgrammeRow = memo(function ProgrammeRow({
     // Returning from a title page reopens the row on the card the owner left, wherever it moved.
     initialOffset: () => {
       const place = useLit.getState().place;
+
       if (place?.section !== sectionId) return 0;
       const at = entries.findIndex((entry) => entry.id === place.entry);
+
       return at === -1 ? 0 : at * pitchRem * rem;
     },
   });
+
   const reduced = useReducedMotion();
   const section: Section = { id: sectionId, name: sectionName };
 
@@ -99,7 +104,9 @@ export const ProgrammeRow = memo(function ProgrammeRow({
           >
             {virtualizer.getVirtualItems().map((item) => {
               const entry = entries[item.index];
+
               if (entry === undefined) return null;
+
               return (
                 <div
                   key={entry.id}
@@ -144,6 +151,7 @@ export const FailedRow = memo(function FailedRow({
   readonly onRetry: () => void;
 }) {
   const { ref, focusKey } = useFocusable<object, HTMLElement>({ focusKey: rowKey(sectionId) });
+
   return (
     <FocusContext.Provider value={focusKey}>
       <section ref={ref} aria-label={sectionName} className="flex flex-col gap-5">

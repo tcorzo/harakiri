@@ -19,6 +19,7 @@ export async function openLibrary(page: Page): Promise<FocusedControl> {
   ).toBeVisible({ timeout: 20_000 });
   const focus = await expectFocus(page, heroPlay, 10_000);
   expect(focus.route).toBe("/library");
+
   return focus;
 }
 
@@ -36,6 +37,7 @@ export async function leadContinueWatching(
   await preserveUserData(item.id);
   await jellyfin.seedResume(item.id, seconds);
   expect((await jellyfin.resumeIds())[0]).toBe(item.id);
+
   return { item, shown: await jellyfin.item(item.id) };
 }
 

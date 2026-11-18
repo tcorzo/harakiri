@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("electron", () => ({ app: { getPath: () => "/tmp/harakiri-index-test" } }));
+
 vi.mock("../session", () => ({
   loadSession: () => ({
     serverUrl: "http://jf.test",
@@ -32,6 +33,7 @@ vi.mock("../session", () => ({
     deviceId: "device-1",
   }),
 }));
+
 vi.mock("./playback", () => ({
   preparePlayback: mocks.prepare,
   startPlayback: mocks.start,
@@ -42,6 +44,7 @@ vi.mock("./playback", () => ({
     unreadable: false,
   }),
 }));
+
 vi.mock("./audio-output", () => ({
   AudioOutputJson: { parse: (value: unknown) => value },
   readAudioOutput: async () => ({ kind: "unknown", detail: "test" }),
@@ -50,10 +53,12 @@ vi.mock("./audio-output", () => ({
 const { forgetPrepared, play, prepare } = await import("./index");
 
 const itemId = ItemId.parse("0123456789abcdef0123456789abcdef");
+
 const facts = [
   { text: "HDR10", state: "native" },
   { text: "DTS-HD MA bitstream", state: "native" },
 ];
+
 const prepared = { resolution: { facts }, marker: "the handoff's resolution" };
 const idle = { done: new Promise(() => {}), stop: async () => {}, probe: async () => ({}) };
 

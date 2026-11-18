@@ -20,13 +20,17 @@ interface Box {
 const centre = (page: Page, key: string | null) =>
   page.evaluate((label) => {
     const board = document.querySelector('fieldset[aria-label="On-screen keyboard"]');
+
     if (board === null) return null;
+
     const el =
       label === null
         ? document.activeElement
         : [...board.querySelectorAll("button")].find((b) => b.getAttribute("aria-label") === label);
+
     if (!(el instanceof HTMLElement) || !board.contains(el)) return null;
     const r = el.getBoundingClientRect();
+
     return { x: r.left + r.width / 2, y: r.top + r.height / 2, h: r.height, w: r.width };
   }, key);
 
@@ -37,17 +41,22 @@ const centre = (page: Page, key: string | null) =>
 export async function typeOnScreen(page: Page, dpad: Dpad, keys: readonly string[]): Promise<void> {
   for (const key of keys) {
     const target = await centre(page, key);
+
     if (target === null) throw new Error(`The on-screen keyboard has no key "${key}"`);
+
     for (let steps = 0; ; steps += 1) {
       if (steps > 24) throw new Error(`Could not reach key "${key}" in 24 moves`);
       const at: Box | null = await centre(page, null);
+
       if (at === null) {
         throw new Error(
           `Focus left the on-screen keyboard: ${JSON.stringify(await focusedControl(page))}`
         );
       }
+
       const dy = target.y - at.y;
       const dx = target.x - at.x;
+
       if (Math.abs(dy) < at.h / 2 && Math.abs(dx) < at.w / 2) break;
       const before = (await focusedControl(page))?.name;
       await dpad.move(
@@ -61,6 +70,7 @@ export async function typeOnScreen(page: Page, dpad: Dpad, keys: readonly string
         20
       );
     }
+
     await dpad.select();
   }
 }
@@ -69,12 +79,14 @@ export async function typeOnScreen(page: Page, dpad: Dpad, keys: readonly string
 export function keysFor(text: string, inserts: readonly string[] = []): string[] {
   const keys: string[] = [];
   let rest = text;
+
   while (rest.length > 0) {
     const insert = inserts.find((i) => rest.startsWith(i));
     const next = insert ?? rest.charAt(0);
     keys.push(next);
     rest = rest.slice(next.length);
   }
+
   return keys;
 }
 
@@ -95,6 +107,7 @@ export async function focusField(page: Page, label: string): Promise<void> {
     if ((await focusedControl(page))?.name === label) return;
     await page.keyboard.press("ArrowUp");
   }
+
   if ((await focusedControl(page))?.name !== label) {
     throw new Error(
       `ArrowUp never reached the "${label}" field: ${JSON.stringify(await focusedControl(page))}`

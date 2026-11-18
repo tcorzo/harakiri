@@ -22,6 +22,7 @@ const Stream = z.object({
   DvProfile: z.number().nullish(),
   IsExternal: z.boolean().nullish(),
 });
+
 const Item = z.object({
   Id: z.string(),
   Name: z.string(),
@@ -30,7 +31,9 @@ const Item = z.object({
   RunTimeTicks: z.number().nullish(),
   MediaSources: z.array(z.object({ MediaStreams: z.array(Stream).nullish() })).nullish(),
 });
+
 type Item = z.infer<typeof Item>;
+
 const Items = z.object({ Items: z.array(Item) });
 const Auth = z.object({ AccessToken: z.string(), User: z.object({ Id: z.string() }) });
 
@@ -58,15 +61,19 @@ export function compare(entry: Entry, item: Item | undefined): Row[] {
     observed: show(observed),
     ok: show(declared) === show(observed),
   });
+
   if (!item) return [row("item", entryPath(entry), "not found on the server")];
+
   const streams = (item.MediaSources?.[0]?.MediaStreams ?? []).toSorted(
     (a, b) => a.Index - b.Index
   );
+
   const video = streams.find((s) => s.Type === "Video");
   const audio = streams.filter((s) => s.Type === "Audio");
   const subs = streams.filter((s) => s.Type === "Subtitle");
   const want = entry.expect;
   const seconds = (item.RunTimeTicks ?? 0) / 1e7;
+
   const rows = [
     row("type", entry.kind === "movie" ? "Movie" : "Episode", item.Type),
     row("video.Codec", want.video.codec, video?.Codec),
@@ -81,6 +88,7 @@ export function compare(entry: Entry, item: Item | undefined): Row[] {
     row("subtitles.embedded", want.subtitles.embedded, subs.filter((s) => !s.IsExternal).length),
     row("subtitles.external", want.subtitles.external, subs.filter((s) => s.IsExternal).length),
   ];
+
   // Runtime within a second: the long items must land in the 6-20 min window the tests use.
   rows.push({
     id: entry.id,
@@ -89,6 +97,7 @@ export function compare(entry: Entry, item: Item | undefined): Row[] {
     observed: seconds.toFixed(3),
     ok: Math.abs(seconds - entry.seconds) <= 1,
   });
+
   return rows;
 }
 
@@ -102,10 +111,12 @@ export interface ClassifyOptions {
 
 export async function classifyCorpus(options: ClassifyOptions): Promise<number> {
   const env = process.env;
+
   const base =
     options.server ??
     env["JELLYFIN_DEV_URL"] ??
     `http://127.0.0.1:${env["JELLYFIN_DEV_PORT"] ?? "8096"}`;
+
   const user = env["JELLYFIN_DEV_USER"] ?? "harakiri";
   const password = env["JELLYFIN_DEV_PASSWORD"] ?? "harakiri-dev";
   const client = `MediaBrowser Client="harakiri-dev", Device="corpus-classify", DeviceId="harakiri-dev-corpus-classify", Version="0"`;
@@ -113,6 +124,7 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
   async function call(path: string, init: RequestInit & { token?: string } = {}): Promise<unknown> {
     const auth = init.token ? `${client}, Token="${init.token}"` : client;
     let response: Response;
+
     try {
       response = await fetch(new URL(path, base), {
         ...init,
@@ -126,7 +138,9 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
         { cause: error }
       );
     }
+
     if (!response.ok) throw new Error(`${init.method ?? "GET"} ${path}: HTTP ${response.status}`);
+
     return response.json();
   }
 
@@ -139,12 +153,14 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
   );
 
   await call("System/Info/Public");
+
   const auth = Auth.parse(
     await call("Users/AuthenticateByName", {
       method: "POST",
       body: JSON.stringify({ Username: user, Pw: password }),
     })
   );
+
   const query = new URLSearchParams({
     userId: auth.User.Id,
     Recursive: "true",
@@ -157,32 +173,39 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
   // Match on the path below the library root: the corpus `movies` and `shows` dirs are mounted
   // somewhere in the container, but everything under them is the corpus's own layout.
   const tail = (entry: Entry) => `/${entryPath(entry).split("/").slice(1).join("/")}`;
+
   const lookup = (items: readonly Item[]) =>
     new Map(entries.map((entry) => [entry.id, items.find((i) => i.Path?.endsWith(tail(entry)))]));
+
   const probed = (item: Item | undefined) =>
     (item?.MediaSources?.[0]?.MediaStreams ?? []).some((s) => s.Type === "Video");
 
   const t0 = performance.now();
   let found = lookup([]);
+
   for (;;) {
     found = lookup(
       Items.parse(await call(`Items?${query.toString()}`, { token: auth.AccessToken })).Items
     );
     const ready = entries.filter((entry) => probed(found.get(entry.id))).length;
     const elapsed = (performance.now() - t0) / 1000;
+
     if (ready === entries.length || elapsed >= options.waitSeconds) {
       options.log(
         `${ready}/${entries.length} entries probed by the server after ${elapsed.toFixed(1)}s`
       );
       break;
     }
+
     await new Promise((r) => setTimeout(r, 2000));
   }
+
   await call("Sessions/Logout", { method: "POST", token: auth.AccessToken }).catch(() => undefined);
 
   const rows = entries.flatMap((entry) => compare(entry, found.get(entry.id)));
   const bad = rows.filter((r) => !r.ok);
   options.log("\n| entry | field | declared | Jellyfin | ok |\n| --- | --- | --- | --- | --- |");
+
   for (const r of rows)
     options.log(
       `| ${r.id} | ${r.field} | ${r.declared} | ${r.observed} | ${r.ok ? "yes" : "**NO**"} |`
@@ -192,5 +215,6 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
       ? `\nPASS: ${rows.length} checks on ${entries.length} entries match the catalog`
       : `\nFAIL: ${bad.length} of ${rows.length} checks differ:\n${bad.map((r) => `  ${r.id} ${r.field}: declared ${r.declared}, Jellyfin ${r.observed}`).join("\n")}`
   );
+
   return bad.length === 0 ? 0 : 1;
 }

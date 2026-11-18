@@ -36,6 +36,7 @@ export function synthesizeClip(dir: string, codec: ClipCodec): Clip {
   const reference = join(dir, `${codec}.${rawFormat}`);
   ffmpeg([...SINE_5_1, ...encode, mkv]);
   ffmpeg(["-i", mkv, "-map", "0:a:0", "-c", "copy", "-f", rawFormat, reference]);
+
   return { codec, mkv, reference };
 }
 
@@ -53,6 +54,7 @@ export function synthesizePcmWav(dir: string): string {
     "pcm_s16le",
     wav,
   ]);
+
   return wav;
 }
 

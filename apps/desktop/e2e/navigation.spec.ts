@@ -17,13 +17,16 @@ import { heroPlay, leadContinueWatching, main, openLibrary } from "./support/lib
 /** The film on tonight's screening, read off its focused Play or Resume. */
 function heroTitle(focus: FocusedControl): string {
   const title = heroPlay.exec(focus.name)?.[2];
+
   if (title === undefined) throw new Error(`Focus is not on the hero's Play: ${focus.name}`);
+
   return title;
 }
 
 /** Presses a key and waits until focus rests on a visible, labelled control (named `name` when given). */
 async function press(page: Page, key: string, name?: string | RegExp): Promise<FocusedControl> {
   await page.keyboard.press(key);
+
   return expectFocus(page, name);
 }
 
@@ -35,9 +38,11 @@ async function downTo(
 ): Promise<FocusedControl> {
   for (let i = 0; i < 6; i += 1) {
     const focus = await expectFocus(page);
+
     if (focus.section === section) return focus;
     await move();
   }
+
   throw new Error(`Six moves down never reached ${section}`);
 }
 
@@ -51,6 +56,7 @@ test("the arrow keys walk the hero, the rows and the title pages, and focus is n
   const { shown } = await leadContinueWatching(jellyfin, preserveUserData);
   const latest = await jellyfin.latest();
   const picked = latest[3];
+
   if (picked === undefined) throw new Error("The dev library has fewer than 4 recent titles");
   const { page } = await launch();
 
@@ -73,6 +79,7 @@ test("the arrow keys walk the hero, the rows and the title pages, and focus is n
   // Down through every row in between, to Recently Added, which opens on the newest title.
   const recent = await downTo(page, "Recently Added", () => press(page, "ArrowDown"));
   expect(recent.name).toMatch(cardName(spokenTitle(latest[0] ?? picked)));
+
   for (const i of [1, 2, 3]) {
     const card = await press(page, "ArrowRight", cardName(spokenTitle(latest[i] ?? picked)));
     expect(card.section).toBe("Recently Added");
@@ -127,11 +134,15 @@ test("the gamepad walks the same way: d-pad, stick, A, B, and a held d-pad repea
   await expectFocus(page, heroPlay);
 
   await downTo(page, "Recently Added", () => tap(page, "down"));
+
   const nth = (i: number): ShownItem => {
     const item = latest[i];
+
     if (item === undefined) throw new Error(`Recently Added has no title ${i}`);
+
     return item;
   };
+
   await expectFocus(page, cardName(spokenTitle(nth(0))));
   // Held for a second: one press, then a repeat every 120 ms after 400 ms.
   await setButton(page, "right", true);
@@ -190,12 +201,15 @@ test("holding Down keeps the focused card on screen at every step", async ({ lau
   await setButton(page, "down", true);
   const seen: (FocusedControl | null)[] = [];
   const deadline = Date.now() + 1200;
+
   while (Date.now() < deadline) seen.push(await focusedControl(page));
   await setButton(page, "down", false);
+
   // Focus lost to nothing counts as off screen too.
   const off = seen.filter(
     (f) => f === null || (f.section !== "Tonight's screening" && !f.inViewport)
   );
+
   expect(off).toEqual([]);
   // The hold travelled: focus went down through more than one row.
   expect(new Set(seen.map((f) => f?.section)).size).toBeGreaterThan(2);
@@ -223,6 +237,7 @@ test("a key held down on a card opens its title page once and plays nothing", as
 async function withClock(page: Page): Promise<string> {
   await page.clock.install();
   await page.reload();
+
   return heroTitle(await openLibrary(page));
 }
 

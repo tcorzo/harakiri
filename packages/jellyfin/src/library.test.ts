@@ -20,26 +20,32 @@ import { createJellyfinClient } from "./session";
 
 const USER = "5f2a9c1e0b7d4e3fa8c6d1b2e9f04a7c";
 const server = ServerUrl.parse("http://jf.test");
+
 const identity = {
   client: "Harakiri",
   device: "TV",
   deviceId: DeviceId.parse("dev-1"),
   version: "0.1.0",
 };
+
 const ctx = {
   client: createJellyfinClient(server, identity, AccessToken.parse("tok")),
   userId: UserId.parse(USER),
 };
+
 const SERIES = ItemId.parse("0123456789abcdef0123456789abcdef");
 const SEASON = ItemId.parse("fedcba9876543210fedcba9876543210");
 
 const received: { url: string; auth: string | null }[] = [];
+
 const hdr = {
   MediaStreams: [{ Type: "Video", Width: 3840, VideoRange: "HDR", VideoRangeType: "HDR10" }],
 };
+
 const sdr = {
   MediaStreams: [{ Type: "Video", Width: 1920, VideoRange: "SDR", VideoRangeType: "SDR" }],
 };
+
 let itemsBody: { Items: Record<string, unknown>[] } = { Items: [] };
 
 const mock = setupServer(
@@ -49,22 +55,29 @@ const mock = setupServer(
       url: `${url.pathname}${url.search}`,
       auth: request.headers.get("Authorization"),
     });
+
     if (url.pathname === "/Items") return HttpResponse.json(itemsBody);
+
     if (url.pathname === "/Items/Latest" || url.pathname === "/Users/Public")
       return HttpResponse.json([]);
+
     if (url.pathname === "/System/Info/Public")
       return HttpResponse.json({ ServerName: "jf", Version: "12.4.0" });
+
     if (url.pathname.startsWith("/Items/"))
       return HttpResponse.json({ Id: SERIES, Name: "Fixture Film" });
+
     return HttpResponse.json({ Items: [] });
   })
 );
 
 beforeAll(() => mock.listen({ onUnhandledFrame: "error" }));
+
 afterEach(() => {
   received.length = 0;
   itemsBody = { Items: [] };
 });
+
 afterAll(() => mock.close());
 
 const fresh = () => new QueryClient();

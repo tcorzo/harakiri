@@ -56,18 +56,24 @@ const OF = [
   "-flags:a",
   "+bitexact",
 ];
+
 const SDR_VF =
   "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv";
+
 const PQ_VF =
   "scale=out_color_matrix=bt2020nc:out_range=tv,format=yuv420p10le,setparams=color_primaries=bt2020:color_trc=smpte2084:colorspace=bt2020nc:range=tv";
+
 const HLG_VF =
   "scale=out_color_matrix=bt2020nc:out_range=tv,format=yuv420p10le,setparams=color_primaries=bt2020:color_trc=arib-std-b67:colorspace=bt2020nc:range=tv";
+
 const P5_VF = "scale=out_range=pc,format=yuv420p10le,setparams=range=pc";
 const MASTERING = "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)";
+
 // frame-threads=1:pools=1: x265 with VBV and frame threads is not bit-reproducible.
 // VBV is required by libx265 for -dolbyvision.
 const X265_BASE =
   "log-level=error:info=0:repeat-headers=1:vbv-maxrate=2000:vbv-bufsize=4000:frame-threads=1:pools=1";
+
 const X265_PQ = `${X265_BASE}:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc:range=limited:master-display=${MASTERING}:max-cll=1000,400:hdr10=1:hdr10-opt=1`;
 const X265_HLG = `${X265_BASE}:colorprim=bt2020:transfer=arib-std-b67:colormatrix=bt2020nc:range=limited:max-cll=1000,400`;
 const X265_SDR = `${X265_BASE}:colorprim=bt709:transfer=bt709:colormatrix=bt709`;
@@ -76,8 +82,10 @@ const X264 = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "28", "-g", "24"
 const X265 = ["-c:v", "libx265", "-preset", "fast", "-crf", "30"];
 
 const testsrc = (seconds: number) => `testsrc2=size=${SIZE}:rate=${FPS}:duration=${seconds}`;
+
 const stereo = (seconds: number, low = 440, high = 660) =>
   `aevalsrc=exprs=0.25*sin(2*PI*${low}*t)|0.25*sin(2*PI*${high}*t):s=48000:d=${seconds}:c=stereo`;
+
 const surround = (seconds: number) =>
   `aevalsrc=exprs=${[440, 550, 660, 55, 770, 880].map((f) => `0.2*sin(2*PI*${f}*t)`).join("|")}:s=48000:d=${seconds}:c=5.1`;
 
@@ -89,6 +97,7 @@ First line of the SRT track.
 00:00:02,000 --> 00:00:02,800
 <i>Second</i> line.
 `;
+
 const ASS = `[Script Info]
 ScriptType: v4.00+
 PlayResX: 640
@@ -106,8 +115,10 @@ Dialogue: 0,0:00:00.50,0:00:02.50,Default,,0,0,0,,{\\an8}ASS styled line
 /** HDR10+ profile A metadata: two scenes with different peaks (hdr10plus_tool's JSON format). */
 export function hdr10plusJson(frames: number): string {
   const cut = Math.floor(frames / 2);
+
   const frame = (i: number) => {
     const peak = i < cut ? 40000 : 8000;
+
     return {
       SceneFrameIndex: i < cut ? i : i - cut,
       SceneId: i < cut ? 0 : 1,
@@ -126,6 +137,7 @@ export function hdr10plusJson(frames: number): string {
       },
     };
   };
+
   return JSON.stringify({
     JSONInfo: { HDR10plusProfile: "A", Version: "1.0" },
     SceneInfo: Array.from({ length: frames }, (_, i) => frame(i)),
@@ -172,7 +184,9 @@ const ManifestSchema = z.object({
 
 export function readManifest(dir: string): Manifest {
   const file = join(dir, MANIFEST);
+
   if (!existsSync(file)) throw new Error(`no corpus at ${dir}: run mise run media:gen`);
+
   return ManifestSchema.parse(JSON.parse(readFileSync(file, "utf8")));
 }
 
@@ -191,6 +205,7 @@ function describeFate(state: FateState, dir: string): string {
 /** Empties a directory but keeps it, so a running container's bind mount stays valid. */
 function emptyDir(dir: string): void {
   mkdirSync(dir, { recursive: true });
+
   for (const name of readdirSync(dir)) rmSync(join(dir, name), { recursive: true, force: true });
 }
 
@@ -200,8 +215,10 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
   const { out, fateDir, log } = options;
   const fate = fateState(fateDir);
   const withFate = fate.kind === "complete";
+
   if (!withFate) {
     const detail = describeFate(fate, fateDir);
+
     if (options.requireFate || fate.kind === "corrupt" || fate.kind === "partial")
       throw new Error(`${detail}. Run: mise run media:fetch-fate`);
     log(
@@ -218,6 +235,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
   rmSync(join(out, MANIFEST), { force: true });
 
   const limit = limiter(options.concurrency ?? Math.max(2, Math.min(4, availableParallelism())));
+
   const ff = (args: readonly string[]) =>
     limit(() =>
       runAsync(
@@ -226,17 +244,21 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
         { env: { ...process.env, SVT_LOG: "1" } }
       )
     );
+
   const tool = (command: string, args: readonly string[]) => limit(() => runAsync(command, args));
 
   // Shared intermediates, built once however many entries need them.
   const memo = new Map<string, Promise<string>>();
+
   const once = (key: string, build: (path: string) => Promise<unknown>): Promise<string> => {
     let promise = memo.get(key);
+
     if (!promise) {
       const path = join(work, key);
       promise = build(path).then(() => path);
       memo.set(key, promise);
     }
+
     return promise;
   };
 
@@ -258,6 +280,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
         path,
       ])
     );
+
   // Pass 2: decode the raw HEVC and re-encode. FFmpeg hands the decoder's side data (mastering
   // display, MaxCLL, DV RPU) to libx265, which exports it as container stream side data and,
   // with -dolbyvision, the DOVI configuration record. One lavfi -> x265 pass leaves it empty.
@@ -377,6 +400,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
             rawHevc("pq", PQ_VF, X265_PQ, seconds),
             hdr10plusFile(seconds),
           ]);
+
           return reencode(raw, path, `${X265_PQ}:dhdr10-info=${json}`);
         })
       )
@@ -387,6 +411,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
             .with("8.1", () => [rawHevc("pq", PQ_VF, X265_PQ, seconds), X265_PQ] as const)
             .with("8.4", () => [rawHevc("hlg", HLG_VF, X265_HLG, seconds), X265_HLG] as const)
             .exhaustive();
+
           const config = `${path}.rpu.json`;
           writeFileSync(
             config,
@@ -420,6 +445,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
             `${path}.hevc`,
           ]);
           const x265 = hdr10plus ? `${params}:dhdr10-info=${await hdr10plusFile(seconds)}` : params;
+
           return reencode(`${path}.hevc`, path, x265, ["-dolbyvision", "1"]);
         })
       )
@@ -452,6 +478,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
     const codec = (...args: string[]) => args.map((a, i) => (i % 2 === 0 ? `${a}:a:${n}` : a));
     const recipe: AudioRecipe = track.recipe;
     const pitch = 440 + n * 110;
+
     const [inputs, codecArgs] = match(recipe)
       .returnType<[string[], string[]]>()
       .with("aac-2.0", () => [
@@ -482,8 +509,11 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
         codec("-c", "copy"),
       ])
       .exhaustive();
+
     const meta = [`-metadata:s:a:${n}`, `language=${track.language}`];
+
     if (track.title !== undefined) meta.push(`-metadata:s:a:${n}`, `title=${track.title}`);
+
     return { inputs, map: ["-map", `${input}:a:0`], codec: [...codecArgs, ...meta] };
   }
 
@@ -491,10 +521,13 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
     const { dir } = entryLocation(entry);
     mkdirSync(join(out, dir), { recursive: true });
     const dst = join(out, entryPath(entry));
+
     if (entry.video.kind === "fate-file") {
       copyFileSync(await video(entry.video, entry.seconds), dst);
+
       return;
     }
+
     const src = await video(entry.video, entry.seconds);
     const args: string[] = ["-i", src];
     const maps: string[] = ["-map", "0:v"];
@@ -506,13 +539,16 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
       maps.push(...a.map);
       codecs.push(...a.codec);
     });
+
     for (const [n, sub] of entry.embeddedSubtitles.entries()) {
       args.push("-i", await subtitleFile(sub.format));
       maps.push("-map", `${input++}:s:0`);
       codecs.push(`-metadata:s:s:${n}`, `language=${sub.language}`);
     }
+
     if (entry.embeddedSubtitles.length > 0) codecs.push("-c:s", "copy");
     const hevcTag = entry.video.kind === "dv" && entry.video.profile === "5" ? "dvh1" : "hvc1";
+
     const container = match(entry.container)
       .with("mkv", () => [])
       .with("mp4", () => [
@@ -523,6 +559,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
       .with("m2ts", () => ["-f", "mpegts", "-mpegts_m2ts_mode", "1"])
       .with("ts", () => ["-f", "mpegts"])
       .exhaustive();
+
     const trim = entry.video.kind === "fate-video" ? [] : ["-t", String(entry.seconds)];
     // -strict experimental admits the experimental encoders (dca, truehd) and the unofficial
     // DOVI configuration record alike.
@@ -556,8 +593,10 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
       const index = CATALOG.indexOf(entry);
       const { dir, stem } = entryLocation(entry);
       const at = (name: string) => join(out, dir, name);
+
       if (entry.kind === "movie") {
         writeFileSync(at("movie.nfo"), movieNfo(entry));
+
         for (const kind of ["poster", "backdrop", "logo"] as const)
           jobs.push(art(kind, index, at(`${kind}.png`)));
       } else {
@@ -567,8 +606,10 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
     });
     Object.values(SERIES).forEach((meta, i) => {
       const dir = join(out, "shows", meta.title);
+
       if (!existsSync(dir)) return;
       writeFileSync(join(dir, "tvshow.nfo"), seriesNfo(meta));
+
       for (const kind of ["poster", "backdrop", "logo"] as const)
         jobs.push(art(kind, 100 + i, join(dir, `${kind}.png`)));
     });
@@ -576,6 +617,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
   }
 
   const chosen = CATALOG.filter((entry) => entry.tier === "base" || withFate);
+
   const skipped = CATALOG.filter((entry) => !chosen.includes(entry)).map((entry) => ({
     id: entry.id,
     reason: describeFate(fate, fateDir),
@@ -598,6 +640,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
     fate: withFate,
     entries: chosen.map((entry) => {
       const path = entryPath(entry);
+
       return {
         id: entry.id,
         path,
@@ -607,16 +650,20 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
     }),
     skipped,
   };
+
   writeFileSync(join(out, MANIFEST), `${JSON.stringify(manifest, null, 2)}\n`);
+
   return manifest;
 }
 
 /** Bytes under `dir`, recursively. */
 export function treeBytes(dir: string): number {
   let total = 0;
+
   for (const name of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, name.name);
     total += name.isDirectory() ? treeBytes(path) : statSync(path).size;
   }
+
   return total;
 }

@@ -15,7 +15,9 @@ function network(answers: Record<string, object>): void {
   vi.stubGlobal("fetch", async (input: Request | string | URL) => {
     const url = new URL(input instanceof Request ? input.url : input);
     const body = answers[url.origin];
+
     if (body === undefined) throw new TypeError("Failed to fetch");
+
     return Response.json(body);
   });
 }

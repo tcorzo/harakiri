@@ -25,6 +25,7 @@ function Picture({
   readonly className: string;
 }) {
   if (image === null) return <div aria-hidden="true" className={`${className} bg-ink-raised`} />;
+
   return (
     <img
       alt=""
@@ -38,6 +39,7 @@ function Picture({
 
 function spokenName(entry: Entry, number: number | null): string {
   const code = episodeCode(entry);
+
   const parts = [
     entry.series !== null && entry.kind === "Episode"
       ? `${entry.series.name}, ${code ?? ""}, ${entry.title}`
@@ -45,6 +47,7 @@ function spokenName(entry: Entry, number: number | null): string {
     number === null ? null : catalogueLabel(number),
     entry.played ? "seen" : null,
   ];
+
   return parts.filter((part) => part !== null).join(", ");
 }
 
@@ -53,6 +56,7 @@ export function StillCard({ entry, number, server, focusKey, onFocus, onPress }:
   const { ref } = useFocusable<object, HTMLButtonElement>({ focusKey, onFocus });
   const left = minutesLeft(entry);
   const code = episodeCode(entry);
+
   return (
     <button
       ref={ref}
@@ -92,6 +96,7 @@ export function StillCard({ entry, number, server, focusKey, onFocus, onPress }:
 /** A poster with its catalogue number: the programme sections. */
 export function PosterCard({ entry, number, server, focusKey, onFocus, onPress }: CardProps) {
   const { ref } = useFocusable<object, HTMLButtonElement>({ focusKey, onFocus });
+
   return (
     <button
       ref={ref}

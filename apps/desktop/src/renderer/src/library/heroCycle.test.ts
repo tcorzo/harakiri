@@ -111,9 +111,11 @@ test("reduced motion holds the first film however long it waits, but Next still 
 
 test("the hero stops advancing while focus is down in the rows", async () => {
   stubReducedMotion(false);
+
   const { result, rerender } = renderHook(({ holding }) => useHeroCycle(films(3), holding), {
     initialProps: { holding: false },
   });
+
   await act(async () => {
     vi.advanceTimersByTime(heroHoldMs * 3);
   });
@@ -151,6 +153,7 @@ test("the Play gate follows the last film change, not the last press", () => {
     { index: 0, since: 0, changedAt: 0 },
     { type: "next", now: 10_000, count: 3 }
   );
+
   expect(settled(changed, 10_000 + heroSettleMs - 1)).toBe(false);
   expect(settled(changed, 10_000 + heroSettleMs)).toBe(true);
   // A press restarts the hold but is no film change, so Play right after it still plays.

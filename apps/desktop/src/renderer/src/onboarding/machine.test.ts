@@ -116,16 +116,19 @@ test("a late answer for an address the owner backed out of is ignored", () => {
     address: "10.0.0.1",
     info: server,
   });
+
   expect(other).toEqual(checking);
 });
 
 test("a wrong password clears the field and says so; back walks to the user list", () => {
   const chosen: OnboardingState = { step: "chooseUser", server };
+
   const typing = [
     { type: "pickUser", username: "harakiri", hasPassword: true },
     { type: "edit", text: "wrong" },
     { type: "submitPassword" },
   ] satisfies OnboardingEvent[];
+
   const authenticating = typing.reduce(onboarding, chosen);
   expect(authenticating).toEqual({
     step: "authenticating",
@@ -160,6 +163,7 @@ test("another user types a name first, and a blank name is not accepted", () => 
     { type: "submitUsername" },
     { type: "edit", text: " ana " },
   ] satisfies OnboardingEvent[];
+
   const state = named.reduce(onboarding, { step: "chooseUser", server } as OnboardingState);
   expect(state).toEqual({ step: "username", server, username: " ana " });
   expect(onboarding(state, { type: "submitUsername" })).toEqual({

@@ -15,6 +15,7 @@ export const CORPUS_DIR = process.env["HARAKIRI_CORPUS_DIR"] ?? resolve(REPO, ".
 export const REAL_SERVER = process.env["HARAKIRI_E2E_SERVER"];
 
 const E2E_PORT = 8296;
+
 /**
  * The app probes UDP 7359 at HARAKIRI_DISCOVERY_ADDRESS. A loopback address of the e2e server's
  * own keeps the probe from reaching a dev container on 127.0.0.1:7359, and 127.0.0.2 stays the
@@ -54,6 +55,7 @@ const env = (...names: string[]) =>
 export function resolveBackend(): Backend {
   if (REAL_SERVER !== undefined && REAL_SERVER !== "") {
     const server = ServerUrl.parse(REAL_SERVER);
+
     return {
       kind: "real",
       server,
@@ -64,7 +66,9 @@ export function resolveBackend(): Backend {
       discoveryAddress: env("HARAKIRI_E2E_DISCOVERY_ADDRESS") ?? "127.0.0.1",
     };
   }
+
   const server = ServerUrl.parse(E2E_CONTAINER_ENV.JELLYFIN_DEV_URL);
+
   return {
     kind: "corpus",
     server,

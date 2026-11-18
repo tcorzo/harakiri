@@ -14,6 +14,7 @@ export const BUTTON = {
   left: 14,
   right: 15,
 } as const;
+
 export type Button = keyof typeof BUTTON;
 
 interface FakePad {
@@ -47,6 +48,7 @@ export async function plugPad(page: Page): Promise<void> {
       axes: [0, 0, 0, 0],
       buttons: Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 })),
     };
+
     window.harakiriE2ePad = pad;
     Object.defineProperty(navigator, "getGamepads", {
       configurable: true,
@@ -60,6 +62,7 @@ export async function setButton(page: Page, button: Button, pressed: boolean): P
   await page.evaluate(
     async ([index, down]) => {
       const pad = window.harakiriE2ePad;
+
       if (pad === undefined) throw new Error("plugPad() first");
       pad.buttons[index] = { pressed: down, touched: down, value: down ? 1 : 0 };
       pad.timestamp += 1;
@@ -75,6 +78,7 @@ export async function setAxis(page: Page, axis: 0 | 1, value: number): Promise<v
   await page.evaluate(
     async ([index, to]) => {
       const pad = window.harakiriE2ePad;
+
       if (pad === undefined) throw new Error("plugPad() first");
       pad.axes[index] = to;
       pad.timestamp += 1;

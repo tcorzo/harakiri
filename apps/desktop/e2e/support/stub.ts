@@ -20,6 +20,7 @@ const json = (status: number, value: unknown): StubReply => ({
   body: JSON.stringify(value),
   type: "application/json",
 });
+
 export const reply = { json };
 
 /**
@@ -30,28 +31,37 @@ export const reply = { json };
 export async function stubServer(routes: Readonly<Record<string, StubReply>>): Promise<Stub> {
   const table = new Map(Object.entries(routes).map(([path, r]) => [path.toLowerCase(), r]));
   const seen: string[] = [];
+
   const server = createServer((request, response) => {
     const path = new URL(request.url ?? "/", "http://stub").pathname;
     response.setHeader("Access-Control-Allow-Origin", "*");
     response.setHeader("Access-Control-Allow-Headers", "*");
     response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+
     if (request.method === "OPTIONS") {
       response.writeHead(204).end();
+
       return;
     }
+
     seen.push(`${request.method ?? "GET"} ${path}`);
+
     const found = table.get(path.toLowerCase()) ?? {
       status: 404,
       body: "<!doctype html><title>Not Found</title><h1>Not Found</h1>",
       type: "text/html",
     };
+
     response.writeHead(found.status, { "Content-Type": found.type ?? "text/plain" });
     response.end(found.body);
   });
+
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const bound: string | AddressInfo | null = server.address();
+
   if (bound === null || typeof bound === "string") throw new Error("The stub is not on a TCP port");
   const { port } = bound;
+
   return {
     address: `127.0.0.1:${port}`,
     seen,
@@ -67,5 +77,6 @@ export async function stubServer(routes: Readonly<Record<string, StubReply>>): P
 export async function deadAddress(): Promise<string> {
   const stub = await stubServer({});
   await stub.close();
+
   return stub.address;
 }

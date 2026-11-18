@@ -66,6 +66,7 @@ test("an unreadable session file reads as signed out and the app keeps working",
   signIn();
   const { page } = await launch();
   const sessionFile = join(userDataDir, "session.json");
+
   const corrupt = [
     "{not json",
     JSON.stringify({ serverUrl: account.serverUrl }),

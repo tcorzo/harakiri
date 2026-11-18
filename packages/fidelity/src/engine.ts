@@ -71,9 +71,11 @@ function transcoded<T extends { readonly label: string }>(
   const none = leg === "sound" ? "No sound" : "No picture";
   const from = best(source).text;
   const to = output === null ? none : best(output).text;
+
   if (from === to) return null;
   const why = delivery.reasons.length === 0 ? "" : ` (${delivery.reasons.join(", ")})`;
   const into = output === null ? "nothing" : output.label;
+
   return {
     leg,
     from,
@@ -87,12 +89,14 @@ export function fidelityView(state: FidelityState): FidelityView {
   const now = played(state);
   const picture = picturePlan(now.picture, state.pictureWorld);
   const sound = soundPlan(now.sound, state.soundWorld);
+
   const downgrades = [
     transcoded("picture", state.picture, now.picture, bestPictureFact, state.delivery),
     picture.downgrade,
     transcoded("sound", state.sound, now.sound, bestSoundFact, state.delivery),
     sound.downgrade,
   ].filter((downgrade): downgrade is Downgrade => downgrade !== null);
+
   return {
     bitstream: sound.bitstream,
     renderer: state.pictureWorld.renderer,
@@ -106,11 +110,14 @@ function learn(state: FidelityState, observation: Observation): FidelityState {
     match(observation)
       .with({ kind: "audioOutputFailed" }, (): FidelityState => {
         const sound = played(state).sound;
+
         if (sound === null) return state;
+
         // A failed bitstream steps down to decoding; failed decoding leaves nothing below it.
         const soundWorld = isBitstreaming(sound, state.soundWorld)
           ? { ...state.soundWorld, bitstreamFailed: true }
           : { ...state.soundWorld, silent: true };
+
         return { ...state, soundWorld };
       })
       .with({ kind: "rendererFailed" }, (): FidelityState => ({
@@ -140,11 +147,14 @@ export function observe(
   const next = learn(state, observation);
   const after = fidelityView(next);
   const actions: Action[] = [];
+
   if (!sameCodecs(before.bitstream, after.bitstream)) {
     actions.push({ kind: "setBitstream", codecs: after.bitstream });
   }
+
   if (after.renderer !== before.renderer && after.renderer !== "none") {
     actions.push({ kind: "setRenderer", renderer: after.renderer });
   }
+
   return { state: next, actions };
 }

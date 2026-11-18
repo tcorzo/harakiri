@@ -61,6 +61,7 @@ test("stopWithin reports a stop, a failure and a hang", async () => {
 function fakeApp() {
   let listener: ((event: { preventDefault(): void }) => void) | undefined;
   const exits: number[] = [];
+
   return {
     exits,
     app: {
@@ -78,6 +79,7 @@ function fakeApp() {
           prevented = true;
         },
       });
+
       return prevented ? "prevented" : "allowed";
     },
   };
@@ -89,6 +91,7 @@ test("quit waits for the player to stop, then exits once", async () => {
   let stops = 0;
   holdQuitUntilStopped(app, () => {
     stops += 1;
+
     return stopped;
   });
 

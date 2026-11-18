@@ -28,6 +28,7 @@ const noPad: PadSnapshot = { buttons: [], axes: [] };
 /** Presses what norigin has focused, which is what the owner sees marked, whatever the DOM thinks. */
 async function pressFocused(): Promise<void> {
   const key = getCurrentFocusKey();
+
   if (!doesFocusableExist(key)) return;
   const { node } = await SpatialNavigation.getNodeLayoutByFocusKey(key);
   node.click();
@@ -58,14 +59,19 @@ export function useInputHub(): void {
       // Keys a focused text field types with are left to the field, unprevented.
       const editing = isEditing(document.activeElement);
       const action = keyToAction(event.key, { editing });
+
       if (action === undefined) return;
+
       // Held directions repeat; a held Select or Back acts once, and its repeats must not reach the
       // button's native Enter either (the same rule as keyToAction's `repeat`).
       if (event.repeat && !isDirection(action)) {
         event.preventDefault();
+
         return;
       }
+
       const routed = route(inputMode.getState().mode, "keyboard", action);
+
       if (routed === undefined) return;
       event.preventDefault();
       perform(routed);
@@ -74,25 +80,32 @@ export function useInputHub(): void {
     let pad: PadState = idlePad;
     let lastMode = inputMode.getState().mode;
     let frame = 0;
+
     const poll = (now: number): void => {
       const snapshot = firstPad();
       const mode = inputMode.getState().mode;
+
       // Buttons already down when the mode flips (the B that stopped mpv) must not act on this side too.
       if (mode !== lastMode) {
         pad = seedHeld(snapshot, now);
         lastMode = mode;
       }
+
       const step = stepPad(pad, snapshot, now);
       pad = step.state;
+
       for (const action of step.actions) {
         const routed = route(mode, "gamepad", action);
+
         if (routed !== undefined) perform(routed);
       }
+
       frame = requestAnimationFrame(poll);
     };
 
     window.addEventListener("keydown", onKeyDown);
     frame = requestAnimationFrame(poll);
+
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       cancelAnimationFrame(frame);

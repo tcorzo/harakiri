@@ -5,16 +5,20 @@ export type AppUrlCheck = (url: string) => boolean;
 
 export function appUrlCheck(appUrl: string): AppUrlCheck {
   const app = new URL(appUrl);
+
   return (url) => {
     let candidate: URL;
+
     try {
       candidate = new URL(url);
     } catch {
       return false;
     }
+
     if (app.protocol === "file:") {
       return candidate.protocol === "file:" && candidate.pathname === app.pathname;
     }
+
     return candidate.origin === app.origin;
   };
 }
@@ -25,6 +29,7 @@ export function appUrlCheck(appUrl: string): AppUrlCheck {
  */
 export function contentSecurityPolicy(appUrl: string): string {
   const dev = new URL(appUrl).protocol !== "file:";
+
   return [
     "default-src 'none'",
     // The Vite dev server injects an inline React Refresh preamble and talks HMR over a WebSocket.
@@ -48,8 +53,10 @@ export function installContentSecurityPolicy(
   session.webRequest.onHeadersReceived((details, callback) => {
     if (details.resourceType !== "mainFrame" || !isAppUrl(details.url)) {
       callback({});
+
       return;
     }
+
     callback({
       responseHeaders: { ...details.responseHeaders, "Content-Security-Policy": [policy] },
     });
@@ -81,7 +88,9 @@ export function fromAppOnly<Args extends unknown[], Result>(
 ): (event: IpcMainInvokeEvent, ...args: Args) => Result {
   return (event, ...args) => {
     const url = event.senderFrame?.url;
+
     if (url === undefined || !isAppUrl(url)) throw new ForeignSenderError(url);
+
     return handler(event, ...args);
   };
 }

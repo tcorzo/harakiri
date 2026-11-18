@@ -7,11 +7,13 @@ export function runAsync(
   options: { timeoutMs?: number; env?: NodeJS.ProcessEnv } = {}
 ): Promise<{ stdout: string; stderr: string }> {
   const timeoutMs = options.timeoutMs ?? 300_000;
+
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       stdio: ["ignore", "pipe", "pipe"],
       env: options.env ?? process.env,
     });
+
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf8").on("data", (chunk: string) => (stdout += chunk));
@@ -27,6 +29,7 @@ export function runAsync(
     });
     child.on("close", (code, signal) => {
       clearTimeout(timer);
+
       if (code === 0) resolve({ stdout, stderr });
       else
         reject(
@@ -42,14 +45,17 @@ export function runAsync(
 export function limiter(limit: number) {
   let active = 0;
   const queue: (() => void)[] = [];
+
   const next = () => {
     if (active >= limit) return;
     const start = queue.shift();
+
     if (start) {
       active++;
       start();
     }
   };
+
   return <T>(task: () => Promise<T>): Promise<T> =>
     new Promise<T>((resolve, reject) => {
       queue.push(() =>

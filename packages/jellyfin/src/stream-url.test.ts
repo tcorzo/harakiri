@@ -9,6 +9,7 @@ const identity = {
   deviceId: DeviceId.parse("dev-42"),
   version: "0.1.0",
 };
+
 const token = AccessToken.parse("abc123");
 
 describe("staticStreamUrl", () => {

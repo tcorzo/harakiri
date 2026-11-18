@@ -70,6 +70,7 @@ const clock = (seconds: number): string => {
   const h = Math.floor(total / 3600);
   const m = Math.floor((total % 3600) / 60);
   const s = String(total % 60).padStart(2, "0");
+
   return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
 };
 
@@ -78,6 +79,7 @@ const clock = (seconds: number): string => {
 // An ink keyline keeps the tile's edge over a red frame.
 const GLYPH_TILE = 44;
 const KEYLINE = 2;
+
 const stateGlyph = (paused: boolean, x: number, y: number): string[] => [
   rect(x - KEYLINE, y - KEYLINE, GLYPH_TILE + 2 * KEYLINE, GLYPH_TILE + 2 * KEYLINE, INK),
   rect(x, y, GLYPH_TILE, GLYPH_TILE, ACCENT),
@@ -89,16 +91,20 @@ const stateGlyph = (paused: boolean, x: number, y: number): string[] => [
 // libass has no gradient fill, so the ink field fades in over stacked bands.
 const FADE = Array.from({ length: 14 }, (_, i) => {
   const alpha = (0xe0 - i * 0x0c).toString(16).toUpperCase().padStart(2, "0");
+
   return rect(0, 560 + i * 10, OVERLAY_WIDTH, 10, INK, `&H${alpha}&`);
 });
 
 const scrub = (view: ControlsView, y: number): string[] => {
   const width = RIGHT - LEFT;
+
   const fraction =
     view.durationSeconds && view.durationSeconds > 0
       ? Math.min(Math.max(view.positionSeconds / view.durationSeconds, 0), 1)
       : 0;
+
   const played = Math.round(width * fraction);
+
   return [
     rect(LEFT, y, width, 2, NOTE, "&H60&"),
     rect(LEFT, y - 2, played, 6, PAPER),
@@ -108,16 +114,19 @@ const scrub = (view: ControlsView, y: number): string[] => {
 
 const menuPanel = (menu: NonNullable<ControlsView["menu"]>): string[] => {
   const { rows, cursor } = menu;
+
   const start = Math.min(
     Math.max(cursor - Math.floor(MENU_ROWS / 2), 0),
     Math.max(rows.length - MENU_ROWS, 0)
   );
+
   const visible = rows.slice(start, start + MENU_ROWS);
   const width = RIGHT - MENU_LEFT;
   const events: string[] = [];
   let y = 140;
   visible.forEach((row, offset) => {
     const index = start + offset;
+
     if (offset === 0 || rows[index - 1]?.property !== row.property) {
       if (offset > 0) y += 14;
       events.push(
@@ -127,13 +136,17 @@ const menuPanel = (menu: NonNullable<ControlsView["menu"]>): string[] => {
       events.push(rect(MENU_LEFT + 32, y, width - 64, 1, NOTE, "&H60&"));
       y += 12;
     }
+
     const focused = index === cursor;
     const active = row.id === (row.property === "aid" ? menu.aid : menu.sid);
+
     if (focused) events.push(rect(MENU_LEFT + 32, y + 4, 4, 38, PAPER));
     events.push(text(MENU_LEFT + 52, y, focused ? STYLE.rowFocused : STYLE.row, row.label));
+
     if (active) events.push(rect(RIGHT - 48, y + 17, 10, 10, PAPER));
     y += 48;
   });
+
   return [rect(MENU_LEFT, 100, width, y - 60, INK, "&H28&"), ...events];
 };
 
@@ -142,9 +155,11 @@ export function renderControls(view: ControlsView): string {
   const facts = view.transcodeReasons.length
     ? `${view.signalPath} · ${view.transcodeReasons.join(" · ")}`
     : view.signalPath;
+
   // A transcode or a downgrade is a problem, so its fact line leads with the amber square, sized
   // to the capitals of the 34px line, as the renderer's notices do.
   const problem = view.transcodeReasons.length > 0 || view.downgraded;
+
   const events = [
     ...FADE,
     rect(0, 700, OVERLAY_WIDTH, OVERLAY_HEIGHT - 700, INK, "&H30&"),
@@ -163,5 +178,6 @@ export function renderControls(view: ControlsView): string {
     text(RIGHT, 988, STYLE.note, view.durationSeconds ? clock(view.durationSeconds) : "", 9),
     ...(view.menu ? menuPanel(view.menu) : []),
   ];
+
   return events.join("\n");
 }

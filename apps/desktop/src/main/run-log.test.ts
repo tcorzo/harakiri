@@ -41,6 +41,7 @@ test("only the newest runs are kept, and files that are not run logs are left al
   for (const day of ["01", "02", "03"]) {
     await writeFile(join(dir, `harakiri-2026-10-${day}T09-00-00-1.log`), "old\n");
   }
+
   await writeFile(join(dir, "notes.txt"), "mine\n");
   const { sink } = openRunLog(dir, new Date(Date.UTC(2026, 9, 30, 11, 2, 3)), 2);
   sink[Symbol.dispose]();

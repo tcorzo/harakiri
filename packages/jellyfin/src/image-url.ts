@@ -21,9 +21,13 @@ export const imageUrl = (
     index === undefined
       ? `Items/${itemId}/Images/${type}`
       : `Items/${itemId}/Images/${type}/${index}`;
+
   const url = new URL(path, server);
   url.searchParams.set("maxWidth", String(Math.round(maxWidth)));
+
   if (tag != null) url.searchParams.set("tag", tag);
+
   if (quality !== undefined) url.searchParams.set("quality", String(quality));
+
   return url.toString();
 };

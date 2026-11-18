@@ -5,6 +5,7 @@ import type { NoteFact } from "../data/entry";
 type MarkedState = NonNullable<NoteFact["state"]>;
 
 let cachedRem: number | undefined;
+
 if (typeof window !== "undefined") {
   // rem follows the window height (1rem = 100vh / 67.5), so a resize is the only thing that moves it.
   window.addEventListener("resize", () => {
@@ -15,6 +16,7 @@ if (typeof window !== "undefined") {
 /** CSS pixels per rem, read once per window size rather than once per card per render. */
 export function rootRem(): number {
   cachedRem ??= Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+
   return cachedRem;
 }
 

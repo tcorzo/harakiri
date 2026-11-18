@@ -76,24 +76,33 @@ const toSession = async (
   signIn: Promise<Answer>
 ): Promise<SignInResult> => {
   let answers: [Answer, Answer];
+
   try {
     answers = await Promise.all([signIn, getPublicSystemInfo({ client })]);
   } catch (error) {
     return { kind: "unreachable", message: describe(error) };
   }
+
   const [auth, info] = answers;
+
   // Without throwOnError the generated client reports a network failure as a missing response.
   for (const answer of answers) {
     if (answer.response === undefined)
       return { kind: "unreachable", message: describe(answer.error) };
   }
+
   const authStatus = auth.response?.status ?? 0;
+
   if (authStatus === 401) return { kind: "wrong-credentials" };
+
   if (auth.response?.ok !== true) return { kind: "rejected", status: authStatus };
+
   if (info.response?.ok !== true) return { kind: "rejected", status: info.response?.status ?? 0 };
   const signedIn = SignedIn.safeParse(auth.data);
   const serverInfo = ServerInfo.safeParse(info.data);
+
   if (!signedIn.success || !serverInfo.success) return { kind: "rejected", status: authStatus };
+
   return {
     kind: "signed-in",
     session: {
@@ -116,6 +125,7 @@ export const authenticate = (
   identity: ClientIdentity
 ): Promise<SignInResult> => {
   const client = createJellyfinClient(server, identity);
+
   return toSession(
     server,
     identity,
@@ -130,6 +140,7 @@ export const quickConnectEnabled = async (
 ): Promise<boolean> => {
   const client = createJellyfinClient(server, identity);
   const { data } = await getQuickConnectEnabled({ client, throwOnError: true });
+
   return data;
 };
 
@@ -139,6 +150,7 @@ export const initiateQuickConnect = async (
 ): Promise<QuickConnectCode> => {
   const client = createJellyfinClient(server, identity);
   const { data } = await quickConnectInitiate({ client, throwOnError: true });
+
   return z.object({ code: z.string(), secret: z.string() }).parse({
     code: data.Code,
     secret: data.Secret,
@@ -153,6 +165,7 @@ export const pollQuickConnect = async (
 ): Promise<boolean> => {
   const client = createJellyfinClient(server, identity);
   const { data } = await getQuickConnectState({ client, throwOnError: true, query: { secret } });
+
   return data.Authenticated === true;
 };
 
@@ -162,6 +175,7 @@ export const authenticateWithQuickConnect = (
   secret: string
 ): Promise<SignInResult> => {
   const client = createJellyfinClient(server, identity);
+
   return toSession(
     server,
     identity,

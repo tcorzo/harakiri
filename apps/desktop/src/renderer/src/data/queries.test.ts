@@ -19,9 +19,11 @@ const ctx = signedIn(
     deviceId: "device-1",
   })
 );
+
 const entry = toEntry({ Id: "0123456789abcdef0123456789abcdef", Name: "Film", Type: "Movie" });
 
 const listeners = new Set<(event: PlayerEvent) => void>();
+
 const emit = (phase: PlayerEvent["phase"], itemId = entry.id) => {
   for (const listener of listeners)
     listener({
@@ -41,6 +43,7 @@ Object.defineProperty(window, "harakiri", {
     player: {
       onEvent: (listener: (event: PlayerEvent) => void) => {
         listeners.add(listener);
+
         return () => listeners.delete(listener);
       },
     },

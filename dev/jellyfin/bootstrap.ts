@@ -59,9 +59,11 @@ const LIBRARIES = [
 ];
 
 const info = await waitForServer();
+
 console.log(
   `server ${BASE} up, Jellyfin ${info.Version}, wizard completed: ${info.StartupWizardCompleted}`
 );
+
 if (USING_DEFAULT_CREDS) {
   console.log(
     `using default DEV-ONLY credentials ${USER} / ${PASSWORD} (set JELLYFIN_DEV_USER / JELLYFIN_DEV_PASSWORD to override)`
@@ -89,6 +91,7 @@ if (!info.StartupWizardCompleted) {
 }
 
 const { token, userId } = await login();
+
 console.log(`authenticated as ${USER}`);
 
 // Bound scan parallelism: each concurrent ffprobe (-probesize 1G) can take >1 GB, and the
@@ -100,8 +103,10 @@ const SERVER_CONFIG = {
   // The app's onboarding and the e2e approve sign-ins through Quick Connect.
   QuickConnectAvailable: true,
 };
+
 const serverConfig = await api<Record<string, unknown>>("GET", "/System/Configuration", { token });
 const drift = Object.entries(SERVER_CONFIG).filter(([k, v]) => serverConfig[k] !== v);
+
 if (drift.length > 0) {
   await api("POST", "/System/Configuration", {
     token,
@@ -115,6 +120,7 @@ if (drift.length > 0) {
 // The dev user is hidden from /Users/Public: onboarding then shows the typed sign-in, and the
 // tests that need a "Who is watching" list fake it.
 const user = await api<{ Policy: Record<string, unknown> }>("GET", `/Users/${userId}`, { token });
+
 if (user.Policy.IsHidden !== true) {
   await api("POST", `/Users/${userId}/Policy`, { token, body: { ...user.Policy, IsHidden: true } });
   console.log(`user ${USER} hidden from the public user list`);
@@ -124,14 +130,17 @@ if (user.Policy.IsHidden !== true) {
 
 const existing = await api<VirtualFolder[]>("GET", "/Library/VirtualFolders", { token });
 let created = 0;
+
 for (const lib of LIBRARIES) {
   const found = existing.find((f) => f.Name === lib.name);
+
   if (!found) {
     const q = new URLSearchParams({
       name: lib.name,
       collectionType: lib.collectionType,
       refreshLibrary: "false",
     });
+
     q.append("paths", lib.path);
     await api("POST", `/Library/VirtualFolders?${q}`, {
       token,
@@ -141,6 +150,7 @@ for (const lib of LIBRARIES) {
     console.log(`library ${lib.name} created (${lib.collectionType}, ${lib.path})`);
     continue;
   }
+
   if (!found.Locations.includes(lib.path)) {
     await api("POST", "/Library/VirtualFolders/Paths?refreshLibrary=false", {
       token,
@@ -148,6 +158,7 @@ for (const lib of LIBRARIES) {
     });
     console.log(`library ${lib.name}: added path ${lib.path}`);
   }
+
   await api("POST", "/Library/VirtualFolders/LibraryOptions", {
     token,
     body: { Id: found.ItemId, LibraryOptions: { ...found.LibraryOptions, ...LIBRARY_OPTIONS } },

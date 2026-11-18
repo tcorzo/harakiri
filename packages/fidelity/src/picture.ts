@@ -25,6 +25,7 @@ export interface PictureResult {
 /** The renderer to try after `renderer` fails, or "none". */
 export function nextRenderer(renderer: Renderer | "none"): Renderer | "none" {
   if (renderer === "none") return "none";
+
   return renderers[renderers.indexOf(renderer) + 1] ?? "none";
 }
 
@@ -63,6 +64,7 @@ function message(reason: DowngradeReason, picture: PictureSource): string {
 export function picturePlan(picture: PictureSource | null, world: PictureWorld): PictureResult {
   if (picture === null) return { fact: null, downgrade: null };
   const best = bestPictureFact(picture);
+
   const lowered = (fact: Fact, reason: DowngradeReason): PictureResult => ({
     fact,
     downgrade: {
@@ -80,12 +82,16 @@ export function picturePlan(picture: PictureSource | null, world: PictureWorld):
       { kind: "rendererFailed", renderer: "none" }
     );
   }
+
   if (picture.range === "SDR") return { fact: best, downgrade: null };
   const toneMapped: Fact = { text: `${picture.label} tone-mapped to SDR`, state: "mapped" };
+
   // Only Vulkan hands HDR to the compositor, so any other renderer tone-maps whatever the display.
   if (world.renderer !== "vulkan") {
     return lowered(toneMapped, { kind: "rendererFailed", renderer: world.renderer });
   }
+
   if (world.display === "sdr") return lowered(toneMapped, { kind: "displaySdr" });
+
   return { fact: best, downgrade: null };
 }

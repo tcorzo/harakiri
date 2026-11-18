@@ -5,15 +5,19 @@ import { readPcm16, WavError } from "./wav";
 function le16(n: number): number[] {
   return [n & 0xff, (n >> 8) & 0xff];
 }
+
 function le32(n: number): number[] {
   return [n & 0xff, (n >> 8) & 0xff, (n >> 16) & 0xff, (n >>> 24) & 0xff];
 }
+
 function ascii(s: string): number[] {
   return Array.from(s, (c) => c.charCodeAt(0));
 }
+
 function chunk(id: string, body: number[]): number[] {
   return [...ascii(id), ...le32(body.length), ...body, ...(body.length & 1 ? [0] : [])];
 }
+
 function fmt(tag: number, channels: number, rate: number, bits: number): number[] {
   return chunk("fmt ", [
     ...le16(tag),
@@ -24,8 +28,10 @@ function fmt(tag: number, channels: number, rate: number, bits: number): number[
     ...le16(bits),
   ]);
 }
+
 function riff(...chunks: number[][]): Uint8Array {
   const body = [...ascii("WAVE"), ...chunks.flat()];
+
   return Uint8Array.from([...ascii("RIFF"), ...le32(body.length), ...body]);
 }
 
@@ -36,6 +42,7 @@ describe("readPcm16", () => {
       fmt(0xfffe, 8, 192000, 16),
       chunk("data", [0x72, 0xf8, 0x1f, 0x4e])
     );
+
     expect(readPcm16(file)).toEqual({
       kind: "wav",
       channels: 8,

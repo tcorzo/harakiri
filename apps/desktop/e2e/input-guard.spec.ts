@@ -30,7 +30,9 @@ async function startScreening(page: Page, shown: ShownItem, userDataDir: string)
   const started = await probeUntil(page, (p) => p.running && (p.timePos ?? 0) > 0, 20_000);
   await probeUntil(page, (p) => (p.timePos ?? 0) >= (started.timePos ?? 0) + 1);
   const [mpv, ...others] = mpvProcesses(userDataDir);
+
   if (mpv === undefined || others.length > 0) throw new Error("Expected exactly one mpv");
+
   return mpv.pid;
 }
 
@@ -74,6 +76,7 @@ test("while mpv plays, every pad button reaches nothing in the renderer; once it
 
   // A would press Play again, B would stop mpv from the renderer, the d-pad would move focus.
   const buttons: Button[] = ["a", "b", "y", "view", "start", "up", "down", "left", "right"];
+
   for (const button of buttons) await tap(page, button);
   await setAxis(page, 0, 0.9);
   await setAxis(page, 0, 0);
@@ -127,6 +130,7 @@ test("while mpv plays, renderer keys neither navigate nor play again, and Back s
   for (const key of ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", " "]) {
     await page.keyboard.press(key);
   }
+
   await expectUntouched(page, shown, userDataDir, pid);
 
   await expect(page.getByText("Now screening in the player. Press Back to stop.")).toBeVisible();

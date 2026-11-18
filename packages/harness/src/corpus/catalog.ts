@@ -152,12 +152,14 @@ const SHORT = 3;
 
 const eng = (recipe: AudioRecipe, title?: string): AudioTrack =>
   title === undefined ? { recipe, language: "eng" } : { recipe, language: "eng", title };
+
 const noSubs = { embeddedSubtitles: [], sidecarSubtitles: [] } as const;
 const subsCount = { embedded: 0, external: 0 } as const;
 
 const aac20: ExpectedAudio = { codec: "aac", profile: "LC", channels: 2 };
 const eac351: ExpectedAudio = { codec: "eac3", profile: null, channels: 6 };
 const sdr = (codec: string) => ({ codec, range: "SDR", dvProfile: null }) as const;
+
 const hevc = (range: VideoRangeType, dvProfile: number | null = null) =>
   ({ codec: "hevc", range, dvProfile }) as const;
 
@@ -766,10 +768,13 @@ export const CATALOG: readonly Entry[] = [
 export function entryLocation(entry: Entry): { dir: string; stem: string } {
   if (entry.kind === "movie") {
     const stem = `${entry.meta.title} (${entry.meta.year})`;
+
     return { dir: `movies/${stem}`, stem };
   }
+
   const season = String(entry.season).padStart(2, "0");
   const episode = String(entry.episode).padStart(2, "0");
+
   return {
     dir: `shows/${entry.series}/Season ${season}`,
     stem: `${entry.series} - S${season}E${episode}`,
@@ -778,6 +783,7 @@ export function entryLocation(entry: Entry): { dir: string; stem: string } {
 
 export function entryPath(entry: Entry): string {
   const { dir, stem } = entryLocation(entry);
+
   return `${dir}/${stem}.${entry.container}`;
 }
 

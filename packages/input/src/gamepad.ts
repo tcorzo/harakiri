@@ -62,13 +62,17 @@ interface Contact {
 
 function contacts(prev: PadState, pad: PadSnapshot): ReadonlyMap<Action, Contact> {
   const active = new Map<Action, Contact>();
+
   for (const [index, action] of buttonActions) {
     if (pad.buttons[index]?.pressed === true) active.set(action, { stick: false });
   }
+
   for (const { axis, sign, action } of axisActions) {
     const threshold = prev.get(action)?.stick === true ? stickExit : stickEnter;
+
     if ((pad.axes[axis] ?? 0) * sign >= threshold) active.set(action, { stick: true });
   }
+
   return active;
 }
 
@@ -85,23 +89,31 @@ export function stepPad(
   const active = contacts(prev, pad);
   const state = new Map<Action, Hold>();
   const fired: Action[] = [];
+
   for (const action of actions) {
     const contact = active.get(action);
+
     if (contact === undefined) continue;
     const hold = prev.get(action);
+
     if (hold === undefined) {
       state.set(action, { pressedAt: now, firedAt: now, stick: contact.stick, silenced: false });
       fired.push(action);
       continue;
     }
+
     const repeated = hold.firedAt !== hold.pressedAt;
+
     const repeats =
       !hold.silenced &&
       isDirection(action) &&
       (repeated ? now - hold.firedAt >= timing.intervalMs : now - hold.pressedAt >= timing.delayMs);
+
     state.set(action, { ...hold, stick: contact.stick, firedAt: repeats ? now : hold.firedAt });
+
     if (repeats) fired.push(action);
   }
+
   return { state, actions: fired };
 }
 
@@ -112,8 +124,10 @@ export function stepPad(
  */
 export function seedHeld(pad: PadSnapshot, now: number): PadState {
   const state = new Map<Action, Hold>();
+
   for (const [action, contact] of contacts(idlePad, pad)) {
     state.set(action, { pressedAt: now, firedAt: now, stick: contact.stick, silenced: true });
   }
+
   return state;
 }

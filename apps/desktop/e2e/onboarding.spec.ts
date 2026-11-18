@@ -18,6 +18,7 @@ async function expectLibrary(page: Page, jellyfin: Jellyfin): Promise<void> {
   const focus = await expectFocus(page, /^(Play|Resume) \S/, 10_000);
   expect(focus.route).toBe("/library");
   const [newest] = await jellyfin.latest();
+
   if (newest === undefined) throw new Error("The library has nothing recently added");
   await expect(
     page.getByRole("region", { name: "Recently Added", exact: true }).getByRole("button").first()
@@ -309,10 +310,12 @@ test.describe("with the server answering discovery on loopback", () => {
     await expect(facts).toContainText(/AppVersion \d+\.\d+\.\d+$/);
     await expect(page.getByRole("button", { name: /Restart to update/ })).toHaveCount(0);
     const signedOut = await page.evaluate(() => window.harakiri.session.get());
+
     const asSignedOut = () =>
       fetch(new URL("Users/Me", backend.server), {
         headers: { Authorization: `MediaBrowser Token="${signedOut?.accessToken ?? ""}"` },
       });
+
     // The control: the very same request succeeds while the session is live.
     expect((await asSignedOut()).status).toBe(200);
     await page.keyboard.press("Enter");
@@ -498,6 +501,7 @@ test.describe("with no server answering discovery", () => {
   for (const c of addressCases) {
     test(`${c.name} gets a plain message, and Back leads out`, async ({ launch }) => {
       const stub: Stub | undefined = c.stub === undefined ? undefined : await stubServer(c.stub);
+
       try {
         const address = stub?.address ?? (await c.address?.()) ?? "";
         const { page } = await launch();
@@ -505,6 +509,7 @@ test.describe("with no server answering discovery", () => {
 
         await expect(page.getByRole("alert")).toHaveText(c.message(address));
         await expect(main(page, "Find your server")).toBeVisible();
+
         if (stub !== undefined) expect(stub.seen).toContain("GET /System/Info/Public");
         // Focus stays on the keyboard, so the owner can correct the address at once.
         expect((await expectFocus(page, "Connect")).route).toBe("/onboarding");
@@ -527,6 +532,7 @@ test.describe("with no server answering discovery", () => {
       "/QuickConnect/Enabled": reply.json(200, false),
       "/Users/AuthenticateByName": { status: 403, body: "" },
     });
+
     try {
       const { page } = await launch();
       await submitAddress(page, stub.address);

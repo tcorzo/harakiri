@@ -13,16 +13,19 @@ import {
 } from "./session";
 
 const server = ServerUrl.parse("http://jf.test/");
+
 const identity = {
   client: "Harakiri",
   device: "TV",
   deviceId: DeviceId.parse("dev-1"),
   version: "0.1.0",
 };
+
 const ANONYMOUS = 'MediaBrowser Client="Harakiri", Device="TV", DeviceId="dev-1", Version="0.1.0"';
 const USER = "5f2a9c1e0b7d4e3fa8c6d1b2e9f04a7c";
 
 const received: { method: string; url: string; auth: string | null; body: unknown }[] = [];
+
 const record = async (request: Request) => {
   const url = new URL(request.url);
   received.push({
@@ -32,6 +35,7 @@ const record = async (request: Request) => {
     body: request.method === "POST" ? await request.json().catch(() => null) : null,
   });
 };
+
 const signedIn = { AccessToken: "tok-1", ServerId: "srv-1", User: { Id: USER, Name: "harakiri" } };
 
 const mock = setupServer(
@@ -41,30 +45,38 @@ const mock = setupServer(
   http.post("http://jf.test/Users/AuthenticateByName", async ({ request }) => {
     await record(request);
     const { Pw } = z.object({ Pw: z.string() }).parse(received.at(-1)?.body);
+
     if (Pw === "right") return HttpResponse.json(signedIn);
+
     if (Pw === "rejected") return new HttpResponse(null, { status: 403 });
+
     return new HttpResponse("Error processing request.", { status: 401 });
   }),
   http.get("http://jf.test/QuickConnect/Enabled", () => HttpResponse.json(true)),
   http.post("http://jf.test/QuickConnect/Initiate", async ({ request }) => {
     await record(request);
+
     return HttpResponse.json({ Code: "123456", Secret: "s3cret", Authenticated: false });
   }),
   http.get("http://jf.test/QuickConnect/Connect", async ({ request }) => {
     await record(request);
+
     return HttpResponse.json({ Code: "123456", Secret: "s3cret", Authenticated: true });
   }),
   http.post("http://jf.test/Users/AuthenticateWithQuickConnect", async ({ request }) => {
     await record(request);
+
     return HttpResponse.json(signedIn);
   })
 );
 
 beforeAll(() => mock.listen({ onUnhandledFrame: "error" }));
+
 afterEach(() => {
   received.length = 0;
   mock.resetHandlers();
 });
+
 afterAll(() => mock.close());
 
 const session = {

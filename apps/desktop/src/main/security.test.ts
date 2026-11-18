@@ -59,6 +59,7 @@ type HeadersListener = Parameters<
 
 function headersFor(url: string, resourceType: string): unknown {
   let listener: HeadersListener | undefined;
+
   const session = {
     webRequest: {
       onHeadersReceived: (l: HeadersListener) => {
@@ -66,6 +67,7 @@ function headersFor(url: string, resourceType: string): unknown {
       },
     },
   } as unknown as Pick<Electron.Session, "webRequest">;
+
   installContentSecurityPolicy(session, packaged, "default-src 'none'");
   let response: unknown;
   listener?.(
@@ -78,6 +80,7 @@ function headersFor(url: string, resourceType: string): unknown {
       response = r;
     }
   );
+
   return response;
 }
 
@@ -96,16 +99,20 @@ test("the CSP header is added to the app document only", () => {
 function fakeContents() {
   const listeners = new Map<string, (event: { url?: string; preventDefault(): void }) => void>();
   let openHandler: (() => unknown) | undefined;
+
   const contents = {
     on: (name: string, listener: (event: { url?: string; preventDefault(): void }) => void) => {
       listeners.set(name, listener);
+
       return contents;
     },
     setWindowOpenHandler: (handler: () => unknown) => {
       openHandler = handler;
     },
   };
+
   confineWebContents(contents as unknown as WebContents, packaged);
+
   const emit = (name: string, url?: string): "prevented" | "allowed" => {
     let prevented = false;
     listeners.get(name)?.({
@@ -114,8 +121,10 @@ function fakeContents() {
         prevented = true;
       },
     });
+
     return prevented ? "prevented" : "allowed";
   };
+
   return { emit, openWindow: () => openHandler?.() };
 }
 

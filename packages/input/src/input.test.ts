@@ -25,13 +25,17 @@ type Frame = readonly [number, PadSnapshot] | readonly ["switch", number, PadSna
 
 function run(frames: readonly Frame[]): string[][] {
   let state: PadState = idlePad;
+
   return frames.map((frame) => {
     if (frame[0] === "switch") {
       state = seedHeld(frame[2], frame[1]);
+
       return ["switch"];
     }
+
     const step = stepPad(state, frame[1], frame[0], timing);
     state = step.state;
+
     return [...step.actions];
   });
 }
@@ -63,6 +67,7 @@ describe("keyToAction", () => {
       "ContextMenu",
       "MediaPlayPause",
     ];
+
     expect(keys.map((key) => keyToAction(key, { repeat: true }))).toEqual([
       "down",
       "left",

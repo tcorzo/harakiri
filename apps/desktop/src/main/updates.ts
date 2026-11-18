@@ -54,7 +54,9 @@ export function ownAppImage(where: {
   readonly execPath: string;
 }): string | undefined {
   const { appImage, appDir, execPath } = where;
+
   if (appImage === undefined || appDir === undefined) return undefined;
+
   return execPath.startsWith(`${appDir}/`) ? appImage : undefined;
 }
 
@@ -76,17 +78,20 @@ export function startUpdates(deps: UpdateDeps): Updates {
   }
 
   let updater: UpdaterLike;
+
   try {
     updater = deps.createUpdater();
   } catch (error) {
     const message = messageOf(error);
     log.error("update setup failed: {message}", { message });
+
     return {
       status: () => ({ state: "failed", message }),
       installIfReady: () => {},
       restart: () => {},
     };
   }
+
   let status: UpdateStatus = { state: "idle" };
   let lastCheckAt = 0;
   let relaunch = false;
@@ -105,6 +110,7 @@ export function startUpdates(deps: UpdateDeps): Updates {
     set({ state: "downloading", version, percent: 0 });
     updater.download().catch((error: unknown) => {
       swallow("download")(error);
+
       if (status.state !== "downloading") return;
       const message = messageOf(error);
       set({ state: "failed", message });
@@ -114,6 +120,7 @@ export function startUpdates(deps: UpdateDeps): Updates {
 
   updater.onAvailable((version) => {
     set({ state: "available", version });
+
     if (!deps.isPlaying()) download(version);
   });
   updater.onNotAvailable(() => set({ state: "idle" }));
@@ -153,7 +160,9 @@ export function startUpdates(deps: UpdateDeps): Updates {
     },
     installIfReady: () => {
       if (status.state !== "ready") return;
+
       if (relaunch) deps.releaseLock();
+
       try {
         updater.install(relaunch);
       } catch (error) {

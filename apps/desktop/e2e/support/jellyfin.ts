@@ -45,11 +45,13 @@ export async function signInAccount(backend: Backend): Promise<SessionData> {
     backend.password,
     appIdentity(DeviceId.parse(randomUUID()))
   );
+
   if (result.kind !== "signed-in") {
     throw new Error(
       `Signing in to the Jellyfin at ${backend.server} failed: ${JSON.stringify(result)}`
     );
   }
+
   return result.session;
 }
 
@@ -73,9 +75,11 @@ export async function publicInfo(
   server: ServerUrl
 ): Promise<{ name: string; version: string; id: string }> {
   const response = await fetch(new URL("System/Info/Public", server));
+
   const info = z
     .object({ ServerName: z.string(), Version: z.string(), Id: z.string() })
     .parse(await response.json());
+
   return { name: info.ServerName, version: info.Version, id: info.Id };
 }
 
@@ -87,6 +91,7 @@ const Stream = z.object({
   VideoRangeType: z.string().nullish(),
   DvProfile: z.number().nullish(),
 });
+
 type Stream = z.infer<typeof Stream>;
 
 const Item = z.object({
@@ -107,6 +112,7 @@ const UserData = z.object({
   PlayCount: z.number().int().nullish(),
   LastPlayedDate: z.string().nullish(),
 });
+
 export type UserData = z.infer<typeof UserData>;
 
 const ServerSession = z.object({
@@ -120,6 +126,7 @@ const ServerSession = z.object({
     })
     .nullish(),
 });
+
 export type ServerSession = z.infer<typeof ServerSession>;
 
 /** An item as the library screens show it: the fields their labels and progress are built from. */
@@ -135,6 +142,7 @@ const ShownItem = z.object({
     .object({ PlaybackPositionTicks: z.number(), PlayedPercentage: z.number().nullish() })
     .nullish(),
 });
+
 export type ShownItem = z.infer<typeof ShownItem>;
 
 const TICKS_PER_MINUTE = 60 * TICKS_PER_SECOND;
@@ -151,8 +159,10 @@ export function spokenTitle(item: ShownItem): string {
 /** "N min left" exactly as the renderer computes it (apps/desktop/src/renderer/src/data/entry.ts). */
 export function minutesLeft(item: ShownItem): number | null {
   const percent = item.UserData?.PlayedPercentage ?? null;
+
   if (percent === null || percent <= 0 || percent >= 100 || item.RunTimeTicks == null) return null;
   const minutes = Math.round(item.RunTimeTicks / TICKS_PER_MINUTE);
+
   return Math.max(1, Math.round(minutes * (1 - percent / 100)));
 }
 
@@ -228,17 +238,24 @@ function matchItem(item: z.infer<typeof Item>, criteria: ItemCriteria): PickedIt
   if (!criteria.types.some((type) => type === item.Type)) return undefined;
   const runTimeTicks = item.RunTimeTicks ?? 0;
   const minutes = runTimeTicks / TICKS_PER_SECOND / 60;
+
   if (criteria.minutes && (minutes < criteria.minutes[0] || minutes > criteria.minutes[1]))
     return undefined;
   const [source] = item.MediaSources;
+
   if (!source) return undefined;
   const video = source.MediaStreams.find((stream) => stream.Type === "Video");
+
   if (!video) return undefined;
   const wanted = criteria.video;
+
   if (wanted?.codec !== undefined && video.Codec !== wanted.codec) return undefined;
+
   if (wanted?.ranges && !wanted.ranges.includes(video.VideoRangeType ?? "")) return undefined;
+
   if (wanted?.dvProfile !== undefined && video.DvProfile !== wanted.dvProfile) return undefined;
   const audioWanted = criteria.audio;
+
   const audio = audioWanted
     ? source.MediaStreams.find(
         (stream) =>
@@ -247,7 +264,9 @@ function matchItem(item: z.infer<typeof Item>, criteria: ItemCriteria): PickedIt
           (audioWanted.atmos === undefined || isAtmos(stream) === audioWanted.atmos)
       )
     : undefined;
+
   if (audioWanted && !audio) return undefined;
+
   return {
     id: ItemId.parse(item.Id),
     name: item.Name,
@@ -267,13 +286,17 @@ function pickFromCorpus(
   count: number
 ): PickedItem[] {
   const wanted = criteria.corpus.slice(0, count);
+
   if (wanted.length < count) {
     throw new Error(`The corpus names ${wanted.length} of the ${count} wanted: ${criteria.label}`);
   }
+
   return wanted.map((entryId) => {
     const entry = CATALOG.find((candidate) => candidate.id === entryId);
+
     if (entry === undefined) throw new Error(`The catalog has no "${entryId}"`);
     const item = items.find((candidate) => candidate.Path === containerPath(entry));
+
     if (item === undefined) {
       throw new Error(
         entry.tier === "fate"
@@ -281,10 +304,13 @@ function pickFromCorpus(
           : `${criteria.label}: the server has no "${entryId}" from ${CORPUS_DIR}. Run mise run media:gen.`
       );
     }
+
     const picked = matchItem(item, criteria);
+
     if (picked === undefined) {
       throw new Error(`The corpus entry "${entryId}" is no longer ${criteria.label}`);
     }
+
     return picked;
   });
 }
@@ -306,7 +332,9 @@ export class Jellyfin {
       ...init,
       headers: { Authorization: this.#auth, "Content-Type": "application/json" },
     });
+
     if (!response.ok) throw new Error(`${init.method ?? "GET"} ${path}: HTTP ${response.status}`);
+
     return response.status === 204 ? undefined : response.json();
   }
 
@@ -338,6 +366,7 @@ export class Jellyfin {
     const all = z
       .array(ServerSession)
       .parse(await this.#request(`Sessions?deviceId=${this.session.deviceId}`));
+
     return all.filter((session) => session.DeviceId === this.session.deviceId);
   }
 
@@ -357,22 +386,29 @@ export class Jellyfin {
       IncludeItemTypes: criteria.types.join(","),
       Fields: "MediaSources,Path",
     });
+
     const { Items } = z
       .object({ Items: z.array(Item) })
       .parse(await this.#request(`Items?${query.toString()}`));
+
     if (this.#backend.kind === "corpus") return pickFromCorpus(Items, criteria, count);
+
     const picked = Items.flatMap((item) => matchItem(item, criteria) ?? [])
       .toSorted((a, b) => a.runTimeTicks - b.runTimeTicks || a.id.localeCompare(b.id))
       .slice(0, count);
+
     if (picked.length < count) {
       throw new Error(`The library has ${picked.length} of the ${count} wanted: ${criteria.label}`);
     }
+
     return picked;
   }
 
   async pickItem(criteria: ItemCriteria): Promise<PickedItem> {
     const [item] = await this.pickItems(criteria, 1);
+
     if (!item) throw new Error(`The library has no ${criteria.label}`);
+
     return item;
   }
 
@@ -387,6 +423,7 @@ export class Jellyfin {
       includeItemTypes: "Movie,Series",
       limit: "16",
     });
+
     return z.array(ShownItem).parse(await this.#request(`Items/Latest?${query.toString()}`));
   }
 
@@ -399,12 +436,14 @@ export class Jellyfin {
           `UserItems/Resume?userId=${this.session.userId}&mediaTypes=Video&limit=16`
         )
       );
+
     return Items.map((item) => item.Id);
   }
 
   /** Approves a Quick Connect code as this user, as a phone signed in to the server would. */
   async authorizeQuickConnect(code: string): Promise<void> {
     const query = new URLSearchParams({ code, userId: this.session.userId });
+
     const response = await fetch(
       new URL(`QuickConnect/Authorize?${query.toString()}`, this.#backend.server),
       {
@@ -412,6 +451,7 @@ export class Jellyfin {
         headers: { Authorization: this.#auth },
       }
     );
+
     if (!response.ok) throw new Error(`QuickConnect/Authorize: HTTP ${response.status}`);
   }
 
@@ -425,6 +465,7 @@ export class Jellyfin {
     const { Items } = z
       .object({ Items: z.array(z.object({ Id: z.string() })) })
       .parse(await this.#request("Devices"));
+
     return Items.map((device) => device.Id);
   }
 

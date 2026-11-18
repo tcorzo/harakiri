@@ -18,6 +18,7 @@ const search = z.object({
 
 function Screening() {
   const { id } = Route.useParams();
+
   // Playing the next episode replaces the route with a new id: a new screening, from the house.
   return <ScreeningScreen key={id} />;
 }

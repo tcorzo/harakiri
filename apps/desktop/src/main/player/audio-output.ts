@@ -17,6 +17,7 @@ const CODEC_BY_FORMAT: Readonly<Record<string, BitstreamCodec>> = {
 };
 
 const ServerInfo = z.object({ default_sink_name: z.string() });
+
 const Sinks = z.array(
   z.object({ name: z.string(), description: z.string().optional(), formats: z.array(z.string()) })
 );
@@ -29,7 +30,9 @@ const Sinks = z.array(
 export function outputFromPactl(info: unknown, sinks: unknown): AudioOutput {
   const name = ServerInfo.parse(info).default_sink_name;
   const sink = Sinks.parse(sinks).find((s) => s.name === name);
+
   if (sink === undefined) return { kind: "unknown", detail: `default sink ${name} is not listed` };
+
   return {
     kind: "known",
     name: sink.description ?? sink.name,
@@ -48,17 +51,21 @@ export const AudioOutputJson = z.discriminatedUnion("kind", [
 ]) satisfies z.ZodType<AudioOutput>;
 
 const run = promisify(execFile);
+
 const pactl = async (...args: string[]): Promise<unknown> =>
   JSON.parse((await run("pactl", ["--format=json", ...args], { timeout: 2000 })).stdout);
 
 export async function readAudioOutput(): Promise<AudioOutput> {
   let output: AudioOutput;
+
   try {
     const [info, sinks] = await Promise.all([pactl("info"), pactl("list", "sinks")]);
     output = outputFromPactl(info, sinks);
   } catch (error) {
     output = { kind: "unknown", detail: error instanceof Error ? error.message : String(error) };
   }
+
   logger.info("Audio output: {output}", { output });
+
   return output;
 }

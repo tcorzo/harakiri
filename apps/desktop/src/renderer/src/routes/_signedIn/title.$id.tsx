@@ -13,13 +13,16 @@ export const Route = createFileRoute("/_signedIn/title/$id")({
       queryClient.ensureQueryData(rawItemQuery(signedIn, params.id)),
       queryClient.ensureQueryData(catalogueQuery(signedIn)),
     ]);
+
     // A series page offers its next episode the moment it opens, so the seasons and the opening
     // season's episodes load first; Play then exists to take focus.
     if (item.Type === "Series") {
       const seasons = (await queryClient.ensureQueryData(seasonsQuery(signedIn, params.id))).map(
         toEntry
       );
+
       const season = seasons[initialSeason(params.id, seasons)];
+
       if (season !== undefined)
         await queryClient.ensureQueryData(episodesQuery(signedIn, params.id, season.id));
     }

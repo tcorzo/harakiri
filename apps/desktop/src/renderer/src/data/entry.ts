@@ -77,9 +77,11 @@ export function toEntry(item: BaseItemDto): Entry {
   const tags = item.ImageTags ?? {};
   const user = item.UserData;
   const percent = user?.PlayedPercentage ?? null;
+
   const backdrop =
     image(id, "Backdrop", item.BackdropImageTags?.[0]) ??
     image(item.ParentBackdropItemId, "Backdrop", item.ParentBackdropImageTags?.[0]);
+
   return {
     id,
     kind,
@@ -117,6 +119,7 @@ export function toEntry(item: BaseItemDto): Entry {
 
 function fact(text: string, delivery: SignalState): NoteFact {
   const state = markedState(delivery);
+
   return state === undefined ? { text } : { text, state };
 }
 
@@ -126,9 +129,12 @@ export function programmeNotes(
   fidelity: Fidelity | null = entry.fidelity
 ): NoteFact[] {
   const facts: NoteFact[] = [];
+
   if (entry.year !== null) facts.push({ text: String(entry.year) });
+
   if (entry.minutes !== null && entry.kind !== "Series")
     facts.push({ text: `${entry.minutes} min` });
+
   if (fidelity !== null) {
     const { picture, sound } = fidelity;
     facts.push(
@@ -137,6 +143,7 @@ export function programmeNotes(
         picture.delivery
       )
     );
+
     if (sound !== null) {
       const format = sound.format === "Other" ? sound.codec.toUpperCase() : sound.format;
       facts.push(
@@ -144,17 +151,21 @@ export function programmeNotes(
       );
     }
   }
+
   return facts;
 }
 
 export function episodeCode(entry: Entry): string | null {
   const s = entry.series;
+
   if (s === null || s.season === null || s.episode === null) return null;
+
   return `S${String(s.season).padStart(2, "0")} E${String(s.episode).padStart(2, "0")}`;
 }
 
 export function minutesLeft(entry: Entry): number | null {
   if (entry.progress === null || entry.minutes === null) return null;
+
   return Math.max(1, Math.round(entry.minutes * (1 - entry.progress)));
 }
 

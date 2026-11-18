@@ -20,8 +20,10 @@ export function TitleScreen() {
   if (entry.kind === "Season" && entry.series !== null) {
     return <Navigate to="/title/$id" params={{ id: entry.series.id }} replace />;
   }
+
   if (entry.kind === "Series") {
     return <SeriesPage key={entry.id} series={entry} number={number} server={ctx.server} />;
   }
+
   return <FilmPage key={entry.id} entry={entry} item={item} number={number} server={ctx.server} />;
 }

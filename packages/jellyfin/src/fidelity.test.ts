@@ -12,6 +12,7 @@ const Fixture = zMediaSourceInfo.pick({
   DefaultAudioStreamIndex: true,
   MediaStreams: true,
 });
+
 const fixture = (name: string) =>
   Fixture.parse(
     JSON.parse(readFileSync(new URL(`./__fixtures__/${name}.json`, import.meta.url), "utf8"))

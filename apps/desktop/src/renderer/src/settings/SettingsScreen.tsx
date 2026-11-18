@@ -15,12 +15,14 @@ export function SettingsScreen() {
   const { session } = useSignedIn();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
   // Unsupported means a dev or unpackaged build: nothing will change, so stop asking.
   const updates = useQuery({
     queryKey: ["updates", "status"],
     queryFn: () => window.harakiri.updates.status(),
     refetchInterval: (query) => (query.state.data?.state === "unsupported" ? false : 1000),
   });
+
   const { ref, focusKey } = useFocusable<object, HTMLElement>({
     focusKey: "settings",
     trackChildren: true,

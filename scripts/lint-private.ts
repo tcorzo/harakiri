@@ -33,6 +33,7 @@ const GENERIC: Rule[] = [
 
 const DENYLIST = ".private-denylist";
 const ALLOW = /\/\/\s*allow-private:/;
+
 const ALLOW_FULL =
   /\/\/\s*allow-private:\s*(?<reason>\S.*?)\s*\(expires (?<date>\d{4}-\d{2}-\d{2}), approved-by (?<name>\S[^)]*)\)/;
 
@@ -68,12 +69,14 @@ const tracked = (): string[] =>
 
 const isRealDate = (date: string) => {
   const parsed = new Date(`${date}T00:00:00Z`);
+
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(date);
 };
 
 /** Text, or undefined for a binary file (a NUL byte in its first 8 KiB). */
 const readText = (file: string): string | undefined => {
   const bytes = readFileSync(file);
+
   return bytes.subarray(0, 8192).includes(0) ? undefined : bytes.toString("utf8");
 };
 
@@ -85,33 +88,45 @@ const rules = [...GENERIC, ...denied()];
 /** Why this line breaks the rule, or undefined when it matches nothing or holds a live exception. */
 const judge = (line: string): string | undefined => {
   const hits = rules.filter(({ pattern }) => pattern.test(line)).map(({ name }) => name);
+
   if (hits.length === 0) return undefined;
   const what = [...new Set(hits)].join(", ");
+
   if (!ALLOW.test(line)) return `${what}, without an allow-private exception`;
   const allow = ALLOW_FULL.exec(line)?.groups;
   const date = allow?.["date"];
+
   if (date === undefined || !isRealDate(date))
     return "malformed exception; write // allow-private: <reason> (expires YYYY-MM-DD, approved-by <name>)";
+
   if (date < today)
     return `exception expired on ${date} (approved by ${allow?.["name"]}); remove the data or renew the approval`;
+
   return undefined;
 };
 
 const problems: string[] = [];
+
 for (const file of files) {
   const text = readText(file);
+
   if (text === undefined) continue;
+
   for (const [index, line] of text.split("\n").entries()) {
     const why = judge(line);
+
     if (why) problems.push(`${file}:${index + 1}: ${line.trim().slice(0, 160)}\n  ${why}`);
   }
 }
 
 if (problems.length > 0) {
   console.error(`lint-private: ${problems.length} line(s) with workstation or library data\n`);
+
   for (const problem of problems) console.error(`${problem}\n`);
   console.error(`Rule: ${RULE}`);
   process.exit(1);
 }
+
 const source = existsSync(DENYLIST) ? `, ${rules.length - GENERIC.length} denylist term(s)` : "";
+
 console.log(`lint-private: ${files.length} file(s), none private${source}`);

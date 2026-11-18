@@ -44,6 +44,7 @@ const isReason = (raw: string): raw is TranscodeReason => Object.hasOwn(REASONS,
 /** The server lists its reasons only inside the TranscodingUrl query. */
 export function transcodeReasons(transcodingUrl: string): string[] {
   const raw = new URL(transcodingUrl, "http://x/").searchParams.get("TranscodeReasons") ?? "";
+
   return raw
     .split(",")
     .filter((reason) => reason !== "")
@@ -90,18 +91,23 @@ export function resolve(
   if (response.ErrorCode) throw new Error(ERRORS[response.ErrorCode]);
   const sources = response.MediaSources ?? [];
   const source = sources.find((s) => s.Id === request.mediaSourceId) ?? sources[0];
+
   if (!source?.Id) throw new Error("The server returned no media source");
 
   const transcodingUrl = source.TranscodingUrl ?? undefined;
   const method: PlayMethod = transcodingUrl === undefined ? "DirectPlay" : "Transcode";
+
   const transcodedAudio = transcodingUrl
     ? Number(new URL(transcodingUrl, server).searchParams.get("AudioStreamIndex") ?? Number.NaN)
     : Number.NaN;
+
   const audioStreamIndex = Number.isNaN(transcodedAudio)
     ? (request.audioStreamIndex ?? source.DefaultAudioStreamIndex ?? undefined)
     : transcodedAudio;
+
   const subtitleStreamIndex =
     request.subtitleStreamIndex ?? source.DefaultSubtitleStreamIndex ?? undefined;
+
   const tracks = trackTable(source, method, server, audioStreamIndex);
   const streams = source.MediaStreams ?? [];
 
@@ -141,22 +147,26 @@ const runtime = (ticks: number | null | undefined): string | undefined => {
   if (!ticks) return undefined;
   const minutes = Math.round(ticks / 600_000_000);
   const hours = Math.floor(minutes / 60);
+
   return hours === 0 ? `${minutes} min` : `${hours} h ${minutes % 60} min`;
 };
 
 /** The title and the one-line programme note the player controls show. */
 export function programmeEntry(item: BaseItemDto): ProgrammeEntry {
   const name = item.Name ?? "Untitled";
+
   if (item.Type === "Episode") {
     const number =
       item.ParentIndexNumber != null && item.IndexNumber != null
         ? `S${item.ParentIndexNumber} E${item.IndexNumber}`
         : undefined;
+
     return {
       title: item.SeriesName ?? name,
       programme: [number, name, runtime(item.RunTimeTicks)].filter(Boolean).join(" · "),
     };
   }
+
   return {
     title: name,
     programme: [item.ProductionYear?.toString(), runtime(item.RunTimeTicks), item.OfficialRating]

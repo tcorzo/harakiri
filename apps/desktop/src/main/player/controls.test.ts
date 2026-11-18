@@ -27,6 +27,7 @@ const run = (state: ControlsState, ...inputs: ControlsInput[]) =>
   inputs.reduce<{ state: ControlsState; commands: unknown[] }>(
     (acc, input) => {
       const next = step(acc.state, input, rows);
+
       return { state: next.state, commands: [...acc.commands, ...next.commands] };
     },
     { state, commands: [] }

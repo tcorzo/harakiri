@@ -55,6 +55,7 @@ export function ErrorScreen({ error, reset }: ErrorComponentProps) {
     reset();
     void router.invalidate();
   };
+
   // Signing in again keeps the server, so the owner lands on its user list; changing server does not.
   const leave = async (keepServer: boolean): Promise<void> => {
     const server = queryClient.getQueryData(sessionQuery.queryKey)?.serverUrl;

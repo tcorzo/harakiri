@@ -52,12 +52,15 @@ class FakeJellyfin {
   async listen(): Promise<string> {
     await new Promise<void>((resolve) => this.server.listen(0, "127.0.0.1", resolve));
     const address = this.server.address();
+
     if (address === null || typeof address === "string") throw new Error("not a TCP server");
+
     return `http://127.0.0.1:${address.port}`;
   }
 
   close(): Promise<void> {
     this.server.closeAllConnections();
+
     return new Promise((resolve) => this.server.close(() => resolve()));
   }
 
@@ -68,6 +71,7 @@ class FakeJellyfin {
   private async handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
     req.setEncoding("utf8");
     let text = "";
+
     for await (const chunk of req) text += String(chunk);
     const url = req.url ?? "";
     const authorized = (req.headers.authorization ?? "").includes(`Token="${TOKEN}"`);
@@ -77,24 +81,34 @@ class FakeJellyfin {
       authorized,
       body: text ? (JSON.parse(text) as unknown) : undefined,
     });
+
     if (!authorized) return void res.writeHead(401).end();
 
     const path = url.split("?")[0];
+
     if (path === `/Items/${ITEM}/PlaybackInfo`) return json(res, this.playbackInfo());
+
     if (path === `/Items/${ITEM}` && this.stallItem) return;
+
     if (path === `/Items/${ITEM}`)
       return json(res, { Name: "Synthetic", Type: "Movie", RunTimeTicks: this.runTimeTicks });
+
     if (path === "/Sessions/Playing/Stopped") {
       await new Promise((resolve) => setTimeout(resolve, this.stopDelayMs));
       this.stopAnsweredAt = Date.now();
+
       return void res.writeHead(204).end();
     }
+
     if (path?.startsWith("/Sessions/Playing")) return void res.writeHead(204).end();
+
     if (path === SUBTITLE_PATH && this.stallSidecar) return;
+
     if (path === SUBTITLE_PATH)
       return void res
         .writeHead(200, { "Content-Type": "application/x-subrip" })
         .end("1\n00:00:00,000 --> 00:00:30,000\nSidecar\n");
+
     if (path === `/Videos/${ITEM}/stream`) return serveFile(req, res, await readFile(this.media));
     res.writeHead(404).end();
   }
@@ -133,10 +147,13 @@ function json(res: ServerResponse, body: unknown): void {
 
 function serveFile(req: IncomingMessage, res: ServerResponse, bytes: Buffer): void {
   const range = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range ?? "");
+
   if (!range) {
     res.writeHead(200, { "Accept-Ranges": "bytes", "Content-Length": bytes.length }).end(bytes);
+
     return;
   }
+
   const start = Number(range[1]);
   const end = range[2] ? Number(range[2]) : bytes.length - 1;
   res
@@ -153,13 +170,16 @@ function mpvChild(): { pid: number; cmdline: string } {
   for (const pid of readdirSync("/proc").filter((name) => /^\d+$/.test(name))) {
     try {
       const ppid = readFileSync(`/proc/${pid}/stat`, "utf8").split(") ")[1]?.split(" ")[1];
+
       if (Number(ppid) !== process.pid) continue;
       const cmdline = readFileSync(`/proc/${pid}/cmdline`, "utf8");
+
       if (cmdline.split("\0")[0]?.endsWith("mpv")) return { pid: Number(pid), cmdline };
     } catch {
       // The process exited while we looked.
     }
   }
+
   throw new Error("no mpv child process");
 }
 
@@ -170,11 +190,14 @@ async function until(
 ): Promise<PlayerProbe> {
   const deadline = Date.now() + 20_000;
   let last: PlayerProbe = { running: false };
+
   while (Date.now() < deadline) {
     last = await playback.probe();
+
     if (check(last)) return last;
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
+
   throw new Error(`timed out waiting for ${what}; last probe ${JSON.stringify(last)}`);
 }
 
@@ -251,6 +274,7 @@ const session = (serverUrl: string) =>
     accessToken: TOKEN,
     deviceId: "playback-test",
   });
+
 const identity = { client: "Harakiri", device: "vitest", version: "0.0.0-test" };
 
 async function play(
@@ -264,6 +288,7 @@ async function play(
   jellyfin.runTimeTicks = seconds * TICKS;
   const serverUrl = await jellyfin.listen();
   const events: PlayerEvent[] = [];
+
   const playback = await startPlayback(
     { itemId: ItemId.parse(ITEM), subtitleStreamIndex: 0 },
     (event) => events.push(event),
@@ -275,7 +300,9 @@ async function play(
       audioOutput: { kind: "known", name: "test receiver", bitstream: [...PRD_PASSTHROUGH] },
     }
   );
+
   current = playback;
+
   return { events, playback };
 }
 
@@ -310,6 +337,7 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
     const watched = events.push.bind(events);
     events.push = (...added: PlayerEvent[]) => {
       for (const event of added) at.set(event.phase, Date.now());
+
       return watched(...added);
     };
 
@@ -356,9 +384,11 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
 
   test("a sidecar mpv never finishes loading leaves its ApiKey out of the log and the events", async () => {
     records.length = 0;
+
     const { events, playback } = await play(longClip, 30, (server) => {
       server.stallSidecar = true;
     });
+
     // sub-add waits on the held request until the client's 10 s timeout gives mpv up as dead.
     await playback.done;
 
@@ -379,6 +409,7 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
       { itemId: ItemId.parse(ITEM) },
       { session: session(serverUrl), identity }
     );
+
     expect(Date.now() - startedAt).toBeLessThan(1000);
     expect(prepared.resolution.method).toBe("DirectPlay");
 

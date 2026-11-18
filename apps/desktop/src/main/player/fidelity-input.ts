@@ -38,6 +38,7 @@ export const soundSource = (sound: SoundClass): SoundSource => ({
 /** The file's own picture and the sound track for `audioStreamIndex`, as the server probed them. */
 export function fileStreams(source: MediaSourceInfo, audioStreamIndex: number | undefined) {
   const fidelity = classifyFidelity(source, { audioStreamIndex });
+
   return {
     picture: fidelity === null ? null : pictureSource(fidelity.picture),
     sound: fidelity?.sound == null ? null : soundSource(fidelity.sound),
@@ -65,6 +66,7 @@ const touchesSound = (reason: string): boolean =>
   reason.startsWith("Audio") ||
   reason === "SecondaryAudioNotSupported" ||
   reason === "UnknownAudioStreamInfo";
+
 const touchesPicture = (reason: string): boolean =>
   !touchesSound(reason) && reason !== "SubtitleCodecNotSupported";
 
@@ -77,8 +79,10 @@ export function deliveryOf(resolution: Resolution, file: FileStreams): Delivery 
   if (resolution.method !== "Transcode") return { kind: "direct" };
   const query = new URL(resolution.url).searchParams;
   const list = (name: string) => (query.get(name) ?? "").toLowerCase().split(",").filter(Boolean);
+
   const reasons =
     list("TranscodeReasons").length === 0 ? [] : (query.get("TranscodeReasons") ?? "").split(",");
+
   const videoCodecs = list("VideoCodec");
   const audioCodecs = list("AudioCodec");
 
@@ -86,10 +90,12 @@ export function deliveryOf(resolution: Resolution, file: FileStreams): Delivery 
     file.videoCodec !== null &&
     videoCodecs.includes(file.videoCodec) &&
     !reasons.some(touchesPicture);
+
   const copiesSound =
     file.soundCodec !== null &&
     audioCodecs.includes(file.soundCodec) &&
     !reasons.some(touchesSound);
+
   const encodedVideo = videoCodecs[0];
   const encodedAudio = audioCodecs[0];
 

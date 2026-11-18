@@ -52,6 +52,7 @@ const StoredToken = z.discriminatedUnion("kind", [
 const StoredSession = Session.omit({ accessToken: true, deviceId: true }).extend({
   token: StoredToken,
 });
+
 type StoredSession = z.infer<typeof StoredSession>;
 
 export function createSessionStore(options: SessionStoreOptions): SessionStore {
@@ -65,14 +66,17 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
   function write(file: string, contents: string): void {
     mkdirSync(options.dir, { recursive: true });
     const temp = `${file}.${randomUUID()}.tmp`;
+
     try {
       const fd = openSync(temp, "wx", 0o600);
+
       try {
         writeSync(fd, contents);
         fsyncSync(fd);
       } finally {
         closeSync(fd);
       }
+
       renameSync(temp, file);
     } catch (error) {
       rmSync(temp, { force: true });
@@ -89,17 +93,20 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
 
   function deviceId(): DeviceId {
     if (cachedDeviceId !== undefined) return cachedDeviceId;
+
     try {
       cachedDeviceId = DeviceId.parse(z.uuid().parse(readFileSync(deviceIdFile, "utf8").trim()));
     } catch {
       cachedDeviceId = DeviceId.parse(randomUUID());
       write(deviceIdFile, cachedDeviceId);
     }
+
     return cachedDeviceId;
   }
 
   function readToken(token: StoredSession["token"]): string {
     if (token.kind === "plain") return token.value;
+
     return options.crypto.decryptString(Buffer.from(token.base64, "base64"));
   }
 
@@ -107,19 +114,23 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
     load() {
       if (memorySession !== null) return memorySession;
       let raw: string;
+
       try {
         raw = readFileSync(sessionFile, "utf8");
       } catch {
         return null;
       }
+
       try {
         const { token, ...rest } = StoredSession.parse(JSON.parse(raw));
+
         return Session.parse({ ...rest, accessToken: readToken(token), deviceId: deviceId() });
       } catch (error) {
         logger.error("Ignoring unreadable session file {file}: {error}", {
           file: sessionFile,
           error,
         });
+
         return null;
       }
     },
@@ -127,6 +138,7 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
     save(input) {
       const { accessToken, ...rest } = NewSession.parse(input);
       let token: StoredSession["token"];
+
       if (encryptionUsable()) {
         token = {
           kind: "encrypted",
@@ -141,8 +153,10 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
         );
         memorySession = { ...rest, accessToken, deviceId: deviceId() };
         rmSync(sessionFile, { force: true });
+
         return;
       }
+
       memorySession = null;
       write(sessionFile, JSON.stringify({ ...rest, token } satisfies StoredSession));
     },
@@ -164,6 +178,7 @@ function electronStore(): SessionStore {
     crypto: safeStorage,
     allowPlaintextToken: isE2E,
   });
+
   return defaultStore;
 }
 

@@ -145,6 +145,7 @@ function Welcome({ send }: { readonly send: Send }) {
   useEffect(() => {
     focusFirst("welcome-begin");
   }, []);
+
   return (
     <main
       aria-label="Welcome"
@@ -180,6 +181,7 @@ function DiscoveredList({ onPick }: { readonly onPick: (address: string) => void
     queryFn: () => window.harakiri.discover(),
     staleTime: 0,
   });
+
   const servers = discovery.data ?? [];
   const firstAddress = servers[0]?.address;
   const [shownAt] = useState(() => Date.now());
@@ -189,6 +191,7 @@ function DiscoveredList({ onPick }: { readonly onPick: (address: string) => void
   useEffect(() => {
     if (firstAddress === undefined) return;
     const untouched = activity.getState().at < shownAt;
+
     if (untouched || getCurrentFocusKey() === searchAgainKey) focusFirst("server-found-0");
   }, [firstAddress, shownAt]);
 
@@ -236,9 +239,11 @@ function DiscoveredList({ onPick }: { readonly onPick: (address: string) => void
 function ServerStep({ state, send }: Flow) {
   const queryClient = useQueryClient();
   const address = state.step === "server" || state.step === "checking" ? state.address : "";
+
   const check = async (typed: string, event: OnboardingEvent): Promise<void> => {
     send(event);
     const urls = serverCandidates(typed);
+
     if (urls === null) return;
     const result = await checkServer(queryClient, urls);
     send(
@@ -301,10 +306,12 @@ function ChooseUser({
   readonly identity: ClientIdentity;
 }) {
   const users = useQuery(publicUsersQuery(ServerUrl.parse(server.url)));
+
   const qc = useQuery({
     queryKey: ["quickConnectEnabled", server.url],
     queryFn: () => quickConnectEnabled(server, identity),
   });
+
   const ready = users.status !== "pending";
 
   useEffect(() => {
@@ -312,6 +319,7 @@ function ChooseUser({
   }, [ready]);
 
   const listed = users.data ?? [];
+
   return (
     <Frame
       step="Sign in"
@@ -358,6 +366,7 @@ function UsernameStep({ username, send }: { readonly username: string; readonly 
   useEffect(() => {
     focusFirst(firstKey("username"));
   }, []);
+
   return (
     <Frame step="Sign in" title="Your user name">
       <Heading>Your user name</Heading>
@@ -446,13 +455,16 @@ function SignIn({
     let live = true;
     void signIn(server, identity, username, password).then(async (result) => {
       if (!live) return;
+
       if (result.ok) await finish(result.session);
       else send({ type: "signInFailed", problem: result.problem });
     });
+
     return () => {
       live = false;
     };
   }, [server, username, password, identity, finish, send]);
+
   return null;
 }
 
@@ -473,6 +485,7 @@ function QuickConnectStep({
         .with({ kind: "signedIn" }, (o) => void finish(o.session))
         .exhaustive();
     });
+
     return () => abort.abort();
   }, [server, identity, send, finish]);
 
@@ -517,16 +530,19 @@ const deviceIdQuery = {
 /** The main process owns the device id, so the session and every request name the same device. */
 function useIdentity(): ClientIdentity {
   const { data } = useSuspenseQuery({ ...deviceIdQuery, select: clientIdentity });
+
   return data;
 }
 
 export function OnboardingScreen() {
   const { server: knownServer } = route.useSearch();
+
   const [state, send] = useReducer(onboarding, knownServer, (address): OnboardingState =>
     address === undefined
       ? initialOnboarding
       : onboarding({ step: "server", address }, { type: "submitAddress" })
   );
+
   const identity = useIdentity();
   const queryClient = useQueryClient();
   const resumeCheck = state.step === "checking" && knownServer !== undefined ? state : null;
@@ -544,6 +560,7 @@ export function OnboardingScreen() {
     );
   }, [resumeAddress, resumeUrls, queryClient]);
   const navigate = useNavigate();
+
   const { ref, focusKey } = useFocusable<object, HTMLDivElement>({
     focusKey: "onboarding",
     trackChildren: true,

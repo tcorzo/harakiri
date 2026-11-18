@@ -17,8 +17,10 @@ export async function setHttpHeaders(
     // The value is never echoed: it is usually the secret.
     if (!TOKEN.test(name) || /[\r\n]/.test(value))
       throw new TypeError(`invalid HTTP header ${JSON.stringify(name)}`);
+
     return `${name}: ${value}`;
   });
+
   // A failure cannot quote the value: mpv's errors carry the command name only.
   await client.setProperty("http-header-fields", fields);
 }

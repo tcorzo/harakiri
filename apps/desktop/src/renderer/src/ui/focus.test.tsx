@@ -8,6 +8,7 @@ import { focusFirst } from "./focus";
 
 function Focusable({ focusKey }: { readonly focusKey: string }) {
   const { ref } = useFocusable<object, HTMLButtonElement>({ focusKey });
+
   return (
     <button ref={ref} type="button">
       {focusKey}
@@ -16,6 +17,7 @@ function Focusable({ focusKey }: { readonly focusKey: string }) {
 }
 
 beforeEach(startSpatial);
+
 afterEach(() => {
   cleanup();
   stopSpatial();

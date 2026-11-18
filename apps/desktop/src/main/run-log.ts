@@ -20,16 +20,20 @@ export function openRunLog(
   const stamp = startedAt.toISOString().slice(0, 19).replaceAll(":", "-");
   const path = join(dir, `harakiri-${stamp}-${process.pid}.log`);
   const fd = openSync(path, "a", 0o600);
+
   const stale = readdirSync(dir)
     .filter((name) => runLogName.test(name))
     .toSorted()
     .toReversed()
     .slice(keep);
+
   for (const name of stale) rmSync(join(dir, name), { force: true });
 
   const format = getTextFormatter({ timestamp: "date-time-tz" });
+
   const sink = (record: Parameters<Sink>[0]): void => {
     writeSync(fd, format(record));
   };
+
   return { path, sink: Object.assign(sink, { [Symbol.dispose]: () => closeSync(fd) }) };
 }

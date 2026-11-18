@@ -34,16 +34,20 @@ export async function checkServer(
   urls: readonly string[]
 ): Promise<Checked> {
   const checks = urls.map((url) => checkOne(queryClient, url));
+
   try {
     return await Promise.any(
       checks.map(async (check) => {
         const result = await check;
+
         if (!result.ok) throw new Error(result.problem.kind);
+
         return result;
       })
     );
   } catch {
     const failed = await Promise.all(checks);
+
     return failed.find((r) => !r.ok && r.problem.kind !== "unreachable") ?? failed[0] ?? invalid;
   }
 }
@@ -53,8 +57,10 @@ const invalid: Checked = { ok: false, problem: { kind: "invalid" } };
 /** Validates a server with `GET /System/Info/Public`, the only endpoint that needs no sign-in. */
 async function checkOne(queryClient: QueryClient, url: string): Promise<Checked> {
   const server = ServerUrl.safeParse(url);
+
   if (!server.success) return invalid;
   let info;
+
   try {
     info = await queryClient.fetchQuery({ ...serverInfoQuery(server.data), staleTime: 0 });
   } catch (error) {
@@ -63,14 +69,18 @@ async function checkOne(queryClient: QueryClient, url: string): Promise<Checked>
     // body, so the generated client fails re-reading it), and means something answered.
     const unreachable =
       error instanceof Error && (error.name === "NetworkError" || error.name === "TimeoutError");
+
     return { ok: false, problem: { kind: unreachable ? "unreachable" : "notJellyfin" } };
   }
+
   if (info.Id == null || info.Version == null || !/jellyfin/i.test(info.ProductName ?? "")) {
     return { ok: false, problem: { kind: "notJellyfin" } };
   }
+
   if (!isServerSupported(info.Version)) {
     return { ok: false, problem: { kind: "tooOld", version: info.Version } };
   }
+
   return {
     ok: true,
     info: {
@@ -133,24 +143,31 @@ export async function runQuickConnect(
 ): Promise<void> {
   const url = ServerUrl.parse(server.url);
   let secret: string;
+
   try {
     const started = await initiateQuickConnect(url, identity);
     secret = started.secret;
     report({ kind: "code", code: started.code });
   } catch {
     report({ kind: "failed", problem: "disabled" });
+
     return;
   }
+
   while (!signal.aborted) {
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
+
     if (signal.aborted) return;
     let approved: boolean;
+
     try {
       approved = await pollQuickConnect(url, identity, secret);
     } catch {
       report({ kind: "failed", problem: "expired" });
+
       return;
     }
+
     if (approved) {
       const result = outcome(await authenticateWithQuickConnect(url, identity, secret));
       report(
@@ -158,6 +175,7 @@ export async function runQuickConnect(
           ? { kind: "signedIn", session: result.session }
           : { kind: "failed", problem: "unreachable" }
       );
+
       return;
     }
   }

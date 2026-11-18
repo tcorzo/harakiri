@@ -41,6 +41,8 @@ export const playbackInfo = (name: FixtureName): PlaybackInfoResponse =>
 
 export const mediaSource = (name: FixtureName): MediaSourceInfo => {
   const first = playbackInfo(name).MediaSources?.[0];
+
   if (!first) throw new Error(`fixture ${name} has no media source`);
+
   return first;
 };

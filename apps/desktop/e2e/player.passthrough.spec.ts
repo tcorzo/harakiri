@@ -80,6 +80,7 @@ for (const c of cases) {
       preserveUserData,
     }, testInfo) => {
       const item = await jellyfin.pickItem(criteria);
+
       if (!item.audio) throw new Error(`${item.name} has no matching audio stream`);
       await preserveUserData(item.id);
       const { page } = await launch();
@@ -137,7 +138,9 @@ for (const c of cases) {
 function indexOfSequence(bytes: Uint8Array, sequence: readonly number[]): number {
   outer: for (let i = 0; i + sequence.length <= bytes.length; i++) {
     for (let j = 0; j < sequence.length; j++) if (bytes[i + j] !== sequence[j]) continue outer;
+
     return i;
   }
+
   return -1;
 }

@@ -7,13 +7,16 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "electron-vite";
 
 const renderer = resolve(import.meta.dirname, "src/renderer/src");
+
 const { version, dependencies } = JSON.parse(
   readFileSync(resolve(import.meta.dirname, "package.json"), "utf8")
 ) as {
   version: string;
   dependencies: Record<string, string>;
 };
+
 const workspacePackages = Object.keys(dependencies).filter((name) => name.startsWith("@harakiri/"));
+
 // Run unpackaged, Electron reports its own version from app.getVersion(), so every bundle gets ours
 // (src/shared/identity.ts).
 const define = { HARAKIRI_APP_VERSION: JSON.stringify(version) };

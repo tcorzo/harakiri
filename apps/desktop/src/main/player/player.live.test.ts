@@ -14,12 +14,14 @@ import { type PlayerEvent, type PlayerProbe, Session } from "../../shared/bridge
 const harness = vi.hoisted(() => {
   process.env["HARAKIRI_E2E"] = "1";
   process.env["HARAKIRI_MPV_ARGS"] = "--vo=null --ao=null";
+
   return { userData: "", session: null as z.infer<typeof Session> | null };
 });
 
 vi.mock("electron", () => ({
   app: { getPath: () => harness.userData, getVersion: () => "0.0.0-test" },
 }));
+
 vi.mock("../session", () => ({
   loadSession: () => harness.session,
   deviceId: () => harness.session?.deviceId ?? "none",
@@ -36,6 +38,7 @@ const TICKS = 10_000_000;
 const reachable = await fetch(`${SERVER}/System/Info/Public`, { signal: AbortSignal.timeout(2000) })
   .then((response) => response.ok)
   .catch(() => false);
+
 if (!reachable)
   throw new Error(
     `the Jellyfin at ${SERVER} is unreachable: set JELLYFIN_DEV_URL (and JELLYFIN_DEV_USER, JELLYFIN_DEV_PASSWORD) to your server, or run \`mise run jellyfin:up\` for the dev container`
@@ -52,17 +55,22 @@ async function api<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}
       Authorization: clientHeader(harness.session?.accessToken),
     },
   });
+
   if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
   const body = await response.text();
+
   return schema.parse(body ? JSON.parse(body) : undefined);
 }
 
 const SystemInfo = z.object({ Id: z.string(), ServerName: z.string(), Version: z.string() });
+
 const Auth = z.object({
   AccessToken: z.string(),
   User: z.object({ Id: z.string(), Name: z.string() }),
 });
+
 const UserData = z.object({ PlaybackPositionTicks: z.number().optional() });
+
 const Stream = z.object({
   Type: z.string(),
   Index: z.number(),
@@ -70,7 +78,9 @@ const Stream = z.object({
   VideoRangeType: z.string().nullish(),
   IsExternal: z.boolean().optional(),
 });
+
 type Stream = z.infer<typeof Stream>;
+
 const Items = z.object({
   Items: z.array(
     z.object({
@@ -81,12 +91,14 @@ const Items = z.object({
     })
   ),
 });
+
 const MpvReply = z.object({
   request_id: z.number().optional(),
   error: z.string().optional(),
   // Events arriving on the same connection carry no `data`.
   data: z.unknown().optional(),
 });
+
 const TrackList = z.array(
   z.object({
     type: z.string(),
@@ -100,6 +112,7 @@ const TrackList = z.array(
 
 async function signIn(): Promise<Session> {
   const info = await api("/System/Info/Public", SystemInfo);
+
   const auth = await api("/Users/AuthenticateByName", Auth, {
     method: "POST",
     body: JSON.stringify({
@@ -107,6 +120,7 @@ async function signIn(): Promise<Session> {
       Pw: process.env["JELLYFIN_DEV_PASSWORD"] ?? "harakiri-dev",
     }),
   });
+
   return Session.parse({
     serverUrl: SERVER,
     serverId: info.Id,
@@ -126,6 +140,7 @@ const libraryItems = async (session: Session) =>
       Items
     )
   ).Items.map((item) => ({ ...item, path: item.Path ?? "" }));
+
 type Item = Awaited<ReturnType<typeof libraryItems>>[number];
 
 const catalog = await loadCorpus();
@@ -142,7 +157,9 @@ const pickItem = (
   what: string
 ): Item => {
   const item = corpus ? corpus.item(corpusEntry(catalog, id)) : items.find(fits);
+
   if (!item) throw new Error(`the library at ${SERVER} has no ${what}`);
+
   return item;
 };
 
@@ -162,14 +179,17 @@ function mpvSocket(): string {
   for (const pid of readdirSync("/proc").filter((name) => /^\d+$/.test(name))) {
     try {
       const ppid = readFileSync(`/proc/${pid}/stat`, "utf8").split(") ")[1]?.split(" ")[1];
+
       if (Number(ppid) !== process.pid) continue;
       const args = readFileSync(`/proc/${pid}/cmdline`, "utf8").split("\0");
       const socket = args.find((arg) => arg.startsWith("--input-ipc-server="));
+
       if (socket) return socket.slice("--input-ipc-server=".length);
     } catch {
       // The process exited while we looked.
     }
   }
+
   throw new Error("no mpv child process");
 }
 
@@ -182,13 +202,17 @@ function mpvCommand(...command: unknown[]): Promise<unknown> {
     socket.on("error", reject);
     socket.on("data", (chunk: string) => {
       buffer += chunk;
+
       for (const line of buffer.split("\n").slice(0, -1)) {
         const message = MpvReply.parse(JSON.parse(line));
+
         if (message.request_id !== 7) continue;
         socket.end();
+
         if (message.error === "success") resolve(message.data);
         else reject(new Error(`${JSON.stringify(command)}: ${message.error}`));
       }
+
       buffer = buffer.slice(buffer.lastIndexOf("\n") + 1);
     });
     socket.write(`${JSON.stringify({ command, request_id: 7 })}\n`);
@@ -202,23 +226,29 @@ async function until(
 ): Promise<PlayerProbe> {
   const deadline = Date.now() + timeoutMs;
   let last: PlayerProbe = { running: false };
+
   while (Date.now() < deadline) {
     last = await probe();
+
     if (check(last)) return last;
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
+
   throw new Error(`timed out waiting for ${what}; last probe ${JSON.stringify(last)}`);
 }
 
 const userDataDirs: string[] = [];
+
 const freshUserData = (): string => {
   const dir = mkdtempSync(join(tmpdir(), "harakiri-player-test-"));
   userDataDirs.push(dir);
+
   return dir;
 };
 
 afterAll(async () => {
   await stop();
+
   for (const dir of userDataDirs) rmSync(dir, { recursive: true, force: true });
 });
 
@@ -230,6 +260,7 @@ describe(`player against the dev Jellyfin at ${SERVER}`, () => {
       harness.userData = freshUserData();
       harness.session = await signIn();
       const items = await libraryItems(harness.session);
+
       const item = pickItem(
         items,
         matchCorpus(catalog, items),
@@ -244,9 +275,11 @@ describe(`player against the dev Jellyfin at ${SERVER}`, () => {
           ),
         "SDR H.264 item between 6 and 20 minutes"
       );
+
       const before = await userData(harness.session, item.Id);
 
       const events: PlayerEvent[] = [];
+
       try {
         await play({ itemId: ItemId.parse(item.Id), startPositionTicks: 60 * TICKS }, (event) =>
           events.push(event)
@@ -263,6 +296,7 @@ describe(`player against the dev Jellyfin at ${SERVER}`, () => {
         await mpvCommand("keypress", "ENTER");
         await until("ENTER through input.conf resumes", (p) => p.pause === false);
         await mpvCommand("keypress", "GAMEPAD_ACTION_DOWN");
+
         const repaused = await until(
           "gamepad A through input.conf pauses",
           (p) => p.pause === true
@@ -300,12 +334,14 @@ describe(`player against the dev Jellyfin at ${SERVER}`, () => {
       harness.session ??= await signIn();
       const items = await libraryItems(harness.session);
       const corpus = matchCorpus(catalog, items);
+
       const item = pickItem(
         items,
         corpus,
         "sdr-h264-tracks",
         (candidate) => {
           const streams = candidate.MediaStreams ?? [];
+
           return (
             streams.filter((s) => s.Type === "Audio").length >= 2 &&
             streams.some((s) => s.Type === "Subtitle" && s.IsExternal) &&
@@ -314,17 +350,21 @@ describe(`player against the dev Jellyfin at ${SERVER}`, () => {
         },
         "item with two audio tracks and embedded and sidecar subtitles"
       );
+
       const streams = item.MediaStreams ?? [];
       const sidecars = streams.filter((s) => s.Type === "Subtitle" && s.IsExternal);
       const embeddedSubs = streams.filter((s) => s.Type === "Subtitle" && !s.IsExternal);
       const secondAudio = streams.filter((s) => s.Type === "Audio").toSorted(byIndex)[1];
       const sidecar = sidecars.toSorted(byIndex)[0];
+
       if (!secondAudio || !sidecar) throw new Error("unreachable: checked by the find above");
+
       const counts = {
         audio: streams.filter((s) => s.Type === "Audio").length,
         embedded: embeddedSubs.length,
         external: sidecars.length,
       };
+
       const declared = corpusEntry(catalog, "sdr-h264-tracks").expect;
       expect(counts).toEqual(
         corpus ? { audio: declared.audio.length, ...declared.subtitles } : counts
@@ -340,10 +380,12 @@ describe(`player against the dev Jellyfin at ${SERVER}`, () => {
           },
           () => {}
         );
+
         const playing = await until(
           "tracks selected",
           (p) => typeof p.aid === "number" && typeof p.sid === "number"
         );
+
         expect([playing.aid, playing.sid]).toEqual([2, embeddedSubs.length + 1]);
 
         const trackList = TrackList.parse(await mpvCommand("get_property", "track-list"));

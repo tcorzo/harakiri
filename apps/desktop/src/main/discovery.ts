@@ -30,6 +30,7 @@ export function discoverServers(options: DiscoveryOptions = {}): Promise<Discove
 
   return new Promise((resolve) => {
     let done = false;
+
     const finish = (): void => {
       if (done) return;
       done = true;
@@ -37,23 +38,30 @@ export function discoverServers(options: DiscoveryOptions = {}): Promise<Discove
       socket.close();
       resolve([...servers.values()]);
     };
+
     const timer = setTimeout(finish, timeoutMs);
 
     socket.on("message", (message) => {
       let json: unknown;
+
       try {
         json = JSON.parse(message.toString("utf8"));
       } catch {
         logger.debug("Ignoring a discovery reply that is not JSON");
+
         return;
       }
+
       const parsed = DiscoveryReply.safeParse(json);
+
       if (!parsed.success) {
         logger.debug("Ignoring a malformed discovery reply: {issues}", {
           issues: parsed.error.issues,
         });
+
         return;
       }
+
       if (!servers.has(parsed.data.id)) servers.set(parsed.data.id, parsed.data);
     });
     socket.on("error", (error) => {

@@ -10,6 +10,7 @@ const pressed = { play: 0, programme: 0 };
 
 function Screen() {
   useInputHub();
+
   return (
     <div>
       <QuietAction focusKey="play" label="Play" onPress={() => (pressed.play += 1)} />

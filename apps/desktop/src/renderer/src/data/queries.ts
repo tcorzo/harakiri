@@ -30,12 +30,16 @@ const sections = (list: readonly ProgrammeSection[]): Section[] =>
 
 export const featuredQuery = (ctx: SignedIn) =>
   queryOptions({ ...heroQuery(ctx), select: entries });
+
 export const continueQuery = (ctx: SignedIn) =>
   queryOptions({ ...resumeQuery(ctx), select: entries });
+
 export const upNextQuery = (ctx: SignedIn) =>
   queryOptions({ ...nextUpQuery(ctx), select: entries });
+
 export const recentQuery = (ctx: SignedIn) =>
   queryOptions({ ...latestQuery(ctx), select: entries });
+
 export const programmeQuery = (ctx: SignedIn) =>
   queryOptions({ ...sectionsQuery(ctx), select: sections });
 
@@ -72,7 +76,9 @@ export const nextEpisodeQuery = (ctx: SignedIn, seriesId: ItemId, episodeId: Ite
           imageTypeLimit: 1,
         },
       });
+
       const next = data.Items?.[1];
+
       return next === undefined ? null : toEntry(next);
     },
   });
@@ -84,12 +90,14 @@ export const nextEpisodeQuery = (ctx: SignedIn, seriesId: ItemId, episodeId: Ite
  */
 export function playedKeys(ctx: SignedIn, entry: Entry): readonly (readonly unknown[])[] {
   const root = libraryRootKey(ctx);
+
   const keys: (readonly unknown[])[] = [
     item(ctx, entry.id).queryKey,
     [...root, "resume"],
     [...root, "next-up"],
     [...root, "next-episode"],
   ];
+
   if (entry.series !== null) {
     keys.push(
       item(ctx, entry.series.id).queryKey,
@@ -97,6 +105,7 @@ export function playedKeys(ctx: SignedIn, entry: Entry): readonly (readonly unkn
       [...root, "episodes", entry.series.id]
     );
   }
+
   return keys;
 }
 
@@ -108,9 +117,11 @@ export function playedKeys(ctx: SignedIn, entry: Entry): readonly (readonly unkn
  */
 export function refetchWhenReported(queryClient: QueryClient, ctx: SignedIn, entry: Entry): void {
   const keys = playedKeys(ctx, entry);
+
   const unsubscribe = window.harakiri.player.onEvent((event) => {
     if (event.itemId !== entry.id || event.phase !== "reported") return;
     unsubscribe();
+
     for (const queryKey of keys) void queryClient.invalidateQueries({ queryKey });
   });
 }
@@ -139,6 +150,7 @@ export function catalogueQuery(ctx: SignedIn) {
           enableUserData: false,
         },
       });
+
       return new Map((data.Items ?? []).map((raw, i) => [raw.Id ?? "", i + 1]));
     },
   });

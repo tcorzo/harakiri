@@ -47,6 +47,7 @@ const silence: Fact = { text: "No sound", state: "decoded" };
 function bitstreamFor(sound: SoundSource | null, world: SoundWorld): readonly BitstreamCodec[] {
   if (world.output.kind === "unknown" || world.bitstreamFailed || world.silent) return [];
   const listed = world.output.bitstream;
+
   return sound?.carriage === "dts-hd" && !listed.includes("dts-hd")
     ? listed.filter((codec) => codec !== "dts")
     : listed;
@@ -80,6 +81,7 @@ const outputName = (output: AudioOutput): string | null =>
 /** Decides how the selected track plays on this output, and why when it is less than its best. */
 export function soundPlan(sound: SoundSource | null, world: SoundWorld): SoundResult {
   const bitstream = bitstreamFor(sound, world);
+
   if (sound === null) return { bitstream, fact: null, downgrade: null };
   const best = bestSoundFact(sound);
 
@@ -98,8 +100,10 @@ export function soundPlan(sound: SoundSource | null, world: SoundWorld): SoundRe
   if (world.silent)
     return lowered(silence, { kind: "outputFailed", output: outputName(world.output) });
   const carriage = sound.carriage;
+
   if (carriage === "pcm" || carriage === "decode")
     return { bitstream, fact: best, downgrade: null };
+
   if (bitstream.includes(carriage)) return { bitstream, fact: best, downgrade: null };
 
   const reason: DowngradeReason = world.bitstreamFailed
@@ -107,6 +111,7 @@ export function soundPlan(sound: SoundSource | null, world: SoundWorld): SoundRe
     : world.output.kind === "unknown"
       ? { kind: "outputUnknown", detail: world.output.detail }
       : { kind: "outputRefuses", output: world.output.name };
+
   return lowered(decoded(sound), reason);
 }
 

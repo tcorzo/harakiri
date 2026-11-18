@@ -11,6 +11,7 @@ export const ServerVersion = z
   .string()
   .regex(/^\d+\.\d+\.\d+/)
   .transform((raw) => ({ major: Number(raw.split(".")[0]) }));
+
 export type ServerVersion = z.output<typeof ServerVersion>;
 
 type SubtitleRule = {
@@ -34,6 +35,7 @@ const TEXT_FORMATS = [
   "sub",
   "microdvd",
 ];
+
 const IMAGE_FORMATS = ["pgssub", "pgs", "dvdsub", "vobsub", "dvbsub"];
 
 // The server matches Format with string equality, so there is no wildcard.

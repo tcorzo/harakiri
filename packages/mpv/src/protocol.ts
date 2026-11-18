@@ -35,7 +35,9 @@ const clientMessageSchema = z.object({
 const otherEventSchema = z.looseObject({ event: z.string() });
 
 export type Reply = z.infer<typeof replySchema>;
+
 export type PropertyChange = z.infer<typeof propertyChangeSchema>;
+
 /** Any mpv event, as received. */
 export type MpvEvent = z.infer<typeof otherEventSchema>;
 
@@ -48,7 +50,9 @@ export type InboundMessage =
 export function parseInboundLine(line: string): InboundMessage {
   const json: unknown = JSON.parse(line);
   const event = otherEventSchema.safeParse(json);
+
   if (!event.success) return { kind: "reply", reply: replySchema.parse(json) };
+
   switch (event.data.event) {
     case "property-change":
       return {
@@ -74,12 +78,15 @@ export function encodeRequest(request: CommandRequest): string {
 /** Splits a chunked byte stream into complete newline-terminated lines. */
 export function createLineSplitter(onLine: (line: string) => void): (chunk: string) => void {
   let buffer = "";
+
   return (chunk) => {
     buffer += chunk;
     let newline = buffer.indexOf("\n");
+
     while (newline !== -1) {
       const line = buffer.slice(0, newline);
       buffer = buffer.slice(newline + 1);
+
       if (line.trim() !== "") onLine(line);
       newline = buffer.indexOf("\n");
     }

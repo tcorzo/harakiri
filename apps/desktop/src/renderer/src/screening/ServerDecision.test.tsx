@@ -19,9 +19,11 @@ test("the slug states the server's facts: a native leg bare, a mapped leg with i
       }}
     />
   );
+
   const slug = screen.getByLabelText(
     "Signal path: Dolby Vision mapped to HDR10 · TrueHD Atmos bitstream"
   );
+
   expect(slug.textContent).toBe("Dolby Vision mapped to HDR10·TrueHD Atmos bitstream");
   expect(container.querySelectorAll("svg")).toHaveLength(1);
   expect(container.textContent).not.toMatch(/native|as it is/i);

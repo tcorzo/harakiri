@@ -39,6 +39,7 @@ const PREPARED_FOR_MS = 60_000;
 function serialized<T>(operation: () => Promise<T>): Promise<T> {
   const result = queue.then(operation, operation);
   queue = result.catch(() => {});
+
   return result;
 }
 
@@ -66,6 +67,7 @@ const requestKey = (request: PlayRequest, session: Session): string =>
 // e2e describes the output instead of probing the workstation's, e.g. a receiver for passthrough.
 const audioOutput = () => {
   const given = isE2E ? process.env["HARAKIRI_AUDIO_OUTPUT"] : undefined;
+
   return given === undefined
     ? readAudioOutput()
     : Promise.resolve(AudioOutputJson.parse(JSON.parse(given)));
@@ -73,8 +75,10 @@ const audioOutput = () => {
 
 function deps(): Omit<PlaybackDeps, "audioOutput"> {
   const session = loadSession();
+
   if (!session) throw new Error("Not signed in");
   const { deviceId: _ownDeviceIdFromSession, ...identity } = clientIdentity(session.deviceId);
+
   return {
     session,
     identity,
@@ -89,6 +93,7 @@ export async function prepare(request: PlayRequest): Promise<SignalReport> {
   const result = preparePlayback(request, playback);
   pending = { key: requestKey(request, playback.session), at: Date.now(), result };
   const [{ resolution }, output] = await Promise.all([result, audioOutput()]);
+
   return signalReport(resolution, fidelityView(startingFidelity(resolution, output)));
 }
 
@@ -103,9 +108,12 @@ export function forgetPrepared(): void {
  */
 async function takePrepared(request: PlayRequest, session: Session): Promise<Prepared | undefined> {
   const kept = pending;
+
   if (kept === undefined || kept.key !== requestKey(request, session)) return undefined;
   pending = undefined;
+
   if (Date.now() - kept.at > PREPARED_FOR_MS) return undefined;
+
   return kept.result.catch(() => undefined);
 }
 

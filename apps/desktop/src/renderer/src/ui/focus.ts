@@ -6,7 +6,9 @@ import { doesFocusableExist, setFocus } from "@noriginmedia/norigin-spatial-navi
  */
 export function focusFirst(...keys: readonly string[]): boolean {
   const key = keys.find((candidate) => doesFocusableExist(candidate));
+
   if (key === undefined) return false;
   void setFocus(key);
+
   return true;
 }

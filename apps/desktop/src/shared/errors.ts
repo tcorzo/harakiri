@@ -26,8 +26,10 @@ export function fromIpc(error: unknown): unknown {
   if (!(error instanceof Error)) return error;
   const message = error.message.replace(ipcWrapper, "");
   const status = statusMessage.exec(message);
+
   if (status?.[1] !== undefined && status[2] !== undefined) {
     return new ServerStatusError(Number(status[1]), status[2]);
   }
+
   return message === error.message ? error : new Error(message);
 }

@@ -16,6 +16,7 @@ test("only a failed connection reads as unreachable; anything else says what it 
   const network = Object.assign(new Error("Request failed due to a network error: GET /x"), {
     name: "NetworkError",
   });
+
   const timeout = new DOMException("signal timed out", "TimeoutError");
   expect(classifyFailure(network)).toEqual({ kind: "unreachable" });
   expect(classifyFailure(timeout)).toEqual({ kind: "unreachable" });
@@ -41,6 +42,7 @@ test("a status error from main survives Electron's IPC wrapping, status and all"
       "Error invoking remote method 'player:prepare': ServerStatusError: The server answered 401 for /Items/x/PlaybackInfo"
     )
   );
+
   expect(crossed).toBeInstanceOf(ServerStatusError);
   expect(crossed).toMatchObject({
     status: 401,
@@ -51,6 +53,7 @@ test("a status error from main survives Electron's IPC wrapping, status and all"
   const other = fromIpc(
     new Error("Error invoking remote method 'player:play': Error: mpv could not play the file")
   );
+
   expect(other).not.toBeInstanceOf(ServerStatusError);
   expect(other).toMatchObject({ message: "mpv could not play the file" });
 });

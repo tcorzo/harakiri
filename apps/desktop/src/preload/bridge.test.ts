@@ -9,22 +9,28 @@ import { createBridge } from "./bridge";
 function fakeIpc(replies: Record<string, unknown> = {}, failure?: (channel: string) => Error) {
   const listeners = new Map<string, (event: IpcRendererEvent, payload: unknown) => void>();
   const invoked: unknown[][] = [];
+
   const ipc = {
     invoke: (channel: string, ...args: unknown[]) => {
       invoked.push([channel, ...args]);
+
       return failure ? Promise.reject(failure(channel)) : Promise.resolve(replies[channel]);
     },
     on: (channel: string, listener: (event: IpcRendererEvent, payload: unknown) => void) => {
       listeners.set(channel, listener);
+
       return ipc;
     },
     removeListener: (channel: string) => {
       listeners.delete(channel);
+
       return ipc;
     },
   };
+
   const push = (channel: string, payload: unknown) =>
     listeners.get(channel)?.({} as IpcRendererEvent, payload);
+
   return { ipc: ipc as unknown as IpcRenderer, invoked, push };
 }
 
@@ -88,10 +94,13 @@ test("a main-process error crosses unwrapped, and a server status keeps its stat
         `Error invoking remote method '${channel}': ServerStatusError: The server answered 401 for /Items/x/PlaybackInfo`
       )
   );
+
   const bridge = createBridge(ipc, { e2e: false, warn });
+
   const error: unknown = await bridge.player
     .prepare({ itemId: ItemId.parse("0123456789abcdef0123456789abcdef") })
     .catch((caught: unknown) => caught);
+
   expect(error).toBeInstanceOf(ServerStatusError);
   expect(error).toMatchObject({ status: 401 });
 });
@@ -106,6 +115,7 @@ test("prepare sends the request and parses the server's decision", async () => {
     transcodeReasons: [],
     unreadable: false,
   };
+
   const { ipc, invoked } = fakeIpc({ [channels.prepare]: report });
   const request = { itemId: ItemId.parse("0123456789abcdef0123456789abcdef") };
 
@@ -119,6 +129,7 @@ test("a prepare reply with an unknown signal state is refused", async () => {
   const { ipc } = fakeIpc({
     [channels.prepare]: { facts: [{ text: "HDR10", state: "glorious" }], transcodeReasons: [] },
   });
+
   const request = { itemId: ItemId.parse("0123456789abcdef0123456789abcdef") };
 
   await expect(createBridge(ipc, { e2e: false, warn }).player.prepare(request)).rejects.toThrow(
@@ -139,6 +150,7 @@ test("update status is parsed and restart invokes its channel", async () => {
   const { ipc, invoked } = fakeIpc({
     [channels.updateStatus]: { state: "ready", version: "0.3.0" },
   });
+
   const bridge = createBridge(ipc, { e2e: false, warn });
 
   expect(await bridge.updates.status()).toEqual({ state: "ready", version: "0.3.0" });

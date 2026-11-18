@@ -114,7 +114,9 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
     await closeAll(apps);
     // A leak fails the test and is killed, so it cannot leak into the next one.
     const leaked = await waitForNoMpv(userDataDir, 5000);
+
     for (const { pid } of leaked) process.kill(pid, "SIGKILL");
+
     if (leaked.length > 0) {
       throw new Error(`mpv outlived the app: pids ${leaked.map(({ pid }) => pid).join(", ")}`);
     }
@@ -127,6 +129,7 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
     });
     // An app quitting mid-playback reports a stop, which would overwrite a restored resume point.
     await closeAll(apps);
+
     for (const [itemId, data] of saved) await jellyfin.setUserData(itemId, data);
   },
 
@@ -135,10 +138,13 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
       await use();
       await closeAll(apps);
       const file = join(userDataDir, "device-id");
+
       if (!existsSync(file)) return;
       const deviceId = readFileSync(file, "utf8").trim();
+
       // A seeded profile shares the worker's device, which the worker fixture signs out itself.
       if (deviceId === account.deviceId) return;
+
       // An app that never signed in left nothing on the server.
       if ((await jellyfin.deviceIds()).includes(deviceId)) await jellyfin.deleteDevice(deviceId);
     },
@@ -149,9 +155,11 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
     // Without DISPLAY, Electron cannot fall back to the user's X session if the nested compositor is missing.
     // A terminal that is itself an AppImage exports APPIMAGE, which would switch the updater on.
     const dropped = new Set(["DISPLAY", "APPIMAGE"]);
+
     const inherited = Object.entries(process.env).filter(
       (entry): entry is [string, string] => !dropped.has(entry[0]) && entry[1] !== undefined
     );
+
     await use(async () => {
       const app = await _electron.launch({
         executablePath: electronPath,
@@ -164,9 +172,11 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
           HARAKIRI_MPV_ARGS: mpvArgs,
         },
       });
+
       apps.push(app);
       const page = await app.firstWindow();
       await page.waitForFunction(() => window.harakiri !== undefined);
+
       return { app, page };
     });
   },
@@ -197,18 +207,24 @@ export interface FocusedControl {
 export function focusedControl(page: Page): Promise<FocusedControl | null> {
   return page.evaluate(() => {
     const el = document.activeElement;
+
     if (!(el instanceof HTMLElement) || el === document.body) return null;
+
     const label =
       el.getAttribute("aria-label") ??
       (el instanceof HTMLInputElement ? el.labels?.[0]?.textContent : null) ??
       el.textContent;
+
     const rect = el.getBoundingClientRect();
     let opacity = 1;
+
     for (let node: Element | null = el; node !== null; node = node.parentElement) {
       const style = getComputedStyle(node);
+
       if (style.visibility === "hidden" || style.display === "none") opacity = 0;
       opacity *= Number(style.opacity);
     }
+
     return {
       name: (label ?? "").trim(),
       tag: el.tagName.toLowerCase(),
@@ -248,7 +264,9 @@ export async function expectFocus(
     timeoutMs,
     50
   );
+
   if (found === null) throw new Error("unreachable: until() returned without a focused control");
+
   return found;
 }
 
@@ -262,13 +280,16 @@ export async function until<T>(
 ): Promise<T> {
   const deadline = Date.now() + timeoutMs;
   let last = await read();
+
   while (!predicate(last)) {
     if (Date.now() > deadline) {
       throw new Error(`${what}: not within ${timeoutMs} ms; last ${JSON.stringify(last)}`);
     }
+
     await sleep(intervalMs);
     last = await read();
   }
+
   return last;
 }
 
@@ -287,6 +308,7 @@ export async function probe(page: Page): Promise<PlayerProbe> {
     await page.evaluate(() => {
       if (!window.harakiri.test)
         throw new Error("window.harakiri.test is missing without HARAKIRI_E2E=1");
+
       return window.harakiri.test.probe();
     })
   );
@@ -317,6 +339,7 @@ export async function recordPlayerEvents(page: Page): Promise<void> {
 
 export async function playerEvents(page: Page): Promise<PlayerEvent[]> {
   const raw = await page.evaluate(() => window.harakiriE2eEvents ?? []);
+
   return raw.map((event) => PlayerEvent.parse(event));
 }
 
@@ -332,7 +355,10 @@ export async function playerEventUntil(
     (seen) => seen.some(predicate),
     timeoutMs
   );
+
   const found = events.find(predicate);
+
   if (!found) throw new Error("unreachable: until() returned without a match");
+
   return found;
 }

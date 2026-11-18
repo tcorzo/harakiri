@@ -18,6 +18,7 @@ test.use({
   mpvArgs: `--ao=null --vulkan-device=${lavapipeDeviceUuid()}`,
   extraEnv: { VK_DRIVER_FILES: "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json" },
 });
+
 // Software decode of a 4K HEVC remux plus lavapipe rendering; measured at 5 to 8 s per test.
 test.setTimeout(90_000);
 
@@ -70,22 +71,27 @@ for (const { name, criteria, colormatrix, signal, reshaped } of cases) {
     const first = await probeUntil(page, (p) => p.videoGamma !== undefined, 60_000);
     expect(first.videoGamma).toBe("pq");
     expect(first.videoPrimaries).toBe("bt.2020");
+
     const params = ColourParams.parse(
       await mpvCommand(userDataDir, "get_property", "video-params")
     );
+
     expect(params.colormatrix).toBe(colormatrix);
     await probeUntil(page, (p) => (p.timePos ?? 0) >= (first.timePos ?? 0) + 1, 60_000);
 
     const target = ColourParams.parse(
       await mpvCommand(userDataDir, "get_property", "video-target-params")
     );
+
     const vo = z.string().parse(await mpvCommand(userDataDir, "get_property", "current-vo"));
     const passes = JSON.stringify(await mpvCommand(userDataDir, "get_property", "vo-passes"));
+
     // The watcher reads the display's target within a sample or two of playback starting.
     const playing = await playerEventUntil(
       page,
       (event) => event.phase === "playing" && event.downgrades.some((d) => d.leg === "picture")
     );
+
     await testInfo.attach("picture", {
       contentType: "application/json",
       body: JSON.stringify({

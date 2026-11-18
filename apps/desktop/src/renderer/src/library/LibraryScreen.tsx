@@ -43,13 +43,16 @@ interface RowShape {
 
 const still: RowShape = { Card: StillCard, pitchRem: 26, heightRem: 19.5 };
 const poster: RowShape = { Card: PosterCard, pitchRem: 15.5, heightRem: 26 };
+
 /** A failed section holds one line and its retry action. */
 const failedHeightRem = 4.5;
 
 /** Header, padding and the gap to the next section, around each row's cards (rem). */
 const rowChromeRem = 3 + 1.25 + 3 + 3;
+
 /** Where the focused row's top edge rests once focus leaves the hero (rem from the top). */
 const rowAnchorRem = 31;
+
 /** How much of the first row shows under the hero. */
 const peekRem = 9.5;
 
@@ -80,18 +83,23 @@ const failed = (section: Section, refetch: () => unknown): PlannedRow => ({
  */
 function useProgramme(): readonly PlannedRow[] | null {
   const ctx = useSignedIn();
+
   const [resume, nextUp, recent, sections] = useQueries({
     queries: [continueQuery(ctx), upNextQuery(ctx), recentQuery(ctx), programmeQuery(ctx)],
   });
+
   // An episode already in Continue Watching would otherwise appear twice in a row. Memoized so
   // the row keeps the same entries, and its memo holds, while nothing changed.
   const nextUpEntries = useMemo(() => {
     const resuming = new Set((resume.data ?? []).map((entry) => entry.id));
+
     return nextUp.data?.filter((entry) => !resuming.has(entry.id));
   }, [resume.data, nextUp.data]);
+
   if ([resume, nextUp, recent, sections].some((query) => query.isPending)) return null;
   // Rebuilt each render, which is cheap: the rows themselves are memoized on stable data.
   const rows: PlannedRow[] = [];
+
   const add = (
     section: Section,
     query: { readonly data: readonly Entry[] | undefined; readonly refetch: () => unknown },
@@ -101,9 +109,11 @@ function useProgramme(): readonly PlannedRow[] | null {
     else if (query.data.length > 0)
       rows.push({ kind: "entries", section, entries: query.data, ...shape });
   };
+
   add({ id: "resume", name: "Continue Watching" }, resume, still);
   add({ id: "next-up", name: "Next Up" }, { ...nextUp, data: nextUpEntries }, still);
   add({ id: "latest", name: "Recently Added" }, recent, poster);
+
   if (sections.data === undefined) {
     rows.push(failed({ id: "genres", name: "Programme" }, sections.refetch));
   } else {
@@ -117,12 +127,15 @@ function useProgramme(): readonly PlannedRow[] | null {
         });
     }
   }
+
   return rows;
 }
 
 function rowTop(rows: readonly PlannedRow[], index: number): number {
   let top = 0;
+
   for (const row of rows.slice(0, Math.max(0, index - 1))) top += row.heightRem + rowChromeRem;
+
   return top;
 }
 
@@ -131,6 +144,7 @@ let relightTimer = 0;
 
 function useOpenEntry(): (entry: Entry) => void {
   const navigate = useNavigate();
+
   return useCallback(
     (entry: Entry) => void navigate({ to: "/title/$id", params: { id: entry.id } }),
     [navigate]
@@ -170,7 +184,9 @@ const Programme = memo(function Programme({
         useLit.getState().light(entry, section);
         // Only a card the owner rests on is worth fetching in full.
         void queryClient.prefetchQuery(rawItemQuery(ctx, entry.id));
+
         if (entry.kind === "Series") void queryClient.prefetchQuery(seasonsQuery(ctx, entry.id));
+
         if (entry.backdrop !== null) preload(backdropUrl(server, entry.backdrop), { as: "image" });
       }, relightRestMs);
     },
@@ -183,8 +199,11 @@ const Programme = memo(function Programme({
     if (direction !== "up" || !hero || first === undefined) return false;
     // Typed as a string, but null while nothing has focus.
     const key: string | null = getCurrentFocusKey();
+
     if (key === null) return false;
+
     if (!key.startsWith(cardKey(first, "")) && key !== retryKey(first)) return false;
+
     return focusFirst("hero-play");
   });
 
@@ -194,6 +213,7 @@ const Programme = memo(function Programme({
     if (restored.current) return;
     restored.current = true;
     const { place } = useLit.getState();
+
     if (place !== null || !hero) focusFirst(...restoreKeys(place, hero, first));
   }, [hero, first]);
 
@@ -258,6 +278,7 @@ function UpNext({
   readonly onPress: () => void;
 }) {
   const { ref } = useFocusable<object, HTMLButtonElement>({ focusKey: "hero-next", focusable });
+
   return (
     <button
       ref={ref}
@@ -295,6 +316,7 @@ function UpNext({
 function SettingsLink() {
   const navigate = useNavigate();
   const { ref } = useFocusable<object, HTMLButtonElement>({ focusKey: "library-settings" });
+
   return (
     <button
       ref={ref}
@@ -313,6 +335,7 @@ function EmptyLibrary() {
   useEffect(() => {
     focusFirst("library-settings");
   }, []);
+
   return (
     <main className="px-safe-x py-safe-y flex h-screen flex-col justify-end gap-6">
       <h1 className="text-marquee stretch-extra-wide m-0 font-[820]">An empty programme</h1>
@@ -344,11 +367,13 @@ export function LibraryScreen() {
   const nextIndex = upNext(cycle.index, featured.length);
   const next = nextIndex === null ? null : (featured[nextIndex] ?? null);
   const lit = holding ? hero : (litEntry ?? hero);
+
   // Row items arrive without media streams; the full item fills in the notes once it lands.
   const detail = useQuery({
     ...titleQuery(ctx, lit?.id ?? noItem),
     enabled: lit !== null,
   });
+
   const shown = detail.data?.entry ?? lit;
   const { data: numbers } = useSuspenseQuery(catalogueQuery(ctx));
 
@@ -384,12 +409,14 @@ export function LibraryScreen() {
       search: { start: hero.positionTicks, after: "title" },
     });
   };
+
   const lightHero = (): void => {
     if (hero === null) return;
     window.clearTimeout(relightTimer);
     useLit.setState({ place: null });
     light(hero, tonight);
   };
+
   const number = shown === null ? null : numberFor(numbers, shown);
 
   return (

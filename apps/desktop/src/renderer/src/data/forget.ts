@@ -19,12 +19,14 @@ export async function forgetSession(
   { revoke }: { readonly revoke: boolean }
 ): Promise<void> {
   const session = queryClient.getQueryData(sessionQuery.queryKey);
+
   if (session && revoke) {
     await reportSessionEnded({
       client: signedIn(session).client,
       signal: AbortSignal.timeout(3000),
     }).catch(() => {});
   }
+
   await window.harakiri.session.clear();
   useLit.getState().forget();
   seriesPlace.clear();

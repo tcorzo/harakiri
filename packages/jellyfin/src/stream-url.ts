@@ -10,6 +10,7 @@ export type StaticStream = {
 export const staticStreamUrl = ({ server, itemId, mediaSourceId }: StaticStream): string => {
   const url = new URL(`Videos/${itemId}/stream`, server);
   url.search = new URLSearchParams({ static: "true", MediaSourceId: mediaSourceId }).toString();
+
   return url.toString();
 };
 
@@ -29,9 +30,11 @@ export const authorizationHeader = (identity: ClientIdentity, token?: AccessToke
     Version: identity.version,
     ...(token === undefined ? {} : { Token: token }),
   };
+
   const parts = Object.entries(fields).map(
     ([key, value]) => `${key}="${encodeURIComponent(value)}"`
   );
+
   return `MediaBrowser ${parts.join(", ")}`;
 };
 

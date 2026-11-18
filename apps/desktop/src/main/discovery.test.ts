@@ -18,8 +18,10 @@ function startResponder(replies: string[]): Promise<{ port: number; probes: stri
   responder = socket;
   socket.on("message", (message, from) => {
     probes.push(message.toString("utf8"));
+
     for (const reply of replies) socket.send(reply, from.port, from.address);
   });
+
   return new Promise((resolve) => {
     socket.bind(0, "127.0.0.1", () => resolve({ port: socket.address().port, probes }));
   });
@@ -32,6 +34,7 @@ test("collects valid replies, dedupes by Id and skips malformed ones", async () 
     Name: "Living room",
     EndpointAddress: null,
   });
+
   const { port, probes } = await startResponder([
     living,
     living,

@@ -8,6 +8,7 @@ export {
   type PlaybackConfig,
   type SpdifCodec,
 } from "./args";
+
 export {
   MpvClosedError,
   MpvCommandError,
@@ -20,4 +21,5 @@ export {
   type MpvSpawnOptions,
   type Unsubscribe,
 } from "./client";
+
 export { setHttpHeaders, type HttpHeaders } from "./http";

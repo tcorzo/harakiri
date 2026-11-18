@@ -21,26 +21,32 @@ const clips = new Map<ClipCodec, Clip>();
 
 beforeAll(() => {
   dir = mkdtempSync(join(tmpdir(), "harness-t0-"));
+
   for (const codec of ["ac3", "eac3", "dts", "truehd"] as const)
     clips.set(codec, synthesizeClip(dir, codec));
 });
+
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 function clip(codec: ClipCodec): Clip {
   const found = clips.get(codec);
+
   if (found === undefined) throw new Error(`clip ${codec} was not synthesized`);
+
   return found;
 }
 
 function spdifOf(codec: ClipCodec, options: { dtshdRate?: number } = {}): Uint8Array {
   const out = join(dir, `${codec}-${options.dtshdRate ?? "plain"}.spdif`);
   muxSpdif(clip(codec).mkv, out, options);
+
   return readPcm16(readFileSync(out)).data;
 }
 
 function summarize(pcm: Uint8Array) {
   const bursts = scanBursts(pcm);
   const kinds = [...new Set(bursts.map((b) => `${b.dataType}/${b.subtype}`))];
+
   return { bursts, kinds, stream: elementaryStream(bursts) };
 }
 

@@ -30,7 +30,9 @@ export function TrackPicker({
     focusKey: "track-picker",
     isFocusBoundary: true,
   });
+
   useActionHandler("back", onClose);
+
   const chosenPosition = Math.max(
     0,
     options.findIndex((option) => option.index === chosen)

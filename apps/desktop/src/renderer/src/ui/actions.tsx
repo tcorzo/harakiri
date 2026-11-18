@@ -33,6 +33,7 @@ function PlayGlyph() {
 /** The only red action: Play and Resume, paper on Harakiri Red. Bands share the red but never take focus. */
 export function PlayAction(props: ActionProps) {
   const { ref } = useAction(props);
+
   return (
     <button
       ref={ref}
@@ -51,6 +52,7 @@ export function PlayAction(props: ActionProps) {
 /** Every other action: paper type in a hairline frame, so Play stays the only red thing the d-pad lands on. */
 export function QuietAction(props: ActionProps) {
   const { ref } = useAction(props);
+
   return (
     <button
       ref={ref}
@@ -68,6 +70,7 @@ export function QuietAction(props: ActionProps) {
 /** A full-width line in a list: a choice in a programme index rather than a button. */
 export function ListAction(props: ActionProps & { readonly detail?: ReactNode }) {
   const { ref } = useAction(props);
+
   return (
     <button
       ref={ref}

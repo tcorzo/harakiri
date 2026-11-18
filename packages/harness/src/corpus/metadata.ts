@@ -52,6 +52,7 @@ export function episodeNfo(entry: EpisodeEntry, seriesYear: number): string {
 /** A colour pair from an index: distinct per item, the same on every run. */
 export function palette(index: number): { base: string; accent: string } {
   const hue = (index * 137.508) % 360; // golden angle
+
   return { base: hsl(hue, 0.45, 0.28), accent: hsl((hue + 160) % 360, 0.7, 0.6) };
 }
 
@@ -59,10 +60,12 @@ function hsl(h: number, s: number, l: number): string {
   const k = (n: number) => (n + h / 30) % 12;
   const a = s * Math.min(l, 1 - l);
   const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+
   const hex = (v: number) =>
     Math.round(v * 255)
       .toString(16)
       .padStart(2, "0");
+
   return `0x${hex(f(0))}${hex(f(8))}${hex(f(4))}`;
 }
 
@@ -74,12 +77,15 @@ export type Artwork = "poster" | "backdrop" | "logo" | "thumb";
  */
 export function artworkGraph(kind: Artwork, index: number): string {
   const { base, accent } = palette(index);
+
   const bar = (x: number, y: number, w: number, h: number, color: string, replace = false) =>
     `drawbox=x=${x}:y=${y}:w=${w}:h=${h}:color=${color}:t=fill${replace ? ":replace=1" : ""}`;
+
   const stripes = (width: number, height: number) =>
     Array.from({ length: 1 + (index % 4) }, (_, i) =>
       bar(0, Math.round(height * (0.55 + i * 0.08)), width, Math.round(height * 0.04), accent)
     );
+
   return match(kind)
     .with("poster", () =>
       [`color=c=${base}:s=300x450:d=1`, bar(30, 40, 240, 120, accent), ...stripes(300, 450)].join(

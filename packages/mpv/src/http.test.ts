@@ -5,12 +5,15 @@ import { setHttpHeaders } from "./http";
 
 test("a header mpv rejects fails without quoting the secret", async () => {
   const sent: JsonValue[] = [];
+
   const client = {
     setProperty: (name: string, value: JsonValue) => {
       sent.push(value);
+
       return Promise.reject(new MpvCommandError(["set_property", name, value], "error running"));
     },
   };
+
   const error: unknown = await setHttpHeaders(client, {
     Authorization: 'MediaBrowser Token="s3cret"',
   }).catch((caught: unknown) => caught);

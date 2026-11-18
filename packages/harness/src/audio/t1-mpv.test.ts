@@ -15,14 +15,18 @@ const clips = new Map<ClipCodec, Clip>();
 
 beforeAll(() => {
   dir = mkdtempSync(join(tmpdir(), "harness-t1-"));
+
   for (const codec of ["ac3", "eac3", "dts", "truehd"] as const)
     clips.set(codec, synthesizeClip(dir, codec));
 });
+
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 function clip(codec: ClipCodec): Clip {
   const found = clips.get(codec);
+
   if (found === undefined) throw new Error(`clip ${codec} was not synthesized`);
+
   return found;
 }
 
@@ -32,6 +36,7 @@ function capture(codec: ClipCodec, audioPassthrough?: AudioPassthrough) {
   const pcm = readPcm16(readFileSync(wav));
   const reference = join(dir, `${codec}-ffmpeg.spdif`);
   muxSpdif(clip(codec).mkv, reference);
+
   return {
     ao,
     pcm,
@@ -74,6 +79,7 @@ describe("T1: the player's mpv argv writes the IEC 61937 stream unmodified", () 
     expect([kinds(captured), kinds(reference)]).toEqual([["21/0"], ["21/0"]]);
 
     const [first, second] = reference;
+
     if (first === undefined || second === undefined) throw new Error("fewer than two bursts");
     const missing = run.spdifReference.length - run.pcm.data.length;
     expect([0, second.offset - first.offset]).toContain(missing);

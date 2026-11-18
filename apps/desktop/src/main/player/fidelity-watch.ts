@@ -50,6 +50,7 @@ export interface FidelityWatch {
 /** Samples kept to judge the audio output; a PipeWire stream that fails reopens and fails again. */
 const AUDIO_WINDOW = 4;
 const AUDIO_FAILURES = 3;
+
 /** Samples a newly selected renderer gets to open its window before it is judged. */
 const RENDERER_SETTLE = 4;
 
@@ -61,9 +62,11 @@ const RENDERER_OPTIONS: Readonly<Record<Renderer, { readonly vo: string; readonl
   };
 
 const TargetParams = z.object({ gamma: z.string() });
+
 const TrackList = z.array(
   z.object({ id: z.number(), type: z.string(), albumart: z.boolean().optional() })
 );
+
 const HDR_GAMMAS = new Set(["pq", "hlg"]);
 
 /** Reads a property that mpv reports as unavailable while its subsystem is down. */
@@ -105,6 +108,7 @@ export function watchFidelity(
       .with({ kind: "setBitstream" }, async ({ codecs }) => {
         await mpv.setProperty("audio-spdif", codecs.join(","));
         const aid = options.aid();
+
         // mpv picks passthrough when it opens the decoder, so a playing track is reopened.
         if (reselect && typeof aid === "number") {
           await mpv.setProperty("aid", "no");
@@ -127,11 +131,13 @@ export function watchFidelity(
   const learn = async (observation: Observation, failure: boolean): Promise<void> => {
     const step = observe(state, observation);
     state = step.state;
+
     for (const action of step.actions) {
       await apply(action, failure).catch((error: unknown) => {
         logger.warn("Applying {action} failed: {error}", { action, error });
       });
     }
+
     if (failure) {
       await mpv
         .setProperty("time-pos", lastHealthy ?? options.startSeconds)
@@ -139,13 +145,17 @@ export function watchFidelity(
           logger.warn("Returning after a step-down failed: {error}", { error })
         );
     }
+
     const view = fidelityView(state);
     const next = JSON.stringify(view);
+
     if (next === shown) return;
     shown = next;
+
     for (const downgrade of view.downgrades) {
       logger.warn("Playing below best: {message}", { message: downgrade.message, downgrade });
     }
+
     options.onChange(view);
   };
 
@@ -155,15 +165,18 @@ export function watchFidelity(
       optional(mpv, "current-vo", z.string()),
       optional(mpv, "time-pos", z.number()),
     ]);
+
     const audioSelected = typeof options.aid() === "number";
 
     // A PipeWire stream in error reopens about once a second, so with video keeping the clock
     // `current-ao` is present half the time; mpv's own warnings between samples settle it.
     const warned = audioWarnings > 0;
     audioWarnings = 0;
+
     if (audioSelected && !options.paused()) {
       audioSamples = [...audioSamples, ao !== undefined && !warned].slice(-AUDIO_WINDOW);
       const failures = audioSamples.filter((open) => !open).length;
+
       if (audioSamples.length === AUDIO_WINDOW && failures >= AUDIO_FAILURES) {
         audioSamples = [];
         await learn({ kind: "audioOutputFailed" }, true);
@@ -173,29 +186,39 @@ export function watchFidelity(
     // A PipeWire stream that keeps failing is open for a moment between attempts, so only a
     // whole window of open samples, or a working renderer, marks a moment worth returning to.
     const audioHealthy = audioSamples.length === AUDIO_WINDOW && audioSamples.every((open) => open);
+
     if (position !== undefined && ((options.video && vo !== undefined) || audioHealthy)) {
       lastHealthy = position;
     }
 
     const view = fidelityView(state);
+
     if (!options.video || view.renderer === "none") return;
+
     if (settling > 0) {
       settling -= 1;
+
       return;
     }
+
     // No video output alone proves nothing (`--vid=no` has none); mpv's error says it failed.
     const failed = vo === undefined && rendererErrors > 0;
     rendererErrors = 0;
+
     if (failed) {
       settling = RENDERER_SETTLE;
       display = undefined;
       await learn({ kind: "rendererFailed" }, true);
+
       return;
     }
+
     if (vo === undefined) return;
     const target = await optional(mpv, "video-target-params", TargetParams);
+
     if (target === undefined) return;
     const hdr = HDR_GAMMAS.has(target.gamma);
+
     if (hdr === display) return;
     display = hdr;
     await learn({ kind: "displayTarget", hdr }, false);

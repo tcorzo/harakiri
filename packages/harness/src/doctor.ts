@@ -27,13 +27,17 @@ function notRunnable(run: ToolRun): Verdict {
 export function versionAtLeast(prefix: RegExp, min: Version | null): Check["judge"] {
   return (run) => {
     const text = output(run);
+
     if (text === null) return notRunnable(run);
     const found = parseVersion(text, prefix);
+
     if (found === null)
       return { status: "missing", detail: `no version matching ${prefix.source}` };
+
     if (min !== null && compareVersions(found, min) < 0) {
       return { status: "outdated", detail: `${formatVersion(found)} < ${formatVersion(min)}` };
     }
+
     return { status: "ok", detail: formatVersion(found) };
   };
 }
@@ -42,8 +46,10 @@ export function versionAtLeast(prefix: RegExp, min: Version | null): Check["judg
 export function listsAll(names: readonly string[], row: (name: string) => RegExp): Check["judge"] {
   return (run) => {
     const text = output(run);
+
     if (text === null) return notRunnable(run);
     const absent = names.filter((name) => !row(name).test(text));
+
     return absent.length === 0
       ? { status: "ok", detail: names.join(", ") }
       : { status: "missing", detail: `missing ${absent.join(", ")}` };
@@ -124,6 +130,7 @@ export interface CheckResult {
 export function runChecks(checks: readonly Check[]): CheckResult[] {
   return checks.map((check) => {
     const [command, ...args] = check.probe;
+
     return { check, verdict: check.judge(runTool(command, args)) };
   });
 }

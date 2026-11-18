@@ -30,12 +30,14 @@ export function createBridge(
     ...args: unknown[]
   ): Promise<T> {
     let reply: unknown;
+
     try {
       reply = await ipc.invoke(channel, ...args);
     } catch (error) {
       // A main-process error crosses as a wrapped message: restore it, status included.
       throw fromIpc(error);
     }
+
     return schema.parse(reply);
   }
 
@@ -58,13 +60,16 @@ export function createBridge(
       onEvent: (listener) => {
         const handler = (_event: IpcRendererEvent, payload: unknown): void => {
           const parsed = PlayerEvent.safeParse(payload);
+
           if (parsed.success) {
             listener(parsed.data);
           } else {
             options.warn("Dropped a malformed player event", z.prettifyError(parsed.error));
           }
         };
+
         ipc.on(channels.playerEvent, handler);
+
         return () => {
           ipc.removeListener(channels.playerEvent, handler);
         };

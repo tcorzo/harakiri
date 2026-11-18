@@ -19,7 +19,9 @@ const languages = new Intl.DisplayNames(["en"], { type: "language" });
 
 function languageOf(stream: MediaStream): string {
   const code = stream.Language;
+
   if (code == null || code === "" || code === "und") return "Unknown language";
+
   try {
     return languages.of(code) ?? code;
   } catch {
@@ -34,13 +36,16 @@ function audioOptions(source: MediaSourceInfo | undefined): TrackOption[] {
     .map((stream) => {
       const index = stream.Index ?? 0;
       const sound = classifyFidelity(source, { audioStreamIndex: index })?.sound ?? null;
+
       const format =
         sound === null
           ? null
           : [sound.format === "Other" ? sound.codec.toUpperCase() : sound.format, sound.channels]
               .filter((part) => part !== null)
               .join(" ");
+
       const extra = stream.IsDefault === true ? "Default" : (stream.Title ?? undefined);
+
       return {
         index,
         label: [languageOf(stream), format].filter((part) => part !== null).join(" · "),
@@ -58,6 +63,7 @@ function subtitleTracks(streams: readonly MediaStream[]): TrackOption[] {
         stream.IsForced === true ? "Forced" : null,
         stream.IsHearingImpaired === true ? "SDH" : null,
       ].filter((flag) => flag !== null);
+
       return {
         index: stream.Index ?? 0,
         label: [languageOf(stream), ...flags].join(" · "),
@@ -70,21 +76,26 @@ function subtitleTracks(streams: readonly MediaStream[]): TrackOption[] {
 function creditOf(name: string, role: string | null | undefined): string {
   if (role == null || role === "") return name;
   const part = role.replace(/\s*\((voice|uncredited)\)/gi, "").trim();
+
   if (/\(voice\)/i.test(role)) return `${name}, voice of ${part}`;
+
   return /\(uncredited\)/i.test(role) ? `${name} as ${part} (uncredited)` : `${name} as ${part}`;
 }
 
 /** The synopsis whole when it fits, otherwise cut at the last sentence that does. */
 function synopsis(text: string | null, max = 420): string {
   if (text === null) return "No synopsis on the server.";
+
   if (text.length <= max) return text;
   const cut = text.slice(0, max);
   const end = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
+
   return end > 0 ? cut.slice(0, end + 1) : `${cut.slice(0, cut.lastIndexOf(" "))}…`;
 }
 
 function credits(item: BaseItemDto): { directors: string[]; cast: string[] } {
   const people = item.People ?? [];
+
   return {
     directors: people.filter((p) => p.Type === "Director").map((p) => p.Name ?? ""),
     cast: people
@@ -111,21 +122,27 @@ export function FilmPage({
   const source = item.MediaSources?.[0];
   const streams = source?.MediaStreams ?? [];
   const audioChoices = audioOptions(source);
+
   const subtitleOptions: TrackOption[] = [
     { index: subtitlesOff, label: "Off" },
     ...subtitleTracks(streams),
   ];
+
   const [audio, setAudio] = useState<number | null>(entry.fidelity?.sound?.streamIndex ?? null);
+
   const [subtitle, setSubtitle] = useState<number>(
     source?.DefaultSubtitleStreamIndex ?? subtitlesOff
   );
+
   const [picking, setPicking] = useState<Picking>("none");
   const fidelity = classifyFidelity(source, audio === null ? {} : { audioStreamIndex: audio });
+
   const { ref, focusKey } = useFocusable<object, HTMLElement>({
     focusKey: "title-page",
     trackChildren: true,
     forceFocus: true,
   });
+
   const resumable = entry.progress !== null;
   const left = minutesLeft(entry);
   const code = episodeCode(entry);

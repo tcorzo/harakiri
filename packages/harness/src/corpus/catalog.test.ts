@@ -17,12 +17,14 @@ describe("the corpus catalog", () => {
 
   test("the base tier covers what the e2e picks by criteria, with no FATE sample", () => {
     const base = CATALOG.filter((e) => e.tier === "base");
+
     const sdrH264Long = base.filter(
       (e) =>
         e.expect.video.codec === "h264" &&
         e.expect.video.range === "SDR" &&
         e.seconds === LONG_SECONDS
     );
+
     expect(sdrH264Long).toHaveLength(2);
     expect(LONG_SECONDS / 60).toBe(6.5);
     expect(
@@ -38,6 +40,7 @@ describe("the corpus catalog", () => {
           e.expect.subtitles.external > 0
       )
     ).toBe(true);
+
     for (const e of base) {
       expect(e.video.kind).not.toMatch(/^fate/);
       expect(e.audio.every((a) => typeof a.recipe === "string")).toBe(true);
@@ -55,6 +58,7 @@ describe("the NFO writer", () => {
       ...CATALOG.find((e): e is MovieEntry => e.kind === "movie")!,
       meta: { title: "A & B", year: 2000, genres: ["Drama"], plot: "<x>" },
     });
+
     expect(nfo).toContain("<title>A &amp; B</title>");
     expect(nfo).toContain("<plot>&lt;x&gt;</plot>");
     expect(nfo).toContain("<genre>Drama</genre>");
@@ -73,6 +77,7 @@ describe("the PGS writer", () => {
   // The demuxer reads each segment as a packet: 8 per cue (5 to show it, 3 to clear it).
   test("writes a stream ffprobe reads as a 640x360 PGS track with two cues", () => {
     const dir = mkdtempSync(join(tmpdir(), "corpus-pgs-"));
+
     try {
       const file = join(dir, "cues.sup");
       writeFileSync(
@@ -82,6 +87,7 @@ describe("the PGS writer", () => {
           { start: 2, end: 2.8 },
         ])
       );
+
       const { stdout } = runToolOrThrow("ffprobe", [
         "-v",
         "error",
@@ -94,6 +100,7 @@ describe("the PGS writer", () => {
         "json",
         file,
       ]);
+
       expect(JSON.parse(stdout).streams).toEqual([
         { codec_name: "hdmv_pgs_subtitle", width: 640, height: 360, nb_read_packets: "16" },
       ]);

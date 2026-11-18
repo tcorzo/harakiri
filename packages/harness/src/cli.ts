@@ -27,6 +27,7 @@ function report({ check, verdict }: CheckResult): void {
 async function doctor(): Promise<number> {
   intro("harakiri-harness doctor");
   const results = runChecks(CHECKS);
+
   for (const result of results) {
     getLogger(["harakiri", "harness", "doctor"]).debug("{label} probed with {probe}", {
       label: result.check.label,
@@ -34,12 +35,14 @@ async function doctor(): Promise<number> {
     });
     report(result);
   }
+
   const failed = requiredFailures(results);
   outro(
     failed.length === 0
       ? "All required tools present."
       : `${failed.length} required check(s) failed.`
   );
+
   return failed.length === 0 ? 0 : 1;
 }
 
@@ -52,6 +55,7 @@ await configure({
 });
 
 const parsed = run(parser, { programName: "harakiri-harness", help: "both" });
+
 process.exitCode = await match(parsed.command)
   .with("doctor", () => doctor())
   .exhaustive();

@@ -74,6 +74,7 @@ afterEach(() => {
 
 const store = (crypto: TokenCrypto, allowPlaintextToken = false) =>
   createSessionStore({ dir, crypto, allowPlaintextToken });
+
 const readStored = (): unknown => JSON.parse(readFileSync(join(dir, "session.json"), "utf8"));
 
 test("round-trips a session with the token encrypted on disk and main's device id", () => {
@@ -121,6 +122,7 @@ test("an undecryptable token loads as null", () => {
       throw new Error("keyring changed");
     },
   };
+
   expect(store(locked).load()).toBe(null);
 });
 

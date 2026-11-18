@@ -28,9 +28,13 @@ const isNetworkFailure = (error: unknown): boolean =>
 export function classifyFailure(error: unknown): Failure {
   if (error instanceof ServerStatusError) {
     if (error.status === 401) return { kind: "signedOut" };
+
     if (error.status === 403) return { kind: "refused" };
+
     return { kind: "server", status: error.status };
   }
+
   if (isNetworkFailure(error)) return { kind: "unreachable" };
+
   return { kind: "unexpected", message: error instanceof Error ? error.message : String(error) };
 }

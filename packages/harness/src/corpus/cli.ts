@@ -60,18 +60,21 @@ const parser = or(
 async function gen(out: string, fate: string, requireFate: boolean): Promise<number> {
   intro(`corpus gen -> ${out}`);
   const t0 = performance.now();
+
   const manifest = await generateCorpus({
     out: resolve(out),
     fateDir: resolve(fate),
     requireFate,
     log: (line) => (line.startsWith("FATE TIER NOT BUILT") ? log.warn(line) : log.step(line)),
   });
+
   const seconds = ((performance.now() - t0) / 1000).toFixed(1);
   const mb = (treeBytes(resolve(out)) / 1e6).toFixed(1);
   outro(
     `${manifest.entries.length} media files, ${mb} MB, ${seconds}s` +
       (manifest.skipped.length > 0 ? `; ${manifest.skipped.length} FATE items left out` : "")
   );
+
   return 0;
 }
 
@@ -79,10 +82,12 @@ async function fetchFateCommand(dir: string, mirror: string): Promise<number> {
   intro(`fetch FATE samples from ${mirror} -> ${dir}`);
   await fetchFate(resolve(dir), mirror, (line) => log.step(line));
   outro("all FATE samples verified");
+
   return 0;
 }
 
 const parsed = run(parser, { programName: "corpus", help: "both" });
+
 try {
   process.exitCode = await match(parsed)
     .with({ command: "gen" }, (p) => gen(p.out, p.fate, p.requireFate))

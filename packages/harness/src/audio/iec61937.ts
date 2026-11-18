@@ -1,6 +1,7 @@
 import { match } from "ts-pattern";
 
 type LengthUnit = "bits" | "bytes";
+
 type StreamCodec = "ac3" | "eac3" | "dts" | "dts-hd" | "truehd";
 
 /**
@@ -39,6 +40,7 @@ const DATA_TYPES = [
 }[];
 
 type DataTypeEntry = (typeof DATA_TYPES)[number];
+
 export type DataTypeName = DataTypeEntry["name"];
 
 const DATA_TYPE_BY_CODE: ReadonlyMap<number, DataTypeEntry> = new Map(
@@ -91,26 +93,32 @@ export function scanBursts(pcm: Uint8Array): Burst[] {
   const view = new DataView(pcm.buffer, pcm.byteOffset, pcm.byteLength);
   const bursts: Burst[] = [];
   let at = 0;
+
   while (at + BURST_HEADER_SIZE <= pcm.length) {
     if (view.getUint16(at, true) !== PA || view.getUint16(at + 2, true) !== PB) {
       at += 2;
       continue;
     }
+
     const pc = view.getUint16(at + 4, true);
     const pd = view.getUint16(at + 6, true);
     const dataType = pc & 0x1f;
     const entry = DATA_TYPE_BY_CODE.get(dataType);
+
     if (entry === undefined) {
       throw new Iec61937Error(`reserved data type 0x${dataType.toString(16)} at byte ${at}`);
     }
+
     const length = entry.pd === "bytes" ? pd : Math.ceil(pd / 8);
     const start = at + BURST_HEADER_SIZE;
     const wordAlignedEnd = start + length + (length & 1);
+
     if (wordAlignedEnd > pcm.length) {
       throw new Iec61937Error(
         `${entry.name} burst at byte ${at} needs ${length} bytes, stream ends first`
       );
     }
+
     bursts.push({
       dataType,
       name: entry.name,
@@ -120,15 +128,18 @@ export function scanBursts(pcm: Uint8Array): Burst[] {
     });
     at = wordAlignedEnd;
   }
+
   return bursts;
 }
 
 function swapWords(le: Uint8Array): Uint8Array {
   const be = new Uint8Array(le.length);
+
   for (let i = 0; i < le.length; i += 2) {
     be[i] = le[i + 1] ?? 0;
     be[i + 1] = le[i] ?? 0;
   }
+
   return be;
 }
 
@@ -140,17 +151,23 @@ function swapWords(le: Uint8Array): Uint8Array {
 export function elementaryStream(bursts: readonly Burst[]): ElementaryStream {
   const carried = bursts.flatMap((burst) => {
     const stream = DATA_TYPE_BY_CODE.get(burst.dataType)?.stream ?? null;
+
     return stream === null ? [] : [{ stream, burst }];
   });
+
   const first = carried[0];
+
   if (first === undefined) throw new Iec61937Error("no audio-carrying bursts");
   const other = carried.find((c) => c.stream !== first.stream);
+
   if (other !== undefined) {
     throw new Iec61937Error(
       `mixed codecs: ${first.stream} and ${other.stream} at byte ${other.burst.offset}`
     );
   }
+
   const payloads = carried.map((c) => c.burst);
+
   return match(first.stream)
     .with("ac3", "eac3", "dts", (codec) => ({
       codec,
@@ -179,20 +196,25 @@ const DTSHD_START_CODE = Uint8Array.of(0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
  */
 function unwrapDtsTypeIV(burst: Burst): Uint8Array {
   const { payload, offset } = burst;
+
   if (!startsWith(payload, DTSHD_START_CODE, 0)) {
     throw new Iec61937Error(`DTS type IV burst at byte ${offset} lacks the DTS-HD start code`);
   }
+
   const frameLength = ((payload[10] ?? 0) << 8) | (payload[11] ?? 0);
   const frameStart = DTSHD_START_CODE.length + 2;
+
   if (frameStart + frameLength > payload.length) {
     throw new Iec61937Error(
       `DTS type IV burst at byte ${offset} declares ${frameLength} bytes, holds fewer`
     );
   }
+
   return payload.subarray(frameStart, frameStart + frameLength);
 }
 
 const MAT_FRAME_SIZE = 61424;
+
 const MAT_CODES = [
   {
     label: "start",
@@ -257,22 +279,27 @@ const MAT_CODES = [
  */
 function unwrapMatFrame(burst: Burst): Uint8Array {
   const { payload, offset } = burst;
+
   if (payload.length !== MAT_FRAME_SIZE) {
     throw new Iec61937Error(
       `MAT burst at byte ${offset} is ${payload.length} bytes, not ${MAT_FRAME_SIZE}`
     );
   }
+
   const segments: Uint8Array[] = [];
   let cursor = 0;
+
   for (const { label, at, code } of MAT_CODES) {
     if (!startsWith(payload, code, at)) {
       throw new Iec61937Error(
         `MAT burst at byte ${offset}: ${label} code missing at frame offset ${at}`
       );
     }
+
     segments.push(payload.subarray(cursor, at));
     cursor = at + code.length;
   }
+
   return concat(segments);
 }
 
@@ -284,18 +311,23 @@ function unwrapMatFrame(burst: Burst): Uint8Array {
 function walkTrueHdAccessUnits(data: Uint8Array): { bytes: Uint8Array; partialTailBytes: number } {
   const units: Uint8Array[] = [];
   let at = 0;
+
   while (at + 2 <= data.length) {
     const word = ((data[at] ?? 0) << 8) | (data[at + 1] ?? 0);
+
     if (word === 0) {
       at += 2;
       continue;
     }
+
     const length = (word & 0x0fff) * 2;
+
     if (at + length > data.length)
       return { bytes: concat(units), partialTailBytes: data.length - at };
     units.push(data.subarray(at, at + length));
     at += length;
   }
+
   return { bytes: concat(units), partialTailBytes: 0 };
 }
 
@@ -306,9 +338,11 @@ function startsWith(haystack: Uint8Array, needle: Uint8Array, at: number): boole
 function concat(parts: readonly Uint8Array[]): Uint8Array {
   const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
   let at = 0;
+
   for (const part of parts) {
     out.set(part, at);
     at += part.length;
   }
+
   return out;
 }

@@ -24,5 +24,6 @@ export function inputConf(): string {
   const lines = BINDINGS.flatMap(({ keys, action, repeat }) =>
     keys.map((key) => `${key} ${repeat ? "repeatable " : ""}script-message harakiri ${action}`)
   );
+
   return `${lines.join("\n")}\n`;
 }

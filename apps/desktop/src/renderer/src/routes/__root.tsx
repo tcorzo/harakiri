@@ -7,6 +7,7 @@ import { Curtain } from "../ui/Curtain";
 
 function Root() {
   useInputHub();
+
   return (
     <Suspense fallback={<Curtain />}>
       <Outlet />

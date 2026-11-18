@@ -26,6 +26,7 @@ const TEXT = [
   "sub",
   "microdvd",
 ];
+
 const IMAGE = ["pgssub", "pgs", "dvdsub", "vobsub", "dvbsub"];
 
 const subtitleRows = (profile: DeviceProfile) =>
@@ -67,6 +68,7 @@ describe("deviceProfile", () => {
       ...TEXT.map((f) => `${f}|External|`),
       "pgssub|External|",
     ];
+
     expect(subtitleRows(deviceProfile(v12))).toEqual([...shared, "dvdsub|External|mks"].sort());
     expect(subtitleRows(deviceProfile(v10))).toEqual([...shared].sort());
   });
@@ -88,6 +90,7 @@ describe("deviceProfile", () => {
     const tooLong = (deviceProfile(v12).TranscodingProfiles ?? [])
       .flatMap((t) => [t.VideoCodec ?? "", t.AudioCodec ?? ""])
       .filter((csv) => !/^[a-zA-Z0-9\-._,|]{0,40}$/.test(csv));
+
     expect(tooLong).toEqual([]);
   });
 });
@@ -110,6 +113,7 @@ describe("profileAllowsAllRanges (DV Profile 5 regression)", () => {
         },
       ],
     };
+
     expect(profileAllowsAllRanges(tenBitCap)).toBe(true);
   });
 });
@@ -130,6 +134,7 @@ describe("playbackInfoRequest", () => {
       server: v12,
       source: { kind: "default" },
     });
+
     expect(body).toEqual({
       UserId: "5f2a9c1e0b7d4e3fa8c6d1b2e9f04a7c",
       MaxStreamingBitrate: 1_000_000_000,
@@ -150,6 +155,7 @@ describe("playbackInfoRequest", () => {
       source: { kind: "chosen", mediaSourceId: MediaSourceId.parse("src-1"), audioStreamIndex: 0 },
       startTimeTicks: 600_000_000,
     });
+
     expect([body.MediaSourceId, body.AudioStreamIndex, body.StartTimeTicks]).toEqual([
       "src-1",
       0,

@@ -23,6 +23,7 @@ import {
 const logger = getLogger(["harakiri", "mpv"]);
 
 export type { JsonValue, MpvEvent };
+
 export type Unsubscribe = () => void;
 
 export interface MpvExit {
@@ -71,6 +72,7 @@ export interface MpvClient {
  */
 function commandName(command: readonly JsonValue[]): string {
   const [verb] = command;
+
   return typeof verb === "string" ? redactSecrets(verb) : "(unnamed)";
 }
 
@@ -116,6 +118,7 @@ interface Pending {
 }
 
 const secretParam = /\b(ApiKey|api_key|X-Emby-Token)=[^&\s'"]+/gi;
+
 // Verbose mpv echoes `Set property: http-header-fields=["Authorization: MediaBrowser Token=\"…\""]`.
 const tokenField = /\b(Token=)(\\?")?[^"\s,\\]+/g;
 
@@ -130,6 +133,7 @@ export function redactSecrets(line: string): string {
 export async function spawnMpv(options: MpvSpawnOptions): Promise<MpvClient> {
   const dir = await mkdtemp(join(tmpdir(), "harakiri-mpv-"));
   const socketPath = join(dir, "ipc.sock");
+
   const child = spawn(
     options.binary ?? "mpv",
     [
@@ -140,6 +144,7 @@ export async function spawnMpv(options: MpvSpawnOptions): Promise<MpvClient> {
     ],
     { stdio: ["ignore", "pipe", "pipe"] }
   );
+
   // Off a terminal, mpv writes its log messages to stdout, not stderr.
   for (const stream of [child.stdout, child.stderr]) {
     createInterface({ input: stream }).on("line", (line) => {
@@ -148,12 +153,14 @@ export async function spawnMpv(options: MpvSpawnOptions): Promise<MpvClient> {
   }
 
   let exit: MpvExit | undefined;
+
   const exited = new Promise<MpvExit>((resolve) => {
     child.once("exit", (code, signal) => {
       exit = { code, signal };
       resolve(exit);
     });
   });
+
   const cleanedUp = exited.then(() => rm(dir, { recursive: true, force: true }));
 
   const spawnFailed = new Promise<never>((_, reject) => {
@@ -164,6 +171,7 @@ export async function spawnMpv(options: MpvSpawnOptions): Promise<MpvClient> {
   });
 
   let socket: Socket;
+
   try {
     socket = await Promise.race([
       connectWhenReady(socketPath, options.socketTimeoutMs ?? 5000, () => exit !== undefined),
@@ -175,6 +183,7 @@ export async function spawnMpv(options: MpvSpawnOptions): Promise<MpvClient> {
     await rm(dir, { recursive: true, force: true });
     throw error;
   }
+
   spawnFailed.catch(() => {});
 
   return createClient({
@@ -193,14 +202,17 @@ async function connectWhenReady(
   hasExited: () => boolean
 ): Promise<Socket> {
   const deadline = Date.now() + timeoutMs;
+
   for (;;) {
     try {
       return await connectOnce(path);
     } catch (error) {
       if (hasExited()) throw error;
+
       if (Date.now() > deadline) {
         throw new Error(`mpv IPC socket ${path} not ready after ${timeoutMs}ms`, { cause: error });
       }
+
       await delay(20);
     }
   }
@@ -244,9 +256,11 @@ function createClient({
 
   const settle = (reply: Reply) => {
     const request = pending.get(reply.request_id);
+
     if (!request) return;
     pending.delete(reply.request_id);
     clearTimeout(request.timer);
+
     if (reply.error === "success") request.resolve(reply.data);
     else request.reject(new MpvCommandError([request.command], reply.error));
   };
@@ -262,6 +276,7 @@ function createClient({
         for (const listener of clientMessageListeners) listener(message.args);
         break;
     }
+
     for (const listener of eventListeners) listener(message.event);
   };
 
@@ -270,6 +285,7 @@ function createClient({
     "data",
     createLineSplitter((line) => {
       let message;
+
       try {
         message = parseInboundLine(line);
       } catch (error) {
@@ -277,8 +293,10 @@ function createClient({
           line: redactSecrets(line),
           error,
         });
+
         return;
       }
+
       dispatch(message);
     })
   );
@@ -287,10 +305,12 @@ function createClient({
   });
   socket.on("close", () => {
     closed = true;
+
     for (const request of pending.values()) {
       clearTimeout(request.timer);
       request.reject(new MpvClosedError());
     }
+
     pending.clear();
   });
   void exited.then(() => socket.destroy());
@@ -298,13 +318,16 @@ function createClient({
   const command = (...args: JsonValue[]): Promise<unknown> => {
     if (closed) return Promise.reject(new MpvClosedError());
     const requestId = nextRequestId++;
+
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         pending.delete(requestId);
         reject(new MpvTimeoutError(args, requestTimeoutMs));
         kill("SIGKILL");
       }, requestTimeoutMs);
+
       pending.set(requestId, { command: commandName(args), resolve, reject, timer });
+
       try {
         socket.write(encodeRequest({ command: args, request_id: requestId }));
       } catch (error) {
@@ -317,6 +340,7 @@ function createClient({
 
   const subscribe = <T>(set: Set<T>, listener: T): Unsubscribe => {
     set.add(listener);
+
     return () => set.delete(listener);
   };
 
@@ -338,6 +362,7 @@ function createClient({
       propertyHandlers.set(id, (data) => {
         if (data === undefined) return onChange(undefined);
         const parsed = schema.safeParse(data);
+
         if (parsed.success) onChange(parsed.data);
         else
           logger.error("mpv property {name} failed validation: {error}", {
@@ -345,12 +370,14 @@ function createClient({
             error: parsed.error,
           });
       });
+
       try {
         await command("observe_property", id, name);
       } catch (error) {
         propertyHandlers.delete(id);
         throw error;
       }
+
       return () => {
         if (!propertyHandlers.delete(id)) return;
         command("unobserve_property", id).catch(() => {});
@@ -368,6 +395,7 @@ function createClient({
       const result = await exited;
       clearTimeout(timer);
       await cleanedUp;
+
       return result;
     },
   };

@@ -9,14 +9,17 @@ import { AccessToken, DeviceId, ItemId, UserId } from "./ids";
 import { authorizationHeader } from "./stream-url";
 
 const received: { auth: string | null; body: unknown }[] = [];
+
 const server = setupServer(
   http.post("http://jf.test/Items/:itemId/PlaybackInfo", async ({ request }) => {
     received.push({ auth: request.headers.get("Authorization"), body: await request.json() });
+
     return HttpResponse.json({ MediaSources: [], PlaySessionId: "ps-1" });
   })
 );
 
 beforeAll(() => server.listen({ onUnhandledFrame: "error" }));
+
 afterAll(() => server.close());
 
 test("the server receives a condition-free profile and the auth header through the generated ky client", async () => {
@@ -26,10 +29,12 @@ test("the server receives a condition-free profile and the auth header through t
     deviceId: DeviceId.parse("dev-1"),
     version: "0.1.0",
   };
+
   const client = createClient({
     baseUrl: "http://jf.test",
     auth: () => authorizationHeader(identity, AccessToken.parse("tok")),
   });
+
   const userId = UserId.parse("5f2a9c1e0b7d4e3fa8c6d1b2e9f04a7c");
 
   const { data } = await getPostedPlaybackInfo({

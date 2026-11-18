@@ -8,6 +8,7 @@ import { adaptUpdater } from "./updater";
 
 function fakeUpdater() {
   const emitter = new EventEmitter();
+
   return Object.assign(emitter, {
     autoDownload: true,
     autoInstallOnAppQuit: true,
