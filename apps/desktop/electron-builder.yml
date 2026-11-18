@@ -5,6 +5,17 @@ directories:
 files:
   - out/**
   - package.json
+# Writes latest-linux.yml and embeds resources/app-update.yml. Uploading is release.yml's job (--publish never).
+publish:
+  provider: github
+  owner: tcorzo
+  repo: harakiri
 linux:
-  target: AppImage
+  target:
+    - target: AppImage
+      arch: [x64]
   category: AudioVideo
+  # Defaults to the scoped package name "@harakiri/desktop", which electron-builder rejects.
+  executableName: harakiri
+  # No version in the name: AppImageUpdater overwrites the running file in place only then.
+  artifactName: harakiri-${arch}.AppImage
