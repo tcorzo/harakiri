@@ -91,7 +91,9 @@ export const SettingsScreen = () => {
                 focusKey="settings-restart"
                 label="Restart to update"
                 detail={`Installs ${updates.data.version} and opens harakiri again`}
-                onPress={() => void window.harakiri.updates.restart()}
+                onPress={() => {
+                  void window.harakiri.updates.restart();
+                }}
               />
             ) : null}
           </div>
