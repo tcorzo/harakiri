@@ -6,8 +6,7 @@ import { createServer } from "node:http";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { promisify } from "node:util";
-import { inspect } from "node:util";
+import { promisify, inspect } from "node:util";
 
 import { ItemId } from "@harakiri/jellyfin";
 import { PRD_PASSTHROUGH } from "@harakiri/mpv";
