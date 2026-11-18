@@ -10,7 +10,8 @@ import {
   getQuickConnectState,
   initiateQuickConnect as quickConnectInitiate,
 } from "./generated/sdk.gen";
-import { AccessToken, DeviceId, ServerUrl, UserId } from "./ids";
+import type { DeviceId, ServerUrl } from "./ids";
+import { AccessToken, UserId } from "./ids";
 import { authorizationHeader } from "./stream-url";
 import type { ClientIdentity } from "./stream-url";
 
