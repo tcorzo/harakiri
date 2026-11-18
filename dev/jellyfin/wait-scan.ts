@@ -34,9 +34,9 @@ const { userId } = auth;
 async function get<T>(path: string): Promise<T> {
   try {
     return await api<T>("GET", path, { token: auth.token });
-  } catch (e) {
-    if (!String(e).includes("-> 401")) {
-      throw e;
+  } catch (error) {
+    if (!String(error).includes("-> 401")) {
+      throw error;
     }
     auth = await login();
 

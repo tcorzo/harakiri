@@ -19,7 +19,7 @@ test("a header mpv rejects fails without quoting the secret", async () => {
 
   const error: unknown = await setHttpHeaders(client, {
     Authorization: 'MediaBrowser Token="s3cret"',
-  }).catch((caught: unknown) => caught);
+  }).catch((error_: unknown) => error_);
 
   expect(sent).toEqual([['Authorization: MediaBrowser Token="s3cret"']]);
   expect(error).toBeInstanceOf(MpvCommandError);

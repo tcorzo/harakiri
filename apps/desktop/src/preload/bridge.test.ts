@@ -102,7 +102,7 @@ test("a main-process error crosses unwrapped, and a server status keeps its stat
 
   const error: unknown = await bridge.player
     .prepare({ itemId: ItemId.parse("0123456789abcdef0123456789abcdef") })
-    .catch((caught: unknown) => caught);
+    .catch((error_: unknown) => error_);
 
   expect(error).toBeInstanceOf(ServerStatusError);
   expect(error).toMatchObject({ status: 401 });

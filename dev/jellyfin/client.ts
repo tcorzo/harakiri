@@ -76,8 +76,8 @@ export async function waitForServer(
         return info;
       }
       last = `not started yet: ${JSON.stringify(info)?.slice(0, 120)}`;
-    } catch (e) {
-      last = String(e);
+    } catch (error) {
+      last = String(error);
     }
 
     await Bun.sleep(2000);

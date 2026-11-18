@@ -270,7 +270,7 @@ describe("a failed command never carries its arguments", () => {
 
     const error: unknown = await client
       .command("loadfile", url, "no-such-flag")
-      .catch((caught: unknown) => caught);
+      .catch((error_: unknown) => error_);
 
     expect(error).toBeInstanceOf(MpvCommandError);
     expect(printed(error)).not.toContain(TOKEN);
@@ -314,7 +314,7 @@ describe("a failed command never carries its arguments", () => {
 
     const error: unknown = await client
       .command("sub-add", url, "auto", "External 1")
-      .catch((caught: unknown) => caught);
+      .catch((error_: unknown) => error_);
 
     expect(error).toBeInstanceOf(MpvTimeoutError);
     expect(printed(error)).not.toContain(TOKEN);
