@@ -70,7 +70,9 @@ if (USING_DEFAULT_CREDS) {
   );
 }
 
-if (!info.StartupWizardCompleted) {
+if (info.StartupWizardCompleted) {
+  console.log("startup wizard already completed, skipping");
+} else {
   await api("POST", "/Startup/Configuration", {
     body: {
       ServerName: "harakiri-dev",
@@ -86,8 +88,6 @@ if (!info.StartupWizardCompleted) {
   await api("POST", "/Startup/RemoteAccess", { body: { EnableRemoteAccess: true } });
   await api("POST", "/Startup/Complete");
   console.log("startup wizard completed");
-} else {
-  console.log("startup wizard already completed, skipping");
 }
 
 const { token, userId } = await login();
@@ -121,11 +121,11 @@ if (drift.length > 0) {
 // tests that need a "Who is watching" list fake it.
 const user = await api<{ Policy: Record<string, unknown> }>("GET", `/Users/${userId}`, { token });
 
-if (user.Policy.IsHidden !== true) {
+if (user.Policy.IsHidden === true) {
+  console.log(`user ${USER} already hidden`);
+} else {
   await api("POST", `/Users/${userId}/Policy`, { token, body: { ...user.Policy, IsHidden: true } });
   console.log(`user ${USER} hidden from the public user list`);
-} else {
-  console.log(`user ${USER} already hidden`);
 }
 
 const existing = await api<VirtualFolder[]>("GET", "/Library/VirtualFolders", { token });

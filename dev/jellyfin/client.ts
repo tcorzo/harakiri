@@ -30,9 +30,9 @@ export async function api<T = unknown>(
       method,
       headers: {
         Authorization: auth,
-        ...(opts.body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...(opts.body === undefined ? {} : { "Content-Type": "application/json" }),
       },
-      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+      body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
     });
 
   const deadline = Date.now() + UNAVAILABLE_RETRY_MS;

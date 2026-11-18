@@ -546,17 +546,19 @@ function QuickConnectStep({
       <Heading detail="On a device already signed in to this server, open Quick Connect in the user menu and enter this code.">
         Quick Connect
       </Heading>
-      {state.problem !== undefined ? (
-        <Problem>{quickConnectProblemText(state.problem)}</Problem>
-      ) : state.code === undefined ? (
-        <p className="text-body text-paper-dim">Asking the server for a code…</p>
+      {state.problem === undefined ? (
+        state.code === undefined ? (
+          <p className="text-body text-paper-dim">Asking the server for a code…</p>
+        ) : (
+          <p
+            aria-label={`Code ${state.code.split("").join(" ")}`}
+            className="stretch-condensed text-[8rem] leading-none font-[300] tracking-[0.18em]"
+          >
+            {state.code}
+          </p>
+        )
       ) : (
-        <p
-          aria-label={`Code ${state.code.split("").join(" ")}`}
-          className="stretch-condensed text-[8rem] leading-none font-[300] tracking-[0.18em]"
-        >
-          {state.code}
-        </p>
+        <Problem>{quickConnectProblemText(state.problem)}</Problem>
       )}
       <div className="mt-12">
         <QuietAction
