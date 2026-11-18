@@ -7,7 +7,6 @@ A TV-first, gamepad-first Jellyfin player. mpv plays every file as it is, HDR re
 ## Where things are written down
 
 - `docs/PRD.md`: scope, behaviour, fidelity rules, acceptance criteria, harness tiers, out-of-scope list.
-- `docs/decisions/autonomous-run.md`: decisions taken without the owner, each with the alternative. Append to it when you make a call the owner did not.
 - `docs/research/`: the research behind every choice, including the library census (`07-media-census.md`). Check it before re-researching.
 - `apps/desktop/PRODUCT.md` and `apps/desktop/.impeccable/surfaces/src-renderer.md`: product truth and the visual direction contract, in the formats the impeccable skill reads. `apps/desktop/DESIGN.md` is written at the impeccable finish review.
 
@@ -68,6 +67,11 @@ Secrets never go in mpv's argv: `/proc/<pid>/cmdline` is world-readable. Set hea
 <important if="you are writing or changing web UI in apps/desktop/src/renderer">
 All web UI goes through the impeccable loop: load the `impeccable` skill, run its `context --target apps/desktop`, read its craft floor before every UI edit, run its detector on what changed, then critique and audit. React code follows the `vercel-react-best-practices` rules. The finish review writes `apps/desktop/DESIGN.md`.
 </important>
+
+## Releases
+
+- release-please keeps a release PR open on `main`. Merging it tags `vX.Y.Z`, and `.github/workflows/release.yml` uploads `harakiri-x86_64.AppImage` and `latest-linux.yml` to that release. Never edit the version in `apps/desktop/package.json` or `CHANGELOG.md` by hand.
+- `mise run package` builds the same AppImage locally, and `mise run package:check` verifies it. `gh workflow run release.yml -f tag=vX.Y.Z` rebuilds and re-uploads an existing release.
 
 ## How work is verified
 

@@ -25,7 +25,7 @@ The commits fix the renderer bugs from review 02 and add `player.prepare`, so th
    - The revocation assertion needs a positive control: the same request returns 200 before sign out.
    - The hold-Down test filters out a null focus, so lost focus passes.
    - The `< 60 s` assertion cannot fail apart from the timeout.
-9. **Stale text and identity in e2e (A+B).** The `revokeAppDevice` comment and D16 still say sign out is local. D16's rule must also cover `forgetSession` from the error screen. The e2e worker signs in as `Harakiri` / `harakiri-e2e` on the app's device id; use `clientIdentity`.
+9. **Stale text and identity in e2e (A+B).** The `revokeAppDevice` comment and the sign-out decision still say sign out is local. The sign-out decision's rule must also cover `forgetSession` from the error screen. The e2e worker signs in as `Harakiri` / `harakiri-e2e` on the app's device id; use `clientIdentity`.
 10. **Hero cycle edge cases (A+B).** The resumed index points into a random list that is refetched after 5 minutes of gc; remember the film id. An early `tick` stops the cycle until the next press. `getCurrentFocusKey()` can be null in the Up guard.
 11. **Dead and duplicated surface (A+B).** The `appVersion` channel has no caller. `signalPathFor` is test-only, and `PlayerEvent` carries both `facts` and `signalPath`; keep only one if the overlay allows. `SignalFact` is defined twice, so derive the zod enum from one source. `SignalReport` defaults hide main regressions. The hub calls `keyToAction` twice per repeat. `Prepared.request` is unused.
 12. **Space on the on-screen keyboard types a space (A).** Elsewhere Space is Select.
