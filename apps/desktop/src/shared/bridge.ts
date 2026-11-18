@@ -157,6 +157,16 @@ export const PlayerProbe = z.object({
 });
 export type PlayerProbe = z.infer<typeof PlayerProbe>;
 
+export const UpdateStatus = z.discriminatedUnion("state", [
+  z.object({ state: z.literal("unsupported") }),
+  z.object({ state: z.literal("idle") }),
+  z.object({ state: z.literal("available"), version: z.string() }),
+  z.object({ state: z.literal("downloading"), version: z.string(), percent: z.number() }),
+  z.object({ state: z.literal("ready"), version: z.string() }),
+  z.object({ state: z.literal("failed"), message: z.string() }),
+]);
+export type UpdateStatus = z.infer<typeof UpdateStatus>;
+
 /** What the preload exposes on `window.harakiri`. Every value crossing IPC is parsed with the schemas above. */
 export interface HarakiriBridge {
   /**
