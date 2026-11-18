@@ -4,7 +4,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { memo, useRef, type ComponentType, type ReactNode } from "react";
 import type { Entry } from "../data/entry";
 import { QuietAction } from "../ui/actions";
-import { rootRem } from "../ui/marks";
+import { Notice, rootRem, SectionHead } from "../ui/marks";
 import type { CardProps } from "./cards";
 import { useReducedMotion } from "./heroCycle";
 import { cardKey, rowKey, useLit, type Section } from "./lit";
@@ -29,7 +29,7 @@ const gapRem = 2;
 function RowHeader({ name, children }: { readonly name: string; readonly children: ReactNode }) {
   return (
     <header className="flex h-[3rem] items-center gap-6 pr-safe-x">
-      <h2 className="bg-band px-4 py-1.5 text-body font-[760] text-paper stretch-wide">{name}</h2>
+      <SectionHead>{name}</SectionHead>
       <span aria-hidden="true" className="h-0 flex-1 border-t-2 hairline" />
       {children}
     </header>
@@ -37,7 +37,7 @@ function RowHeader({ name, children }: { readonly name: string; readonly childre
 }
 
 /**
- * One programme section: a band label, a hairline, and a horizontally virtualized run of entries.
+ * One programme section: a section head, a hairline, and a horizontally virtualized run of entries.
  * Memoized, with primitive and stable props, so moving between rows re-renders none of them.
  */
 export const ProgrammeRow = memo(function ProgrammeRow({
@@ -148,13 +148,7 @@ export const FailedRow = memo(function FailedRow({
       <section ref={ref} aria-label={sectionName} className="flex flex-col gap-5">
         <RowHeader name={sectionName}>{null}</RowHeader>
         <div className="flex items-center gap-8 py-6 pr-safe-x">
-          <p role="alert" className="m-0 flex items-start gap-4 text-body">
-            <span
-              aria-hidden="true"
-              className="mt-[0.55em] block h-[0.75rem] w-[0.75rem] shrink-0 bg-alert"
-            />
-            <span>This section did not load from the server.</span>
-          </p>
+          <Notice>This section did not load from the server.</Notice>
           <QuietAction
             focusKey={retryKey(sectionId)}
             label={`Try ${sectionName} again`}

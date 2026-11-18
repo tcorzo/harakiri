@@ -14,9 +14,9 @@ Memorable moment: the screening handoff into mpv.
 
 ## Direction contract
 
-THESIS: The library is a festival programme for one. Every title is a programme entry whose technical facts read as screening notes. It refuses the streaming-service template of identical card rows under a red-and-black chrome.
+THESIS: The library is a festival programme for one. Every title is a programme entry whose technical facts read as screening notes. It refuses the streaming-service template of identical card rows under a logo-red chrome: its red is a programme's printed section colour and the fill of the one action that starts a film, never a frame around the catalogue.
 
-OWN-WORLD: The film's own backdrop is the ground, dimmed under a deep programme-ink field that owns the lower two thirds. One condensed-to-wide grotesk family set like a catalogue: titles wide and heavy, programme notes condensed with tabular figures, entry numbers in the margin. Section bands in a single committed festival colour. One reserved accent, used only for Play and Resume. Hairline rules from the catalogue grid.
+OWN-WORLD: The film's own backdrop is the ground, dimmed under a deep programme-ink field that owns the lower two thirds. One condensed-to-wide grotesk family set like a catalogue: titles wide and heavy, programme notes condensed with tabular figures, entry numbers in the margin. Section tabs and Play share one committed festival colour, Harakiri Red (a dark arterial red on a warm near-black ink), the only accent; Play is the only red block that carries a line of type. Problems carry an amber mark, never red. Hairline rules from the catalogue grid.
 
 STORY: The owner sees one film presented as tonight's screening, understands its programme notes at a glance (year, runtime, picture, sound), and either presses play or moves down to Continue Watching and the programme sections.
 
@@ -28,5 +28,5 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
 ## Unresolved
 
-- Exact festival colour, accent and type family are chosen at build against the craft floor.
+- Festival colour and accent: resolved by the owner on 2026-11-17 as one Harakiri Red for bands and Play (DESIGN.md, Colors). Type family: Archivo Variable, chosen at build.
 - How the mpv-drawn controls translate the world in ASS.

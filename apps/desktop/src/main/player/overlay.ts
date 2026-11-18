@@ -9,6 +9,8 @@ export interface ControlsView {
   readonly programme: string;
   readonly signalPath: string;
   readonly transcodeReasons: readonly string[];
+  /** The fidelity engine stepped below the best this output can take (bitstream to PCM, and so on). */
+  readonly downgraded: boolean;
   readonly positionSeconds: number;
   readonly durationSeconds: number | undefined;
   readonly paused: boolean;
@@ -20,12 +22,14 @@ export interface ControlsView {
   } | null;
 }
 
-// The renderer's tokens in ASS's &HBBGGRR& order: programme ink, paper, muted note, and the
-// one accent the direction reserves for play.
-const PAPER = "&HEDE8E5&";
-const NOTE = "&HACA5A1&";
-const INK = "&H150F0D&";
-const ACCENT = "&H4BC8FE&";
+// The renderer's tokens in ASS's &HBBGGRR& order: paper (#f3f0e9), dim paper for notes
+// (#c5bcb3), programme ink (#0a0605), Harakiri Red (#9b0f1b), the one accent, and Torch Amber
+// (#f7c243), the problem mark.
+const PAPER = "&HE9F0F3&";
+const NOTE = "&HB3BCC5&";
+const INK = "&H05060A&";
+const ACCENT = "&H1B0F9B&";
+const ALERT = "&H43C2F7&";
 const FONT = "Noto Sans";
 
 // Overscan-safe margins: 5% of each axis.
@@ -46,6 +50,7 @@ const STYLE = {
 } as const;
 
 const BASE = "\\bord0\\shad0\\blur0";
+const ALERT_MARK = 18;
 
 /** Keeps item titles from opening override blocks or forming `\N`-style escapes. */
 const escape = (raw: string): string =>
@@ -68,10 +73,18 @@ const clock = (seconds: number): string => {
   return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
 };
 
-const stateGlyph = (paused: boolean, x: number, y: number): string =>
+// The state mark is the Play button in miniature: a red tile with a paper glyph. A red glyph
+// alone falls under 2.5:1 against the ink field over a bright frame; paper on red holds 7.4:1.
+// An ink keyline keeps the tile's edge over a red frame.
+const GLYPH_TILE = 44;
+const KEYLINE = 2;
+const stateGlyph = (paused: boolean, x: number, y: number): string[] => [
+  rect(x - KEYLINE, y - KEYLINE, GLYPH_TILE + 2 * KEYLINE, GLYPH_TILE + 2 * KEYLINE, INK),
+  rect(x, y, GLYPH_TILE, GLYPH_TILE, ACCENT),
   paused
-    ? shape(x, y, ACCENT, "&H00&", "m 0 0 l 8 0 8 28 0 28 m 16 0 l 24 0 24 28 16 28")
-    : shape(x, y, ACCENT, "&H00&", "m 0 0 l 24 14 0 28");
+    ? shape(x + 10, y + 8, PAPER, "&H00&", "m 0 0 l 8 0 8 28 0 28 m 16 0 l 24 0 24 28 16 28")
+    : shape(x + 12, y + 8, PAPER, "&H00&", "m 0 0 l 24 14 0 28"),
+];
 
 // libass has no gradient fill, so the ink field fades in over stacked bands.
 const FADE = Array.from({ length: 14 }, (_, i) => {
@@ -129,16 +142,24 @@ export function renderControls(view: ControlsView): string {
   const facts = view.transcodeReasons.length
     ? `${view.signalPath} · ${view.transcodeReasons.join(" · ")}`
     : view.signalPath;
+  // A transcode or a downgrade is a problem, so its fact line leads with the amber square, sized
+  // to the capitals of the 34px line, as the renderer's notices do.
+  const problem = view.transcodeReasons.length > 0 || view.downgraded;
   const events = [
     ...FADE,
     rect(0, 700, OVERLAY_WIDTH, OVERLAY_HEIGHT - 700, INK, "&H30&"),
     text(LEFT, 728, STYLE.label, view.paused ? "PAUSED" : "NOW SCREENING"),
     text(LEFT, 756, STYLE.title, view.title),
     text(LEFT, 850, STYLE.note, view.programme),
-    text(LEFT, 894, STYLE.fact, facts),
+    ...(problem
+      ? [
+          rect(LEFT, 902, ALERT_MARK, ALERT_MARK, ALERT),
+          text(LEFT + ALERT_MARK + 16, 894, STYLE.fact, facts),
+        ]
+      : [text(LEFT, 894, STYLE.fact, facts)]),
     ...scrub(view, 968),
-    stateGlyph(view.paused, LEFT, 992),
-    text(LEFT + 44, 988, STYLE.time, clock(view.positionSeconds)),
+    ...stateGlyph(view.paused, LEFT, 984),
+    text(LEFT + GLYPH_TILE + 20, 988, STYLE.time, clock(view.positionSeconds)),
     text(RIGHT, 988, STYLE.note, view.durationSeconds ? clock(view.durationSeconds) : "", 9),
     ...(view.menu ? menuPanel(view.menu) : []),
   ];

@@ -2,18 +2,20 @@
 
 @theme {
   --color-*: initial;
-  --color-ink: oklch(0.15 0.024 262);
-  --color-ink-raised: oklch(0.2 0.03 262);
-  --color-ink-line: oklch(0.36 0.03 262);
+  --color-ink: oklch(0.13 0.008 40);
+  --color-ink-raised: oklch(0.18 0.011 40);
+  --color-ink-line: oklch(0.34 0.012 40);
   --color-paper: oklch(0.955 0.01 85);
-  --color-paper-dim: oklch(0.8 0.018 255);
-  --color-paper-faint: oklch(0.66 0.022 258);
-  --color-band: oklch(0.47 0.2 266);
-  --color-play: oklch(0.85 0.16 80);
-  --color-play-ink: oklch(0.2 0.04 262);
-  --color-alert: oklch(0.8 0.12 45);
-  --color-house: oklch(0.06 0.01 262);
-  --color-shade: oklch(0.08 0.02 262 / 0.6);
+  --color-paper-dim: oklch(0.8 0.016 70);
+  --color-paper-faint: oklch(0.66 0.02 65);
+  /* Harakiri Red, the one accent: section bands and the Play fill are the same red. */
+  --color-band: oklch(0.44 0.17 25);
+  --color-play: var(--color-band);
+  --color-play-ink: var(--color-paper);
+  /* Torch Amber stays clear of the red, so a problem is never read as the brand. */
+  --color-alert: oklch(0.84 0.15 85);
+  --color-house: oklch(0.06 0.006 40);
+  --color-shade: oklch(0.06 0.007 40 / 0.6);
   --color-transparent: transparent;
 
   --font-*: initial;

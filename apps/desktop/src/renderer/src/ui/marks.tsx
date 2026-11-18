@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { NoteFact } from "../data/entry";
 
 type MarkedState = NonNullable<NoteFact["state"]>;
@@ -99,6 +100,63 @@ export function ProgrammeNotes({
           </span>
         </span>
       ))}
+    </p>
+  );
+}
+
+/**
+ * A programme section head: paper type on ink, led by a short red tab, as a printed guide marks
+ * its sections. Play stays the only red block that carries horizontal type.
+ */
+export function SectionHead({
+  children,
+  className = "",
+}: {
+  readonly children: ReactNode;
+  readonly className?: string;
+}) {
+  return (
+    <h2
+      className={`m-0 flex items-center gap-4 text-body font-[760] text-paper stretch-wide ${className}`}
+    >
+      <span aria-hidden="true" className="block h-[1.5em] w-[0.5rem] shrink-0 bg-band" />
+      {children}
+    </h2>
+  );
+}
+
+/**
+ * The margin's section tab: the section name set upward on Harakiri Red. It is as tall as its
+ * name, never a full-height rail; only Welcome runs the band the full height of the screen.
+ */
+export function SectionTab({ children }: { readonly children: ReactNode }) {
+  return (
+    <div className="flex min-h-[10rem] w-[3.5rem] flex-none items-end justify-center bg-band py-4">
+      <span className="rotate-180 text-body font-[760] whitespace-nowrap text-paper stretch-wide [writing-mode:vertical-rl]">
+        {children}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * A problem, said in words after a Torch Amber square the height of a capital, so it reads from the
+ * couch. Every problem on screen goes through here; red never marks one.
+ */
+export function Notice({
+  children,
+  className = "",
+}: {
+  readonly children: ReactNode;
+  readonly className?: string;
+}) {
+  return (
+    <p
+      role="alert"
+      className={`m-0 flex items-start gap-4 text-body font-[560] text-paper ${className}`}
+    >
+      <span aria-hidden="true" className="mt-[0.38em] block size-[0.75em] shrink-0 bg-alert" />
+      <span>{children}</span>
     </p>
   );
 }

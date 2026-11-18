@@ -14,7 +14,7 @@ import { backdropUrl } from "../library/Stage";
 import { numberFor } from "../library/sections";
 import { PlayAction, QuietAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
-import { catalogueLabel, StateMark } from "../ui/marks";
+import { catalogueLabel, Notice, StateMark } from "../ui/marks";
 import { handoffTiming, stationOf, stations, type Station } from "./stations";
 
 const route = getRouteApi("/_signedIn/screening/$id");
@@ -88,23 +88,11 @@ export function SignalSlug({ facts }: { readonly facts: readonly SignalFact[] })
   );
 }
 
-function Notice({ children }: { readonly children: string }) {
-  return (
-    <p role="alert" className="m-0 flex max-w-[64ch] items-start gap-4 text-body">
-      <span
-        aria-hidden="true"
-        className="mt-[0.55em] block h-[0.75rem] w-[0.75rem] shrink-0 bg-alert"
-      />
-      <span>{children}</span>
-    </p>
-  );
-}
-
 /** What the server decided, stated before mpv takes the screen (PRD principle 1). */
 export function ServerDecision({ report }: { readonly report: SignalReport }) {
   if (report.unreadable) {
     return (
-      <Notice>
+      <Notice className="max-w-[64ch]">
         The server could not read this file, so it cannot send it as it is. Check that the server
         can open the file, then rescan the library.
       </Notice>
@@ -114,7 +102,7 @@ export function ServerDecision({ report }: { readonly report: SignalReport }) {
     return (
       <>
         <p className="m-0 text-title font-[460] stretch-condensed">Server transcode</p>
-        <Notice>{`The server is converting this file instead of sending it as it is, because: ${report.transcodeReasons.join("; ")}.`}</Notice>
+        <Notice className="max-w-[64ch]">{`The server is converting this file instead of sending it as it is, because: ${report.transcodeReasons.join("; ")}.`}</Notice>
       </>
     );
   }
@@ -382,9 +370,7 @@ export function ScreeningScreen() {
           <div className="flex min-h-[5rem] items-end justify-between">
             {outcome.kind === "failed" ? (
               <div className="flex flex-col gap-6">
-                <p role="alert" className="m-0 max-w-[64ch] text-body">
-                  It did not start. {outcome.message}
-                </p>
+                <Notice className="max-w-[64ch]">It did not start. {outcome.message}</Notice>
                 <div>
                   <QuietAction
                     focusKey="screening-back"
