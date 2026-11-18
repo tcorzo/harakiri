@@ -143,7 +143,7 @@ describe("controls overlay", () => {
     }));
 
     const ass = renderControls({ ...playing, menu: { rows: many, cursor: 20, aid: 1, sid: 21 } });
-    const labels = [...ass.matchAll(/\}(Subtitle \d+)$/gm)].map((m) => m[1]);
+    const labels = [...ass.matchAll(/\}(?<label>Subtitle \d+)$/gmu)].map((m) => m.groups?.label);
     expect(labels).toStrictEqual([
       "Subtitle 17",
       "Subtitle 18",
