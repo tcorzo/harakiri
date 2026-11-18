@@ -60,11 +60,11 @@ const LIBRARIES = [
 
 const info = await waitForServer();
 console.log(
-  `server ${BASE} up, Jellyfin ${info.Version}, wizard completed: ${info.StartupWizardCompleted}`,
+  `server ${BASE} up, Jellyfin ${info.Version}, wizard completed: ${info.StartupWizardCompleted}`
 );
 if (USING_DEFAULT_CREDS) {
   console.log(
-    `using default DEV-ONLY credentials ${USER} / ${PASSWORD} (set JELLYFIN_DEV_USER / JELLYFIN_DEV_PASSWORD to override)`,
+    `using default DEV-ONLY credentials ${USER} / ${PASSWORD} (set JELLYFIN_DEV_USER / JELLYFIN_DEV_PASSWORD to override)`
   );
 }
 

@@ -1,6 +1,7 @@
 // @vitest-environment node
 import type { IpcMainInvokeEvent, WebContents } from "electron";
 import { expect, test } from "vitest";
+
 import {
   appUrlCheck,
   confineWebContents,
@@ -40,7 +41,7 @@ test("the packaged policy keeps scripts same-origin and lets Jellyfin images and
     "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
       "img-src 'self' http: https: data: blob:; font-src 'self' data:; " +
       "connect-src 'self' http: https:; object-src 'none'; base-uri 'none'; " +
-      "form-action 'none'; frame-ancestors 'none'",
+      "form-action 'none'; frame-ancestors 'none'"
   );
 });
 
@@ -75,14 +76,14 @@ function headersFor(url: string, resourceType: string): unknown {
     } as unknown as Electron.OnHeadersReceivedListenerDetails,
     (r) => {
       response = r;
-    },
+    }
   );
   return response;
 }
 
 test("the CSP header is added to the app document only", () => {
   expect(
-    headersFor("file:///opt/harakiri/resources/app/out/renderer/index.html", "mainFrame"),
+    headersFor("file:///opt/harakiri/resources/app/out/renderer/index.html", "mainFrame")
   ).toEqual({
     responseHeaders: {
       "Content-Type": ["text/html"],
@@ -124,7 +125,7 @@ test("navigation to a foreign URL is denied and navigation within the app is all
   expect(emit("will-navigate", "https://evil.example/")).toBe("prevented");
   expect(emit("will-navigate", "file:///etc/passwd")).toBe("prevented");
   expect(
-    emit("will-navigate", "file:///opt/harakiri/resources/app/out/renderer/index.html#/home"),
+    emit("will-navigate", "file:///opt/harakiri/resources/app/out/renderer/index.html#/home")
   ).toBe("allowed");
 });
 
@@ -142,10 +143,10 @@ test("IPC from a foreign frame is rejected and IPC from the app is answered", ()
   const handler = fromAppOnly(packaged, (_event, n: number) => n * 2);
 
   expect(() => handler(eventFrom("https://evil.example/frame"), 21)).toThrow(
-    new ForeignSenderError("https://evil.example/frame"),
+    new ForeignSenderError("https://evil.example/frame")
   );
   expect(() => handler(eventFrom(null), 21)).toThrow("Rejected IPC from a destroyed frame");
   expect(
-    handler(eventFrom("file:///opt/harakiri/resources/app/out/renderer/index.html#/home"), 21),
+    handler(eventFrom("file:///opt/harakiri/resources/app/out/renderer/index.html#/home"), 21)
   ).toBe(42);
 });

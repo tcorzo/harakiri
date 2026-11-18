@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+
 import { cardName, expect, expectFocus, type FocusedControl } from "./harakiri";
 import { ITEMS, type Jellyfin, type PickedItem, type ShownItem, spokenTitle } from "./jellyfin";
 
@@ -14,7 +15,7 @@ export const main = (page: Page, name: string) => page.getByRole("main", { name,
 export async function openLibrary(page: Page): Promise<FocusedControl> {
   await expect(main(page, "Library")).toBeVisible({ timeout: 20_000 });
   await expect(
-    page.getByRole("region", { name: "Recently Added", exact: true }).getByRole("button").first(),
+    page.getByRole("region", { name: "Recently Added", exact: true }).getByRole("button").first()
   ).toBeVisible({ timeout: 20_000 });
   const focus = await expectFocus(page, heroPlay, 10_000);
   expect(focus.route).toBe("/library");
@@ -29,7 +30,7 @@ export async function openLibrary(page: Page): Promise<FocusedControl> {
 export async function leadContinueWatching(
   jellyfin: Jellyfin,
   preserveUserData: (id: PickedItem["id"]) => Promise<void>,
-  seconds = 120,
+  seconds = 120
 ): Promise<{ item: PickedItem; shown: ShownItem }> {
   const item = await jellyfin.pickItem(ITEMS.sdrH264Short);
   await preserveUserData(item.id);

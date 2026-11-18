@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { ServerUrl } from "@harakiri/jellyfin";
 import { describe, expect, test } from "vitest";
+
 import { playbackInfo } from "./fixtures/load";
 import { programmeEntry, resolve, transcodeReasons } from "./resolve";
 
@@ -13,7 +14,7 @@ describe("resolve", () => {
     const resolution = resolve(
       dvTruehd,
       { itemId: "fe56760a326f401c35863368589d15f1", audioStreamIndex: 3, subtitleStreamIndex: 1 },
-      server,
+      server
     );
     expect(resolution).toMatchObject({
       method: "DirectPlay",
@@ -35,7 +36,7 @@ describe("resolve", () => {
     const off = resolve(
       dvTruehd,
       { itemId: "fe56760a326f401c35863368589d15f1", subtitleStreamIndex: -1 },
-      server,
+      server
     );
     expect(off.sid).toBe(false);
   });
@@ -45,8 +46,8 @@ describe("resolve", () => {
     expect(resolution.method).toBe("Transcode");
     expect(
       resolution.url.startsWith(
-        "http://jf.test/videos/333d2fed-9dc9-bd77-0dfa-6843547d111a/master.m3u8?",
-      ),
+        "http://jf.test/videos/333d2fed-9dc9-bd77-0dfa-6843547d111a/master.m3u8?"
+      )
     ).toBe(true);
     expect(resolution.transcodeReasons).toEqual(["Bitrate over the limit"]);
     expect(resolution.unreadable).toBe(false);
@@ -66,7 +67,7 @@ describe("resolve", () => {
         ],
       },
       { itemId: "0123456789abcdef0123456789abcdef" },
-      server,
+      server
     );
     expect([resolution.unreadable, resolution.method]).toEqual([true, "Transcode"]);
   });
@@ -78,14 +79,14 @@ describe("resolve", () => {
         MediaSources: [{ Id: "0123456789abcdef0123456789abcdef", MediaStreams: [] }],
       },
       { itemId: "0123456789abcdef0123456789abcdef" },
-      server,
+      server
     );
     expect([resolution.unreadable, resolution.method]).toEqual([false, "DirectPlay"]);
   });
 
   test("a server error code becomes a plain sentence", () => {
     expect(() =>
-      resolve({ ErrorCode: "NoCompatibleStream", MediaSources: [] }, { itemId: "x" }, server),
+      resolve({ ErrorCode: "NoCompatibleStream", MediaSources: [] }, { itemId: "x" }, server)
     ).toThrow("The server found no playable stream");
   });
 });
@@ -93,8 +94,8 @@ describe("resolve", () => {
 test("transcodeReasons maps every listed reason and keeps unknown ones verbatim", () => {
   expect(
     transcodeReasons(
-      "/videos/x/master.m3u8?TranscodeReasons=VideoRangeTypeNotSupported,AudioChannelsNotSupported,NewReason",
-    ),
+      "/videos/x/master.m3u8?TranscodeReasons=VideoRangeTypeNotSupported,AudioChannelsNotSupported,NewReason"
+    )
   ).toEqual(["HDR format not supported", "Too many audio channels", "NewReason"]);
 });
 
@@ -107,7 +108,7 @@ describe("programmeEntry", () => {
         ProductionYear: 2001,
         RunTimeTicks: 74_856_200_000,
         OfficialRating: "R",
-      }),
+      })
     ).toEqual({ title: "Fixture Film", programme: "2001 · 2 h 5 min · R" });
   });
 
@@ -120,7 +121,7 @@ describe("programmeEntry", () => {
         ParentIndexNumber: 2,
         IndexNumber: 1,
         RunTimeTicks: 17_080_000_000,
-      }),
+      })
     ).toEqual({
       title: "Fixture Series: Night Shift",
       programme: "S2 E1 · The Second Evening · 28 min",

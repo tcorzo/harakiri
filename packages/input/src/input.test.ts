@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+
 import {
   idlePad,
   isEditing,
@@ -137,7 +138,7 @@ describe("stepPad", () => {
         [16, pad([0])],
         [32, pad([])],
         [48, pad([0])],
-      ]),
+      ])
     ).toEqual([["select"], [], [], ["select"]]);
   });
 
@@ -151,7 +152,7 @@ describe("stepPad", () => {
         [0, pad([], [0.4, 0, 0, 0])],
         [16, pad([], [0.9, 0, 0, 0])],
         [32, pad([], [0, -0.9, 0, 0])],
-      ]),
+      ])
     ).toEqual([[], ["right"], ["up"]]);
   });
 
@@ -164,7 +165,7 @@ describe("stepPad", () => {
         [48, stickX(0.34)],
         [64, stickX(0.49)],
         [80, stickX(0.5)],
-      ]),
+      ])
     ).toEqual([[], ["right"], [], [], [], ["right"]]);
   });
 
@@ -177,7 +178,7 @@ describe("stepPad", () => {
         [48, stickX(0.45)],
         [64, stickX(0.55)],
         [80, stickX(0.45)],
-      ]),
+      ])
     ).toEqual([["right"], [], [], [], [], []]);
   });
 
@@ -194,7 +195,7 @@ describe("stepPad", () => {
         [450, pad([15])],
         [500, pad([15])],
         [600, pad([15])],
-      ]),
+      ])
     ).toEqual([["right"], [], ["right"], [], ["right"], ["right"]]);
   });
 
@@ -203,7 +204,7 @@ describe("stepPad", () => {
       run([
         [0, pad([0])],
         [1000, pad([0])],
-      ]),
+      ])
     ).toEqual([["select"], []]);
   });
 });
@@ -218,7 +219,7 @@ describe("seedHeld on an input mode switch", () => {
         [1016, pad([])],
         [1032, pad([1])],
         [1048, pad([1])],
-      ]),
+      ])
     ).toEqual([["switch"], [], [], [], ["back"], []]);
   });
 
@@ -230,7 +231,7 @@ describe("seedHeld on an input mode switch", () => {
         [600, pad([15])],
         [616, pad([])],
         [632, pad([15])],
-      ]),
+      ])
     ).toEqual([["switch"], [], [], [], ["right"]]);
   });
 
@@ -242,7 +243,7 @@ describe("seedHeld on an input mode switch", () => {
         [32, stickX(0.9)],
         [48, stickX(0.3)],
         [64, stickX(0.9)],
-      ]),
+      ])
     ).toEqual([["switch"], [], [], [], ["right"]]);
   });
 
@@ -251,7 +252,7 @@ describe("seedHeld on an input mode switch", () => {
       run([
         ["switch", 0, pad([1])],
         [16, pad([1, 0])],
-      ]),
+      ])
     ).toEqual([["switch"], ["select"]]);
   });
 });

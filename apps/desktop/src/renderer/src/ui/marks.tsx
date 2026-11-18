@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+
 import type { NoteFact } from "../data/entry";
 
 type MarkedState = NonNullable<NoteFact["state"]>;
@@ -80,7 +81,7 @@ export function ProgrammeNotes({
 }) {
   return (
     <p
-      className={`flex flex-wrap items-baseline gap-x-5 gap-y-2 text-notes font-[540] stretch-condensed ${className}`}
+      className={`text-notes stretch-condensed flex flex-wrap items-baseline gap-x-5 gap-y-2 font-[540] ${className}`}
     >
       {facts.map((fact, i) => (
         <span key={fact.text} className="flex items-baseline gap-5">
@@ -92,7 +93,7 @@ export function ProgrammeNotes({
           <span className="flex items-baseline gap-2">
             <span>{fact.text}</span>
             {fact.state === undefined ? null : (
-              <span className="flex items-center gap-1.5 self-center text-[1.375rem] font-[620] tracking-[0.06em] text-paper-dim uppercase stretch-semicondensed">
+              <span className="text-paper-dim stretch-semicondensed flex items-center gap-1.5 self-center text-[1.375rem] font-[620] tracking-[0.06em] uppercase">
                 <StateMark state={fact.state} />
                 {stateWords[fact.state]}
               </span>
@@ -117,9 +118,9 @@ export function SectionHead({
 }) {
   return (
     <h2
-      className={`m-0 flex items-center gap-4 text-body font-[760] text-paper stretch-wide ${className}`}
+      className={`text-body text-paper stretch-wide m-0 flex items-center gap-4 font-[760] ${className}`}
     >
-      <span aria-hidden="true" className="block h-[1.5em] w-[0.5rem] shrink-0 bg-band" />
+      <span aria-hidden="true" className="bg-band block h-[1.5em] w-[0.5rem] shrink-0" />
       {children}
     </h2>
   );
@@ -131,8 +132,8 @@ export function SectionHead({
  */
 export function SectionTab({ children }: { readonly children: ReactNode }) {
   return (
-    <div className="flex min-h-[10rem] w-[3.5rem] flex-none items-end justify-center bg-band py-4">
-      <span className="rotate-180 text-body font-[760] whitespace-nowrap text-paper stretch-wide [writing-mode:vertical-rl]">
+    <div className="bg-band flex min-h-[10rem] w-[3.5rem] flex-none items-end justify-center py-4">
+      <span className="text-body text-paper stretch-wide rotate-180 font-[760] whitespace-nowrap [writing-mode:vertical-rl]">
         {children}
       </span>
     </div>
@@ -153,9 +154,9 @@ export function Notice({
   return (
     <p
       role="alert"
-      className={`m-0 flex items-start gap-4 text-body font-[560] text-paper ${className}`}
+      className={`text-body text-paper m-0 flex items-start gap-4 font-[560] ${className}`}
     >
-      <span aria-hidden="true" className="mt-[0.38em] block size-[0.75em] shrink-0 bg-alert" />
+      <span aria-hidden="true" className="bg-alert mt-[0.38em] block size-[0.75em] shrink-0" />
       <span>{children}</span>
     </p>
   );

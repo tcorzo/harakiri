@@ -40,7 +40,7 @@ export function PlayAction(props: ActionProps) {
       aria-label={props.label}
       tabIndex={props.focusable === false ? -1 : undefined}
       onClick={props.onPress}
-      className="focus-mark flex h-[4.5rem] shrink-0 items-center gap-4 bg-play px-8 text-heading font-[780] text-play-ink stretch-wide"
+      className="focus-mark bg-play text-heading text-play-ink stretch-wide flex h-[4.5rem] shrink-0 items-center gap-4 px-8 font-[780]"
     >
       <PlayGlyph />
       <span>{props.children ?? props.label}</span>
@@ -58,7 +58,7 @@ export function QuietAction(props: ActionProps) {
       aria-label={props.label}
       tabIndex={props.focusable === false ? -1 : undefined}
       onClick={props.onPress}
-      className="focus-mark flex h-[4.5rem] shrink-0 items-center gap-3 border-2 hairline px-7 text-body font-[560] text-paper stretch-semicondensed focus-visible:border-paper focus-visible:bg-paper focus-visible:text-ink"
+      className="focus-mark hairline text-body text-paper stretch-semicondensed focus-visible:border-paper focus-visible:bg-paper focus-visible:text-ink flex h-[4.5rem] shrink-0 items-center gap-3 border-2 px-7 font-[560]"
     >
       {props.children ?? props.label}
     </button>
@@ -74,9 +74,9 @@ export function ListAction(props: ActionProps & { readonly detail?: ReactNode })
       type="button"
       aria-label={props.label}
       onClick={props.onPress}
-      className="group focus-mark flex min-h-[4.5rem] w-full items-baseline gap-8 border-b-2 hairline px-4 py-4 text-left focus-visible:transform-none focus-visible:bg-paper focus-visible:text-ink"
+      className="group focus-mark hairline focus-visible:bg-paper focus-visible:text-ink flex min-h-[4.5rem] w-full items-baseline gap-8 border-b-2 px-4 py-4 text-left focus-visible:transform-none"
     >
-      <span className="text-heading font-[700] stretch-wide">{props.children ?? props.label}</span>
+      <span className="text-heading stretch-wide font-[700]">{props.children ?? props.label}</span>
       {props.detail === undefined ? null : (
         <span className="text-notes text-paper-dim stretch-condensed group-focus-visible:text-ink">
           {props.detail}

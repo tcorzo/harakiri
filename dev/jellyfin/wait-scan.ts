@@ -63,13 +63,13 @@ while (Date.now() < deadline) {
   const elapsed = Math.round((Date.now() - start) / 60_000);
   const pct = scan?.CurrentProgressPercentage?.toFixed(1) ?? "-";
   console.log(
-    `[${new Date().toISOString()} +${elapsed}m] scan ${scan?.State ?? "?"} ${pct}% | movies ${c.MovieCount} series ${c.SeriesCount} episodes ${c.EpisodeCount}`,
+    `[${new Date().toISOString()} +${elapsed}m] scan ${scan?.State ?? "?"} ${pct}% | movies ${c.MovieCount} series ${c.SeriesCount} episodes ${c.EpisodeCount}`
   );
   if (scan?.State === "Running") seenRunning = true;
   else if (seenRunning || Date.now() - start > IDLE_GRACE_MS) {
     finished = true;
     console.log(
-      `scan idle, last result: ${scan?.LastExecutionResult?.Status ?? "none"} at ${scan?.LastExecutionResult?.EndTimeUtc ?? "-"}`,
+      `scan idle, last result: ${scan?.LastExecutionResult?.Status ?? "none"} at ${scan?.LastExecutionResult?.EndTimeUtc ?? "-"}`
     );
     break;
   }
@@ -82,7 +82,7 @@ console.log(`\nitems: movies ${c.MovieCount}, series ${c.SeriesCount}, episodes 
 for (const type of ["Movie", "Series", "Episode"]) {
   const s = await imageStats(type);
   console.log(
-    `${type.padEnd(8)} total ${s.total} | Primary ${s.primary} | Backdrop ${s.backdrop} | Logo ${s.logo}`,
+    `${type.padEnd(8)} total ${s.total} | Primary ${s.primary} | Backdrop ${s.backdrop} | Logo ${s.logo}`
   );
 }
 process.exit(finished ? 0 : 1);

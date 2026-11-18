@@ -4,7 +4,7 @@ import { spawn } from "node:child_process";
 export function runAsync(
   command: string,
   args: readonly string[],
-  options: { timeoutMs?: number; env?: NodeJS.ProcessEnv } = {},
+  options: { timeoutMs?: number; env?: NodeJS.ProcessEnv } = {}
 ): Promise<{ stdout: string; stderr: string }> {
   const timeoutMs = options.timeoutMs ?? 300_000;
   return new Promise((resolve, reject) => {
@@ -22,7 +22,7 @@ export function runAsync(
       reject(
         error.code === "ENOENT"
           ? new Error(`${command} is not on PATH (run through mise so the pinned tools are found)`)
-          : error,
+          : error
       );
     });
     child.on("close", (code, signal) => {
@@ -31,8 +31,8 @@ export function runAsync(
       else
         reject(
           new Error(
-            `${command} ${args.join(" ")} ${signal ? `was killed by ${signal}` : `exited ${code}`}:\n${stderr}`,
-          ),
+            `${command} ${args.join(" ")} ${signal ? `was killed by ${signal}` : `exited ${code}`}:\n${stderr}`
+          )
         );
     });
   });
@@ -58,7 +58,7 @@ export function limiter(limit: number) {
           .finally(() => {
             active--;
             next();
-          }),
+          })
       );
       next();
     });

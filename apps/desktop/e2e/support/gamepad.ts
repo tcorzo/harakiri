@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+
 import type { Dpad } from "./keyboard";
 
 /** W3C "standard" mapping indices, as packages/input reads them. */
@@ -65,7 +66,7 @@ export async function setButton(page: Page, button: Button, pressed: boolean): P
       await new Promise(requestAnimationFrame);
       await new Promise(requestAnimationFrame);
     },
-    [BUTTON[button], pressed] as const,
+    [BUTTON[button], pressed] as const
   );
 }
 
@@ -80,7 +81,7 @@ export async function setAxis(page: Page, axis: 0 | 1, value: number): Promise<v
       await new Promise(requestAnimationFrame);
       await new Promise(requestAnimationFrame);
     },
-    [axis, value] as const,
+    [axis, value] as const
   );
 }
 

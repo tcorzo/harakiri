@@ -13,6 +13,7 @@ import {
 } from "@harakiri/jellyfin";
 import { getEpisodes, getItems, type BaseItemDto } from "@harakiri/jellyfin/generated";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
+
 import { toEntry, type Entry } from "./entry";
 import type { SignedIn } from "./session";
 
@@ -93,7 +94,7 @@ export function playedKeys(ctx: SignedIn, entry: Entry): readonly (readonly unkn
     keys.push(
       item(ctx, entry.series.id).queryKey,
       [...root, "seasons", entry.series.id],
-      [...root, "episodes", entry.series.id],
+      [...root, "episodes", entry.series.id]
     );
   }
   return keys;

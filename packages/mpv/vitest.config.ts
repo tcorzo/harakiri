@@ -1,4 +1,5 @@
 import { defineProject } from "vitest/config";
+
 import { hermeticExclude } from "../../vitest.shared";
 
 export default defineProject({

@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { createSocket, type Socket } from "node:dgram";
+
 import { afterEach, expect, test } from "vitest";
+
 import { discoverServers } from "./discovery";
 
 let responder: Socket | undefined;
@@ -53,6 +55,6 @@ test("returns an empty list when nobody answers", async () => {
   const { port } = await startResponder([]);
 
   await expect(discoverServers({ address: "127.0.0.1", port, timeoutMs: 100 })).resolves.toEqual(
-    [],
+    []
   );
 });

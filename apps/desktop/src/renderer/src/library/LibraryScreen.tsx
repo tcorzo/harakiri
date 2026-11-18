@@ -8,6 +8,7 @@ import { useQueries, useQuery, useQueryClient, useSuspenseQuery } from "@tanstac
 import { useNavigate } from "@tanstack/react-router";
 import { memo, useCallback, useEffect, useMemo, useRef, type ComponentType } from "react";
 import { preload } from "react-dom";
+
 import { imageUrl, type Entry } from "../data/entry";
 import {
   catalogueQuery,
@@ -94,7 +95,7 @@ function useProgramme(): readonly PlannedRow[] | null {
   const add = (
     section: Section,
     query: { readonly data: readonly Entry[] | undefined; readonly refetch: () => unknown },
-    shape: RowShape,
+    shape: RowShape
   ): void => {
     if (query.data === undefined) rows.push(failed(section, query.refetch));
     else if (query.data.length > 0)
@@ -132,7 +133,7 @@ function useOpenEntry(): (entry: Entry) => void {
   const navigate = useNavigate();
   return useCallback(
     (entry: Entry) => void navigate({ to: "/title/$id", params: { id: entry.id } }),
-    [navigate],
+    [navigate]
   );
 }
 
@@ -173,7 +174,7 @@ const Programme = memo(function Programme({
         if (entry.backdrop !== null) preload(backdropUrl(server, entry.backdrop), { as: "image" });
       }, relightRestMs);
     },
-    [ctx, queryClient, server],
+    [ctx, queryClient, server]
   );
 
   // Up from the first row returns to the stage, which the spatial search cannot see while it is hidden.
@@ -200,7 +201,7 @@ const Programme = memo(function Programme({
     <div
       // A held d-pad moves a row every 120 ms, faster than the 700 ms glide, so while it travels the
       // rows jump with focus and the glide returns once it rests (the relight ends the travel).
-      className={`absolute inset-x-0 top-0 flex flex-col gap-12 pl-[calc(var(--spacing-safe-x)+var(--spacing-margin)+2.5rem)] ease-curtain ${
+      className={`ease-curtain absolute inset-x-0 top-0 flex flex-col gap-12 pl-[calc(var(--spacing-safe-x)+var(--spacing-margin)+2.5rem)] ${
         travelling ? "" : "transition-transform duration-700"
       }`}
       style={{ transform: `translateY(${offset})` }}
@@ -273,16 +274,16 @@ function UpNext({
           className="aspect-video w-full object-cover opacity-80 group-focus-visible:opacity-100"
         />
       )}
-      <span className="truncate text-body font-[700] stretch-semicondensed">{entry.title}</span>
-      <span className="flex items-baseline justify-between gap-4 text-caption font-[560] whitespace-nowrap text-paper-dim stretch-condensed">
+      <span className="text-body stretch-semicondensed truncate font-[700]">{entry.title}</span>
+      <span className="text-caption text-paper-dim stretch-condensed flex items-baseline justify-between gap-4 font-[560] whitespace-nowrap">
         <span>{auto ? `Next in ${heroHoldMs / 1000} quiet seconds` : "Next screening"}</span>
         {number === null ? null : <span>{catalogueLabel(number)}</span>}
       </span>
-      <span aria-hidden="true" className="block h-[0.1875rem] w-full bg-ink-line">
+      <span aria-hidden="true" className="bg-ink-line block h-[0.1875rem] w-full">
         {auto ? (
           <span
             key={since}
-            className="block h-full origin-left animate-hold bg-paper"
+            className="animate-hold bg-paper block h-full origin-left"
             style={{ animationDuration: `${heroHoldMs}ms` }}
           />
         ) : null}
@@ -301,7 +302,7 @@ function SettingsLink() {
       aria-label="Settings"
       onClick={() => void navigate({ to: "/settings" })}
       // Full paper, not dim: it sits on the thin top wash, over whatever the backdrop's sky is.
-      className="focus-mark px-4 py-2 text-body font-[600] text-paper stretch-semicondensed focus-visible:bg-paper focus-visible:text-ink"
+      className="focus-mark text-body text-paper stretch-semicondensed focus-visible:bg-paper focus-visible:text-ink px-4 py-2 font-[600]"
     >
       Settings
     </button>
@@ -313,9 +314,9 @@ function EmptyLibrary() {
     focusFirst("library-settings");
   }, []);
   return (
-    <main className="flex h-screen flex-col justify-end gap-6 px-safe-x py-safe-y">
-      <h1 className="m-0 text-marquee font-[820] stretch-extra-wide">An empty programme</h1>
-      <p className="max-w-[60ch] text-body text-paper-dim">
+    <main className="px-safe-x py-safe-y flex h-screen flex-col justify-end gap-6">
+      <h1 className="text-marquee stretch-extra-wide m-0 font-[820]">An empty programme</h1>
+      <p className="text-body text-paper-dim max-w-[60ch]">
         The server has no films or series this account can see yet. Add a library on the server, let
         it scan, then come back.
       </p>
@@ -401,20 +402,20 @@ export function LibraryScreen() {
         />
         <InkField deep={!holding} />
 
-        <div className="absolute top-safe-y left-safe-x flex items-baseline gap-4">
-          <span className="text-heading font-[820] stretch-extra-wide">harakiri</span>
+        <div className="top-safe-y left-safe-x absolute flex items-baseline gap-4">
+          <span className="text-heading stretch-extra-wide font-[820]">harakiri</span>
           <span className="text-caption text-paper-dim stretch-condensed">
             {session.serverName}
           </span>
         </div>
-        <div className="absolute top-[calc(var(--spacing-safe-y)-0.5rem)] right-safe-x">
+        <div className="right-safe-x absolute top-[calc(var(--spacing-safe-y)-0.5rem)]">
           <SettingsLink />
         </div>
 
         {shown === null ? null : (
           <section
             aria-label={holding ? "Tonight's screening" : shown.title}
-            className="absolute left-safe-x flex items-stretch gap-10 transition-transform duration-700 ease-curtain"
+            className="left-safe-x ease-curtain absolute flex items-stretch gap-10 transition-transform duration-700"
             style={{
               bottom: `${peekRem + 3}rem`,
               // Lifts the block so its last visible line rests just above the focused row.
@@ -428,7 +429,7 @@ export function LibraryScreen() {
               <TitleMark entry={shown} server={server} compact={!holding} />
               <EntryNotes entry={shown}>
                 {holding || shown.overview === null ? null : (
-                  <p className="line-clamp-2 max-w-[60ch] text-body text-paper-dim">
+                  <p className="text-body text-paper-dim line-clamp-2 max-w-[60ch]">
                     {shown.overview}
                   </p>
                 )}
@@ -463,7 +464,7 @@ export function LibraryScreen() {
 
         {next === null ? null : (
           <div
-            className={`absolute right-safe-x transition-opacity duration-500 ${holding ? "opacity-100" : "opacity-0"}`}
+            className={`right-safe-x absolute transition-opacity duration-500 ${holding ? "opacity-100" : "opacity-0"}`}
             style={{ bottom: `${peekRem + 3}rem` }}
           >
             <UpNext

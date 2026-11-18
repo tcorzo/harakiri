@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+
 import { outputFromPactl } from "./audio-output";
 
 const info = { default_sink_name: "alsa_output.hdmi" };
@@ -19,7 +20,7 @@ test("an HDMI sink with passthrough on takes exactly the codecs PipeWire lists",
           "mpeg-iec61937",
         ],
       },
-    ]),
+    ])
   ).toEqual({ kind: "known", name: "AV receiver", bitstream: ["ac3", "eac3", "truehd", "dts-hd"] });
 });
 
@@ -27,7 +28,7 @@ test("an analog sink takes no bitstream", () => {
   expect(
     outputFromPactl({ default_sink_name: "usb-interface" }, [
       { name: "usb-interface", description: "USB interface", formats: ["pcm"] },
-    ]),
+    ])
   ).toEqual({ kind: "known", name: "USB interface", bitstream: [] });
 });
 

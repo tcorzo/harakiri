@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useSyncExternalStore } from "react";
 import { useStore } from "zustand";
+
 import { activity } from "../input/activity";
 import { useLit } from "./lit";
 
@@ -49,7 +50,7 @@ function subscribeReducedMotion(onChange: () => void): () => void {
 export function useReducedMotion(): boolean {
   return useSyncExternalStore(
     subscribeReducedMotion,
-    () => window.matchMedia(reducedMotionQuery).matches,
+    () => window.matchMedia(reducedMotionQuery).matches
   );
 }
 
@@ -93,7 +94,7 @@ export function useHeroCycle(ids: readonly string[], holding: boolean) {
           if (Date.now() - state.since < heroHoldMs) arm();
           else send({ type: "tick", now: Date.now(), count, auto });
         },
-        Math.max(0, state.since + heroHoldMs - Date.now()),
+        Math.max(0, state.since + heroHoldMs - Date.now())
       );
     };
     arm();

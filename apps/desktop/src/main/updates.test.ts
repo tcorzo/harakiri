@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
 import { type UpdateDeps, type UpdaterLike, ownAppImage, startUpdates } from "./updates";
 
 function fakeUpdater() {
@@ -289,7 +290,7 @@ describe("ownAppImage", () => {
         appImage,
         appDir: "/tmp/.mount_harakiAbC",
         execPath: "/tmp/.mount_harakiAbC/harakiri",
-      }),
+      })
     ).toBe(appImage);
   });
 
@@ -299,13 +300,13 @@ describe("ownAppImage", () => {
         appImage: "/apps/Terminal.AppImage",
         appDir: "/tmp/.mount_TerminXyZ",
         execPath: "/repo/apps/desktop/dist/linux-unpacked/harakiri",
-      }),
+      })
     ).toBeUndefined();
   });
 
   test("ignores an APPIMAGE without an APPDIR", () => {
     expect(
-      ownAppImage({ appImage, appDir: undefined, execPath: "/tmp/.mount_harakiAbC/harakiri" }),
+      ownAppImage({ appImage, appDir: undefined, execPath: "/tmp/.mount_harakiAbC/harakiri" })
     ).toBeUndefined();
   });
 
@@ -315,7 +316,7 @@ describe("ownAppImage", () => {
         appImage,
         appDir: "/tmp/.mount_harak",
         execPath: "/tmp/.mount_harakiAbC/harakiri",
-      }),
+      })
     ).toBeUndefined();
   });
 
@@ -325,7 +326,7 @@ describe("ownAppImage", () => {
         appImage: undefined,
         appDir: "/tmp/.mount_harakiAbC",
         execPath: "/tmp/.mount_harakiAbC/harakiri",
-      }),
+      })
     ).toBeUndefined();
   });
 });

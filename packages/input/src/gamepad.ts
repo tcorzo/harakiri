@@ -80,7 +80,7 @@ export function stepPad(
   prev: PadState,
   pad: PadSnapshot,
   now: number,
-  timing: RepeatTiming = defaultRepeat,
+  timing: RepeatTiming = defaultRepeat
 ): PadStep {
   const active = contacts(prev, pad);
   const state = new Map<Action, Hold>();

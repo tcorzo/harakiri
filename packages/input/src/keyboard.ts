@@ -31,7 +31,7 @@ export interface KeyContext {
 
 export function keyToAction(
   key: string,
-  { editing = false, repeat = false }: KeyContext = {},
+  { editing = false, repeat = false }: KeyContext = {}
 ): Action | undefined {
   const binding = Object.hasOwn(keyBindings, key) ? keyBindings[key] : undefined;
   if (binding === undefined || (editing && !binding.whileEditing)) return undefined;

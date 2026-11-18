@@ -1,5 +1,6 @@
 import { readdirSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
+
 import { getLogger } from "@logtape/logtape";
 
 const logger = getLogger(["harakiri", "lifecycle"]);
@@ -9,7 +10,7 @@ export const STOP_CAP_MS = 5000;
 /** Runs `stop`, giving up after `capMs` so a hung mpv can never keep the app from quitting. */
 export async function stopWithin(
   stop: () => Promise<void>,
-  capMs: number,
+  capMs: number
 ): Promise<"stopped" | "timed-out" | "failed"> {
   let timer: NodeJS.Timeout | undefined;
   const timeout = new Promise<"timed-out">((resolve) => {
@@ -22,7 +23,7 @@ export async function stopWithin(
         (error: unknown) => {
           logger.error("Stopping playback on quit failed: {error}", { error });
           return "failed" as const;
-        },
+        }
       ),
       timeout,
     ]);
@@ -48,7 +49,7 @@ interface HoldOptions {
 export function holdQuitUntilStopped(
   app: QuittingApp,
   stop: () => Promise<void>,
-  options: HoldOptions = {},
+  options: HoldOptions = {}
 ): void {
   const capMs = options.capMs ?? STOP_CAP_MS;
   let stopping = false;

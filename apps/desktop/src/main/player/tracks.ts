@@ -40,16 +40,16 @@ export function trackTable(
   source: MediaSourceInfo,
   method: PlayMethod,
   serverUrl: string,
-  transcodedAudioIndex?: number,
+  transcodedAudioIndex?: number
 ): TrackTable {
   const streams = (source.MediaStreams ?? []).toSorted(byIndex);
   const embeddedAudio = streams.filter((s) => s.Type === "Audio" && !s.IsExternal);
   const subs = streams.filter((s) => s.Type === "Subtitle");
   const embeddedSubs = subs.filter(
-    (s) => (s.DeliveryMethod ?? (s.IsExternal ? "External" : "Embed")) === "Embed",
+    (s) => (s.DeliveryMethod ?? (s.IsExternal ? "External" : "Embed")) === "Embed"
   );
   const sidecars = subs.filter(
-    (s) => s.DeliveryMethod === "External" && typeof s.DeliveryUrl === "string",
+    (s) => s.DeliveryMethod === "External" && typeof s.DeliveryUrl === "string"
   );
   const audio =
     method === "DirectPlay"
@@ -68,7 +68,7 @@ export function trackTable(
  */
 export function mpvTrack(
   tracks: readonly Track[],
-  index: number | null | undefined,
+  index: number | null | undefined
 ): number | false | undefined {
   if (index === null || index === undefined) return undefined;
   if (index < 0) return false;

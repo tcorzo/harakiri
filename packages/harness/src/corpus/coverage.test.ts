@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+
 import { CATALOG, type VideoRangeType } from "./catalog";
 
 // What the contract and live tiers prove is only as wide as the corpus: these are the cases the
@@ -16,7 +17,7 @@ test("the corpus carries every passthrough codec as Jellyfin reports it", () => 
     "dts DTS-HD MA + DTS:X",
   ];
   const covered = new Set(
-    CATALOG.flatMap((e) => e.expect.audio.map((a) => [a.codec, a.profile].join(" ").trim())),
+    CATALOG.flatMap((e) => e.expect.audio.map((a) => [a.codec, a.profile].join(" ").trim()))
   );
   expect(passthrough.filter((codec) => !covered.has(codec))).toEqual([]);
 });

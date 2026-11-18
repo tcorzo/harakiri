@@ -1,5 +1,6 @@
 import { ItemId } from "@harakiri/jellyfin";
 import { createFileRoute } from "@tanstack/react-router";
+
 import { toEntry } from "../../data/entry";
 import { catalogueQuery, episodesQuery, rawItemQuery, seasonsQuery } from "../../data/queries";
 import { initialSeason } from "../../title/SeriesPage";
@@ -16,7 +17,7 @@ export const Route = createFileRoute("/_signedIn/title/$id")({
     // season's episodes load first; Play then exists to take focus.
     if (item.Type === "Series") {
       const seasons = (await queryClient.ensureQueryData(seasonsQuery(signedIn, params.id))).map(
-        toEntry,
+        toEntry
       );
       const season = seasons[initialSeason(params.id, seasons)];
       if (season !== undefined)

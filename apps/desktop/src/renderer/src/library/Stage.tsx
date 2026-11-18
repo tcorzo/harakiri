@@ -1,5 +1,6 @@
 import type { ServerUrl } from "@harakiri/jellyfin";
 import { useState, type ReactNode } from "react";
+
 import { imageUrl, programmeNotes, type Entry, type ImageRef } from "../data/entry";
 import { ProgrammeNotes, SectionTab, SeenMark } from "../ui/marks";
 
@@ -7,7 +8,7 @@ export function backdropUrl(server: ServerUrl, image: ImageRef): string {
   return imageUrl(
     server,
     image,
-    Math.min(3840, window.screen.width * (window.devicePixelRatio || 1)),
+    Math.min(3840, window.screen.width * (window.devicePixelRatio || 1))
   );
 }
 
@@ -16,7 +17,7 @@ export function Backdrop({ url }: { readonly url: string | null }) {
   const [layers, setLayers] = useState<readonly (string | null)[]>([url]);
   if (layers.at(-1) !== url) setLayers([layers.at(-1) ?? null, url]);
   return (
-    <div aria-hidden="true" className="absolute inset-0 overflow-hidden bg-ink">
+    <div aria-hidden="true" className="bg-ink absolute inset-0 overflow-hidden">
       {layers.map((layer, i) =>
         layer === null ? null : (
           <img
@@ -29,7 +30,7 @@ export function Backdrop({ url }: { readonly url: string | null }) {
               i === layers.length - 1 && layers.length > 1 ? "animate-relight" : ""
             }`}
           />
-        ),
+        )
       )}
     </div>
   );
@@ -40,7 +41,7 @@ export function InkField({ deep }: { readonly deep: boolean }) {
   return (
     <div
       aria-hidden="true"
-      className="absolute inset-0 transition-opacity duration-700 ease-curtain"
+      className="ease-curtain absolute inset-0 transition-opacity duration-700"
       style={{
         // An eased ramp rather than a hard stop, so a bright backdrop fades into the ink instead of
         // ending on a horizon line; the thin top band keeps the wordmark and Settings legible.
@@ -63,17 +64,17 @@ export function Margin({
   readonly section: string;
 }) {
   return (
-    <div className="flex w-margin shrink-0 flex-col items-start gap-4 self-stretch">
+    <div className="w-margin flex shrink-0 flex-col items-start gap-4 self-stretch">
       {number === null ? null : (
         <p className="m-0 flex items-baseline gap-1 leading-none">
-          <span className="text-body font-[560] text-paper-dim stretch-condensed">No.</span>
-          <span className="text-title font-[300] stretch-condensed">
+          <span className="text-body text-paper-dim stretch-condensed font-[560]">No.</span>
+          <span className="text-title stretch-condensed font-[300]">
             {String(number).padStart(3, "0")}
           </span>
         </p>
       )}
       {seen ? (
-        <span className="flex items-center gap-2 text-caption font-[620] text-paper stretch-condensed">
+        <span className="text-caption text-paper stretch-condensed flex items-center gap-2 font-[620]">
           <SeenMark />
           Seen
         </span>
@@ -102,7 +103,7 @@ export function TitleMark({
           src={imageUrl(
             server,
             entry.logo,
-            0.33 * window.innerWidth * (window.devicePixelRatio || 1),
+            0.33 * window.innerWidth * (window.devicePixelRatio || 1)
           )}
           className={`block w-auto max-w-[33vw] object-contain object-left-bottom drop-shadow-[0_0.25rem_1.5rem_var(--color-shade)] ${
             compact ? "max-h-[8rem]" : "max-h-[13rem]"
@@ -113,7 +114,7 @@ export function TitleMark({
   }
   return (
     <h1
-      className={`m-0 max-w-[38vw] font-[820] text-balance stretch-extra-wide ${
+      className={`stretch-extra-wide m-0 max-w-[38vw] font-[820] text-balance ${
         compact ? "text-title" : "text-marquee"
       }`}
     >
@@ -132,7 +133,7 @@ export function EntryNotes({
   return (
     <div className="flex flex-col gap-3">
       {entry.kind === "Episode" ? (
-        <p className="text-body font-[620] text-paper stretch-semicondensed">{entry.title}</p>
+        <p className="text-body text-paper stretch-semicondensed font-[620]">{entry.title}</p>
       ) : null}
       <ProgrammeNotes facts={programmeNotes(entry)} />
       {children}

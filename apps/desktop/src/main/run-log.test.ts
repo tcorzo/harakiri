@@ -1,8 +1,10 @@
 import { mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import type { LogRecord } from "@logtape/logtape";
 import { afterEach, beforeEach, expect, test } from "vitest";
+
 import { openRunLog } from "./run-log";
 
 let dir: string;
@@ -29,7 +31,7 @@ test("each line is on disk as soon as it is logged, in a file only the owner can
   sink(record("mpv: [ao/pipewire] no target node available"));
   expect(path).toBe(join(dir, `harakiri-2026-10-30T11-02-03-${process.pid}.log`));
   expect(await readFile(path, "utf8")).toBe(
-    "2026-10-30 11:02:03.000 +00 [WRN] harakiri·player: mpv: [ao/pipewire] no target node available\n",
+    "2026-10-30 11:02:03.000 +00 [WRN] harakiri·player: mpv: [ao/pipewire] no target node available\n"
   );
   expect((await stat(path)).mode & 0o777).toBe(0o600);
   sink[Symbol.dispose]();

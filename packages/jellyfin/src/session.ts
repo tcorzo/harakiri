@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { type Client, createClient } from "./generated/client";
 import {
   authenticateUserByName,
@@ -44,7 +45,7 @@ export type QuickConnectCode = {
 export const createJellyfinClient = (
   server: ServerUrl,
   identity: ClientIdentity,
-  token?: AccessToken,
+  token?: AccessToken
 ): Client =>
   createClient({
     baseUrl: server.replace(/\/$/, ""),
@@ -72,7 +73,7 @@ const toSession = async (
   server: ServerUrl,
   identity: ClientIdentity,
   client: Client,
-  signIn: Promise<Answer>,
+  signIn: Promise<Answer>
 ): Promise<SignInResult> => {
   let answers: [Answer, Answer];
   try {
@@ -112,20 +113,20 @@ export const authenticate = (
   server: ServerUrl,
   username: string,
   password: string,
-  identity: ClientIdentity,
+  identity: ClientIdentity
 ): Promise<SignInResult> => {
   const client = createJellyfinClient(server, identity);
   return toSession(
     server,
     identity,
     client,
-    authenticateUserByName({ client, body: { Username: username, Pw: password } }),
+    authenticateUserByName({ client, body: { Username: username, Pw: password } })
   );
 };
 
 export const quickConnectEnabled = async (
   server: ServerUrl,
-  identity: ClientIdentity,
+  identity: ClientIdentity
 ): Promise<boolean> => {
   const client = createJellyfinClient(server, identity);
   const { data } = await getQuickConnectEnabled({ client, throwOnError: true });
@@ -134,7 +135,7 @@ export const quickConnectEnabled = async (
 
 export const initiateQuickConnect = async (
   server: ServerUrl,
-  identity: ClientIdentity,
+  identity: ClientIdentity
 ): Promise<QuickConnectCode> => {
   const client = createJellyfinClient(server, identity);
   const { data } = await quickConnectInitiate({ client, throwOnError: true });
@@ -148,7 +149,7 @@ export const initiateQuickConnect = async (
 export const pollQuickConnect = async (
   server: ServerUrl,
   identity: ClientIdentity,
-  secret: string,
+  secret: string
 ): Promise<boolean> => {
   const client = createJellyfinClient(server, identity);
   const { data } = await getQuickConnectState({ client, throwOnError: true, query: { secret } });
@@ -158,13 +159,13 @@ export const pollQuickConnect = async (
 export const authenticateWithQuickConnect = (
   server: ServerUrl,
   identity: ClientIdentity,
-  secret: string,
+  secret: string
 ): Promise<SignInResult> => {
   const client = createJellyfinClient(server, identity);
   return toSession(
     server,
     identity,
     client,
-    quickConnectAuthenticate({ client, body: { Secret: secret } }),
+    quickConnectAuthenticate({ client, body: { Secret: secret } })
   );
 };

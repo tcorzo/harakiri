@@ -2,6 +2,7 @@ import type { ServerUrl } from "@harakiri/jellyfin";
 import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-navigation";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { memo, useRef, type ComponentType, type ReactNode } from "react";
+
 import type { Entry } from "../data/entry";
 import { QuietAction } from "../ui/actions";
 import { Notice, rootRem, SectionHead } from "../ui/marks";
@@ -28,9 +29,9 @@ const gapRem = 2;
 
 function RowHeader({ name, children }: { readonly name: string; readonly children: ReactNode }) {
   return (
-    <header className="flex h-[3rem] items-center gap-6 pr-safe-x">
+    <header className="pr-safe-x flex h-[3rem] items-center gap-6">
       <SectionHead>{name}</SectionHead>
-      <span aria-hidden="true" className="h-0 flex-1 border-t-2 hairline" />
+      <span aria-hidden="true" className="hairline h-0 flex-1 border-t-2" />
       {children}
     </header>
   );
@@ -87,11 +88,11 @@ export const ProgrammeRow = memo(function ProgrammeRow({
     <FocusContext.Provider value={focusKey}>
       <section ref={ref} aria-label={sectionName} className="flex flex-col gap-5">
         <RowHeader name={sectionName}>
-          <span className="text-caption font-[600] text-paper-dim stretch-condensed">
+          <span className="text-caption text-paper-dim stretch-condensed font-[600]">
             {entries.length} {entries.length === 1 ? "title" : "titles"}
           </span>
         </RowHeader>
-        <div ref={scroller} className="-ml-6 overflow-x-hidden py-6 pr-safe-x">
+        <div ref={scroller} className="pr-safe-x -ml-6 overflow-x-hidden py-6">
           <div
             className="relative"
             style={{ width: virtualizer.getTotalSize(), height: `${heightRem}rem` }}
@@ -147,7 +148,7 @@ export const FailedRow = memo(function FailedRow({
     <FocusContext.Provider value={focusKey}>
       <section ref={ref} aria-label={sectionName} className="flex flex-col gap-5">
         <RowHeader name={sectionName}>{null}</RowHeader>
-        <div className="flex items-center gap-8 py-6 pr-safe-x">
+        <div className="pr-safe-x flex items-center gap-8 py-6">
           <Notice>This section did not load from the server.</Notice>
           <QuietAction
             focusKey={retryKey(sectionId)}

@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+
 import { ServerUrl } from "./ids";
 
 test.each([

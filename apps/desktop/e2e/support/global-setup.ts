@@ -3,7 +3,9 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
+
 import { z } from "zod";
+
 import { CATALOG } from "../../../../packages/harness/src/corpus/catalog";
 import { fateState } from "../../../../packages/harness/src/corpus/fate";
 import { MANIFEST, readManifest } from "../../../../packages/harness/src/corpus/generate";
@@ -93,7 +95,7 @@ export default async function globalSetup(): Promise<void> {
   if (REAL_SERVER !== undefined && REAL_SERVER !== "") return;
   if (spawnSync("podman", ["--version"]).error !== undefined) {
     throw new Error(
-      "The e2e suite runs a real Jellyfin in podman, and podman is not installed. Install it (Fedora: sudo dnf install podman), or point HARAKIRI_E2E_SERVER at a running Jellyfin.",
+      "The e2e suite runs a real Jellyfin in podman, and podman is not installed. Install it (Fedora: sudo dnf install podman), or point HARAKIRI_E2E_SERVER at a running Jellyfin."
     );
   }
 

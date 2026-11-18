@@ -1,6 +1,7 @@
 import { getCurrentFocusKey, useFocusable } from "@noriginmedia/norigin-spatial-navigation";
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test } from "vitest";
+
 import { restoreKeys } from "../library/lit";
 import { startSpatial, stopSpatial } from "../test/spatial";
 import { focusFirst } from "./focus";
@@ -27,7 +28,7 @@ test("a remembered card that is gone falls back to its row, found by id, not by 
       <Focusable focusKey="row|resume" />
       <Focusable focusKey="row|next-up" />
       <Focusable focusKey="hero-play" />
-    </>,
+    </>
   );
   let moved = false;
   await act(async () => {

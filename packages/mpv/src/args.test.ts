@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+
 import { buildPlaybackArgs, configArg } from "./args";
 
 describe("buildPlaybackArgs", () => {
@@ -24,7 +25,7 @@ describe("buildPlaybackArgs", () => {
         audioDevice: "pipewire/alsa_output.hdmi-stereo",
         fullscreen: false,
         gamepad: false,
-      }),
+      })
     ).toEqual([
       "--vo=gpu-next",
       "--gpu-api=vulkan",
@@ -40,7 +41,7 @@ describe("buildPlaybackArgs", () => {
 
   test("passthrough off is the explicit `none`, which leaves --audio-spdif out", () => {
     expect(buildPlaybackArgs({ audioPassthrough: "none" })).not.toContainEqual(
-      expect.stringMatching(/^--audio-spdif/),
+      expect.stringMatching(/^--audio-spdif/)
     );
     expect(buildPlaybackArgs({ audioPassthrough: ["ac3"] })).toContain("--audio-spdif=ac3");
   });
@@ -48,7 +49,7 @@ describe("buildPlaybackArgs", () => {
 
 test("configArg points mpv at an app-owned dir, or at nothing", () => {
   expect(configArg({ dir: "/data/u/.config/harakiri/mpv" })).toBe(
-    "--config-dir=/data/u/.config/harakiri/mpv",
+    "--config-dir=/data/u/.config/harakiri/mpv"
   );
   expect(configArg("none")).toBe("--no-config");
 });

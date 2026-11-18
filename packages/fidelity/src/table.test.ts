@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+
 import { expect, test } from "vitest";
+
 import { renderTables } from "./table";
 
 const committed = join(import.meta.dirname, "../../../docs/fidelity/compatibility.md");

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+
 import { listsAll, versionAtLeast } from "./doctor";
 import { compareVersions, parseVersion } from "./version";
 
@@ -51,7 +52,7 @@ describe("check judges", () => {
   test("names the encoders an ffmpeg listing lacks", () => {
     const encoders = listsAll(
       ["ac3", "eac3", "dca"],
-      (name) => new RegExp(`^\\s*\\S+\\s+${name}\\s`, "m"),
+      (name) => new RegExp(`^\\s*\\S+\\s+${name}\\s`, "m")
     );
     const listing = ` A....D ac3                  ATSC A/52A (AC-3)\n A....D eac3                 ATSC A/52 E-AC-3\n`;
     expect(encoders(exited(listing))).toEqual({ status: "missing", detail: "missing dca" });

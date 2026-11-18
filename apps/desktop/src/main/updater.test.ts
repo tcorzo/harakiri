@@ -1,7 +1,9 @@
 // @vitest-environment node
 import { EventEmitter } from "node:events";
+
 import type { BaseUpdater, CancellationToken } from "electron-updater";
 import { describe, expect, it, vi } from "vitest";
+
 import { adaptUpdater } from "./updater";
 
 function fakeUpdater() {

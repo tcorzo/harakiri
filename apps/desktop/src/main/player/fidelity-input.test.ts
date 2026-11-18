@@ -2,6 +2,7 @@
 import { type AudioOutput, fidelityView } from "@harakiri/fidelity";
 import { ServerUrl } from "@harakiri/jellyfin";
 import { expect, test } from "vitest";
+
 import { type FixtureName, playbackInfo } from "./fixtures/load";
 import { startingFidelity } from "./playback";
 import { resolve } from "./resolve";
@@ -18,10 +19,10 @@ const viewOf = (
   fixture: FixtureName,
   itemId: string,
   output: AudioOutput,
-  audioStreamIndex?: number,
+  audioStreamIndex?: number
 ) =>
   fidelityView(
-    startingFidelity(resolve(playbackInfo(fixture), { itemId, audioStreamIndex }, server), output),
+    startingFidelity(resolve(playbackInfo(fixture), { itemId, audioStreamIndex }, server), output)
   );
 
 const DV_TRUEHD = "fe56760a326f401c35863368589d15f1";
@@ -68,7 +69,7 @@ test("a source the server never probed states no facts it cannot back", () => {
       ],
     },
     { itemId: "0123456789abcdef0123456789abcdef" },
-    server,
+    server
   );
   const view = fidelityView(startingFidelity(resolution, receiver));
   expect([view.downgrades, view.facts]).toEqual([

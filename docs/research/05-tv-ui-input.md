@@ -103,7 +103,7 @@ await page.addInitScript(() => {
   (window as any).__pad = pad;
   navigator.getGamepads = () => [pad as any, null, null, null];
   window.addEventListener("load", () =>
-    window.dispatchEvent(Object.assign(new Event("gamepadconnected"), { gamepad: pad })),
+    window.dispatchEvent(Object.assign(new Event("gamepadconnected"), { gamepad: pad }))
   );
 });
 // press d-pad down for 2 frames

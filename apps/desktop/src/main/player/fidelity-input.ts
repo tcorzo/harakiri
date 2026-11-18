@@ -1,7 +1,8 @@
 import type { Delivery, PictureSource, SoundCarriage, SoundSource } from "@harakiri/fidelity";
 import type { PictureClass, SoundClass, SoundFormat } from "@harakiri/jellyfin";
-import type { MediaSourceInfo } from "@harakiri/jellyfin/generated";
 import { classifyFidelity } from "@harakiri/jellyfin";
+import type { MediaSourceInfo } from "@harakiri/jellyfin/generated";
+
 import type { Resolution } from "./resolve";
 
 const CARRIAGE: Readonly<Record<SoundFormat, SoundCarriage>> = {

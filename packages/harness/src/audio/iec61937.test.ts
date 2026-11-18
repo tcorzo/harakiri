@@ -1,11 +1,12 @@
 import { describe, expect, test } from "vitest";
+
 import { elementaryStream, Iec61937Error, scanBursts } from "./iec61937";
 
 /** Writes one burst the way spdifenc does: LE header words, payload byte-swapped into LE words. */
 function burst(pc: number, pd: number, payloadBigEndian: readonly number[], padTo = 0): number[] {
   const padded = payloadBigEndian.length & 1 ? [...payloadBigEndian, 0] : [...payloadBigEndian];
   const swapped = padded.flatMap((_, i) =>
-    i % 2 === 0 ? [padded[i + 1] ?? 0, padded[i] ?? 0] : [],
+    i % 2 === 0 ? [padded[i + 1] ?? 0, padded[i] ?? 0] : []
   );
   const out = [0x72, 0xf8, 0x1f, 0x4e, pc & 0xff, pc >> 8, pd & 0xff, pd >> 8, ...swapped];
   return [...out, ...Array.from({ length: Math.max(0, padTo - out.length) }, () => 0)];
@@ -47,14 +48,14 @@ describe("scanBursts", () => {
 
   test("rejects a reserved data type", () => {
     expect(() => scanBursts(Uint8Array.from(burst(0x0014, 0, [])))).toThrow(
-      new Iec61937Error("reserved data type 0x14 at byte 0"),
+      new Iec61937Error("reserved data type 0x14 at byte 0")
     );
   });
 
   test("rejects a burst cut off by the end of the stream", () => {
     const cut = burst(0x0015, 6, [1, 2, 3, 4, 5, 6]).slice(0, 12);
     expect(() => scanBursts(Uint8Array.from(cut))).toThrow(
-      new Iec61937Error("eac3 burst at byte 0 needs 6 bytes, stream ends first"),
+      new Iec61937Error("eac3 burst at byte 0 needs 6 bytes, stream ends first")
     );
   });
 });
@@ -96,7 +97,7 @@ describe("elementaryStream", () => {
       ...burst(0x0015, 2, [0x0b, 0x77]),
     ]);
     expect(() => elementaryStream(scanBursts(stream))).toThrow(
-      new Iec61937Error("mixed codecs: ac3 and eac3 at byte 10"),
+      new Iec61937Error("mixed codecs: ac3 and eac3 at byte 10")
     );
   });
 
@@ -133,7 +134,7 @@ describe("elementaryStream", () => {
   test("rejects a DTS type IV burst without the DTS-HD start code", () => {
     const stream = Uint8Array.from(burst(0x0411, 4, [0xde, 0xad, 0xbe, 0xef]));
     expect(() => elementaryStream(scanBursts(stream))).toThrow(
-      new Iec61937Error("DTS type IV burst at byte 0 lacks the DTS-HD start code"),
+      new Iec61937Error("DTS type IV burst at byte 0 lacks the DTS-HD start code")
     );
   });
 });

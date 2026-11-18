@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+
 import { runTool, runToolOrThrow } from "./process";
 
 describe("runTool", () => {
@@ -11,7 +12,7 @@ describe("runTool", () => {
       stderr: "",
     });
     expect(() => runToolOrThrow("sleep", ["5"], 200)).toThrow(
-      "sleep 5 timed out after 200ms and was killed by SIGKILL:\n",
+      "sleep 5 timed out after 200ms and was killed by SIGKILL:\n"
     );
   });
 

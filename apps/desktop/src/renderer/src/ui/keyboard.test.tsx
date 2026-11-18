@@ -7,6 +7,7 @@ import {
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useEffect, useState } from "react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
+
 import { place, remeasure, startSpatial, stopSpatial } from "../test/spatial";
 import { ListAction } from "./actions";
 import { focusFirst } from "./focus";
@@ -65,7 +66,7 @@ function layOut(): void {
       key,
       i < 40
         ? { x: 400 + (i % 10) * 100, y: 250 + Math.floor(i / 10) * 80, width: 90, height: 70 }
-        : { x: 400 + (i - 40) * 200, y: 570, width: 190, height: 70 },
+        : { x: 400 + (i - 40) * 200, y: 570, width: 190, height: 70 }
     );
   }
 }

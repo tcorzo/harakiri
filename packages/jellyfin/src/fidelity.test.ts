@@ -1,6 +1,8 @@
 /// <reference types="node" />
 import { readFileSync } from "node:fs";
+
 import { describe, expect, test } from "vitest";
+
 import { classifyFidelity } from "./fidelity";
 import { zMediaSourceInfo } from "./generated/zod.gen";
 
@@ -12,7 +14,7 @@ const Fixture = zMediaSourceInfo.pick({
 });
 const fixture = (name: string) =>
   Fixture.parse(
-    JSON.parse(readFileSync(new URL(`./__fixtures__/${name}.json`, import.meta.url), "utf8")),
+    JSON.parse(readFileSync(new URL(`./__fixtures__/${name}.json`, import.meta.url), "utf8"))
   );
 
 const dovInvalidSdrAac = fixture("dovi-invalid-sdr-aac");
@@ -134,7 +136,7 @@ test("an explicit audio track describes that track: a default Russian AC3 stereo
 
 test("an E-AC3 Atmos track keeps the server's 5.1.2 layout", () => {
   expect(classifyFidelity(dv8Hdr10PlusTruehdAtmos, { audioStreamIndex: 4 })?.notes).toBe(
-    "4K Dolby Vision · E-AC3 Atmos 5.1.2",
+    "4K Dolby Vision · E-AC3 Atmos 5.1.2"
   );
 });
 
@@ -156,7 +158,7 @@ test("HLG is mapped to HDR10, and a video without audio has no sound note", () =
           VideoRangeType: "HLG",
         },
       ],
-    }),
+    })
   ).toEqual({
     picture: { range: "HLG", resolution: "720p", delivery: "mapped" },
     sound: null,
@@ -180,6 +182,6 @@ test("an audio codec outside the classes is named by its codec and decoded", () 
         },
         { Type: "Audio", Index: 1, Codec: "mp3", Channels: 2 },
       ],
-    })?.signalPath,
+    })?.signalPath
   ).toBe("SDR · MP3 decoded to PCM");
 });

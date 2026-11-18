@@ -1,4 +1,5 @@
 import { writeFileSync } from "node:fs";
+
 import { renderTables } from "./table";
 
 const [path] = process.argv.slice(2);

@@ -1,5 +1,6 @@
 import { joinFacts } from "@harakiri/jellyfin";
 import { z } from "zod";
+
 import {
   expect,
   play,
@@ -70,20 +71,20 @@ for (const { name, criteria, colormatrix, signal, reshaped } of cases) {
     expect(first.videoGamma).toBe("pq");
     expect(first.videoPrimaries).toBe("bt.2020");
     const params = ColourParams.parse(
-      await mpvCommand(userDataDir, "get_property", "video-params"),
+      await mpvCommand(userDataDir, "get_property", "video-params")
     );
     expect(params.colormatrix).toBe(colormatrix);
     await probeUntil(page, (p) => (p.timePos ?? 0) >= (first.timePos ?? 0) + 1, 60_000);
 
     const target = ColourParams.parse(
-      await mpvCommand(userDataDir, "get_property", "video-target-params"),
+      await mpvCommand(userDataDir, "get_property", "video-target-params")
     );
     const vo = z.string().parse(await mpvCommand(userDataDir, "get_property", "current-vo"));
     const passes = JSON.stringify(await mpvCommand(userDataDir, "get_property", "vo-passes"));
     // The watcher reads the display's target within a sample or two of playback starting.
     const playing = await playerEventUntil(
       page,
-      (event) => event.phase === "playing" && event.downgrades.some((d) => d.leg === "picture"),
+      (event) => event.phase === "playing" && event.downgrades.some((d) => d.leg === "picture")
     );
     await testInfo.attach("picture", {
       contentType: "application/json",

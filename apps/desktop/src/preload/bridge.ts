@@ -1,6 +1,7 @@
 import { DeviceId } from "@harakiri/jellyfin";
 import type { IpcRenderer, IpcRendererEvent } from "electron";
 import { z } from "zod";
+
 import {
   channels,
   DiscoveredServer,
@@ -21,7 +22,7 @@ export interface BridgeOptions {
 
 export function createBridge(
   ipc: Pick<IpcRenderer, "invoke" | "on" | "removeListener">,
-  options: BridgeOptions,
+  options: BridgeOptions
 ): HarakiriBridge {
   async function invoke<T>(
     channel: string,

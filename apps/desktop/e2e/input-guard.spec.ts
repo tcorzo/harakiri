@@ -1,6 +1,9 @@
 import { writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+
 import type { Page } from "@playwright/test";
+
+import { type Button, plugPad, setAxis, setButton, tap } from "./support/gamepad";
 import {
   cardName,
   expect,
@@ -14,7 +17,6 @@ import {
   until,
   waitForNoMpv,
 } from "./support/harakiri";
-import { type Button, plugPad, setAxis, setButton, tap } from "./support/gamepad";
 import { type ShownItem, spokenTitle } from "./support/jellyfin";
 import { leadContinueWatching, main, openFirstResumed } from "./support/library";
 import { mpvProcesses, pressKey } from "./support/mpv";
@@ -53,7 +55,7 @@ async function stopInMpv(page: Page, shown: ShownItem, userDataDir: string): Pro
   await playerEventUntil(page, (event) => event.phase === "stopped");
   expect(await waitForNoMpv(userDataDir, 5000)).toEqual([]);
   expect((await expectFocus(page, `Resume ${shown.Name}`, 10_000)).route).toBe(
-    `/title/${shown.Id}`,
+    `/title/${shown.Id}`
   );
 }
 
@@ -133,7 +135,7 @@ test("while mpv plays, renderer keys neither navigate nor play again, and Back s
   expect(stopped.itemId).toBe(shown.Id);
   expect(await waitForNoMpv(userDataDir, 5000)).toEqual([]);
   expect((await expectFocus(page, `Resume ${shown.Name}`, 10_000)).route).toBe(
-    `/title/${shown.Id}`,
+    `/title/${shown.Id}`
   );
 });
 
@@ -158,7 +160,7 @@ test.describe("with mpv holding the file until the test lets it load", () => {
     await until(
       "mpv starts",
       async () => mpvProcesses(userDataDir),
-      (alive) => alive.length === 1,
+      (alive) => alive.length === 1
     );
     expect((await probe(page)).running).toBe(false);
 
@@ -166,7 +168,7 @@ test.describe("with mpv holding the file until the test lets it load", () => {
     writeFileSync(join(userDataDir, "mpv", "release"), "");
 
     expect((await expectFocus(page, `Resume ${shown.Name}`, 15_000)).route).toBe(
-      `/title/${shown.Id}`,
+      `/title/${shown.Id}`
     );
     expect(await waitForNoMpv(userDataDir, 5000)).toEqual([]);
   });

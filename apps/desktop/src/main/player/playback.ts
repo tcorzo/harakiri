@@ -2,6 +2,7 @@
 /// <reference lib="dom" />
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+
 import {
   type AudioOutput,
   type FidelityState,
@@ -9,7 +10,6 @@ import {
   fidelityView,
   startFidelity,
 } from "@harakiri/fidelity";
-import { getLogger } from "@logtape/logtape";
 import {
   AccessToken,
   type ClientIdentity,
@@ -39,8 +39,10 @@ import {
   setHttpHeaders,
   spawnMpv,
 } from "@harakiri/mpv";
+import { getLogger } from "@logtape/logtape";
 import { match } from "ts-pattern";
 import { z } from "zod";
+
 import type {
   PlayerEvent,
   PlayerPhase,
@@ -59,10 +61,10 @@ import {
   parsePlayerAction,
   step,
 } from "./controls";
-import { inputConf } from "./input-conf";
-import { OVERLAY_HEIGHT, OVERLAY_WIDTH, renderControls } from "./overlay";
 import { deliveryOf, fileStreams } from "./fidelity-input";
 import { type FidelityWatch, watchFidelity } from "./fidelity-watch";
+import { inputConf } from "./input-conf";
+import { OVERLAY_HEIGHT, OVERLAY_WIDTH, renderControls } from "./overlay";
 import { programmeEntry, type ProgrammeEntry, type Resolution, resolve } from "./resolve";
 
 const logger = getLogger(["harakiri", "player"]);
@@ -124,7 +126,7 @@ function mpvArgs(
   title: string,
   request: PlayRequest,
   deps: PlaybackDeps,
-  fidelity: FidelityView,
+  fidelity: FidelityView
 ) {
   return [
     ...buildPlaybackArgs({ audioPassthrough: passthroughOf(fidelity) }),
@@ -194,13 +196,13 @@ const passthroughOf = (view: FidelityView): AudioPassthrough => {
  */
 export async function preparePlayback(
   request: PlayRequest,
-  deps: Pick<PlaybackDeps, "session" | "identity">,
+  deps: Pick<PlaybackDeps, "session" | "identity">
 ): Promise<Prepared> {
   const { session } = deps;
   const itemId = ItemId.parse(request.itemId);
   const auth = authorizationHeader(
     { ...deps.identity, deviceId: DeviceId.parse(session.deviceId) },
-    AccessToken.parse(session.accessToken),
+    AccessToken.parse(session.accessToken)
   );
   const client = jellyfinClient(session, auth);
   const userId = UserId.parse(session.userId);
@@ -217,7 +219,7 @@ export async function preparePlayback(
     (error: unknown) => {
       logger.warn("Fetching the title of {itemId} failed: {error}", { itemId, error });
       return undefined;
-    },
+    }
   );
   const info = await getPostedPlaybackInfo({
     client,
@@ -245,7 +247,7 @@ export async function preparePlayback(
     auth,
     resolution,
     entry: fetched.then(
-      (entry) => entry ?? programmeEntry({ Name: resolution.source.Name ?? null, Type: "Movie" }),
+      (entry) => entry ?? programmeEntry({ Name: resolution.source.Name ?? null, Type: "Movie" })
     ),
   };
 }
@@ -259,7 +261,7 @@ export async function startPlayback(
   request: PlayRequest,
   send: (event: PlayerEvent) => void,
   deps: PlaybackDeps,
-  prepared?: Prepared,
+  prepared?: Prepared
 ): Promise<Playback> {
   const itemId = ItemId.parse(request.itemId);
   const startTicks = request.startPositionTicks ?? 0;
@@ -326,7 +328,7 @@ async function addSidecarSubtitles(mpv: MpvClient, resolution: Resolution): Prom
   await mpv
     .setProperty("sid", resolution.sid === false ? "no" : resolution.sid)
     .catch((error: unknown) =>
-      logger.warn("mpv could not select the subtitle: {error}", { error }),
+      logger.warn("mpv could not select the subtitle: {error}", { error })
     );
 }
 
@@ -369,7 +371,7 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
   const reportProgress = () => {
     if (started)
       void report("progress", () =>
-        reportPlaybackProgress({ client, throwOnError: true, body: progressBody() }),
+        reportPlaybackProgress({ client, throwOnError: true, body: progressBody() })
       );
   };
   let watch: FidelityWatch | undefined;
@@ -438,7 +440,7 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
               sid: controls.sid,
             },
           })
-        : undefined,
+        : undefined
     );
   };
   const scheduleHide = () => {
@@ -478,7 +480,7 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
       // At eof mpv has already unloaded the file, and the last time-pos notification can lag
       // the real end (it did by 5 s when ao_pcm decoded faster than real time).
       const positionTicks = toTicks(
-        outcome.phase === "ended" && duration !== undefined ? duration : position,
+        outcome.phase === "ended" && duration !== undefined ? duration : position
       );
       const reported = started
         ? report("stop", () =>
@@ -492,7 +494,7 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
                 PositionTicks: positionTicks,
                 Failed: outcome.phase === "error",
               },
-            }),
+            })
           )
         : undefined;
       await mpv.quit();
@@ -518,7 +520,7 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
       if (reason === "error") fail(`mpv could not play the file: ${fileError ?? "unknown error"}`);
     });
     void mpv.exited.then((exit) =>
-      fail(`mpv exited unexpectedly (code ${exit.code ?? exit.signal})`),
+      fail(`mpv exited unexpectedly (code ${exit.code ?? exit.signal})`)
     );
     // Before the file loads, startPlayback owns the failure and its error event.
     const fail = (error: string) => {
@@ -547,10 +549,10 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
       emit();
     }),
     mpv.observeProperty("aid", mpvTrackId, (aid) =>
-      dispatch({ type: "tracks", aid, sid: controls.sid }),
+      dispatch({ type: "tracks", aid, sid: controls.sid })
     ),
     mpv.observeProperty("sid", mpvTrackId, (sid) =>
-      dispatch({ type: "tracks", aid: controls.aid, sid }),
+      dispatch({ type: "tracks", aid: controls.aid, sid })
     ),
   ]);
 
@@ -580,7 +582,7 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
   await addSidecarSubtitles(mpv, resolution);
   if (!finished)
     await report("start", () =>
-      reportPlaybackStart({ client, throwOnError: true, body: progressBody() }),
+      reportPlaybackStart({ client, throwOnError: true, body: progressBody() })
     );
   emit();
   scheduleHide();
@@ -590,7 +592,7 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
       emit();
       if (controls.visible) render();
     }, EVENT_EVERY_MS),
-    setInterval(reportProgress, PROGRESS_EVERY_MS),
+    setInterval(reportProgress, PROGRESS_EVERY_MS)
   );
 
   const read = <T>(name: string, schema: z.ZodType<T>) =>

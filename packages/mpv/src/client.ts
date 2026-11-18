@@ -5,8 +5,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { setTimeout as delay } from "node:timers/promises";
+
 import { getLogger } from "@logtape/logtape";
 import type { z } from "zod";
+
 import { configArg, type MpvConfig } from "./args";
 import {
   createLineSplitter,
@@ -54,7 +56,7 @@ export interface MpvClient {
   observeProperty<T>(
     name: string,
     schema: z.ZodType<T>,
-    onChange: (value: T | undefined) => void,
+    onChange: (value: T | undefined) => void
   ): Promise<Unsubscribe>;
   onEvent(listener: (event: MpvEvent) => void): Unsubscribe;
   onClientMessage(listener: (args: readonly string[]) => void): Unsubscribe;
@@ -136,7 +138,7 @@ export async function spawnMpv(options: MpvSpawnOptions): Promise<MpvClient> {
       ...(options.args ?? []),
       `--input-ipc-server=${socketPath}`,
     ],
-    { stdio: ["ignore", "pipe", "pipe"] },
+    { stdio: ["ignore", "pipe", "pipe"] }
   );
   // Off a terminal, mpv writes its log messages to stdout, not stderr.
   for (const stream of [child.stdout, child.stderr]) {
@@ -157,7 +159,7 @@ export async function spawnMpv(options: MpvSpawnOptions): Promise<MpvClient> {
   const spawnFailed = new Promise<never>((_, reject) => {
     child.once("error", reject);
     void exited.then((e) =>
-      reject(new Error(`mpv exited before its IPC socket was ready (code ${e.code})`)),
+      reject(new Error(`mpv exited before its IPC socket was ready (code ${e.code})`))
     );
   });
 
@@ -188,7 +190,7 @@ export async function spawnMpv(options: MpvSpawnOptions): Promise<MpvClient> {
 async function connectWhenReady(
   path: string,
   timeoutMs: number,
-  hasExited: () => boolean,
+  hasExited: () => boolean
 ): Promise<Socket> {
   const deadline = Date.now() + timeoutMs;
   for (;;) {
@@ -278,7 +280,7 @@ function createClient({
         return;
       }
       dispatch(message);
-    }),
+    })
   );
   socket.on("error", (error) => {
     logger.warn("mpv IPC socket error: {error}", { error });

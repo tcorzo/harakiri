@@ -1,7 +1,9 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { describe, expect, test } from "vitest";
+
 import { runToolOrThrow } from "../process";
 import { CATALOG, entryPath, LONG_SECONDS, type MovieEntry } from "./catalog";
 import { movieNfo } from "./metadata";
@@ -19,12 +21,12 @@ describe("the corpus catalog", () => {
       (e) =>
         e.expect.video.codec === "h264" &&
         e.expect.video.range === "SDR" &&
-        e.seconds === LONG_SECONDS,
+        e.seconds === LONG_SECONDS
     );
     expect(sdrH264Long).toHaveLength(2);
     expect(LONG_SECONDS / 60).toBe(6.5);
     expect(
-      sdrH264Long.some((e) => e.expect.audio.some((a) => a.codec === "eac3" && a.profile === null)),
+      sdrH264Long.some((e) => e.expect.audio.some((a) => a.codec === "eac3" && a.profile === null))
     ).toBe(true);
     expect(base.some((e) => e.kind === "episode" && e.expect.video.dvProfile === 5)).toBe(true);
     expect(base.some((e) => e.kind === "movie" && e.expect.video.range === "HDR10")).toBe(true);
@@ -33,8 +35,8 @@ describe("the corpus catalog", () => {
         (e) =>
           e.expect.audio.length >= 2 &&
           e.expect.subtitles.embedded > 0 &&
-          e.expect.subtitles.external > 0,
-      ),
+          e.expect.subtitles.external > 0
+      )
     ).toBe(true);
     for (const e of base) {
       expect(e.video.kind).not.toMatch(/^fate/);
@@ -78,7 +80,7 @@ describe("the PGS writer", () => {
         writePgs(640, 360, [
           { start: 0.5, end: 1.5 },
           { start: 2, end: 2.8 },
-        ]),
+        ])
       );
       const { stdout } = runToolOrThrow("ffprobe", [
         "-v",

@@ -1,7 +1,9 @@
 /// <reference types="node" />
 import { readFileSync, readdirSync } from "node:fs";
+
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
+
 import { scrubPlaybackInfo, scrubSource, scrubText } from "./scrub";
 
 const REAL_ID = "0123456789abcdef0123456789abcdef";
@@ -27,7 +29,7 @@ describe("scrubSource", () => {
         ],
         MediaAttachments: [{ FileName: "Some Font.ttf" }],
       },
-      "dv5-eac3",
+      "dv5-eac3"
     );
     expect(scrubbed).toEqual({
       Id: "3653ee5a956c9868ec7fdf0caff8a2cb",
@@ -57,7 +59,7 @@ describe("scrubSource", () => {
           { Id: REAL_ID, TranscodingUrl: `/videos/${REAL_ID}/master.m3u8?PlaySessionId=abc123` },
         ],
       },
-      "transcode-bitrate",
+      "transcode-bitrate"
     );
     expect(scrubbed).toEqual({
       PlaySessionId: "e885ab483b5abe4a5dc3457e102ff5c1",
@@ -82,7 +84,7 @@ test("scrubText drops credits, release tags, encoder credits and dubbing studios
       "Some Film (1999) - 1080p - AV1 - SDR",
       "MVO (Some Studio) - Russian - Dolby Digital - Stereo",
       "Forced - English - PGSSUB",
-    ].map(scrubText),
+    ].map(scrubText)
   ).toEqual([
     "Commentary - English - Default",
     "1080p AV1 - SDR",

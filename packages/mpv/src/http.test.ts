@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+
 import { type JsonValue, MpvCommandError } from "./client";
 import { setHttpHeaders } from "./http";
 

@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+
 import {
   cardName,
   expect,
@@ -67,7 +68,7 @@ test("Play from the title page: House, Programme, Picture, then mpv plays the it
   const { page } = await launch();
   await openFirstResumed(page, shown);
   await expect(page.getByRole("button", { name: `Resume ${shown.Name}` })).toHaveText(
-    `Resume · ${leftBefore} min left`,
+    `Resume · ${leftBefore} min left`
   );
   await recordPlayerEvents(page);
   await recordStations(page);
@@ -77,7 +78,7 @@ test("Play from the title page: House, Programme, Picture, then mpv plays the it
   await expect(page.getByText("Press Back to cancel.")).toBeVisible();
   await expect(page.getByRole("listitem").filter({ hasText: "Picture" })).not.toHaveAttribute(
     "aria-current",
-    "step",
+    "step"
   );
 
   // mpv runs the item the server named, as a direct stream, from the resume point.
@@ -85,15 +86,15 @@ test("Play from the title page: House, Programme, Picture, then mpv plays the it
   expect(running.path).toBe(
     new URL(
       `Videos/${item.id}/stream?static=true&MediaSourceId=${item.mediaSourceId}`,
-      backend.server,
-    ).href,
+      backend.server
+    ).href
   );
   expect(running.timePos ?? 0).toBeLessThan(75);
   expect(mpvProcesses(userDataDir)).toHaveLength(1);
   await expect(page.getByText("Now screening in the player. Press Back to stop.")).toBeVisible();
   await expect(page.getByRole("listitem").filter({ hasText: "Picture" })).toHaveAttribute(
     "aria-current",
-    "step",
+    "step"
   );
 
   // The stations came in order and each held for its beat (House 1200 ms, Programme 3000 ms).
@@ -121,14 +122,14 @@ test("Play from the title page: House, Programme, Picture, then mpv plays the it
     "the server stores the new resume point",
     () => jellyfin.item(item.id),
     (data) => (data.UserData?.PlaybackPositionTicks ?? 0) >= ticks(from + 85),
-    5000,
+    5000
   );
   const leftAfter = minutesLeft(saved);
   expect(leftAfter).not.toBeNull();
   expect(leftAfter).not.toBe(leftBefore);
   expect((await expectFocus(page, `Resume ${shown.Name}`, 10_000)).route).toBe(`/title/${item.id}`);
   await expect(page.getByRole("button", { name: `Resume ${shown.Name}` })).toHaveText(
-    `Resume · ${leftAfter} min left`,
+    `Resume · ${leftAfter} min left`
   );
 
   // Back to the library: focus on the card it was opened from, still leading Continue Watching.
@@ -163,12 +164,12 @@ for (const station of ["House", "Programme"] as const) {
       () => stations(page),
       (s) => s.at(-1) === station,
       6000,
-      50,
+      50
     );
     await page.keyboard.press("Escape");
 
     expect((await expectFocus(page, `Resume ${shown.Name}`, 10_000)).route).toBe(
-      `/title/${shown.Id}`,
+      `/title/${shown.Id}`
     );
     // Past the moment the picture would have been handed to mpv (1.2 s + 3 s).
     await page.waitForTimeout(4500);

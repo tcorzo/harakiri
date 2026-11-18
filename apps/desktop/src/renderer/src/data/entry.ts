@@ -123,7 +123,7 @@ function fact(text: string, delivery: SignalState): NoteFact {
 /** The programme note line: year · runtime · picture · sound; mapped and decoded facts carry their state. */
 export function programmeNotes(
   entry: Entry,
-  fidelity: Fidelity | null = entry.fidelity,
+  fidelity: Fidelity | null = entry.fidelity
 ): NoteFact[] {
   const facts: NoteFact[] = [];
   if (entry.year !== null) facts.push({ text: String(entry.year) });
@@ -134,13 +134,13 @@ export function programmeNotes(
     facts.push(
       fact(
         [picture.resolution, picture.range].filter((part) => part !== null).join(" "),
-        picture.delivery,
-      ),
+        picture.delivery
+      )
     );
     if (sound !== null) {
       const format = sound.format === "Other" ? sound.codec.toUpperCase() : sound.format;
       facts.push(
-        fact([format, sound.channels].filter((part) => part !== null).join(" "), sound.delivery),
+        fact([format, sound.channels].filter((part) => part !== null).join(" "), sound.delivery)
       );
     }
   }

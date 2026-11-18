@@ -9,7 +9,7 @@ export const handoffTiming = { houseMs: 1200, slugMs: 3000 } as const;
 
 export function stationOf(
   elapsed: "house" | "slug" | "picture",
-  event: PlayerEvent | null,
+  event: PlayerEvent | null
 ): Station {
   if (elapsed === "picture" || event !== null) return "Picture";
   return elapsed === "house" ? "House" : "Programme";

@@ -1,4 +1,5 @@
 import { match } from "ts-pattern";
+
 import type {
   AudioOutput,
   BitstreamCodec,
@@ -58,18 +59,18 @@ function message(reason: DowngradeReason, sound: SoundSource, to: Fact): string 
     match(reason)
       .with(
         { kind: "outputRefuses" },
-        (r) => `${r.output} does not take ${sound.label} as a bitstream, so harakiri decodes it.`,
+        (r) => `${r.output} does not take ${sound.label} as a bitstream, so harakiri decodes it.`
       )
       .with(
         { kind: "outputUnknown" },
-        () => `harakiri could not tell what the audio output takes, so it decodes ${sound.label}.`,
+        () => `harakiri could not tell what the audio output takes, so it decodes ${sound.label}.`
       )
       .with({ kind: "outputFailed" }, (r) =>
         to === silence
           ? `${r.output ?? "The audio output"} stopped playing sound. The picture carries on without it.`
-          : `${r.output ?? "The audio output"} stopped taking the ${sound.label} bitstream, so harakiri decodes it.`,
+          : `${r.output ?? "The audio output"} stopped taking the ${sound.label} bitstream, so harakiri decodes it.`
       )
-      .otherwise(() => ""),
+      .otherwise(() => "")
   );
 }
 

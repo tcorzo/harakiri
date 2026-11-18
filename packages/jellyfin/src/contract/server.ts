@@ -114,7 +114,7 @@ export const libraryItems = async ({
 export const playbackInfo = async (
   { client }: ContractSession,
   itemId: ItemId,
-  body: PlaybackInfoDto,
+  body: PlaybackInfoDto
 ): Promise<PlaybackInfoResponse> =>
   (await getPostedPlaybackInfo({ client, throwOnError: true, path: { itemId }, body })).data;
 
@@ -152,7 +152,7 @@ export const describeDecision = (decision: Decision): string => {
 export const mapLimit = async <T, R>(
   inputs: readonly T[],
   limit: number,
-  run: (input: T) => Promise<R>,
+  run: (input: T) => Promise<R>
 ): Promise<R[]> => {
   const results: R[] = Array.from({ length: inputs.length });
   // One iterator shared by every worker hands each input to exactly one of them.

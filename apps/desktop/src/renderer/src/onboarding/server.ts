@@ -11,6 +11,7 @@ import {
 } from "@harakiri/jellyfin";
 import type { QueryClient } from "@tanstack/react-query";
 import { match } from "ts-pattern";
+
 import type { Session } from "../../../shared/bridge";
 import {
   isServerSupported,
@@ -30,7 +31,7 @@ export type Checked =
  */
 export async function checkServer(
   queryClient: QueryClient,
-  urls: readonly string[],
+  urls: readonly string[]
 ): Promise<Checked> {
   const checks = urls.map((url) => checkOne(queryClient, url));
   try {
@@ -39,7 +40,7 @@ export async function checkServer(
         const result = await check;
         if (!result.ok) throw new Error(result.problem.kind);
         return result;
-      }),
+      })
     );
   } catch {
     const failed = await Promise.all(checks);
@@ -98,14 +99,14 @@ export async function signIn(
   server: ServerInfo,
   identity: ClientIdentity,
   username: string,
-  password: string,
+  password: string
 ): Promise<SignedInResult> {
   return outcome(await authenticate(ServerUrl.parse(server.url), username, password, identity));
 }
 
 export async function quickConnectEnabled(
   server: ServerInfo,
-  identity: ClientIdentity,
+  identity: ClientIdentity
 ): Promise<boolean> {
   try {
     return await serverQuickConnectEnabled(ServerUrl.parse(server.url), identity);
@@ -128,7 +129,7 @@ export async function runQuickConnect(
   identity: ClientIdentity,
   signal: AbortSignal,
   report: (outcome: QuickConnectOutcome) => void,
-  intervalMs = 3000,
+  intervalMs = 3000
 ): Promise<void> {
   const url = ServerUrl.parse(server.url);
   let secret: string;
@@ -155,7 +156,7 @@ export async function runQuickConnect(
       report(
         result.ok
           ? { kind: "signedIn", session: result.session }
-          : { kind: "failed", problem: "unreachable" },
+          : { kind: "failed", problem: "unreachable" }
       );
       return;
     }

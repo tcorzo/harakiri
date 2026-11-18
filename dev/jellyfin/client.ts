@@ -19,7 +19,7 @@ const UNAVAILABLE_RETRY_MS = 60_000;
 export async function api<T = unknown>(
   method: string,
   path: string,
-  opts: { token?: string; body?: unknown } = {},
+  opts: { token?: string; body?: unknown } = {}
 ): Promise<T> {
   const auth = opts.token ? `${CLIENT_AUTH}, Token="${opts.token}"` : CLIENT_AUTH;
   const send = () =>
@@ -47,7 +47,7 @@ export async function api<T = unknown>(
 }
 
 export async function waitForServer(
-  timeoutMs = 180_000,
+  timeoutMs = 180_000
 ): Promise<{ StartupWizardCompleted: boolean; Version: string }> {
   const deadline = Date.now() + timeoutMs;
   let last = "";
@@ -57,7 +57,7 @@ export async function waitForServer(
       // drops connections and answers 503; only the real server answers with "Version".
       const info = await api<{ StartupWizardCompleted: boolean; Version: string } | undefined>(
         "GET",
-        "/System/Info/Public",
+        "/System/Info/Public"
       );
       if (typeof info?.Version === "string") return info;
       last = `not started yet: ${JSON.stringify(info)?.slice(0, 120)}`;
@@ -75,7 +75,7 @@ export async function login(): Promise<{ token: string; userId: string }> {
     "/Users/AuthenticateByName",
     {
       body: { Username: USER, Pw: PASSWORD },
-    },
+    }
   );
   return { token: r.AccessToken, userId: r.User.Id };
 }

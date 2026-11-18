@@ -1,13 +1,14 @@
+import { publicUsersQuery, ServerUrl, type ClientIdentity } from "@harakiri/jellyfin";
 import {
   FocusContext,
   getCurrentFocusKey,
   useFocusable,
 } from "@noriginmedia/norigin-spatial-navigation";
-import { publicUsersQuery, ServerUrl, type ClientIdentity } from "@harakiri/jellyfin";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { useEffect, useReducer, useState, type ReactNode } from "react";
 import { match } from "ts-pattern";
+
 import type { Session } from "../../../shared/bridge";
 import { clientIdentity } from "../../../shared/identity";
 import { sessionQuery } from "../data/session";
@@ -52,9 +53,9 @@ function Frame({
   readonly children: ReactNode;
 }) {
   return (
-    <main aria-label={title} className="flex h-screen gap-10 bg-ink px-safe-x py-safe-y">
-      <div className="flex w-margin shrink-0 flex-col items-start gap-6">
-        <span className="text-heading font-[820] stretch-extra-wide">harakiri</span>
+    <main aria-label={title} className="bg-ink px-safe-x py-safe-y flex h-screen gap-10">
+      <div className="w-margin flex shrink-0 flex-col items-start gap-6">
+        <span className="text-heading stretch-extra-wide font-[820]">harakiri</span>
         {step === null ? null : <SectionTab>{step}</SectionTab>}
       </div>
       <div className="flex min-w-0 flex-1 flex-col pt-[7rem]">{children}</div>
@@ -71,9 +72,9 @@ function Heading({
 }) {
   return (
     <header className="mb-10 flex flex-col gap-3">
-      <h1 className="m-0 text-title font-[800] text-balance stretch-extra-wide">{children}</h1>
+      <h1 className="text-title stretch-extra-wide m-0 font-[800] text-balance">{children}</h1>
       {detail === undefined ? null : (
-        <p className="max-w-[62ch] text-body text-paper-dim">{detail}</p>
+        <p className="text-body text-paper-dim max-w-[62ch]">{detail}</p>
       )}
     </header>
   );
@@ -88,21 +89,21 @@ function serverProblemText(problem: ServerProblem, address: string): string {
     .with(
       { kind: "invalid" },
       () =>
-        "That is not an address harakiri can use. Type a host name or IP, such as 192.168.1.20 or jellyfin.local.",
+        "That is not an address harakiri can use. Type a host name or IP, such as 192.168.1.20 or jellyfin.local."
     )
     .with(
       { kind: "unreachable" },
       () =>
-        `Nothing answered at ${address}. Check the address, and that the server is on and on this network.`,
+        `Nothing answered at ${address}. Check the address, and that the server is on and on this network.`
     )
     .with(
       { kind: "notJellyfin" },
-      () => `Something answered at ${address}, but it is not a Jellyfin server.`,
+      () => `Something answered at ${address}, but it is not a Jellyfin server.`
     )
     .with(
       { kind: "tooOld" },
       (p) =>
-        `This server runs Jellyfin ${p.version}. harakiri needs ${minimumServer.major}.${minimumServer.minor} or newer. Update the server, then try again.`,
+        `This server runs Jellyfin ${p.version}. harakiri needs ${minimumServer.major}.${minimumServer.minor} or newer. Update the server, then try again.`
     )
     .exhaustive();
 }
@@ -112,16 +113,16 @@ function signInProblemText(problem: SignInProblem, username: string): string {
     .with(
       "wrongPassword",
       () =>
-        `That password did not work for ${username}. Try again, or press Back to choose another user.`,
+        `That password did not work for ${username}. Try again, or press Back to choose another user.`
     )
     .with(
       "rejected",
       () =>
-        "The server refused this sign-in. The account may be disabled; ask whoever runs the server.",
+        "The server refused this sign-in. The account may be disabled; ask whoever runs the server."
     )
     .with(
       "unreachable",
-      () => "The server stopped answering. Press Back and check that it is still on.",
+      () => "The server stopped answering. Press Back and check that it is still on."
     )
     .exhaustive();
 }
@@ -130,12 +131,12 @@ function quickConnectProblemText(problem: QuickConnectProblem): string {
   return match(problem)
     .with(
       "disabled",
-      () => "Quick Connect is switched off on this server. Press Back and sign in with a password.",
+      () => "Quick Connect is switched off on this server. Press Back and sign in with a password."
     )
     .with("expired", () => "That code expired. Press Back and start Quick Connect again.")
     .with(
       "unreachable",
-      () => "The server stopped answering. Press Back and check that it is still on.",
+      () => "The server stopped answering. Press Back and check that it is still on."
     )
     .exhaustive();
 }
@@ -147,14 +148,14 @@ function Welcome({ send }: { readonly send: Send }) {
   return (
     <main
       aria-label="Welcome"
-      className="relative flex h-screen flex-col justify-end bg-ink px-safe-x py-safe-y"
+      className="bg-ink px-safe-x py-safe-y relative flex h-screen flex-col justify-end"
     >
-      <div aria-hidden="true" className="absolute top-0 bottom-0 left-safe-x w-[3.5rem] bg-band" />
+      <div aria-hidden="true" className="left-safe-x bg-band absolute top-0 bottom-0 w-[3.5rem]" />
       <div className="relative flex flex-col gap-10 pb-[6rem] pl-[calc(var(--spacing-margin)+2.5rem)]">
-        <h1 className="m-0 text-[9rem] leading-[0.9] font-[860] tracking-[-0.02em] stretch-extra-wide">
+        <h1 className="stretch-extra-wide m-0 text-[9rem] leading-[0.9] font-[860] tracking-[-0.02em]">
           harakiri
         </h1>
-        <p className="max-w-[40ch] text-heading font-[460] text-paper-dim stretch-semicondensed">
+        <p className="text-heading text-paper-dim stretch-semicondensed max-w-[40ch] font-[460]">
           A screening room for your Jellyfin library. Every file plays as it is.
         </p>
         <div>
@@ -193,7 +194,7 @@ function DiscoveredList({ onPick }: { readonly onPick: (address: string) => void
 
   return (
     <section aria-label="Servers on this network" className="flex flex-col gap-4">
-      <h2 className="m-0 text-heading font-[760] stretch-wide">On this network</h2>
+      <h2 className="text-heading stretch-wide m-0 font-[760]">On this network</h2>
       {match(discovery)
         .with({ status: "pending" }, () => (
           <p aria-live="polite" className="text-body text-paper-dim">
@@ -203,7 +204,7 @@ function DiscoveredList({ onPick }: { readonly onPick: (address: string) => void
         .otherwise(() =>
           servers.length === 0 ? (
             <div className="flex flex-col items-start gap-4">
-              <p className="max-w-[40ch] text-body text-paper-dim">
+              <p className="text-body text-paper-dim max-w-[40ch]">
                 No server answered. Type its address instead, or search again.
               </p>
               <QuietAction
@@ -226,7 +227,7 @@ function DiscoveredList({ onPick }: { readonly onPick: (address: string) => void
                 </ListAction>
               ))}
             </div>
-          ),
+          )
         )}
     </section>
   );
@@ -243,7 +244,7 @@ function ServerStep({ state, send }: Flow) {
     send(
       result.ok
         ? { type: "serverFound", address: typed, info: result.info }
-        : { type: "serverFailed", address: typed, problem: result.problem },
+        : { type: "serverFailed", address: typed, problem: result.problem }
     );
   };
 
@@ -491,7 +492,7 @@ function QuickConnectStep({
       ) : (
         <p
           aria-label={`Code ${state.code.split("").join(" ")}`}
-          className="text-[8rem] leading-none font-[300] tracking-[0.18em] stretch-condensed"
+          className="stretch-condensed text-[8rem] leading-none font-[300] tracking-[0.18em]"
         >
           {state.code}
         </p>
@@ -524,7 +525,7 @@ export function OnboardingScreen() {
   const [state, send] = useReducer(onboarding, knownServer, (address): OnboardingState =>
     address === undefined
       ? initialOnboarding
-      : onboarding({ step: "server", address }, { type: "submitAddress" }),
+      : onboarding({ step: "server", address }, { type: "submitAddress" })
   );
   const identity = useIdentity();
   const queryClient = useQueryClient();
@@ -538,8 +539,8 @@ export function OnboardingScreen() {
       send(
         result.ok
           ? { type: "serverFound", address: resumeAddress, info: result.info }
-          : { type: "serverFailed", address: resumeAddress, problem: result.problem },
-      ),
+          : { type: "serverFailed", address: resumeAddress, problem: result.problem }
+      )
     );
   }, [resumeAddress, resumeUrls, queryClient]);
   const navigate = useNavigate();

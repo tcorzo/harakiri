@@ -1,4 +1,5 @@
 import { match } from "ts-pattern";
+
 import type {
   Action,
   AudioOutput,
@@ -64,7 +65,7 @@ function transcoded<T extends { readonly label: string }>(
   source: T | null,
   output: T | null,
   best: (stream: T) => Fact,
-  delivery: Delivery,
+  delivery: Delivery
 ): Downgrade | null {
   if (delivery.kind !== "transcode" || source === null) return null;
   const none = leg === "sound" ? "No sound" : "No picture";
@@ -133,7 +134,7 @@ const sameCodecs = (a: readonly BitstreamCodec[], b: readonly BitstreamCodec[]):
 /** Folds in what the player saw, and returns what it must change in mpv to match. */
 export function observe(
   state: FidelityState,
-  observation: Observation,
+  observation: Observation
 ): { readonly state: FidelityState; readonly actions: readonly Action[] } {
   const before = fidelityView(state);
   const next = learn(state, observation);

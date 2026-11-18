@@ -1,5 +1,7 @@
 import { resolve } from "node:path";
+
 import { type TestProjectInlineConfiguration, configDefaults, defineConfig } from "vitest/config";
+
 import desktop from "./apps/desktop/vitest.config";
 import harness from "./packages/harness/vitest.config";
 import jellyfin from "./packages/jellyfin/vitest.config";
@@ -14,7 +16,7 @@ const tier = (
   name: keyof typeof TIERS,
   project: string,
   dir: string,
-  base: TestProjectInlineConfiguration,
+  base: TestProjectInlineConfiguration
 ): TestProjectInlineConfiguration => ({
   ...base,
   // Spread instead of inheriting: `extends` concatenates arrays, so the package's

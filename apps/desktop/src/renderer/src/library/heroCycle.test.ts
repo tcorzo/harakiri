@@ -1,5 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
+
 import { activity, touch } from "../input/activity";
 import { heroCycle, heroHoldMs, heroSettleMs, settled, upNext, useHeroCycle } from "./heroCycle";
 import { useLit } from "./lit";
@@ -41,15 +42,15 @@ test("the last film wraps to the first, and Next works even without auto-advance
   expect(
     heroCycle(
       { index: 4, since: 0, changedAt: 0 },
-      { type: "tick", now: 20_000, count: 5, auto: true },
-    ),
+      { type: "tick", now: 20_000, count: 5, auto: true }
+    )
   ).toEqual({
     index: 0,
     since: 20_000,
     changedAt: 20_000,
   });
   expect(
-    heroCycle({ index: 2, since: 0, changedAt: 0 }, { type: "next", now: 50, count: 3 }),
+    heroCycle({ index: 2, since: 0, changedAt: 0 }, { type: "next", now: 50, count: 3 })
   ).toEqual({
     index: 0,
     since: 50,
@@ -58,8 +59,8 @@ test("the last film wraps to the first, and Next works even without auto-advance
   expect(
     heroCycle(
       { index: 0, since: 0, changedAt: 0 },
-      { type: "tick", now: 99_000, count: 5, auto: false },
-    ),
+      { type: "tick", now: 99_000, count: 5, auto: false }
+    )
   ).toEqual({
     index: 0,
     since: 0,
@@ -69,7 +70,7 @@ test("the last film wraps to the first, and Next works even without auto-advance
 
 test("a single featured film never advances and has nothing up next", () => {
   expect(
-    heroCycle({ index: 0, since: 0, changedAt: 0 }, { type: "next", now: 9, count: 1 }),
+    heroCycle({ index: 0, since: 0, changedAt: 0 }, { type: "next", now: 9, count: 1 })
   ).toEqual({
     index: 0,
     since: 0,
@@ -148,7 +149,7 @@ test("any press restarts the hold, so the film never changes while the owner is 
 test("the Play gate follows the last film change, not the last press", () => {
   const changed = heroCycle(
     { index: 0, since: 0, changedAt: 0 },
-    { type: "next", now: 10_000, count: 3 },
+    { type: "next", now: 10_000, count: 3 }
   );
   expect(settled(changed, 10_000 + heroSettleMs - 1)).toBe(false);
   expect(settled(changed, 10_000 + heroSettleMs)).toBe(true);

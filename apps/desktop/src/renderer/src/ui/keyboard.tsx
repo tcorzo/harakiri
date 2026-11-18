@@ -88,9 +88,9 @@ function KeyCap({ focusKey, label, spoken, wide, primary, onPress, onKeyDown }: 
       aria-label={spoken}
       onClick={onPress}
       onKeyDown={onKeyDown}
-      className={`focus-mark flex h-[4rem] min-w-0 items-center justify-center focus-visible:bg-paper focus-visible:text-ink ${
-        wide ? "col-span-2 text-body stretch-semicondensed" : "text-heading"
-      } ${primary ? "hairline border-2 bg-ink-raised font-[780] stretch-wide" : "bg-ink-raised font-[620]"}`}
+      className={`focus-mark focus-visible:bg-paper focus-visible:text-ink flex h-[4rem] min-w-0 items-center justify-center ${
+        wide ? "text-body stretch-semicondensed col-span-2" : "text-heading"
+      } ${primary ? "hairline bg-ink-raised stretch-wide border-2 font-[780]" : "bg-ink-raised font-[620]"}`}
     >
       {label}
     </button>
@@ -176,7 +176,7 @@ export function Keyboard({
               onPress={() => press(key)}
               onKeyDown={onKeyDown}
             />
-          )),
+          ))
         )}
       </fieldset>
     </FocusContext.Provider>
@@ -202,7 +202,7 @@ export function EntryField({
   const { ref } = useFocusable<object, HTMLInputElement>({ focusKey });
   return (
     <label className="flex flex-col gap-2">
-      <span className="text-caption font-[600] tracking-[0.12em] text-paper-dim uppercase stretch-condensed">
+      <span className="text-caption text-paper-dim stretch-condensed font-[600] tracking-[0.12em] uppercase">
         {label}
       </span>
       <input
@@ -221,7 +221,7 @@ export function EntryField({
           event.stopPropagation();
           onSubmit();
         }}
-        className="focus-mark h-[5rem] w-full focus-visible:transform-none border-0 border-b-2 border-paper-faint bg-transparent text-title font-[640] text-paper stretch-semicondensed focus-visible:border-paper focus-visible:bg-ink-raised"
+        className="focus-mark border-paper-faint text-title text-paper stretch-semicondensed focus-visible:border-paper focus-visible:bg-ink-raised h-[5rem] w-full border-0 border-b-2 bg-transparent font-[640] focus-visible:transform-none"
       />
     </label>
   );

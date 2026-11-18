@@ -22,7 +22,7 @@ const DEFAULT_TIMEOUT_MS = 60_000;
 export function runTool(
   command: string,
   args: readonly string[],
-  timeoutMs = DEFAULT_TIMEOUT_MS,
+  timeoutMs = DEFAULT_TIMEOUT_MS
 ): ToolRun {
   const result = spawnSync(command, args, {
     encoding: "utf8",
@@ -66,7 +66,7 @@ export function describeFailure(run: Exclude<ToolRun, { kind: "not-found" }>): s
 export function runToolOrThrow(
   command: string,
   args: readonly string[],
-  timeoutMs = DEFAULT_TIMEOUT_MS,
+  timeoutMs = DEFAULT_TIMEOUT_MS
 ): { stdout: string; stderr: string } {
   const run = runTool(command, args, timeoutMs);
   if (run.kind === "not-found") throw new Error(`${command} is not on PATH`);

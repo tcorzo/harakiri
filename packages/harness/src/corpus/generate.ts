@@ -11,8 +11,10 @@ import {
 } from "node:fs";
 import { availableParallelism } from "node:os";
 import { join } from "node:path";
+
 import { match, P } from "ts-pattern";
 import { z } from "zod";
+
 import {
   CATALOG,
   entryLocation,
@@ -118,7 +120,7 @@ export function hdr10plusJson(frames: number): string {
         LuminanceDistributions: {
           DistributionIndex: [1, 5, 10, 25, 50, 75, 90, 95, 99],
           DistributionValues: [10, 50, 100, 500, 1000, 5000, 10000, 20000, 40000].map((v) =>
-            Math.floor((v * peak) / 40000),
+            Math.floor((v * peak) / 40000)
           ),
         },
       },
@@ -163,7 +165,7 @@ const ManifestSchema = z.object({
   version: z.literal(1),
   fate: z.boolean(),
   entries: z.array(
-    z.object({ id: z.string(), path: z.string(), bytes: z.number(), sha256: z.string() }),
+    z.object({ id: z.string(), path: z.string(), bytes: z.number(), sha256: z.string() })
   ),
   skipped: z.array(z.object({ id: z.string(), reason: z.string() })),
 });
@@ -181,7 +183,7 @@ function describeFate(state: FateState, dir: string): string {
     .with({ kind: "partial" }, (s) => `FATE samples missing from ${dir}: ${s.missing.join(", ")}`)
     .with(
       { kind: "corrupt" },
-      (s) => `FATE samples in ${dir} fail their sha256: ${s.bad.join(", ")}`,
+      (s) => `FATE samples in ${dir} fail their sha256: ${s.bad.join(", ")}`
     )
     .exhaustive();
 }
@@ -204,7 +206,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
       throw new Error(`${detail}. Run: mise run media:fetch-fate`);
     log(
       `FATE TIER NOT BUILT: ${detail}. TrueHD Atmos, E-AC3 JOC, DTS-HD MA, DTS:X, VC-1 and ` +
-        `DV profile 7 items are left out. Run: mise run media:fetch-fate`,
+        `DV profile 7 items are left out. Run: mise run media:fetch-fate`
     );
   }
 
@@ -221,8 +223,8 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
       runAsync(
         "ffmpeg",
         ["-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-fflags", "+bitexact", ...args],
-        { env: { ...process.env, SVT_LOG: "1" } },
-      ),
+        { env: { ...process.env, SVT_LOG: "1" } }
+      )
     );
   const tool = (command: string, args: readonly string[]) => limit(() => runAsync(command, args));
 
@@ -254,7 +256,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
         "-f",
         "hevc",
         path,
-      ]),
+      ])
     );
   // Pass 2: decode the raw HEVC and re-encode. FFmpeg hands the decoder's side data (mastering
   // display, MaxCLL, DV RPU) to libx265, which exports it as container stream side data and,
@@ -279,15 +281,15 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
 
   const hdr10plusFile = (seconds: number) =>
     once(`hdr10plus-${seconds}.json`, async (path) =>
-      writeFileSync(path, hdr10plusJson(seconds * FPS)),
+      writeFileSync(path, hdr10plusJson(seconds * FPS))
     );
 
   const video = (recipe: VideoRecipe, seconds: number): Promise<string> =>
     match(recipe)
       .with({ kind: "sdr-h264" }, () =>
         once(`sdr-h264-${seconds}.mkv`, (path) =>
-          ff(["-f", "lavfi", "-i", testsrc(seconds), "-vf", SDR_VF, ...X264, ...OF, "-an", path]),
-        ),
+          ff(["-f", "lavfi", "-i", testsrc(seconds), "-vf", SDR_VF, ...X264, ...OF, "-an", path])
+        )
       )
       .with({ kind: "sdr-h264-still" }, () =>
         once(`sdr-h264-still-${seconds}.mkv`, (path) =>
@@ -311,8 +313,8 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
             ...OF,
             "-an",
             path,
-          ]),
-        ),
+          ])
+        )
       )
       .with({ kind: "sdr-hevc" }, () =>
         once(`sdr-hevc-${seconds}.mkv`, (path) =>
@@ -329,8 +331,8 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
             ...OF,
             "-an",
             path,
-          ]),
-        ),
+          ])
+        )
       )
       .with({ kind: "sdr-av1" }, () =>
         once(`sdr-av1-${seconds}.mkv`, (path) =>
@@ -354,18 +356,18 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
             ...OF,
             "-an",
             path,
-          ]),
-        ),
+          ])
+        )
       )
       .with({ kind: "hdr10" }, () =>
         once(`hdr10-${seconds}.mkv`, async (path) =>
-          reencode(await rawHevc("pq", PQ_VF, X265_PQ, seconds), path, X265_PQ),
-        ),
+          reencode(await rawHevc("pq", PQ_VF, X265_PQ, seconds), path, X265_PQ)
+        )
       )
       .with({ kind: "hlg" }, () =>
         once(`hlg-${seconds}.mkv`, async (path) =>
-          reencode(await rawHevc("hlg", HLG_VF, X265_HLG, seconds), path, X265_HLG),
-        ),
+          reencode(await rawHevc("hlg", HLG_VF, X265_HLG, seconds), path, X265_HLG)
+        )
       )
       .with({ kind: "hdr10plus" }, () =>
         once(`hdr10plus-${seconds}.mkv`, async (path) => {
@@ -376,7 +378,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
             hdr10plusFile(seconds),
           ]);
           return reencode(raw, path, `${X265_PQ}:dhdr10-info=${json}`);
-        }),
+        })
       )
       .with({ kind: "dv" }, ({ profile, hdr10plus }) =>
         once(`dv-p${profile}${hdr10plus ? "-hdr10plus" : ""}-${seconds}.mkv`, async (path) => {
@@ -397,7 +399,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
                 max_content_light_level: 1000,
                 max_frame_average_light_level: 400,
               },
-            }),
+            })
           );
           await tool("dovi_tool", [
             "generate",
@@ -419,10 +421,10 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
           ]);
           const x265 = hdr10plus ? `${params}:dhdr10-info=${await hdr10plusFile(seconds)}` : params;
           return reencode(`${path}.hevc`, path, x265, ["-dolbyvision", "1"]);
-        }),
+        })
       )
       .with({ kind: "fate-video" }, { kind: "fate-file" }, ({ sample }) =>
-        Promise.resolve(join(fateDir, sample)),
+        Promise.resolve(join(fateDir, sample))
       )
       .exhaustive();
 
@@ -437,10 +439,10 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
             writePgs(640, 360, [
               { start: 0.5, end: 1.5 },
               { start: 2, end: 2.8 },
-            ]),
+            ])
           )
-          .exhaustive(),
-      ),
+          .exhaustive()
+      )
     );
 
   /** Input args and per-output-stream codec args for one audio track. */
@@ -540,7 +542,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
       const { stem } = entryLocation(entry);
       copyFileSync(
         await subtitleFile(sub.format),
-        join(out, dir, `${stem}.${SIDECAR_LANGUAGE[sub.language]}.${sub.format}`),
+        join(out, dir, `${stem}.${SIDECAR_LANGUAGE[sub.language]}.${sub.format}`)
       );
     }
   }
@@ -584,9 +586,9 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
       const t0 = performance.now();
       await buildEntry(entry);
       log(
-        `${entry.id.padEnd(26)} ${((performance.now() - t0) / 1000).toFixed(2)}s  ${entryPath(entry)}`,
+        `${entry.id.padEnd(26)} ${((performance.now() - t0) / 1000).toFixed(2)}s  ${entryPath(entry)}`
       );
-    }),
+    })
   );
   await writeMetadata(chosen);
   rmSync(work, { recursive: true, force: true });

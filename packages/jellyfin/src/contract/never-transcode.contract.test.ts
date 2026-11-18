@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, test } from "vitest";
+
 import { ServerVersion, playbackInfoRequest } from "../device-profile";
 import type { DeviceProfile, MediaSourceInfo, MediaStream } from "../generated/types.gen";
 import { type CorpusEntry, corpusEntry, loadCorpus, matchCorpus } from "./corpus";
@@ -21,7 +22,7 @@ import {
 const unreachable = await serverUnreachable();
 if (unreachable)
   throw new Error(
-    `${unreachable}: set JELLYFIN_DEV_URL (and JELLYFIN_DEV_USER, JELLYFIN_DEV_PASSWORD) to your server, or run \`mise run jellyfin:up\` for the dev container`,
+    `${unreachable}: set JELLYFIN_DEV_URL (and JELLYFIN_DEV_USER, JELLYFIN_DEV_PASSWORD) to your server, or run \`mise run jellyfin:up\` for the dev container`
   );
 const corpus = await loadCorpus();
 // The test list depends on what the server holds, so the library is read at collection time.
@@ -115,10 +116,10 @@ describe(`${SERVER} never transcodes under harakiri's profile`, () => {
       const item = pick(
         "dv-p5-hevc-episode",
         () => library.find((candidate) => videoStream(candidate)?.DvProfile === 5),
-        "Dolby Vision profile 5 item",
+        "Dolby Vision profile 5 item"
       );
       const decision = decide(
-        await playbackInfo(session, item.id, { ...ours, DeviceProfile: desktop }),
+        await playbackInfo(session, item.id, { ...ours, DeviceProfile: desktop })
       );
       console.info(`[contract] Desktop profile, ${item.name}: ${describeDecision(decision)}`);
 
@@ -144,13 +145,13 @@ describe(`${SERVER} never transcodes under harakiri's profile`, () => {
       const item = pick(
         "sdr-h264-lpcm-bitrate",
         () => library.toSorted((a, b) => bitrate(b) - bitrate(a))[0],
-        "item at all",
+        "item at all"
       );
       const decision = decide(
-        await playbackInfo(session, item.id, { ...request, DeviceProfile: profile }),
+        await playbackInfo(session, item.id, { ...request, DeviceProfile: profile })
       );
       console.info(
-        `[contract] no MaxStreamingBitrate, ${item.name} at ${(bitrate(item) / 1e6).toFixed(1)} Mbps: ${describeDecision(decision)}`,
+        `[contract] no MaxStreamingBitrate, ${item.name} at ${(bitrate(item) / 1e6).toFixed(1)} Mbps: ${describeDecision(decision)}`
       );
 
       expect(decision).toMatchObject({
@@ -174,7 +175,7 @@ describe(`${SERVER} never transcodes under harakiri's profile`, () => {
       });
     const seconds = ((performance.now() - started) / 1000).toFixed(1);
     console.info(
-      `[contract] sweep: ${verdicts.length} items, ${verdicts.length - failures.length} direct play, ${failures.length} not, ${seconds}s`,
+      `[contract] sweep: ${verdicts.length} items, ${verdicts.length - failures.length} direct play, ${failures.length} not, ${seconds}s`
     );
 
     // Another library has no known size, so there only the failures count.

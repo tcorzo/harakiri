@@ -1,5 +1,6 @@
 import type { Action } from "@harakiri/input";
 import { match, P } from "ts-pattern";
+
 import type { TrackTable } from "./tracks";
 
 /** What mpv's bindings send as `script-message harakiri <action>`. `stop` is the window's close button. */
@@ -121,7 +122,7 @@ const onAction = (state: ControlsState, action: PlayerAction, rows: readonly Men
           menu: { cursor: clamp(menu.cursor + (direction === "up" ? -1 : 1), rows.length - 1) },
         },
         commands: [],
-      }),
+      })
     )
     .with({ menu: P.nonNullable, action: P.union("left", "right") }, () => ({
       state: shown,

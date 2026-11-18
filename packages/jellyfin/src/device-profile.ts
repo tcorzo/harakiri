@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import type { DeviceProfile, PlaybackInfoDto, SubtitleProfile } from "./generated/types.gen";
 import type { MediaSourceId, UserId } from "./ids";
 
@@ -50,7 +51,7 @@ const subtitleProfiles = (server: ServerVersion): SubtitleProfile[] =>
     ({ format, method, container }) =>
       container === undefined
         ? { Format: format, Method: method }
-        : { Format: format, Method: method, Container: container },
+        : { Format: format, Method: method, Container: container }
   );
 
 export const deviceProfile = (server: ServerVersion): DeviceProfile => ({
@@ -81,7 +82,7 @@ export const deviceProfile = (server: ServerVersion): DeviceProfile => ({
 
 export const profileAllowsAllRanges = (profile: DeviceProfile): boolean =>
   (profile.CodecProfiles ?? []).every((codec) =>
-    (codec.Conditions ?? []).every((condition) => condition.Property !== "VideoRangeType"),
+    (codec.Conditions ?? []).every((condition) => condition.Property !== "VideoRangeType")
   );
 
 export type PlaybackSource =

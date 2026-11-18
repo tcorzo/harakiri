@@ -1,4 +1,5 @@
 import { match } from "ts-pattern";
+
 import type { UpdateStatus } from "../../../shared/bridge";
 
 /** The Settings "App" fact: the running version, then what the updater is doing, in the owner's words. */

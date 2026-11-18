@@ -4,6 +4,7 @@ import type { BaseItemDto, MediaSourceInfo, MediaStream } from "@harakiri/jellyf
 import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-navigation";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+
 import { episodeCode, minutesLeft, programmeNotes, type Entry } from "../data/entry";
 import { Backdrop, backdropUrl, InkField, Margin, TitleMark } from "../library/Stage";
 import { PlayAction, QuietAction } from "../ui/actions";
@@ -116,7 +117,7 @@ export function FilmPage({
   ];
   const [audio, setAudio] = useState<number | null>(entry.fidelity?.sound?.streamIndex ?? null);
   const [subtitle, setSubtitle] = useState<number>(
-    source?.DefaultSubtitleStreamIndex ?? subtitlesOff,
+    source?.DefaultSubtitleStreamIndex ?? subtitlesOff
   );
   const [picking, setPicking] = useState<Picking>("none");
   const fidelity = classifyFidelity(source, audio === null ? {} : { audioStreamIndex: audio });
@@ -163,7 +164,7 @@ export function FilmPage({
       >
         <Backdrop url={entry.backdrop === null ? null : backdropUrl(server, entry.backdrop)} />
         <InkField deep />
-        <div className="absolute inset-x-safe-x top-[calc(var(--spacing-safe-y)+5rem)] bottom-safe-y flex gap-10">
+        <div className="inset-x-safe-x bottom-safe-y absolute top-[calc(var(--spacing-safe-y)+5rem)] flex gap-10">
           <Margin
             number={number}
             seen={entry.played}
@@ -173,8 +174,8 @@ export function FilmPage({
             <div className="flex flex-col gap-4">
               <TitleMark entry={entry} server={server} compact={false} />
               {entry.kind === "Episode" ? (
-                <p className="text-heading font-[680] stretch-semicondensed">
-                  {code === null ? null : <span className="mr-4 text-paper-dim">{code}</span>}
+                <p className="text-heading stretch-semicondensed font-[680]">
+                  {code === null ? null : <span className="text-paper-dim mr-4">{code}</span>}
                   {entry.title}
                 </p>
               ) : null}
@@ -183,7 +184,7 @@ export function FilmPage({
             <div className="flex flex-wrap items-center gap-6">
               {source === undefined ? (
                 // A server entry that is not a film (a box set, a folder) has no file to screen.
-                <p className="m-0 text-body text-paper-dim">
+                <p className="text-body text-paper-dim m-0">
                   There is no file to play for this entry.
                 </p>
               ) : resumable ? (
@@ -230,22 +231,22 @@ export function FilmPage({
               )}
             </div>
             <div className="grid grid-cols-[minmax(0,62ch)_minmax(0,1fr)] gap-16">
-              <p className="m-0 self-start text-body text-paper-dim">{synopsis(entry.overview)}</p>
-              <dl className="m-0 flex flex-col gap-3 text-body">
+              <p className="text-body text-paper-dim m-0 self-start">{synopsis(entry.overview)}</p>
+              <dl className="text-body m-0 flex flex-col gap-3">
                 {directors.length > 0 ? (
                   <div className="flex gap-4">
-                    <dt className="w-[7rem] shrink-0 text-caption font-[620] tracking-[0.1em] text-paper-dim uppercase stretch-condensed">
+                    <dt className="text-caption text-paper-dim stretch-condensed w-[7rem] shrink-0 font-[620] tracking-[0.1em] uppercase">
                       Directed
                     </dt>
-                    <dd className="m-0 stretch-semicondensed">{directors.join(", ")}</dd>
+                    <dd className="stretch-semicondensed m-0">{directors.join(", ")}</dd>
                   </div>
                 ) : null}
                 {cast.length > 0 ? (
                   <div className="flex gap-4">
-                    <dt className="w-[7rem] shrink-0 text-caption font-[620] tracking-[0.1em] text-paper-dim uppercase stretch-condensed">
+                    <dt className="text-caption text-paper-dim stretch-condensed w-[7rem] shrink-0 font-[620] tracking-[0.1em] uppercase">
                       With
                     </dt>
-                    <dd className="m-0 line-clamp-4 stretch-semicondensed">{cast.join(", ")}</dd>
+                    <dd className="stretch-semicondensed m-0 line-clamp-4">{cast.join(", ")}</dd>
                   </div>
                 ) : null}
               </dl>

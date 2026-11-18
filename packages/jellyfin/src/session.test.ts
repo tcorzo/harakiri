@@ -2,6 +2,7 @@ import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, expect, test } from "vitest";
 import { z } from "zod";
+
 import { DeviceId, ServerUrl } from "./ids";
 import {
   authenticate,
@@ -35,7 +36,7 @@ const signedIn = { AccessToken: "tok-1", ServerId: "srv-1", User: { Id: USER, Na
 
 const mock = setupServer(
   http.get("http://jf.test/System/Info/Public", () =>
-    HttpResponse.json({ Id: "srv-1", ServerName: "harakiri-dev", Version: "12.4.0" }),
+    HttpResponse.json({ Id: "srv-1", ServerName: "harakiri-dev", Version: "12.4.0" })
   ),
   http.post("http://jf.test/Users/AuthenticateByName", async ({ request }) => {
     await record(request);
@@ -56,7 +57,7 @@ const mock = setupServer(
   http.post("http://jf.test/Users/AuthenticateWithQuickConnect", async ({ request }) => {
     await record(request);
     return HttpResponse.json(signedIn);
-  }),
+  })
 );
 
 beforeAll(() => mock.listen({ onUnhandledFrame: "error" }));

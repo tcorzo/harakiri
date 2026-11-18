@@ -3,8 +3,10 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
+
 import type { ItemId, SessionData } from "@harakiri/jellyfin";
 import { _electron, test as base, type ElectronApplication, type Page } from "@playwright/test";
+
 import {
   type HarakiriBridge,
   PlayerEvent,
@@ -148,7 +150,7 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
     // A terminal that is itself an AppImage exports APPIMAGE, which would switch the updater on.
     const dropped = new Set(["DISPLAY", "APPIMAGE"]);
     const inherited = Object.entries(process.env).filter(
-      (entry): entry is [string, string] => !dropped.has(entry[0]) && entry[1] !== undefined,
+      (entry): entry is [string, string] => !dropped.has(entry[0]) && entry[1] !== undefined
     );
     await use(async () => {
       const app = await _electron.launch({
@@ -231,7 +233,7 @@ export function focusedControl(page: Page): Promise<FocusedControl | null> {
 export async function expectFocus(
   page: Page,
   name?: string | RegExp,
-  timeoutMs = 5000,
+  timeoutMs = 5000
 ): Promise<FocusedControl> {
   const found = await until(
     `focus rests on a visible control${name === undefined ? "" : ` named ${String(name)}`}`,
@@ -244,7 +246,7 @@ export async function expectFocus(
       (name === undefined ||
         (typeof name === "string" ? control.name === name : name.test(control.name))),
     timeoutMs,
-    50,
+    50
   );
   if (found === null) throw new Error("unreachable: until() returned without a focused control");
   return found;
@@ -256,7 +258,7 @@ export async function until<T>(
   read: () => Promise<T>,
   predicate: (value: T) => boolean,
   timeoutMs = 15_000,
-  intervalMs = 200,
+  intervalMs = 200
 ): Promise<T> {
   const deadline = Date.now() + timeoutMs;
   let last = await read();
@@ -276,7 +278,7 @@ export async function waitForNoMpv(userDataDir: string, timeoutMs: number) {
     "mpv exits",
     async () => mpvProcesses(userDataDir),
     (alive) => alive.length === 0,
-    timeoutMs,
+    timeoutMs
   ).catch(() => mpvProcesses(userDataDir));
 }
 
@@ -286,7 +288,7 @@ export async function probe(page: Page): Promise<PlayerProbe> {
       if (!window.harakiri.test)
         throw new Error("window.harakiri.test is missing without HARAKIRI_E2E=1");
       return window.harakiri.test.probe();
-    }),
+    })
   );
 }
 
@@ -294,7 +296,7 @@ export async function probe(page: Page): Promise<PlayerProbe> {
 export const probeUntil = (
   page: Page,
   predicate: (probe: PlayerProbe) => boolean,
-  timeoutMs = 15_000,
+  timeoutMs = 15_000
 ): Promise<PlayerProbe> => until("probe matches", () => probe(page), predicate, timeoutMs);
 
 /** Calls the bridge's play exactly as the renderer does. */
@@ -322,13 +324,13 @@ export async function playerEvents(page: Page): Promise<PlayerEvent[]> {
 export async function playerEventUntil(
   page: Page,
   predicate: (event: PlayerEvent) => boolean,
-  timeoutMs = 15_000,
+  timeoutMs = 15_000
 ): Promise<PlayerEvent> {
   const events = await until(
     "a matching player event arrives",
     () => playerEvents(page),
     (seen) => seen.some(predicate),
-    timeoutMs,
+    timeoutMs
   );
   const found = events.find(predicate);
   if (!found) throw new Error("unreachable: until() returned without a match");

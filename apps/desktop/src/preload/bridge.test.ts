@@ -1,6 +1,7 @@
-import type { IpcRenderer, IpcRendererEvent } from "electron";
 import { ItemId } from "@harakiri/jellyfin";
+import type { IpcRenderer, IpcRendererEvent } from "electron";
 import { expect, test } from "vitest";
+
 import { channels, type PlayerEvent } from "../shared/bridge";
 import { ServerStatusError } from "../shared/errors";
 import { createBridge } from "./bridge";
@@ -84,8 +85,8 @@ test("a main-process error crosses unwrapped, and a server status keeps its stat
     {},
     (channel) =>
       new Error(
-        `Error invoking remote method '${channel}': ServerStatusError: The server answered 401 for /Items/x/PlaybackInfo`,
-      ),
+        `Error invoking remote method '${channel}': ServerStatusError: The server answered 401 for /Items/x/PlaybackInfo`
+      )
   );
   const bridge = createBridge(ipc, { e2e: false, warn });
   const error: unknown = await bridge.player
@@ -109,7 +110,7 @@ test("prepare sends the request and parses the server's decision", async () => {
   const request = { itemId: ItemId.parse("0123456789abcdef0123456789abcdef") };
 
   await expect(createBridge(ipc, { e2e: false, warn }).player.prepare(request)).resolves.toEqual(
-    report,
+    report
   );
   expect(invoked).toEqual([["player:prepare", { itemId: "0123456789abcdef0123456789abcdef" }]]);
 });
@@ -121,7 +122,7 @@ test("a prepare reply with an unknown signal state is refused", async () => {
   const request = { itemId: ItemId.parse("0123456789abcdef0123456789abcdef") };
 
   await expect(createBridge(ipc, { e2e: false, warn }).player.prepare(request)).rejects.toThrow(
-    /Invalid option/,
+    /Invalid option/
   );
 });
 
@@ -129,7 +130,7 @@ test("deviceId asks main and returns its id", async () => {
   const { ipc, invoked } = fakeIpc({ [channels.deviceId]: "6f9619ff-8b86-4d01-b42d-00cf4fc964ff" });
 
   await expect(createBridge(ipc, { e2e: false, warn }).deviceId()).resolves.toBe(
-    "6f9619ff-8b86-4d01-b42d-00cf4fc964ff",
+    "6f9619ff-8b86-4d01-b42d-00cf4fc964ff"
   );
   expect(invoked).toEqual([["device:id"]]);
 });
@@ -146,6 +147,6 @@ test("update status is parsed and restart invokes its channel", async () => {
 
   const bad = fakeIpc({ [channels.updateStatus]: { state: "ready" } });
   await expect(createBridge(bad.ipc, { e2e: false, warn }).updates.status()).rejects.toThrow(
-    /version/,
+    /version/
   );
 });

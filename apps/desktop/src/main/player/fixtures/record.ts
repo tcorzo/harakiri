@@ -5,6 +5,7 @@
 //   mise exec -- bun apps/desktop/src/main/player/fixtures/record.ts dv5-eac3=<itemId> ...
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
+
 import {
   AccessToken,
   DeviceId,
@@ -15,8 +16,8 @@ import {
   playbackInfoRequest,
 } from "@harakiri/jellyfin";
 import { scrubPlaybackInfo } from "@harakiri/jellyfin/fixture-scrub";
-import { createClient } from "@harakiri/jellyfin/generated/client";
 import { authenticateUserByName, getPostedPlaybackInfo } from "@harakiri/jellyfin/generated";
+import { createClient } from "@harakiri/jellyfin/generated/client";
 
 const server = process.env["JELLYFIN_DEV_URL"] ?? "http://127.0.0.1:8096";
 const identity = {
@@ -66,7 +67,7 @@ const record = async (name: string, itemId: ItemId, maxBitrate?: number) => {
   });
   const json = JSON.stringify(scrubPlaybackInfo({ ...data }, name), null, 2).replaceAll(
     /ApiKey=[0-9a-f]+/g,
-    "ApiKey=REDACTED",
+    "ApiKey=REDACTED"
   );
   await writeFile(join(import.meta.dirname, `${name}.json`), `${json}\n`);
   console.log(`${name}: ${data.MediaSources?.[0]?.Name ?? "?"}`);

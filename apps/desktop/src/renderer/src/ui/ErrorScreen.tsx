@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, type ErrorComponentProps } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { match } from "ts-pattern";
+
 import { classifyFailure, type Failure } from "../data/errors";
 import { forgetSession } from "../data/forget";
 import { sessionQuery } from "../data/session";
@@ -67,8 +68,8 @@ export function ErrorScreen({ error, reset }: ErrorComponentProps) {
   };
 
   return (
-    <main className="flex h-screen flex-col justify-end gap-8 bg-ink px-safe-x py-safe-y">
-      <h1 className="m-0 max-w-[24ch] text-marquee font-[820] text-balance stretch-extra-wide">
+    <main className="bg-ink px-safe-x py-safe-y flex h-screen flex-col justify-end gap-8">
+      <h1 className="text-marquee stretch-extra-wide m-0 max-w-[24ch] font-[820] text-balance">
         {title}
       </h1>
       <Notice className="max-w-[62ch]">{detail}</Notice>

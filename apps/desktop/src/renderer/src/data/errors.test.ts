@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { z } from "zod";
+
 import { fromIpc } from "../../../shared/errors";
 import { classifyFailure, ServerStatusError } from "./errors";
 
@@ -30,15 +31,15 @@ test("only a failed connection reads as unreachable; anything else says what it 
 
 test("the message names the path only, never the query and the key it can carry", () => {
   expect(new ServerStatusError(401, url).message).toBe(
-    "The server answered 401 for /Users/u/Items",
+    "The server answered 401 for /Users/u/Items"
   );
 });
 
 test("a status error from main survives Electron's IPC wrapping, status and all", () => {
   const crossed = fromIpc(
     new Error(
-      "Error invoking remote method 'player:prepare': ServerStatusError: The server answered 401 for /Items/x/PlaybackInfo",
-    ),
+      "Error invoking remote method 'player:prepare': ServerStatusError: The server answered 401 for /Items/x/PlaybackInfo"
+    )
   );
   expect(crossed).toBeInstanceOf(ServerStatusError);
   expect(crossed).toMatchObject({
@@ -48,7 +49,7 @@ test("a status error from main survives Electron's IPC wrapping, status and all"
   expect(classifyFailure(crossed)).toEqual({ kind: "signedOut" });
 
   const other = fromIpc(
-    new Error("Error invoking remote method 'player:play': Error: mpv could not play the file"),
+    new Error("Error invoking remote method 'player:play': Error: mpv could not play the file")
   );
   expect(other).not.toBeInstanceOf(ServerStatusError);
   expect(other).toMatchObject({ message: "mpv could not play the file" });

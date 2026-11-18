@@ -1,9 +1,11 @@
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { type Clip, type ClipCodec, muxSpdif, sha256, synthesizeClip } from "./clips";
+
 import type { AudioPassthrough } from "@harakiri/mpv";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
+
+import { type Clip, type ClipCodec, muxSpdif, sha256, synthesizeClip } from "./clips";
 import { type Burst, elementaryStream, scanBursts } from "./iec61937";
 import { captureWithMpv } from "./mpv-capture";
 import { readPcm16, WavError } from "./wav";
@@ -79,7 +81,7 @@ describe("T1: the player's mpv argv writes the IEC 61937 stream unmodified", () 
 
     expect(sha256(elementaryStream(reference).bytes)).toBe(sha256(run.source));
     expect(sha256(elementaryStream(captured).bytes)).toBe(
-      sha256(elementaryStream(reference.slice(0, captured.length)).bytes),
+      sha256(elementaryStream(reference.slice(0, captured.length)).bytes)
     );
   });
 
@@ -91,7 +93,7 @@ describe("T1: the player's mpv argv writes the IEC 61937 stream unmodified", () 
       format: "float",
     });
     expect(() => readPcm16(readFileSync(wav))).toThrow(
-      new WavError("fmt has 32 bits per sample, IEC 61937 needs 16"),
+      new WavError("fmt has 32 bits per sample, IEC 61937 needs 16")
     );
   });
 });

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+
 import type { FateSample } from "./catalog";
 
 /**
@@ -61,8 +62,7 @@ export function fateState(dir: string): FateState {
   const missing = SAMPLE_NAMES.filter((name) => !existsSync(join(dir, name)));
   const bad = SAMPLE_NAMES.filter(
     (name) =>
-      !missing.includes(name) &&
-      sha256(readFileSync(join(dir, name))) !== FATE_SAMPLES[name].sha256,
+      !missing.includes(name) && sha256(readFileSync(join(dir, name))) !== FATE_SAMPLES[name].sha256
   );
   if (bad.length > 0) return { kind: "corrupt", bad };
   if (missing.length === SAMPLE_NAMES.length) return { kind: "absent" };
@@ -77,7 +77,7 @@ export function fateState(dir: string): FateState {
 export async function fetchFate(
   dir: string,
   mirror: string,
-  log: (line: string) => void,
+  log: (line: string) => void
 ): Promise<void> {
   mkdirSync(dir, { recursive: true });
   const base = mirror.replace(/\/+$/, "");
@@ -106,6 +106,6 @@ export async function fetchFate(
   if (failures.length > 0)
     throw new Error(
       `FATE fetch failed for ${failures.length} of ${SAMPLE_NAMES.length} samples ` +
-        `(set HARAKIRI_FATE_MIRROR to use a mirror):\n  ${failures.join("\n  ")}`,
+        `(set HARAKIRI_FATE_MIRROR to use a mirror):\n  ${failures.join("\n  ")}`
     );
 }

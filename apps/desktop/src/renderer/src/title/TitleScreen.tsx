@@ -1,5 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, Navigate } from "@tanstack/react-router";
+
 import { catalogueQuery, titleQuery } from "../data/queries";
 import { useSignedIn } from "../data/session";
 import { numberFor } from "../library/sections";

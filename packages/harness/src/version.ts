@@ -3,7 +3,7 @@ export type Version = readonly [major: number, minor: number, patch: number];
 /** Reads the first dotted version after `prefix` (e.g. "mpv v0.41.0" with /mpv v?/). */
 export function parseVersion(text: string, prefix: RegExp): Version | null {
   const found = new RegExp(`${prefix.source}(\\d+)(?:\\.(\\d+))?(?:\\.(\\d+))?`, prefix.flags).exec(
-    text,
+    text
   );
   if (found === null) return null;
   const [, major = "0", minor = "0", patch = "0"] = found;

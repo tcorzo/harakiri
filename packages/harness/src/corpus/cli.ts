@@ -2,6 +2,7 @@
 // The synthetic media corpus: generate it, fetch the FATE tier, check a Jellyfin scan of it.
 // Run through mise so the pinned dovi_tool is on PATH: mise run media:gen | media:fetch-fate | test:corpus
 import { resolve } from "node:path";
+
 import { intro, log, outro } from "@clack/prompts";
 import { object, or } from "@optique/core/constructs";
 import { message } from "@optique/core/message";
@@ -10,6 +11,7 @@ import { command, constant, option } from "@optique/core/primitives";
 import { integer, string } from "@optique/core/valueparser";
 import { run } from "@optique/run";
 import { match } from "ts-pattern";
+
 import { classifyCorpus } from "./classify";
 import { DEFAULT_FATE_MIRROR, fetchFate } from "./fate";
 import { generateCorpus, treeBytes } from "./generate";
@@ -27,7 +29,7 @@ const parser = or(
       fate: withDefault(option("--fate", string({ metavar: "DIR" })), DEFAULT_FATE),
       requireFate: option("--require-fate"),
     }),
-    { description: message`Write the synthetic Jellyfin library (default .cache/corpus).` },
+    { description: message`Write the synthetic Jellyfin library (default .cache/corpus).` }
   ),
   command(
     "fetch-fate",
@@ -36,10 +38,10 @@ const parser = or(
       dir: withDefault(option("--dir", string({ metavar: "DIR" })), DEFAULT_FATE),
       mirror: withDefault(
         option("--mirror", string({ metavar: "URL" })),
-        process.env["HARAKIRI_FATE_MIRROR"] ?? DEFAULT_FATE_MIRROR,
+        process.env["HARAKIRI_FATE_MIRROR"] ?? DEFAULT_FATE_MIRROR
       ),
     }),
-    { description: message`Fetch the pinned FFmpeg FATE samples (default .cache/fate).` },
+    { description: message`Fetch the pinned FFmpeg FATE samples (default .cache/fate).` }
   ),
   command(
     "classify",
@@ -51,8 +53,8 @@ const parser = or(
     }),
     {
       description: message`Check a Jellyfin scan of the corpus against the catalog's classification.`,
-    },
-  ),
+    }
+  )
 );
 
 async function gen(out: string, fate: string, requireFate: boolean): Promise<number> {
@@ -68,7 +70,7 @@ async function gen(out: string, fate: string, requireFate: boolean): Promise<num
   const mb = (treeBytes(resolve(out)) / 1e6).toFixed(1);
   outro(
     `${manifest.entries.length} media files, ${mb} MB, ${seconds}s` +
-      (manifest.skipped.length > 0 ? `; ${manifest.skipped.length} FATE items left out` : ""),
+      (manifest.skipped.length > 0 ? `; ${manifest.skipped.length} FATE items left out` : "")
   );
   return 0;
 }
@@ -91,7 +93,7 @@ try {
         server: p.server,
         waitSeconds: p.waitSeconds,
         log: (line) => console.log(line),
-      }),
+      })
     )
     .exhaustive();
 } catch (error) {

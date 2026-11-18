@@ -1,5 +1,6 @@
 import { reportSessionEnded } from "@harakiri/jellyfin/generated";
 import type { QueryClient } from "@tanstack/react-query";
+
 import { useLit } from "../library/lit";
 import { seriesPlace } from "../title/seriesPlace";
 import { sessionQuery, signedIn } from "./session";
@@ -15,7 +16,7 @@ import { sessionQuery, signedIn } from "./session";
  */
 export async function forgetSession(
   queryClient: QueryClient,
-  { revoke }: { readonly revoke: boolean },
+  { revoke }: { readonly revoke: boolean }
 ): Promise<void> {
   const session = queryClient.getQueryData(sessionQuery.queryKey);
   if (session && revoke) {

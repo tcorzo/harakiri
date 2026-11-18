@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { connect } from "node:net";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
+
 import { z } from "zod";
 
 export interface MpvProcess {
@@ -55,7 +56,7 @@ export async function mpvCommand(userDataDir: string, ...command: JsonValue[]): 
   const [mpv, ...others] = mpvProcesses(userDataDir);
   if (!mpv?.ipcSocket || others.length > 0) {
     throw new Error(
-      `Expected exactly one mpv with an IPC socket, found ${others.length + (mpv ? 1 : 0)}`,
+      `Expected exactly one mpv with an IPC socket, found ${others.length + (mpv ? 1 : 0)}`
     );
   }
   const socket = connect(mpv.ipcSocket);
@@ -68,7 +69,7 @@ export async function mpvCommand(userDataDir: string, ...command: JsonValue[]): 
     const reply = new Promise<unknown>((resolve, reject) => {
       const timer = setTimeout(
         () => reject(new Error(`mpv did not answer ${JSON.stringify(command)}`)),
-        5000,
+        5000
       );
       createInterface({ input: socket }).on("line", (line) => {
         const message = Reply.safeParse(JSON.parse(line));

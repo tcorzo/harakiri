@@ -1,10 +1,11 @@
-import { expect, test } from "vitest";
 import type { BaseItemDto, VideoRangeType } from "@harakiri/jellyfin/generated";
+import { expect, test } from "vitest";
+
 import { kindOf, programmeNotes, toEntry } from "./entry";
 
 const item = (
   audio: { Codec: string; Profile?: string; Channels: number },
-  range: VideoRangeType,
+  range: VideoRangeType
 ): ReturnType<typeof toEntry> => {
   const raw: BaseItemDto = {
     Id: "0123456789abcdef0123456789abcdef",
@@ -26,7 +27,7 @@ const item = (
 
 test("native facts are stated bare; only mapped and decoded carry a state", () => {
   expect(
-    programmeNotes(item({ Codec: "truehd", Profile: "TrueHD + Atmos", Channels: 8 }, "HDR10")),
+    programmeNotes(item({ Codec: "truehd", Profile: "TrueHD + Atmos", Channels: 8 }, "HDR10"))
   ).toEqual([
     { text: "1988" },
     { text: "125 min" },

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+
 import {
   authenticate,
   authorizationHeader,
@@ -12,6 +13,7 @@ import {
   type SessionData,
 } from "@harakiri/jellyfin";
 import { z } from "zod";
+
 import { CATALOG, type Entry, entryPath } from "../../../../packages/harness/src/corpus/catalog";
 import { clientIdentity } from "../../src/shared/identity";
 import { type Backend, CORPUS_DIR } from "./backend";
@@ -41,11 +43,11 @@ export async function signInAccount(backend: Backend): Promise<SessionData> {
     backend.server,
     backend.user,
     backend.password,
-    appIdentity(DeviceId.parse(randomUUID())),
+    appIdentity(DeviceId.parse(randomUUID()))
   );
   if (result.kind !== "signed-in") {
     throw new Error(
-      `Signing in to the Jellyfin at ${backend.server} failed: ${JSON.stringify(result)}`,
+      `Signing in to the Jellyfin at ${backend.server} failed: ${JSON.stringify(result)}`
     );
   }
   return result.session;
@@ -61,14 +63,14 @@ export function seedSession(userDataDir: string, session: SessionData): void {
   writeFileSync(
     join(userDataDir, "session.json"),
     JSON.stringify({ ...rest, token: { kind: "plain", value: accessToken } }),
-    { mode: 0o600 },
+    { mode: 0o600 }
   );
   writeFileSync(join(userDataDir, "device-id"), deviceId, { mode: 0o600 });
 }
 
 /** What the server says about itself before sign-in: the name and version onboarding shows. */
 export async function publicInfo(
-  server: ServerUrl,
+  server: ServerUrl
 ): Promise<{ name: string; version: string; id: string }> {
   const response = await fetch(new URL("System/Info/Public", server));
   const info = z
@@ -242,7 +244,7 @@ function matchItem(item: z.infer<typeof Item>, criteria: ItemCriteria): PickedIt
         (stream) =>
           stream.Type === "Audio" &&
           stream.Codec === audioWanted.codec &&
-          (audioWanted.atmos === undefined || isAtmos(stream) === audioWanted.atmos),
+          (audioWanted.atmos === undefined || isAtmos(stream) === audioWanted.atmos)
       )
     : undefined;
   if (audioWanted && !audio) return undefined;
@@ -262,7 +264,7 @@ const containerPath = (entry: Entry) => `/media/${entryPath(entry).replace(/^sho
 function pickFromCorpus(
   items: readonly z.infer<typeof Item>[],
   criteria: ItemCriteria,
-  count: number,
+  count: number
 ): PickedItem[] {
   const wanted = criteria.corpus.slice(0, count);
   if (wanted.length < count) {
@@ -276,7 +278,7 @@ function pickFromCorpus(
       throw new Error(
         entry.tier === "fate"
           ? `${criteria.label}: "${entryId}" is a FATE-tier corpus entry and ${CORPUS_DIR} was built without the FATE samples. Run mise run media:fetch-fate, then mise run media:gen (mise run e2e does both).`
-          : `${criteria.label}: the server has no "${entryId}" from ${CORPUS_DIR}. Run mise run media:gen.`,
+          : `${criteria.label}: the server has no "${entryId}" from ${CORPUS_DIR}. Run mise run media:gen.`
       );
     }
     const picked = matchItem(item, criteria);
@@ -310,7 +312,7 @@ export class Jellyfin {
 
   async userData(itemId: ItemId): Promise<UserData> {
     return UserData.parse(
-      await this.#request(`UserItems/${itemId}/UserData?userId=${this.session.userId}`),
+      await this.#request(`UserItems/${itemId}/UserData?userId=${this.session.userId}`)
     );
   }
 
@@ -394,8 +396,8 @@ export class Jellyfin {
       .object({ Items: z.array(z.object({ Id: z.string() })) })
       .parse(
         await this.#request(
-          `UserItems/Resume?userId=${this.session.userId}&mediaTypes=Video&limit=16`,
-        ),
+          `UserItems/Resume?userId=${this.session.userId}&mediaTypes=Video&limit=16`
+        )
       );
     return Items.map((item) => item.Id);
   }
@@ -408,7 +410,7 @@ export class Jellyfin {
       {
         method: "POST",
         headers: { Authorization: this.#auth },
-      },
+      }
     );
     if (!response.ok) throw new Error(`QuickConnect/Authorize: HTTP ${response.status}`);
   }

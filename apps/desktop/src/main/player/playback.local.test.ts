@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { inspect } from "node:util";
+
 import { ItemId } from "@harakiri/jellyfin";
 import { PRD_PASSTHROUGH } from "@harakiri/mpv";
 import {
@@ -16,6 +17,7 @@ import {
   reset as resetLogging,
 } from "@logtape/logtape";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+
 import { type PlayerEvent, type PlayerProbe, Session } from "../../shared/bridge";
 import { type Playback, preparePlayback, startPlayback } from "./playback";
 
@@ -164,7 +166,7 @@ function mpvChild(): { pid: number; cmdline: string } {
 async function until(
   what: string,
   playback: Playback,
-  check: (probe: PlayerProbe) => boolean,
+  check: (probe: PlayerProbe) => boolean
 ): Promise<PlayerProbe> {
   const deadline = Date.now() + 20_000;
   let last: PlayerProbe = { running: false };
@@ -254,7 +256,7 @@ const identity = { client: "Harakiri", device: "vitest", version: "0.0.0-test" }
 async function play(
   media: string,
   seconds: number,
-  setup: (server: FakeJellyfin) => void = () => {},
+  setup: (server: FakeJellyfin) => void = () => {}
 ): Promise<{ events: PlayerEvent[]; playback: Playback }> {
   jellyfin = new FakeJellyfin();
   setup(jellyfin);
@@ -271,7 +273,7 @@ async function play(
       configDir: join(dir, "mpv"),
       extraArgs: ["--vo=null", "--ao=null"],
       audioOutput: { kind: "known", name: "test receiver", bitstream: [...PRD_PASSTHROUGH] },
-    },
+    }
   );
   current = playback;
   return { events, playback };
@@ -347,7 +349,7 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
       expect.arrayContaining([
         [`/Videos/${ITEM}/stream`, true],
         [SUBTITLE_PATH, true],
-      ]),
+      ])
     );
     expect(media.every((r) => r.authorized)).toBe(true);
   });
@@ -375,7 +377,7 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
 
     const prepared = await preparePlayback(
       { itemId: ItemId.parse(ITEM) },
-      { session: session(serverUrl), identity },
+      { session: session(serverUrl), identity }
     );
     expect(Date.now() - startedAt).toBeLessThan(1000);
     expect(prepared.resolution.method).toBe("DirectPlay");

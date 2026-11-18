@@ -1,4 +1,6 @@
 import type { Page } from "@playwright/test";
+
+import { plugPad, setAxis, setButton, tap } from "./support/gamepad";
 import {
   cardName,
   escapeRegExp,
@@ -9,7 +11,6 @@ import {
   test,
   until,
 } from "./support/harakiri";
-import { plugPad, setAxis, setButton, tap } from "./support/gamepad";
 import { minutesLeft, type ShownItem, spokenTitle } from "./support/jellyfin";
 import { heroPlay, leadContinueWatching, main, openLibrary } from "./support/library";
 
@@ -30,7 +31,7 @@ async function press(page: Page, key: string, name?: string | RegExp): Promise<F
 async function downTo(
   page: Page,
   section: string,
-  move: () => Promise<unknown>,
+  move: () => Promise<unknown>
 ): Promise<FocusedControl> {
   for (let i = 0; i < 6; i += 1) {
     const focus = await expectFocus(page);
@@ -66,7 +67,7 @@ test("the arrow keys walk the hero, the rows and the title pages, and focus is n
   const left = minutesLeft(shown);
   expect(left).not.toBeNull();
   await expect(
-    page.getByRole("button", { name: cardName(spokenTitle(shown)) }).first(),
+    page.getByRole("button", { name: cardName(spokenTitle(shown)) }).first()
   ).toContainText(`${left} min left`);
 
   // Down through every row in between, to Recently Added, which opens on the newest title.
@@ -111,7 +112,7 @@ test("the gamepad walks the same way: d-pad, stick, A, B, and a held d-pad repea
   await tap(page, "a");
   await expect(main(page, shown.Name)).toBeVisible();
   expect((await expectFocus(page, `Resume ${shown.Name}`, 10_000)).route).toBe(
-    `/title/${shown.Id}`,
+    `/title/${shown.Id}`
   );
   await tap(page, "b");
   expect((await expectFocus(page, cardName(spokenTitle(shown)))).route).toBe("/library");
@@ -193,7 +194,7 @@ test("holding Down keeps the focused card on screen at every step", async ({ lau
   await setButton(page, "down", false);
   // Focus lost to nothing counts as off screen too.
   const off = seen.filter(
-    (f) => f === null || (f.section !== "Tonight's screening" && !f.inViewport),
+    (f) => f === null || (f.section !== "Tonight's screening" && !f.inViewport)
   );
   expect(off).toEqual([]);
   // The hold travelled: focus went down through more than one row.
@@ -245,7 +246,7 @@ test.describe("the hero cycle", () => {
     const second = await nextTitle(page);
     expect(second).not.toBe(first);
     await expect(page.getByRole("button", { name: `Next screening: ${second}` })).toContainText(
-      "Next in 20 quiet seconds",
+      "Next in 20 quiet seconds"
     );
 
     // With the clock stopped, a press starts the hold at a known instant and only runFor moves
@@ -291,7 +292,7 @@ test.describe("the hero cycle", () => {
       "the hero advances 20 s after the last press",
       async () => heroTitle(await expectFocus(page, heroPlay)),
       (title) => title === second,
-      3000,
+      3000
     );
   });
 

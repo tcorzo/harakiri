@@ -7,6 +7,7 @@ import { message } from "@optique/core/message";
 import { command, constant } from "@optique/core/primitives";
 import { run } from "@optique/run";
 import { match } from "ts-pattern";
+
 import { CHECKS, requiredFailures, runChecks, type CheckResult } from "./doctor";
 
 const parser = command("doctor", object({ command: constant("doctor") }), {
@@ -18,7 +19,7 @@ function report({ check, verdict }: CheckResult): void {
   match(verdict.status)
     .with("ok", () => log.success(line))
     .with("missing", "outdated", () =>
-      check.required ? log.error(line) : log.warn(`${line} (optional)`),
+      check.required ? log.error(line) : log.warn(`${line} (optional)`)
     )
     .exhaustive();
 }
@@ -37,7 +38,7 @@ async function doctor(): Promise<number> {
   outro(
     failed.length === 0
       ? "All required tools present."
-      : `${failed.length} required check(s) failed.`,
+      : `${failed.length} required check(s) failed.`
   );
   return failed.length === 0 ? 0 : 1;
 }

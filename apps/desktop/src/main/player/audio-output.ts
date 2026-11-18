@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+
 import type { AudioOutput, BitstreamCodec } from "@harakiri/fidelity";
 import { getLogger } from "@logtape/logtape";
 import { z } from "zod";
@@ -17,7 +18,7 @@ const CODEC_BY_FORMAT: Readonly<Record<string, BitstreamCodec>> = {
 
 const ServerInfo = z.object({ default_sink_name: z.string() });
 const Sinks = z.array(
-  z.object({ name: z.string(), description: z.string().optional(), formats: z.array(z.string()) }),
+  z.object({ name: z.string(), description: z.string().optional(), formats: z.array(z.string()) })
 );
 
 /**

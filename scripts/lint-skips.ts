@@ -44,7 +44,7 @@ const tracked = (): string[] =>
     ],
     {
       encoding: "utf8",
-    },
+    }
   )
     .split("\0")
     // A file deleted or renamed in the working tree stays listed until it is staged.

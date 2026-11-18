@@ -1,5 +1,6 @@
 /// <reference types="node" />
 import { fileURLToPath } from "node:url";
+
 import { z } from "zod";
 
 const Audio = z.object({ codec: z.string(), profile: z.string().nullable(), channels: z.number() });
@@ -53,7 +54,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 // packages/jellyfin cannot reference packages/harness in its tsconfig, so the catalog is loaded
 // at run time and parsed here. It stays the one table of what the synthetic library holds.
 const catalogFile = fileURLToPath(
-  new URL("../../../harness/src/corpus/catalog.ts", import.meta.url),
+  new URL("../../../harness/src/corpus/catalog.ts", import.meta.url)
 );
 export const loadCorpus = async (): Promise<Corpus> => {
   const module = Catalog.parse(await import(catalogFile));
@@ -88,11 +89,11 @@ export type CorpusMatch<T> = {
  */
 export const matchCorpus = <T extends { readonly path: string }>(
   corpus: Corpus,
-  items: readonly T[],
+  items: readonly T[]
 ): CorpusMatch<T> | undefined => {
   const tail = (entry: CorpusEntry) => `/${entry.path.split("/").slice(1).join("/")}`;
   const byEntry = new Map(
-    corpus.entries.map((entry) => [entry, items.find((item) => item.path.endsWith(tail(entry)))]),
+    corpus.entries.map((entry) => [entry, items.find((item) => item.path.endsWith(tail(entry)))])
   );
   const matched = new Set(byEntry.values());
   if (items.length === 0 || items.some((item) => !matched.has(item))) return undefined;

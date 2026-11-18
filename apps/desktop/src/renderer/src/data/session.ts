@@ -1,5 +1,6 @@
 import { createJellyfinClient, type LibraryContext, type ServerUrl } from "@harakiri/jellyfin";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+
 import type { Session } from "../../../shared/bridge";
 import { clientIdentity } from "../../../shared/identity";
 import { ServerStatusError } from "./errors";
@@ -24,7 +25,7 @@ export function signedIn(session: Session): SignedIn {
     const client = createJellyfinClient(
       session.serverUrl,
       clientIdentity(session.deviceId),
-      session.accessToken,
+      session.accessToken
     );
     // ky 2 consumes an error response's body before the generated client reads it, so a failed
     // request surfaces as "body already used" with the status lost. Raise the status here, as the

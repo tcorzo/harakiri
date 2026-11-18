@@ -1,6 +1,7 @@
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, beforeAll, expect, test } from "vitest";
+
 import { ServerVersion, playbackInfoRequest } from "./device-profile";
 import { createClient } from "./generated/client";
 import { getPostedPlaybackInfo } from "./generated/sdk.gen";
@@ -12,7 +13,7 @@ const server = setupServer(
   http.post("http://jf.test/Items/:itemId/PlaybackInfo", async ({ request }) => {
     received.push({ auth: request.headers.get("Authorization"), body: await request.json() });
     return HttpResponse.json({ MediaSources: [], PlaySessionId: "ps-1" });
-  }),
+  })
 );
 
 beforeAll(() => server.listen({ onUnhandledFrame: "error" }));
@@ -46,7 +47,7 @@ test("the server receives a condition-free profile and the auth header through t
   expect(received).toHaveLength(1);
   const [request] = received;
   expect(request?.auth).toBe(
-    'MediaBrowser Client="Harakiri", Device="TV", DeviceId="dev-1", Version="0.1.0", Token="tok"',
+    'MediaBrowser Client="Harakiri", Device="TV", DeviceId="dev-1", Version="0.1.0", Token="tok"'
   );
   expect(request?.body).toMatchObject({
     MaxStreamingBitrate: 1_000_000_000,

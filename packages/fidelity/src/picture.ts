@@ -1,4 +1,5 @@
 import { match } from "ts-pattern";
+
 import {
   type Downgrade,
   type DowngradeReason,
@@ -48,12 +49,12 @@ function message(reason: DowngradeReason, picture: PictureSource): string {
   return match(reason)
     .with(
       { kind: "displaySdr" },
-      () => `The display takes SDR only, so ${picture.label} is tone-mapped to SDR.`,
+      () => `The display takes SDR only, so ${picture.label} is tone-mapped to SDR.`
     )
     .with({ kind: "rendererFailed" }, ({ renderer }) =>
       renderer === "none"
         ? "No video renderer could start. The sound carries on without a picture."
-        : `Vulkan could not start, so harakiri renders with ${RENDERER_NAMES[renderer]}, which cannot send HDR. ${picture.label} is tone-mapped to SDR.`,
+        : `Vulkan could not start, so harakiri renders with ${RENDERER_NAMES[renderer]}, which cannot send HDR. ${picture.label} is tone-mapped to SDR.`
     )
     .otherwise(() => "");
 }
@@ -76,7 +77,7 @@ export function picturePlan(picture: PictureSource | null, world: PictureWorld):
   if (world.renderer === "none") {
     return lowered(
       { text: "No picture", state: "mapped" },
-      { kind: "rendererFailed", renderer: "none" },
+      { kind: "rendererFailed", renderer: "none" }
     );
   }
   if (picture.range === "SDR") return { fact: best, downgrade: null };

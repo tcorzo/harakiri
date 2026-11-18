@@ -132,7 +132,7 @@ const dolbyVision = (
   stream: MediaStream,
   resolution: Resolution | null,
   compatibility: DolbyVisionCompatibility,
-  options: { hdr10Plus?: boolean; enhancementLayer?: boolean } = {},
+  options: { hdr10Plus?: boolean; enhancementLayer?: boolean } = {}
 ): PictureClass => ({
   range: "Dolby Vision",
   resolution,
@@ -270,7 +270,7 @@ const join = (...parts: (string | null)[]): string =>
  */
 export const classifyFidelity = (
   source: MediaSourceInfo | undefined,
-  options: { readonly audioStreamIndex?: number } = {},
+  options: { readonly audioStreamIndex?: number } = {}
 ): Fidelity | null => {
   const streams = source?.MediaStreams ?? [];
   const video = streams.find((stream) => stream.Type === "Video");

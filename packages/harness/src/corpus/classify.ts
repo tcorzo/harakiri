@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { CATALOG, entryPath, type Entry } from "./catalog";
 import { readManifest } from "./generate";
 
@@ -49,7 +50,7 @@ export function compare(entry: Entry, item: Item | undefined): Row[] {
   const row = (
     field: string,
     declared: string | number | null | undefined,
-    observed: string | number | null | undefined,
+    observed: string | number | null | undefined
   ): Row => ({
     id: entry.id,
     field,
@@ -59,7 +60,7 @@ export function compare(entry: Entry, item: Item | undefined): Row[] {
   });
   if (!item) return [row("item", entryPath(entry), "not found on the server")];
   const streams = (item.MediaSources?.[0]?.MediaStreams ?? []).toSorted(
-    (a, b) => a.Index - b.Index,
+    (a, b) => a.Index - b.Index
   );
   const video = streams.find((s) => s.Type === "Video");
   const audio = streams.filter((s) => s.Type === "Audio");
@@ -122,7 +123,7 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
       throw new Error(
         `Jellyfin is unreachable at ${base} (${error instanceof Error ? error.message : String(error)}). ` +
           `Start it with: mise run jellyfin:up`,
-        { cause: error },
+        { cause: error }
       );
     }
     if (!response.ok) throw new Error(`${init.method ?? "GET"} ${path}: HTTP ${response.status}`);
@@ -134,7 +135,7 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
   const entries = CATALOG.filter((entry) => built.has(entry.id));
   options.log(
     `corpus ${options.corpus}: ${entries.length} entries` +
-      (manifest.fate ? " (FATE tier included)" : " (FATE tier NOT built)"),
+      (manifest.fate ? " (FATE tier included)" : " (FATE tier NOT built)")
   );
 
   await call("System/Info/Public");
@@ -142,7 +143,7 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
     await call("Users/AuthenticateByName", {
       method: "POST",
       body: JSON.stringify({ Username: user, Pw: password }),
-    }),
+    })
   );
   const query = new URLSearchParams({
     userId: auth.User.Id,
@@ -165,13 +166,13 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
   let found = lookup([]);
   for (;;) {
     found = lookup(
-      Items.parse(await call(`Items?${query.toString()}`, { token: auth.AccessToken })).Items,
+      Items.parse(await call(`Items?${query.toString()}`, { token: auth.AccessToken })).Items
     );
     const ready = entries.filter((entry) => probed(found.get(entry.id))).length;
     const elapsed = (performance.now() - t0) / 1000;
     if (ready === entries.length || elapsed >= options.waitSeconds) {
       options.log(
-        `${ready}/${entries.length} entries probed by the server after ${elapsed.toFixed(1)}s`,
+        `${ready}/${entries.length} entries probed by the server after ${elapsed.toFixed(1)}s`
       );
       break;
     }
@@ -184,12 +185,12 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
   options.log("\n| entry | field | declared | Jellyfin | ok |\n| --- | --- | --- | --- | --- |");
   for (const r of rows)
     options.log(
-      `| ${r.id} | ${r.field} | ${r.declared} | ${r.observed} | ${r.ok ? "yes" : "**NO**"} |`,
+      `| ${r.id} | ${r.field} | ${r.declared} | ${r.observed} | ${r.ok ? "yes" : "**NO**"} |`
     );
   options.log(
     bad.length === 0
       ? `\nPASS: ${rows.length} checks on ${entries.length} entries match the catalog`
-      : `\nFAIL: ${bad.length} of ${rows.length} checks differ:\n${bad.map((r) => `  ${r.id} ${r.field}: declared ${r.declared}, Jellyfin ${r.observed}`).join("\n")}`,
+      : `\nFAIL: ${bad.length} of ${rows.length} checks differ:\n${bad.map((r) => `  ${r.id} ${r.field}: declared ${r.declared}, Jellyfin ${r.observed}`).join("\n")}`
   );
   return bad.length === 0 ? 0 : 1;
 }

@@ -1,6 +1,8 @@
 import { join } from "node:path";
+
 import { fidelityView } from "@harakiri/fidelity";
 import { app } from "electron";
+
 import type {
   PlayerEvent,
   PlayerProbe,

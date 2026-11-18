@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { expect, test } from "vitest";
+
 import type { MenuRow } from "./controls";
 import { type ControlsView, renderControls } from "./overlay";
 
@@ -64,7 +65,7 @@ test("paused under a server transcode: an amber square leads the fact line and i
       transcodeReasons: ["Bitrate over the limit", "Too many audio channels"],
       positionSeconds: 59,
       durationSeconds: 1421,
-    }),
+    })
   ).toMatchInlineSnapshot(`
     "{\\an7\\pos(0,560)\\bord0\\shad0\\blur0\\1c&H05060A&\\1a&HE0&\\p1}m 0 0 l 1920 0 1920 10 0 10{\\p0}
     {\\an7\\pos(0,570)\\bord0\\shad0\\blur0\\1c&H05060A&\\1a&HD4&\\p1}m 0 0 l 1920 0 1920 10 0 10{\\p0}
@@ -100,10 +101,10 @@ test("paused under a server transcode: an amber square leads the fact line and i
 test("a downgrade leads the fact line with the amber square; a native play has none", () => {
   const lines = renderControls({ ...playing, downgraded: true }).split("\n");
   const fact = lines.findIndex((line) =>
-    line.endsWith("Dolby Vision mapped to HDR10 · TrueHD Atmos bitstream"),
+    line.endsWith("Dolby Vision mapped to HDR10 · TrueHD Atmos bitstream")
   );
   expect(lines[fact - 1]).toBe(
-    "{\\an7\\pos(96,902)\\bord0\\shad0\\blur0\\1c&H43C2F7&\\1a&H00&\\p1}m 0 0 l 18 0 18 18 0 18{\\p0}",
+    "{\\an7\\pos(96,902)\\bord0\\shad0\\blur0\\1c&H43C2F7&\\1a&H00&\\p1}m 0 0 l 18 0 18 18 0 18{\\p0}"
   );
   expect(lines[fact]).toContain("\\pos(130,894)");
   expect(renderControls(playing)).not.toContain("&H43C2F7&");

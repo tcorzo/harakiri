@@ -1,6 +1,7 @@
 import { ItemId } from "@harakiri/jellyfin";
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, expect, test, vi } from "vitest";
+
 import { type PlayerEvent, Session } from "../../../shared/bridge";
 import { toEntry } from "./entry";
 import { refetchWhenReported } from "./queries";
@@ -16,7 +17,7 @@ const ctx = signedIn(
     userName: "tester",
     accessToken: "token",
     deviceId: "device-1",
-  }),
+  })
 );
 const entry = toEntry({ Id: "0123456789abcdef0123456789abcdef", Name: "Film", Type: "Movie" });
 

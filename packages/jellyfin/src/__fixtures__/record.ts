@@ -5,7 +5,9 @@
 //   mise exec -- bun packages/jellyfin/src/__fixtures__/record.ts dv5-eac3=<search term> ...
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
+
 import { z } from "zod";
+
 import { scrubSource } from "./scrub";
 
 const server = process.env["JELLYFIN_DEV_URL"] ?? "http://127.0.0.1:8096";
@@ -75,7 +77,7 @@ const auth = SignedIn.parse(
       Username: process.env["JELLYFIN_DEV_USER"] ?? "harakiri",
       Pw: process.env["JELLYFIN_DEV_PASSWORD"] ?? "harakiri-dev",
     }),
-  }),
+  })
 );
 const token = auth.AccessToken;
 const userId = auth.User.Id;
@@ -95,7 +97,7 @@ for (const { name, term } of fixtures) {
   const full = Item.parse(await call(`/Items/${item.Id}?userId=${userId}`, {}, token));
   const source = full.MediaSources[0] ?? {};
   const streams = (source.MediaStreams ?? []).filter(
-    (stream) => stream["Type"] === "Video" || stream["Type"] === "Audio",
+    (stream) => stream["Type"] === "Video" || stream["Type"] === "Audio"
   );
   const trimmed = {
     ...pick(source, ["Id", "Container", "DefaultAudioStreamIndex"]),
@@ -103,7 +105,7 @@ for (const { name, term } of fixtures) {
   };
   await writeFile(
     join(import.meta.dirname, `${name}.json`),
-    `${JSON.stringify(scrubSource(trimmed, name), null, 2)}\n`,
+    `${JSON.stringify(scrubSource(trimmed, name), null, 2)}\n`
   );
   console.log(`${name}: ${full.Name} (${streams.length} streams)`);
 }

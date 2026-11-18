@@ -3,6 +3,7 @@ import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-naviga
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, useRouter } from "@tanstack/react-router";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
+
 import type { PlayerEvent, PlayRequest, SignalFact, SignalReport } from "../../../shared/bridge";
 import { episodeCode, markedState, type Entry } from "../data/entry";
 import { classifyFailure } from "../data/errors";
@@ -10,8 +11,8 @@ import { catalogueQuery, nextEpisodeQuery, refetchWhenReported, titleQuery } fro
 import { useSignedIn } from "../data/session";
 import { useActionHandler } from "../input/handlers";
 import { inputMode } from "../input/mode";
-import { backdropUrl } from "../library/Stage";
 import { numberFor } from "../library/sections";
+import { backdropUrl } from "../library/Stage";
 import { PlayAction, QuietAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
 import { catalogueLabel, Notice, StateMark } from "../ui/marks";
@@ -40,7 +41,7 @@ function StationRule({ current }: { readonly current: Station }) {
         <li
           key={station}
           aria-current={station === current ? "step" : undefined}
-          className={`flex flex-col gap-2 text-caption font-[620] tracking-[0.1em] uppercase stretch-condensed transition-colors duration-500 ${
+          className={`text-caption stretch-condensed flex flex-col gap-2 font-[620] tracking-[0.1em] uppercase transition-colors duration-500 ${
             i <= at ? "text-paper" : "text-paper-faint"
           }`}
         >
@@ -64,7 +65,7 @@ export function SignalSlug({ facts }: { readonly facts: readonly SignalFact[] })
   return (
     <p
       aria-label={`Signal path: ${path}`}
-      className="m-0 flex flex-wrap items-baseline gap-x-6 gap-y-3 text-title font-[460] stretch-condensed"
+      className="text-title stretch-condensed m-0 flex flex-wrap items-baseline gap-x-6 gap-y-3 font-[460]"
     >
       {facts.map((fact, i) => {
         const state = markedState(fact.state);
@@ -77,7 +78,7 @@ export function SignalSlug({ facts }: { readonly facts: readonly SignalFact[] })
             ) : null}
             <span>{fact.text}</span>
             {state === undefined ? null : (
-              <span className="self-center text-notes text-paper-dim">
+              <span className="text-notes text-paper-dim self-center">
                 <StateMark state={state} />
               </span>
             )}
@@ -101,14 +102,14 @@ export function ServerDecision({ report }: { readonly report: SignalReport }) {
   if (report.transcodeReasons.length > 0) {
     return (
       <>
-        <p className="m-0 text-title font-[460] stretch-condensed">Server transcode</p>
+        <p className="text-title stretch-condensed m-0 font-[460]">Server transcode</p>
         <Notice className="max-w-[64ch]">{`The server is converting this file instead of sending it as it is, because: ${report.transcodeReasons.join("; ")}.`}</Notice>
       </>
     );
   }
   if (report.facts.length === 0) {
     return (
-      <p className="m-0 text-heading text-paper-dim">The server has not described this file yet.</p>
+      <p className="text-heading text-paper-dim m-0">The server has not described this file yet.</p>
     );
   }
   return <SignalSlug facts={report.facts} />;
@@ -131,12 +132,12 @@ function NextEpisode({
   return (
     <FocusContext.Provider value={focusKey}>
       <div ref={ref} className="flex flex-col gap-6">
-        <p className="m-0 flex items-baseline gap-6 text-heading font-[620] stretch-semicondensed">
-          <span className="text-caption font-[620] tracking-[0.1em] text-paper-dim uppercase stretch-condensed">
+        <p className="text-heading stretch-semicondensed m-0 flex items-baseline gap-6 font-[620]">
+          <span className="text-caption text-paper-dim stretch-condensed font-[620] tracking-[0.1em] uppercase">
             Next
           </span>
           <span>
-            {code === null ? null : <span className="mr-4 text-paper-dim">{code}</span>}
+            {code === null ? null : <span className="text-paper-dim mr-4">{code}</span>}
             {next.title}
           </span>
         </p>
@@ -322,14 +323,14 @@ export function ScreeningScreen() {
         ref={ref}
         aria-label={`Screening ${entry.title}`}
         data-station={station}
-        className="relative h-screen w-screen overflow-hidden bg-house"
+        className="bg-house relative h-screen w-screen overflow-hidden"
       >
         {entry.backdrop === null ? null : (
           <img
             alt=""
             aria-hidden="true"
             src={backdropUrl(ctx.server, entry.backdrop)}
-            className="absolute inset-0 h-full w-full object-cover transition-[filter,opacity] ease-house"
+            className="ease-house absolute inset-0 h-full w-full object-cover transition-[filter,opacity]"
             style={{
               transitionDuration: `${handoffTiming.houseMs}ms`,
               filter:
@@ -340,10 +341,10 @@ export function ScreeningScreen() {
             }}
           />
         )}
-        <div className="absolute inset-x-safe-x top-safe-y bottom-safe-y flex flex-col justify-between">
+        <div className="inset-x-safe-x top-safe-y bottom-safe-y absolute flex flex-col justify-between">
           <StationRule current={station} />
           <div
-            className="flex flex-col gap-10 transition-[opacity,transform] duration-700 ease-curtain"
+            className="ease-curtain flex flex-col gap-10 transition-[opacity,transform] duration-700"
             style={{
               opacity: elapsed === "house" ? 0 : 1,
               transform: elapsed === "house" ? "translateY(1.5rem)" : "none",
@@ -351,16 +352,16 @@ export function ScreeningScreen() {
           >
             <div className="flex items-baseline gap-8">
               {number === null ? null : (
-                <span className="shrink-0 text-heading font-[300] whitespace-nowrap text-paper-dim stretch-condensed">
+                <span className="text-heading text-paper-dim stretch-condensed shrink-0 font-[300] whitespace-nowrap">
                   {catalogueLabel(number)}
                 </span>
               )}
-              <h1 className="m-0 text-marquee font-[820] text-balance stretch-extra-wide">
+              <h1 className="text-marquee stretch-extra-wide m-0 font-[820] text-balance">
                 {name}
               </h1>
             </div>
             {entry.kind === "Episode" ? (
-              <p className="m-0 text-heading font-[620] stretch-semicondensed">
+              <p className="text-heading stretch-semicondensed m-0 font-[620]">
                 {code} {entry.title}
               </p>
             ) : null}
@@ -386,15 +387,15 @@ export function ScreeningScreen() {
                 onLeave={leaveAfterPlayback}
               />
             ) : outcome.kind === "ended" ? (
-              <p aria-live="polite" className="m-0 text-body text-paper-dim">
+              <p aria-live="polite" className="text-body text-paper-dim m-0">
                 Played to the end. Press Back to leave.
               </p>
             ) : station === "Picture" ? (
-              <p aria-live="polite" className="m-0 text-body text-paper-dim">
+              <p aria-live="polite" className="text-body text-paper-dim m-0">
                 Now screening in the player. Press Back to stop.
               </p>
             ) : (
-              <p className="m-0 text-body text-paper-faint">Press Back to cancel.</p>
+              <p className="text-body text-paper-faint m-0">Press Back to cancel.</p>
             )}
           </div>
         </div>

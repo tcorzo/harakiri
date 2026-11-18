@@ -1,6 +1,7 @@
 import { getLogger } from "@logtape/logtape";
 import pkg from "electron-updater";
 import type { BaseUpdater, CancellationToken } from "electron-updater";
+
 import type { UpdaterLike } from "./updates";
 
 // electron-updater is CJS and the main bundle is ESM, so take the named exports off the default.

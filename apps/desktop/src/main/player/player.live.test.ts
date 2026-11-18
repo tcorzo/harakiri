@@ -3,10 +3,12 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { createConnection } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, describe, expect, test, vi } from "vitest";
-import { z } from "zod";
+
 import { ItemId, joinFacts } from "@harakiri/jellyfin";
 import { type CorpusMatch, corpusEntry, loadCorpus, matchCorpus } from "@harakiri/jellyfin/corpus";
+import { afterAll, describe, expect, test, vi } from "vitest";
+import { z } from "zod";
+
 import { type PlayerEvent, type PlayerProbe, Session } from "../../shared/bridge";
 
 const harness = vi.hoisted(() => {
@@ -36,7 +38,7 @@ const reachable = await fetch(`${SERVER}/System/Info/Public`, { signal: AbortSig
   .catch(() => false);
 if (!reachable)
   throw new Error(
-    `the Jellyfin at ${SERVER} is unreachable: set JELLYFIN_DEV_URL (and JELLYFIN_DEV_USER, JELLYFIN_DEV_PASSWORD) to your server, or run \`mise run jellyfin:up\` for the dev container`,
+    `the Jellyfin at ${SERVER} is unreachable: set JELLYFIN_DEV_URL (and JELLYFIN_DEV_USER, JELLYFIN_DEV_PASSWORD) to your server, or run \`mise run jellyfin:up\` for the dev container`
   );
 
 const clientHeader = (token?: string) =>
@@ -76,7 +78,7 @@ const Items = z.object({
       Path: z.string().nullish(),
       RunTimeTicks: z.number().nullish(),
       MediaStreams: z.array(Stream).nullish(),
-    }),
+    })
   ),
 });
 const MpvReply = z.object({
@@ -93,7 +95,7 @@ const TrackList = z.array(
     external: z.boolean(),
     "external-filename": z.string().optional(),
     title: z.string().optional(),
-  }),
+  })
 );
 
 async function signIn(): Promise<Session> {
@@ -121,7 +123,7 @@ const libraryItems = async (session: Session) =>
   (
     await api(
       `/Items?userId=${session.userId}&Recursive=true&IncludeItemTypes=Movie,Episode&Fields=MediaStreams,Path&SortBy=RunTimeTicks&SortOrder=Ascending`,
-      Items,
+      Items
     )
   ).Items.map((item) => ({ ...item, path: item.Path ?? "" }));
 type Item = Awaited<ReturnType<typeof libraryItems>>[number];
@@ -137,7 +139,7 @@ const pickItem = (
   corpus: CorpusMatch<Item> | undefined,
   id: string,
   fits: (item: Item) => boolean,
-  what: string,
+  what: string
 ): Item => {
   const item = corpus ? corpus.item(corpusEntry(catalog, id)) : items.find(fits);
   if (!item) throw new Error(`the library at ${SERVER} has no ${what}`);
@@ -196,7 +198,7 @@ function mpvCommand(...command: unknown[]): Promise<unknown> {
 async function until(
   what: string,
   check: (probe: PlayerProbe) => boolean,
-  timeoutMs = 30_000,
+  timeoutMs = 30_000
 ): Promise<PlayerProbe> {
   const deadline = Date.now() + timeoutMs;
   let last: PlayerProbe = { running: false };
@@ -238,16 +240,16 @@ describe(`player against the dev Jellyfin at ${SERVER}`, () => {
           (candidate.RunTimeTicks ?? 0) > 360 * TICKS &&
           (candidate.RunTimeTicks ?? 0) < 1200 * TICKS &&
           (candidate.MediaStreams ?? []).some(
-            (s) => s.Type === "Video" && s.Codec === "h264" && s.VideoRangeType === "SDR",
+            (s) => s.Type === "Video" && s.Codec === "h264" && s.VideoRangeType === "SDR"
           ),
-        "SDR H.264 item between 6 and 20 minutes",
+        "SDR H.264 item between 6 and 20 minutes"
       );
       const before = await userData(harness.session, item.Id);
 
       const events: PlayerEvent[] = [];
       try {
         await play({ itemId: ItemId.parse(item.Id), startPositionTicks: 60 * TICKS }, (event) =>
-          events.push(event),
+          events.push(event)
         );
 
         const advancing = await until("time-pos past 61 s", (p) => (p.timePos ?? 0) > 61);
@@ -263,7 +265,7 @@ describe(`player against the dev Jellyfin at ${SERVER}`, () => {
         await mpvCommand("keypress", "GAMEPAD_ACTION_DOWN");
         const repaused = await until(
           "gamepad A through input.conf pauses",
-          (p) => p.pause === true,
+          (p) => p.pause === true
         );
 
         await stop();
@@ -275,7 +277,7 @@ describe(`player against the dev Jellyfin at ${SERVER}`, () => {
         const stoppedTicks = stopped?.positionTicks ?? 0;
         expect(Math.abs(stoppedTicks - (repaused.timePos ?? 0) * TICKS)).toBeLessThan(TICKS);
         expect(events.map((e) => e.phase)).toEqual(
-          expect.arrayContaining(["starting", "playing", "paused", "stopped"]),
+          expect.arrayContaining(["starting", "playing", "paused", "stopped"])
         );
         expect(joinFacts(events[0]?.facts ?? [])).toMatch(/^SDR · /);
         expect(events[0]?.transcodeReasons).toEqual([]);
@@ -287,7 +289,7 @@ describe(`player against the dev Jellyfin at ${SERVER}`, () => {
         await stop();
         await restoreUserData(harness.session, item.Id, before.PlaybackPositionTicks);
       }
-    },
+    }
   );
 
   test(
@@ -310,7 +312,7 @@ describe(`player against the dev Jellyfin at ${SERVER}`, () => {
             streams.some((s) => s.Type === "Subtitle" && !s.IsExternal)
           );
         },
-        "item with two audio tracks and embedded and sidecar subtitles",
+        "item with two audio tracks and embedded and sidecar subtitles"
       );
       const streams = item.MediaStreams ?? [];
       const sidecars = streams.filter((s) => s.Type === "Subtitle" && s.IsExternal);
@@ -325,7 +327,7 @@ describe(`player against the dev Jellyfin at ${SERVER}`, () => {
       };
       const declared = corpusEntry(catalog, "sdr-h264-tracks").expect;
       expect(counts).toEqual(
-        corpus ? { audio: declared.audio.length, ...declared.subtitles } : counts,
+        corpus ? { audio: declared.audio.length, ...declared.subtitles } : counts
       );
       const before = await userData(harness.session, item.Id);
 
@@ -336,11 +338,11 @@ describe(`player against the dev Jellyfin at ${SERVER}`, () => {
             audioStreamIndex: secondAudio.Index,
             subtitleStreamIndex: sidecar.Index,
           },
-          () => {},
+          () => {}
         );
         const playing = await until(
           "tracks selected",
-          (p) => typeof p.aid === "number" && typeof p.sid === "number",
+          (p) => typeof p.aid === "number" && typeof p.sid === "number"
         );
         expect([playing.aid, playing.sid]).toEqual([2, embeddedSubs.length + 1]);
 
@@ -351,12 +353,12 @@ describe(`player against the dev Jellyfin at ${SERVER}`, () => {
         expect(subtitle?.external).toBe(true);
         expect(subtitle?.["external-filename"]).toContain(`/Subtitles/${sidecar.Index}/0/`);
         expect(trackList.filter((t) => t.external).map((t) => t.title)).toEqual(
-          sidecars.map((_, i) => `External ${i + 1}`),
+          sidecars.map((_, i) => `External ${i + 1}`)
         );
       } finally {
         await stop();
         await restoreUserData(harness.session, item.Id, before.PlaybackPositionTicks);
       }
-    },
+    }
   );
 });

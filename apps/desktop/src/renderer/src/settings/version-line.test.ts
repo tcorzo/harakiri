@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+
 import { versionLine } from "./version-line";
 
 test.each([

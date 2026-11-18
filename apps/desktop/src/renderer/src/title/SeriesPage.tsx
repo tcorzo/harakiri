@@ -7,6 +7,7 @@ import {
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useTransition } from "react";
+
 import { episodeCode, programmeNotes, type Entry } from "../data/entry";
 import { episodesQuery, seasonsQuery } from "../data/queries";
 import { useSignedIn } from "../data/session";
@@ -44,8 +45,8 @@ function SeasonTab({
       aria-pressed={selected}
       aria-label={season.title}
       onClick={onPick}
-      className={`focus-mark shrink-0 border-b-4 px-4 py-2 text-body font-[700] stretch-semicondensed focus-visible:bg-paper focus-visible:text-ink ${
-        selected ? "border-band text-paper" : "border-transparent text-paper-dim"
+      className={`focus-mark text-body stretch-semicondensed focus-visible:bg-paper focus-visible:text-ink shrink-0 border-b-4 px-4 py-2 font-[700] ${
+        selected ? "border-band text-paper" : "text-paper-dim border-transparent"
       }`}
     >
       {season.title}
@@ -76,28 +77,28 @@ function EpisodeLine({
       type="button"
       aria-label={`${episodeCode(episode) ?? ""} ${episode.title}${episode.played ? ", seen" : ""}`}
       onClick={onPress}
-      className="group grid w-full grid-cols-[5rem_minmax(0,1fr)_auto] items-baseline gap-x-6 border-b-2 hairline px-4 py-4 text-left [content-visibility:auto] [contain-intrinsic-size:auto_5rem] focus-visible:bg-paper focus-visible:text-ink"
+      className="group hairline focus-visible:bg-paper focus-visible:text-ink grid w-full grid-cols-[5rem_minmax(0,1fr)_auto] items-baseline gap-x-6 border-b-2 px-4 py-4 text-left [contain-intrinsic-size:auto_5rem] [content-visibility:auto]"
     >
-      <span className="text-heading font-[300] stretch-condensed">
+      <span className="text-heading stretch-condensed font-[300]">
         {number == null ? "—" : String(number).padStart(2, "0")}
       </span>
       <span className="flex min-w-0 flex-col gap-1">
-        <span className="truncate text-body font-[680] stretch-semicondensed">{episode.title}</span>
+        <span className="text-body stretch-semicondensed truncate font-[680]">{episode.title}</span>
         {focused && episode.overview !== null ? (
-          <span className="line-clamp-2 text-caption text-paper-faint group-focus-visible:text-ink">
+          <span className="text-caption text-paper-faint group-focus-visible:text-ink line-clamp-2">
             {episode.overview}
           </span>
         ) : null}
         {episode.progress === null ? null : (
-          <span aria-hidden="true" className="mt-1 block h-[0.25rem] w-full bg-ink-line">
+          <span aria-hidden="true" className="bg-ink-line mt-1 block h-[0.25rem] w-full">
             <span
-              className="block h-full origin-left bg-paper group-focus-visible:bg-ink"
+              className="bg-paper group-focus-visible:bg-ink block h-full origin-left"
               style={{ transform: `scaleX(${episode.progress})` }}
             />
           </span>
         )}
       </span>
-      <span className="flex items-center gap-3 text-notes text-paper-dim stretch-condensed group-focus-visible:text-ink">
+      <span className="text-notes text-paper-dim stretch-condensed group-focus-visible:text-ink flex items-center gap-3">
         {episode.played ? <SeenMark /> : null}
         {episode.minutes === null ? null : `${episode.minutes} min`}
       </span>
@@ -175,12 +176,12 @@ export function SeriesPage({
       >
         <Backdrop url={series.backdrop === null ? null : backdropUrl(server, series.backdrop)} />
         <InkField deep />
-        <div className="absolute inset-x-safe-x top-[calc(var(--spacing-safe-y)+5rem)] bottom-safe-y flex gap-10">
+        <div className="inset-x-safe-x bottom-safe-y absolute top-[calc(var(--spacing-safe-y)+5rem)] flex gap-10">
           <Margin number={number} seen={series.played} section="Series" />
           <div className="flex w-[44rem] shrink-0 flex-col justify-end gap-8">
             <TitleMark entry={series} server={server} compact={false} />
             <ProgrammeNotes facts={programmeNotes(series)} />
-            <p className="m-0 line-clamp-6 max-w-[62ch] text-body text-paper-dim">
+            <p className="text-body text-paper-dim m-0 line-clamp-6 max-w-[62ch]">
               {series.overview ?? "No synopsis on the server."}
             </p>
             <div className="flex">

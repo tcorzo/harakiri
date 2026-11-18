@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { QueryClient } from "@tanstack/react-query";
 import { beforeAll, describe, expect, test } from "vitest";
-import { classifyFidelity } from "./fidelity";
+
 import {
   type Corpus,
   type CorpusMatch,
@@ -10,6 +10,7 @@ import {
   matchCorpus,
 } from "./contract/corpus";
 import { type LibraryItem, libraryItems } from "./contract/server";
+import { classifyFidelity } from "./fidelity";
 import { DeviceId, ItemId, ServerUrl } from "./ids";
 import {
   type LibraryContext,
@@ -54,7 +55,7 @@ const reachable = await fetch(new URL("System/Info/Public", server), {
   .catch(() => false);
 if (!reachable)
   throw new Error(
-    `the Jellyfin at ${server} is unreachable: set JELLYFIN_DEV_URL (and JELLYFIN_DEV_USER, JELLYFIN_DEV_PASSWORD) to your server, or run \`mise run jellyfin:up\` for the dev container`,
+    `the Jellyfin at ${server} is unreachable: set JELLYFIN_DEV_URL (and JELLYFIN_DEV_USER, JELLYFIN_DEV_PASSWORD) to your server, or run \`mise run jellyfin:up\` for the dev container`
   );
 
 const catalog = await loadCorpus();
@@ -62,7 +63,7 @@ const catalog = await loadCorpus();
 /** Genre sections as sectionsQuery must build them from the corpus NFOs: largest first, then by name. */
 const corpusSections = (present: Corpus["entries"]) => {
   const series = new Set(
-    present.flatMap((entry) => (entry.kind === "episode" ? [entry.series] : [])),
+    present.flatMap((entry) => (entry.kind === "episode" ? [entry.series] : []))
   );
   const genres = [
     ...present.flatMap((entry) => (entry.kind === "movie" ? entry.meta.genres : [])),
@@ -97,7 +98,7 @@ describe(`the Jellyfin at ${server}`, () => {
     library = await libraryItems(ctx);
     corpus = matchCorpus(catalog, library);
     console.info(
-      `[live] ${server}: ${corpus ? `the corpus, ${corpus.present.length} of ${catalog.entries.length} entries` : `not the corpus, ${library.length} items`}`,
+      `[live] ${server}: ${corpus ? `the corpus, ${corpus.present.length} of ${catalog.entries.length} entries` : `not the corpus, ${library.length} items`}`
     );
   });
   const fresh = () => new QueryClient();
@@ -157,11 +158,11 @@ describe(`the Jellyfin at ${server}`, () => {
       expect(typeof film.ImageTags?.["Logo"]).toBe("string");
     }
     const ranges = films.map(
-      (film) => classifyFidelity(film.MediaSources?.[0])?.picture.range ?? "SDR",
+      (film) => classifyFidelity(film.MediaSources?.[0])?.picture.range ?? "SDR"
     );
     const firstSdr = ranges.indexOf("SDR");
     expect(
-      firstSdr === -1 ? [] : ranges.slice(firstSdr).filter((range) => range !== "SDR"),
+      firstSdr === -1 ? [] : ranges.slice(firstSdr).filter((range) => range !== "SDR")
     ).toEqual([]);
   });
 
@@ -178,7 +179,7 @@ describe(`the Jellyfin at ${server}`, () => {
   test("latestQuery: films and shows, a row of at most sixteen", async () => {
     const items = await fresh().fetchQuery(latestQuery(ctx));
     const series = new Set(
-      corpus?.present.flatMap((entry) => (entry.kind === "episode" ? [entry.series] : [])),
+      corpus?.present.flatMap((entry) => (entry.kind === "episode" ? [entry.series] : []))
     );
     const titles = new Set([...movies().map((entry) => entry.name), ...series]);
     const names = items.map((item) => item.Name ?? "");
@@ -202,7 +203,7 @@ describe(`the Jellyfin at ${server}`, () => {
     const picked = pick(
       "dv-p8.1-hevc-mp4",
       () => library.find((i) => i.type === "Movie" && rangeOf(i).startsWith("DOVI")),
-      "Dolby Vision film",
+      "Dolby Vision film"
     );
     const entry = corpus ? corpusEntry(catalog, "dv-p8.1-hevc-mp4") : undefined;
     const item = await fresh().fetchQuery(itemQuery(ctx, picked.id));
@@ -224,14 +225,14 @@ describe(`the Jellyfin at ${server}`, () => {
     const picked = pick(
       "dv-p5-hevc-episode",
       () => library.find((i) => i.type === "Episode"),
-      "episode",
+      "episode"
     );
     const episode = await fresh().fetchQuery(itemQuery(ctx, picked.id));
     const seriesId = ItemId.parse(episode.SeriesId);
     const seasons = await fresh().fetchQuery(seasonsQuery(ctx, seriesId));
     expect(seasons.map((season) => season.Id)).toContain(episode.SeasonId);
     const episodes = await fresh().fetchQuery(
-      episodesQuery(ctx, seriesId, ItemId.parse(episode.SeasonId)),
+      episodesQuery(ctx, seriesId, ItemId.parse(episode.SeasonId))
     );
     expect(episodes.map((item) => item.Id)).toContain(picked.id);
     const entry = corpus ? corpusEntry(catalog, "dv-p5-hevc-episode") : undefined;
@@ -240,7 +241,7 @@ describe(`the Jellyfin at ${server}`, () => {
         entry?.kind === "episode" &&
         other.kind === "episode" &&
         other.series === entry.series &&
-        other.season === entry.season,
+        other.season === entry.season
     );
     expect(episodes).toHaveLength(siblings ? siblings.length : episodes.length);
   });

@@ -110,7 +110,7 @@ test("a resolution older than 60 s is not reused", async () => {
 
 test("a failed prepare leaves play to resolve the request itself", async () => {
   mocks.prepare.mockRejectedValueOnce(
-    new Error("The server answered 500 for /Items/x/PlaybackInfo"),
+    new Error("The server answered 500 for /Items/x/PlaybackInfo")
   );
   await expect(prepare({ itemId })).rejects.toThrow("500");
   await play({ itemId }, () => {});

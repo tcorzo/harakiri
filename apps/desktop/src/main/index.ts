@@ -1,22 +1,24 @@
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+
 import { configure, getConsoleSink, getLogger, withFilter } from "@logtape/logtape";
 import { app, BrowserWindow, session } from "electron";
+
+import { appVersion } from "../shared/identity";
 import { env, isE2E } from "./env";
 import { registerIpc } from "./ipc";
-import { appVersion } from "../shared/identity";
 import { holdQuitUntilStopped, killOnExit, removeStaleMpvDirs } from "./lifecycle";
 import * as player from "./player/index";
 import { openRunLog } from "./run-log";
-import { electronUpdater } from "./updater";
-import { ownAppImage, startUpdates, type Updates } from "./updates";
 import {
   appUrlCheck,
   confineWebContents,
   contentSecurityPolicy,
   installContentSecurityPolicy,
 } from "./security";
+import { electronUpdater } from "./updater";
+import { ownAppImage, startUpdates, type Updates } from "./updates";
 
 // Electron keys the single-instance lock on userData, so this must run before the lock.
 if (env.HARAKIRI_USER_DATA !== undefined) app.setPath("userData", env.HARAKIRI_USER_DATA);

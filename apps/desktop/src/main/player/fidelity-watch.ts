@@ -62,7 +62,7 @@ const RENDERER_OPTIONS: Readonly<Record<Renderer, { readonly vo: string; readonl
 
 const TargetParams = z.object({ gamma: z.string() });
 const TrackList = z.array(
-  z.object({ id: z.number(), type: z.string(), albumart: z.boolean().optional() }),
+  z.object({ id: z.number(), type: z.string(), albumart: z.boolean().optional() })
 );
 const HDR_GAMMAS = new Set(["pq", "hlg"]);
 
@@ -70,7 +70,7 @@ const HDR_GAMMAS = new Set(["pq", "hlg"]);
 async function optional<T>(
   mpv: FidelityMpv,
   name: string,
-  schema: z.ZodType<T>,
+  schema: z.ZodType<T>
 ): Promise<T | undefined> {
   try {
     return await mpv.getProperty(name, schema);
@@ -87,7 +87,7 @@ async function optional<T>(
 export function watchFidelity(
   mpv: FidelityMpv,
   initial: FidelityState,
-  options: WatchOptions,
+  options: WatchOptions
 ): FidelityWatch {
   let state = initial;
   let shown = JSON.stringify(fidelityView(state));
@@ -136,7 +136,7 @@ export function watchFidelity(
       await mpv
         .setProperty("time-pos", lastHealthy ?? options.startSeconds)
         .catch((error: unknown) =>
-          logger.warn("Returning after a step-down failed: {error}", { error }),
+          logger.warn("Returning after a step-down failed: {error}", { error })
         );
     }
     const view = fidelityView(state);
@@ -215,7 +215,7 @@ export function watchFidelity(
     start: () => {
       timer ??= setInterval(() => {
         void sample().catch((error: unknown) =>
-          logger.warn("Fidelity sample failed: {error}", { error }),
+          logger.warn("Fidelity sample failed: {error}", { error })
         );
       }, options.intervalMs ?? 500);
     },

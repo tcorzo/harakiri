@@ -2,6 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, expect, test } from "vitest";
+
 import { AccessToken, DeviceId, ItemId, ServerUrl, UserId } from "./ids";
 import {
   episodesQuery,
@@ -56,7 +57,7 @@ const mock = setupServer(
     if (url.pathname.startsWith("/Items/"))
       return HttpResponse.json({ Id: SERIES, Name: "Fixture Film" });
     return HttpResponse.json({ Items: [] });
-  }),
+  })
 );
 
 beforeAll(() => mock.listen({ onUnhandledFrame: "error" }));
@@ -85,7 +86,7 @@ test("heroQuery asks for random movies that have a backdrop and a logo, with med
     `/Items?userId=${USER}&includeItemTypes=Movie&recursive=true&imageTypes=Backdrop&imageTypes=Logo&enableImageTypes=Backdrop&enableImageTypes=Logo&imageTypeLimit=1&fields=MediaSources&sortBy=Random&limit=12`,
   ]);
   expect(received[0]?.auth).toBe(
-    'MediaBrowser Client="Harakiri", Device="TV", DeviceId="dev-1", Version="0.1.0", Token="tok"',
+    'MediaBrowser Client="Harakiri", Device="TV", DeviceId="dev-1", Version="0.1.0", Token="tok"'
   );
 });
 

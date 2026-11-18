@@ -43,7 +43,7 @@ export function contentSecurityPolicy(appUrl: string): string {
 export function installContentSecurityPolicy(
   session: Pick<Session, "webRequest">,
   isAppUrl: AppUrlCheck,
-  policy: string,
+  policy: string
 ): void {
   session.webRequest.onHeadersReceived((details, callback) => {
     if (details.resourceType !== "mainFrame" || !isAppUrl(details.url)) {
@@ -77,7 +77,7 @@ export class ForeignSenderError extends Error {
 /** Wraps an IPC handler so only frames showing the app can call it. */
 export function fromAppOnly<Args extends unknown[], Result>(
   isAppUrl: AppUrlCheck,
-  handler: (event: IpcMainInvokeEvent, ...args: Args) => Result,
+  handler: (event: IpcMainInvokeEvent, ...args: Args) => Result
 ): (event: IpcMainInvokeEvent, ...args: Args) => Result {
   return (event, ...args) => {
     const url = event.senderFrame?.url;

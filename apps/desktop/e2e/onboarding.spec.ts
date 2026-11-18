@@ -1,9 +1,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+
 import type { Page } from "@playwright/test";
-import { cardName, expect, expectFocus, test } from "./support/harakiri";
-import { padDpad, plugPad, tap } from "./support/gamepad";
+
 import type { Backend } from "./support/backend";
+import { padDpad, plugPad, tap } from "./support/gamepad";
+import { cardName, expect, expectFocus, test } from "./support/harakiri";
 import { type Jellyfin, publicInfo } from "./support/jellyfin";
 import { arrowKeys, focusField, keysFor, typeOnScreen } from "./support/keyboard";
 import { deadAddress, reply, type Stub, stubServer } from "./support/stub";
@@ -18,7 +20,7 @@ async function expectLibrary(page: Page, jellyfin: Jellyfin): Promise<void> {
   const [newest] = await jellyfin.latest();
   if (newest === undefined) throw new Error("The library has nothing recently added");
   await expect(
-    page.getByRole("region", { name: "Recently Added", exact: true }).getByRole("button").first(),
+    page.getByRole("region", { name: "Recently Added", exact: true }).getByRole("button").first()
   ).toHaveAccessibleName(cardName(newest.Name));
 }
 
@@ -27,7 +29,7 @@ async function expectStoredSession(
   page: Page,
   backend: Backend,
   userDataDir: string,
-  userId: string,
+  userId: string
 ) {
   const info = await publicInfo(backend.server);
   const session = await page.evaluate(() => window.harakiri.session.get());
@@ -45,7 +47,7 @@ async function expectStoredSession(
 /** From the sign-in chooser: Another user, then the user name and password on the on-screen keyboard. */
 async function signInOnScreen(
   page: Page,
-  { user, password }: { readonly user: string; readonly password: string },
+  { user, password }: { readonly user: string; readonly password: string }
 ): Promise<void> {
   const keys = arrowKeys(page);
   await expectFocus(page, "Another user");
@@ -157,7 +159,7 @@ test.describe("with the server answering discovery on loopback", () => {
     const { page } = await launch();
     // The server hides its one user, so its public list is served here; sign-in itself is real.
     await page.route("**/Users/Public", (route) =>
-      route.fulfill({ json: [{ Name: backend.user, Id: account.userId, HasPassword: true }] }),
+      route.fulfill({ json: [{ Name: backend.user, Id: account.userId, HasPassword: true }] })
     );
     await expectFocus(page, "Begin");
     await page.keyboard.press("Enter");
@@ -168,7 +170,7 @@ test.describe("with the server answering discovery on loopback", () => {
     await expect(page.getByRole("heading", { name: "Who is watching?" })).toBeVisible();
     await expectFocus(page, backend.user);
     await expect(page.getByRole("button", { name: backend.user, exact: true })).toContainText(
-      "Password",
+      "Password"
     );
     await page.keyboard.press("Enter");
 
@@ -227,7 +229,7 @@ test.describe("with the server answering discovery on loopback", () => {
     await signInOnScreen(page, { user: backend.user, password: "not-the-password" });
 
     await expect(page.getByRole("alert")).toHaveText(
-      `That password did not work for ${backend.user}. Try again, or press Back to choose another user.`,
+      `That password did not work for ${backend.user}. Try again, or press Back to choose another user.`
     );
     await expect(page.getByLabel("Password", { exact: true })).toHaveValue("");
     // The keyboard stays where the owner left it, on Sign in, ready for a second try.
@@ -253,7 +255,7 @@ test.describe("with the server answering discovery on loopback", () => {
     await expect(
       page.getByRole("button", {
         name: `${(await publicInfo(backend.server)).name}, ${backend.server}`,
-      }),
+      })
     ).toBeVisible();
     await page.waitForTimeout(500);
     await expectFocus(page, "w");
@@ -353,14 +355,14 @@ test.describe("with no server answering discovery", () => {
 
     await expect(main(page, "Find your server")).toBeVisible();
     await expect(
-      page.getByText("No server answered. Type its address instead, or search again."),
+      page.getByText("No server answered. Type its address instead, or search again.")
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "Search again" })).toBeVisible();
     await expectFocus(page, "q");
 
     await typeOnScreen(page, arrowKeys(page), keysFor(backend.address, [":8096"]));
     await expect(page.getByRole("textbox", { name: "Server address" })).toHaveValue(
-      backend.address,
+      backend.address
     );
     await typeOnScreen(page, arrowKeys(page), ["Connect"]);
 
@@ -535,7 +537,7 @@ test.describe("with no server answering discovery", () => {
       await signInOnScreen(page, { user: "harakiri", password: "anything" });
 
       await expect(page.getByRole("alert")).toHaveText(
-        "The server refused this sign-in. The account may be disabled; ask whoever runs the server.",
+        "The server refused this sign-in. The account may be disabled; ask whoever runs the server."
       );
       expect(stub.seen).toContain("POST /Users/AuthenticateByName");
       expect(await page.evaluate(() => window.harakiri.session.get())).toBeNull();
@@ -547,7 +549,7 @@ test.describe("with no server answering discovery", () => {
       await page.keyboard.press("Escape");
       await expect(main(page, "Find your server")).toBeVisible();
       await expect(page.getByRole("textbox", { name: "Server address" })).toHaveValue(
-        `http://${stub.address}/`,
+        `http://${stub.address}/`
       );
       await expectFocus(page, "q");
       await page.keyboard.press("Escape");

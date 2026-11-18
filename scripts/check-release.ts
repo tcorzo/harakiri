@@ -40,13 +40,13 @@ type Meta = {
 
 const walk = (dir: string): string[] =>
   readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
-    e.isDirectory() ? walk(join(dir, e.name)) : [join(dir, e.name)],
+    e.isDirectory() ? walk(join(dir, e.name)) : [join(dir, e.name)]
   );
 
 const specifiers = (source: string): Set<string> => {
   const found = new Set<string>();
   for (const m of source.matchAll(
-    /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*)["']([^"']+)["']/g,
+    /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*)["']([^"']+)["']/g
   )) {
     found.add(m[1] ?? "");
   }
@@ -72,7 +72,7 @@ check(
   "version",
   meta.version === version
     ? undefined
-    : `latest-linux.yml says ${meta.version}, expected ${version}`,
+    : `latest-linux.yml says ${meta.version}, expected ${version}`
 );
 
 const file = entry?.url ? join(dist, entry.url) : undefined;
@@ -82,7 +82,7 @@ if (!file || !existsSync(file)) {
 }
 check(
   "artifact",
-  meta.path === entry.url ? undefined : `path ${meta.path} differs from files[0].url ${entry.url}`,
+  meta.path === entry.url ? undefined : `path ${meta.path} differs from files[0].url ${entry.url}`
 );
 
 const digest = createHash("sha512").update(readFileSync(file)).digest("base64");
@@ -90,13 +90,13 @@ check(
   "sha512",
   entry.sha512 === digest && meta.sha512 === digest
     ? undefined
-    : `file is ${digest}, files[0] says ${entry.sha512}, top level says ${meta.sha512}`,
+    : `file is ${digest}, files[0] says ${entry.sha512}, top level says ${meta.sha512}`
 );
 check(
   "size",
   entry.size === statSync(file).size
     ? undefined
-    : `file is ${statSync(file).size}, files[0] says ${entry.size}`,
+    : `file is ${statSync(file).size}, files[0] says ${entry.size}`
 );
 
 const tmp = mkdtempSync(join(tmpdir(), "harakiri-release-"));
@@ -122,7 +122,7 @@ try {
   const asar = execFileSync(
     "bun",
     ["x", "--package", "@electron/asar@3.4.1", "asar", "list", join(resources, "app.asar")],
-    { encoding: "utf8", maxBuffer: 1 << 28 },
+    { encoding: "utf8", maxBuffer: 1 << 28 }
   );
   const needed = new Set<string>();
   for (const js of walk(mainOut).filter((f) => f.endsWith(".js"))) {
@@ -134,7 +134,7 @@ try {
   const missing = [...needed].filter((pkg) => !asar.includes(`/node_modules/${pkg}/package.json`));
   check(
     "runtime deps",
-    missing.length ? `not packed in app.asar: ${missing.join(", ")}` : undefined,
+    missing.length ? `not packed in app.asar: ${missing.join(", ")}` : undefined
   );
 } finally {
   rmSync(tmp, { recursive: true, force: true });

@@ -1,7 +1,10 @@
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
+
+import { expectShortByAtMostOneMatFrame } from "./assertions";
 import {
   type Clip,
   type ClipCodec,
@@ -11,7 +14,6 @@ import {
   synthesizePcmWav,
 } from "./clips";
 import { elementaryStream, Iec61937Error, scanBursts } from "./iec61937";
-import { expectShortByAtMostOneMatFrame } from "./assertions";
 import { readPcm16 } from "./wav";
 
 let dir: string;
@@ -77,7 +79,7 @@ describe("T0: captures the harness must reject", () => {
     expect(pcm).toMatchObject({ kind: "wav", channels: 2, sampleRate: 48000 });
     expect(scanBursts(pcm.data)).toEqual([]);
     expect(() => elementaryStream(scanBursts(pcm.data))).toThrow(
-      new Iec61937Error("no audio-carrying bursts"),
+      new Iec61937Error("no audio-carrying bursts")
     );
     expect(elementaryStream(scanBursts(spdifOf("ac3"))).codec).toBe("ac3");
   });
@@ -87,7 +89,7 @@ describe("T0: captures the harness must reject", () => {
     const firstPayload = 8;
     pcm[firstPayload + 30708] = (pcm[firstPayload + 30708] ?? 0) ^ 0xff;
     expect(() => elementaryStream(scanBursts(pcm))).toThrow(
-      new Iec61937Error("MAT burst at byte 0: middle code missing at frame offset 30708"),
+      new Iec61937Error("MAT burst at byte 0: middle code missing at frame offset 30708")
     );
   });
 });

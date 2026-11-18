@@ -1,4 +1,5 @@
 import { create } from "zustand";
+
 import type { Entry } from "../data/entry";
 
 /** A programme section that can own focus: tonight's screening or one row, named by a stable id. */
@@ -60,7 +61,7 @@ export const useLit = create<LitState>()((set) => ({
     set((state) =>
       state.section.id === section.id
         ? { entry, travelling: false }
-        : { entry, section, movedAt: Date.now(), travelling: false },
+        : { entry, section, movedAt: Date.now(), travelling: false }
     ),
   remember: (place) => set({ place }),
   setHeroId: (heroId) => set({ heroId }),
@@ -85,7 +86,7 @@ export const rowKey = (section: string): string => `row|${section}`;
 export function restoreKeys(
   place: Place | null,
   hero: boolean,
-  firstSection: string | undefined,
+  firstSection: string | undefined
 ): string[] {
   const keys: string[] = [];
   if (place !== null) keys.push(cardKey(place.section, place.entry), rowKey(place.section));

@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { inspect, promisify } from "node:util";
+
 import {
   configure,
   defaultTextFormatter,
@@ -14,6 +15,7 @@ import {
 } from "@logtape/logtape";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 import { z } from "zod";
+
 import { buildPlaybackArgs, type MpvConfig } from "./args";
 import {
   type JsonValue,
@@ -35,7 +37,7 @@ const clients: MpvClient[] = [];
 
 async function start(
   args: readonly string[] = headless,
-  options: { config?: MpvConfig; requestTimeoutMs?: number } = {},
+  options: { config?: MpvConfig; requestTimeoutMs?: number } = {}
 ): Promise<MpvClient> {
   const client = await spawnMpv({ config: "none", ...options, args });
   clients.push(client);
@@ -160,7 +162,7 @@ describe("spawnMpv", () => {
     // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- deliberately unencodable
     const unencodable = 1n as unknown as JsonValue;
     await expect(client.command("set_property", "volume", unencodable)).rejects.toBeInstanceOf(
-      TypeError,
+      TypeError
     );
     await delay(400);
     expect(await client.getProperty("pause", z.boolean())).toBe(false);
@@ -205,7 +207,7 @@ describe("spawnMpv", () => {
   test("setHttpHeaders refuses a header that would smuggle a second one", async () => {
     const client = await start();
     await expect(setHttpHeaders(client, { Authorization: "x\r\nCookie: y" })).rejects.toThrow(
-      new TypeError('invalid HTTP header "Authorization"'),
+      new TypeError('invalid HTTP header "Authorization"')
     );
     expect(await client.getProperty("http-header-fields", z.array(z.string()))).toEqual([]);
   });
@@ -310,26 +312,26 @@ describe("redactSecrets", () => {
   test("hides Jellyfin tokens in the URLs mpv prints", () => {
     expect(
       redactSecrets(
-        " ○ Subs --sid=4 'http://jf/Videos/1/Subtitles/0/0/Stream.subrip?ApiKey=9d4e00ff' (subrip)",
-      ),
+        " ○ Subs --sid=4 'http://jf/Videos/1/Subtitles/0/0/Stream.subrip?ApiKey=9d4e00ff' (subrip)"
+      )
     ).toBe(
-      " ○ Subs --sid=4 'http://jf/Videos/1/Subtitles/0/0/Stream.subrip?ApiKey=REDACTED' (subrip)",
+      " ○ Subs --sid=4 'http://jf/Videos/1/Subtitles/0/0/Stream.subrip?ApiKey=REDACTED' (subrip)"
     );
     expect(redactSecrets("GET /stream?static=true&api_key=abc&MediaSourceId=x")).toBe(
-      "GET /stream?static=true&api_key=REDACTED&MediaSourceId=x",
+      "GET /stream?static=true&api_key=REDACTED&MediaSourceId=x"
     );
   });
 
   test("hides the token in the Authorization header verbose mpv echoes", () => {
     expect(
       redactSecrets(
-        '[cplayer] Set property: http-header-fields=["Authorization: MediaBrowser Token=\\"9d4e00ff\\", Client=\\"harakiri\\""] -> 1',
-      ),
+        '[cplayer] Set property: http-header-fields=["Authorization: MediaBrowser Token=\\"9d4e00ff\\", Client=\\"harakiri\\""] -> 1'
+      )
     ).toBe(
-      '[cplayer] Set property: http-header-fields=["Authorization: MediaBrowser Token=\\"REDACTED\\", Client=\\"harakiri\\""] -> 1',
+      '[cplayer] Set property: http-header-fields=["Authorization: MediaBrowser Token=\\"REDACTED\\", Client=\\"harakiri\\""] -> 1'
     );
     expect(redactSecrets('Authorization: MediaBrowser Client="x", Token="9d4e00ff"')).toBe(
-      'Authorization: MediaBrowser Client="x", Token="REDACTED"',
+      'Authorization: MediaBrowser Client="x", Token="REDACTED"'
     );
   });
 });

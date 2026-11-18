@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+
 import { readPcm16, WavError } from "./wav";
 
 function le16(n: number): number[] {
@@ -33,7 +34,7 @@ describe("readPcm16", () => {
     const file = riff(
       chunk("LIST", [1, 2, 3]),
       fmt(0xfffe, 8, 192000, 16),
-      chunk("data", [0x72, 0xf8, 0x1f, 0x4e]),
+      chunk("data", [0x72, 0xf8, 0x1f, 0x4e])
     );
     expect(readPcm16(file)).toEqual({
       kind: "wav",
@@ -64,7 +65,7 @@ describe("readPcm16", () => {
   test("rejects 24-bit PCM, which cannot carry IEC 61937", () => {
     const file = riff(fmt(1, 2, 48000, 24), chunk("data", [0, 0, 0]));
     expect(() => readPcm16(file)).toThrow(
-      new WavError("fmt has 24 bits per sample, IEC 61937 needs 16"),
+      new WavError("fmt has 24 bits per sample, IEC 61937 needs 16")
     );
   });
 });

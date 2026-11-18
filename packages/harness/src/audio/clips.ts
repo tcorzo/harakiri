@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { join } from "node:path";
+
 import { runToolOrThrow } from "../process";
 
 export type ClipCodec = "ac3" | "eac3" | "dts" | "truehd";
@@ -62,7 +63,7 @@ export function synthesizePcmWav(dir: string): string {
 export function muxSpdif(
   input: string,
   output: string,
-  options: { dtshdRate?: number } = {},
+  options: { dtshdRate?: number } = {}
 ): void {
   const dtshd = options.dtshdRate === undefined ? [] : ["-dtshd_rate", String(options.dtshdRate)];
   ffmpeg(["-i", input, "-map", "0:a:0", "-c", "copy", "-f", "spdif", ...dtshd, output]);

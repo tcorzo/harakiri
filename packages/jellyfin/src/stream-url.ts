@@ -30,7 +30,7 @@ export const authorizationHeader = (identity: ClientIdentity, token?: AccessToke
     ...(token === undefined ? {} : { Token: token }),
   };
   const parts = Object.entries(fields).map(
-    ([key, value]) => `${key}="${encodeURIComponent(value)}"`,
+    ([key, value]) => `${key}="${encodeURIComponent(value)}"`
   );
   return `MediaBrowser ${parts.join(", ")}`;
 };

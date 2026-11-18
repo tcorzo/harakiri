@@ -42,7 +42,7 @@ type DataTypeEntry = (typeof DATA_TYPES)[number];
 export type DataTypeName = DataTypeEntry["name"];
 
 const DATA_TYPE_BY_CODE: ReadonlyMap<number, DataTypeEntry> = new Map(
-  DATA_TYPES.map((t) => [t.code, t]),
+  DATA_TYPES.map((t) => [t.code, t])
 );
 
 export interface Burst {
@@ -108,7 +108,7 @@ export function scanBursts(pcm: Uint8Array): Burst[] {
     const wordAlignedEnd = start + length + (length & 1);
     if (wordAlignedEnd > pcm.length) {
       throw new Iec61937Error(
-        `${entry.name} burst at byte ${at} needs ${length} bytes, stream ends first`,
+        `${entry.name} burst at byte ${at} needs ${length} bytes, stream ends first`
       );
     }
     bursts.push({
@@ -147,7 +147,7 @@ export function elementaryStream(bursts: readonly Burst[]): ElementaryStream {
   const other = carried.find((c) => c.stream !== first.stream);
   if (other !== undefined) {
     throw new Iec61937Error(
-      `mixed codecs: ${first.stream} and ${other.stream} at byte ${other.burst.offset}`,
+      `mixed codecs: ${first.stream} and ${other.stream} at byte ${other.burst.offset}`
     );
   }
   const payloads = carried.map((c) => c.burst);
@@ -186,7 +186,7 @@ function unwrapDtsTypeIV(burst: Burst): Uint8Array {
   const frameStart = DTSHD_START_CODE.length + 2;
   if (frameStart + frameLength > payload.length) {
     throw new Iec61937Error(
-      `DTS type IV burst at byte ${offset} declares ${frameLength} bytes, holds fewer`,
+      `DTS type IV burst at byte ${offset} declares ${frameLength} bytes, holds fewer`
     );
   }
   return payload.subarray(frameStart, frameStart + frameLength);
@@ -217,7 +217,7 @@ const MAT_CODES = [
       0x49,
       0x80,
       0x77,
-      0xe0,
+      0xe0
     ),
   },
   {
@@ -244,7 +244,7 @@ const MAT_CODES = [
       0x00,
       0x00,
       0x97,
-      0x11,
+      0x11
     ),
   },
 ] as const;
@@ -259,7 +259,7 @@ function unwrapMatFrame(burst: Burst): Uint8Array {
   const { payload, offset } = burst;
   if (payload.length !== MAT_FRAME_SIZE) {
     throw new Iec61937Error(
-      `MAT burst at byte ${offset} is ${payload.length} bytes, not ${MAT_FRAME_SIZE}`,
+      `MAT burst at byte ${offset} is ${payload.length} bytes, not ${MAT_FRAME_SIZE}`
     );
   }
   const segments: Uint8Array[] = [];
@@ -267,7 +267,7 @@ function unwrapMatFrame(burst: Burst): Uint8Array {
   for (const { label, at, code } of MAT_CODES) {
     if (!startsWith(payload, code, at)) {
       throw new Iec61937Error(
-        `MAT burst at byte ${offset}: ${label} code missing at frame offset ${at}`,
+        `MAT burst at byte ${offset}: ${label} code missing at frame offset ${at}`
       );
     }
     segments.push(payload.subarray(cursor, at));

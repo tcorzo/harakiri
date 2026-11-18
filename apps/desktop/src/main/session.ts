@@ -10,10 +10,12 @@ import {
   writeSync,
 } from "node:fs";
 import { join } from "node:path";
+
+import { DeviceId } from "@harakiri/jellyfin";
 import { getLogger } from "@logtape/logtape";
 import { app, safeStorage } from "electron";
-import { DeviceId } from "@harakiri/jellyfin";
 import { z } from "zod";
+
 import { NewSession, Session } from "../shared/bridge";
 import { isE2E } from "./env";
 
@@ -135,7 +137,7 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
       } else {
         logger.warn(
           "safeStorage has no keyring (backend {backend}); the session is kept in memory and will not survive a restart",
-          { backend: options.crypto.getSelectedStorageBackend() },
+          { backend: options.crypto.getSelectedStorageBackend() }
         );
         memorySession = { ...rest, accessToken, deviceId: deviceId() };
         rmSync(sessionFile, { force: true });

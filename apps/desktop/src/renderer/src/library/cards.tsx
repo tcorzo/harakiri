@@ -1,5 +1,6 @@
 import type { ServerUrl } from "@harakiri/jellyfin";
 import { useFocusable } from "@noriginmedia/norigin-spatial-navigation";
+
 import { episodeCode, imageUrl, minutesLeft, type Entry, type ImageRef } from "../data/entry";
 import { catalogueLabel, remPx, SeenMark } from "../ui/marks";
 
@@ -60,7 +61,7 @@ export function StillCard({ entry, number, server, focusKey, onFocus, onPress }:
       onClick={onPress}
       className="group flex w-[24rem] flex-col gap-3 text-left"
     >
-      <span className="focus-mark relative block group-focus-visible:scale-[1.06] group-focus-visible:outline-paper">
+      <span className="focus-mark group-focus-visible:outline-paper relative block group-focus-visible:scale-[1.06]">
         <Picture
           server={server}
           image={entry.still}
@@ -68,20 +69,20 @@ export function StillCard({ entry, number, server, focusKey, onFocus, onPress }:
           className="block aspect-video w-full"
         />
         {entry.progress === null ? null : (
-          <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[0.375rem] bg-ink/70">
+          <span aria-hidden="true" className="bg-ink/70 absolute inset-x-0 bottom-0 h-[0.375rem]">
             <span
-              className="block h-full origin-left bg-paper"
+              className="bg-paper block h-full origin-left"
               style={{ transform: `scaleX(${entry.progress})` }}
             />
           </span>
         )}
       </span>
-      <span className="flex items-baseline gap-3 text-caption font-[600] text-paper-dim stretch-condensed">
+      <span className="text-caption text-paper-dim stretch-condensed flex items-baseline gap-3 font-[600]">
         {number === null ? null : <span>{catalogueLabel(number)}</span>}
         {code === null ? null : <span>{code}</span>}
         {left === null ? null : <span className="ml-auto">{left} min left</span>}
       </span>
-      <span className="truncate text-body font-[680] stretch-semicondensed group-focus-visible:text-paper">
+      <span className="text-body stretch-semicondensed group-focus-visible:text-paper truncate font-[680]">
         {entry.kind === "Episode" && entry.series !== null ? entry.series.name : entry.title}
       </span>
     </button>
@@ -99,7 +100,7 @@ export function PosterCard({ entry, number, server, focusKey, onFocus, onPress }
       onClick={onPress}
       className="group flex w-[13.5rem] flex-col gap-3 text-left"
     >
-      <span className="focus-mark block group-focus-visible:scale-[1.06] group-focus-visible:outline-paper">
+      <span className="focus-mark group-focus-visible:outline-paper block group-focus-visible:scale-[1.06]">
         <Picture
           server={server}
           image={entry.poster}
@@ -107,11 +108,11 @@ export function PosterCard({ entry, number, server, focusKey, onFocus, onPress }
           className="block aspect-[2/3] w-full"
         />
       </span>
-      <span className="flex items-center gap-2 text-caption font-[600] text-paper-dim stretch-condensed">
+      <span className="text-caption text-paper-dim stretch-condensed flex items-center gap-2 font-[600]">
         {number === null ? null : <span>{catalogueLabel(number)}</span>}
         {entry.played ? <SeenMark className="text-paper" /> : null}
       </span>
-      <span className="-mt-2 truncate text-body font-[640] stretch-semicondensed">
+      <span className="text-body stretch-semicondensed -mt-2 truncate font-[640]">
         {entry.title}
       </span>
     </button>

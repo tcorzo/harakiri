@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+
 import { type FidelityStart, fidelityView, observe, startFidelity } from "./engine";
 import type { AudioOutput, Observation, PictureSource, SoundSource } from "./model";
 
@@ -91,13 +92,13 @@ describe("sound", () => {
     expect(failed.actions).toEqual([{ kind: "setBitstream", codecs: [] }]);
     expect(failed.view.facts[1]).toEqual({ text: "E-AC3 5.1 decoded to PCM", state: "decoded" });
     expect(failed.view.downgrades[0]?.message).toBe(
-      "AV receiver stopped taking the E-AC3 5.1 bitstream, so harakiri decodes it.",
+      "AV receiver stopped taking the E-AC3 5.1 bitstream, so harakiri decodes it."
     );
 
     const silent = run(start(), { kind: "audioOutputFailed" }, { kind: "audioOutputFailed" });
     expect(silent.view.facts[1]).toEqual({ text: "No sound", state: "decoded" });
     expect(silent.view.downgrades[0]?.message).toBe(
-      "AV receiver stopped playing sound. The picture carries on without it.",
+      "AV receiver stopped playing sound. The picture carries on without it."
     );
   });
 
@@ -105,7 +106,7 @@ describe("sound", () => {
     const { view, actions } = run(
       start(),
       { kind: "audioOutputFailed" },
-      { kind: "soundTrack", sound: dtsHd },
+      { kind: "soundTrack", sound: dtsHd }
     );
     expect(actions).toEqual([{ kind: "setBitstream", codecs: [] }]);
     expect(view.facts[1]).toEqual({ text: "DTS-HD MA 7.1 decoded to PCM", state: "decoded" });
@@ -140,14 +141,14 @@ describe("picture", () => {
     const once = run(start(), { kind: "rendererFailed" });
     expect(once.actions).toEqual([{ kind: "setRenderer", renderer: "opengl" }]);
     expect(once.view.downgrades[0]?.message).toBe(
-      "Vulkan could not start, so harakiri renders with OpenGL, which cannot send HDR. Dolby Vision is tone-mapped to SDR.",
+      "Vulkan could not start, so harakiri renders with OpenGL, which cannot send HDR. Dolby Vision is tone-mapped to SDR."
     );
 
     const all = run(
       start(),
       { kind: "rendererFailed" },
       { kind: "rendererFailed" },
-      { kind: "rendererFailed" },
+      { kind: "rendererFailed" }
     );
     expect(all.actions).toEqual([
       { kind: "setRenderer", renderer: "opengl" },
@@ -174,7 +175,7 @@ describe("delivery", () => {
           picture: sdr,
           sound: { carriage: "decode", label: "AAC 5.1" },
         },
-      }),
+      })
     );
     expect(view.facts).toEqual([
       { text: "SDR", state: "native" },

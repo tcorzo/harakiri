@@ -110,7 +110,7 @@ const menuPanel = (menu: NonNullable<ControlsView["menu"]>): string[] => {
   const { rows, cursor } = menu;
   const start = Math.min(
     Math.max(cursor - Math.floor(MENU_ROWS / 2), 0),
-    Math.max(rows.length - MENU_ROWS, 0),
+    Math.max(rows.length - MENU_ROWS, 0)
   );
   const visible = rows.slice(start, start + MENU_ROWS);
   const width = RIGHT - MENU_LEFT;
@@ -121,7 +121,7 @@ const menuPanel = (menu: NonNullable<ControlsView["menu"]>): string[] => {
     if (offset === 0 || rows[index - 1]?.property !== row.property) {
       if (offset > 0) y += 14;
       events.push(
-        text(MENU_LEFT + 32, y, STYLE.label, row.property === "aid" ? "SOUND" : "SUBTITLES"),
+        text(MENU_LEFT + 32, y, STYLE.label, row.property === "aid" ? "SOUND" : "SUBTITLES")
       );
       y += 36;
       events.push(rect(MENU_LEFT + 32, y, width - 64, 1, NOTE, "&H60&"));

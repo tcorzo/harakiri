@@ -2,7 +2,9 @@
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { afterEach, beforeEach, expect, test } from "vitest";
+
 import { holdQuitUntilStopped, removeStaleMpvDirs, stopWithin } from "./lifecycle";
 
 let dir: string;

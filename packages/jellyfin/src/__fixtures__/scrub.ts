@@ -37,7 +37,7 @@ const TEXT_RULES: [RegExp, string][] = [
 export const scrubText = (text: string): string =>
   TEXT_RULES.reduce(
     (current, [pattern, replacement]) => current.replace(pattern, replacement),
-    text,
+    text
   );
 
 const extension = (path: string) => /\.[^./]+$/.exec(path)?.[0] ?? "";
@@ -92,7 +92,7 @@ export const scrubSource = (source: Json, name: string): Json => {
     next["MediaAttachments"] = next["MediaAttachments"].map((attachment, index) =>
       isRecord(attachment) && typeof attachment["FileName"] === "string"
         ? { ...attachment, FileName: `attachment-${index}${extension(attachment["FileName"])}` }
-        : attachment,
+        : attachment
     );
   const scrubbed = replaceIds(next, ids);
   return isRecord(scrubbed) ? scrubbed : next;
@@ -103,7 +103,7 @@ export const scrubPlaybackInfo = (info: Json, name: string): Json => {
   const next: Json = { ...info };
   if (Array.isArray(next["MediaSources"]))
     next["MediaSources"] = next["MediaSources"].map((source, index) =>
-      isRecord(source) ? scrubSource(source, index === 0 ? name : `${name}-${index}`) : source,
+      isRecord(source) ? scrubSource(source, index === 0 ? name : `${name}-${index}`) : source
     );
   const session = next["PlaySessionId"];
   if (typeof session !== "string") return next;

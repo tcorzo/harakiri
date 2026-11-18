@@ -1,5 +1,6 @@
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+
 import { expect, test } from "./support/harakiri";
 
 test("a seeded session is read back whole, with the profile's device id", async ({
@@ -11,7 +12,7 @@ test("a seeded session is read back whole, with the profile's device id", async 
   const { page } = await launch();
 
   const [session, deviceId] = await page.evaluate(() =>
-    Promise.all([window.harakiri.session.get(), window.harakiri.deviceId()]),
+    Promise.all([window.harakiri.session.get(), window.harakiri.deviceId()])
   );
 
   expect(session).toEqual(account);

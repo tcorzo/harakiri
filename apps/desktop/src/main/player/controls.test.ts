@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, expect, test } from "vitest";
+
 import {
   type ControlsInput,
   type ControlsState,
@@ -28,7 +29,7 @@ const run = (state: ControlsState, ...inputs: ControlsInput[]) =>
       const next = step(acc.state, input, rows);
       return { state: next.state, commands: [...acc.commands, ...next.commands] };
     },
-    { state, commands: [] },
+    { state, commands: [] }
   );
 
 test("the menu lists audio, then subtitles led by Off", () => {

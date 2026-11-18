@@ -1,5 +1,6 @@
 import { AccessToken, DeviceId, ServerUrl, UserId } from "@harakiri/jellyfin";
 import { expect, test } from "vitest";
+
 import {
   initialOnboarding,
   isServerSupported,
@@ -75,7 +76,7 @@ test("a typed address is checked, then the server leads to choosing a user", () 
   });
 
   expect(onboarding(checking, { type: "serverFound", address: "127.0.0.1", info: server })).toEqual(
-    { step: "chooseUser", server },
+    { step: "chooseUser", server }
   );
 });
 
@@ -94,7 +95,7 @@ test("an unreachable or too-old server returns to the address with the problem",
       type: "serverFailed",
       address: "http://10.0.0.9:8096",
       problem: { kind: "tooOld", version: "10.8.13" },
-    }),
+    })
   ).toEqual({
     step: "server",
     address: "http://10.0.0.9:8096",
@@ -107,7 +108,7 @@ test("a late answer for an address the owner backed out of is ignored", () => {
   const backedOut = onboarding(checking, { type: "back" });
   expect(backedOut).toEqual({ step: "server", address: "10.0.0.9" });
   expect(onboarding(backedOut, { type: "serverFound", address: "10.0.0.9", info: server })).toEqual(
-    { step: "server", address: "10.0.0.9" },
+    { step: "server", address: "10.0.0.9" }
   );
 
   const other = onboarding(checking, {
@@ -148,8 +149,8 @@ test("a user without a password signs in straight from the list", () => {
   expect(
     onboarding(
       { step: "chooseUser", server },
-      { type: "pickUser", username: "guest", hasPassword: false },
-    ),
+      { type: "pickUser", username: "guest", hasPassword: false }
+    )
   ).toEqual({ step: "authenticating", server, username: "guest", password: "" });
 });
 

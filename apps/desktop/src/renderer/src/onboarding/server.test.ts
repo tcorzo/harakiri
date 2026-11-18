@@ -1,5 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, expect, test, vi } from "vitest";
+
 import { checkServer } from "./server";
 
 const jellyfin = {
@@ -28,7 +29,7 @@ afterEach(() => {
 test("the candidate that answers as Jellyfin wins over one that refuses the connection", async () => {
   network({ "http://films.example:8096": jellyfin });
   expect(
-    await checkServer(fresh(), ["https://films.example/", "http://films.example:8096/"]),
+    await checkServer(fresh(), ["https://films.example/", "http://films.example:8096/"])
   ).toEqual({
     ok: true,
     info: {
@@ -43,7 +44,7 @@ test("the candidate that answers as Jellyfin wins over one that refuses the conn
 test("when no candidate is Jellyfin, the one that answered names the problem", async () => {
   network({ "http://films.example:8096": { hello: "world" } });
   expect(
-    await checkServer(fresh(), ["https://films.example/", "http://films.example:8096/"]),
+    await checkServer(fresh(), ["https://films.example/", "http://films.example:8096/"])
   ).toEqual({ ok: false, problem: { kind: "notJellyfin" } });
   expect(await checkServer(fresh(), ["https://films.example/"])).toEqual({
     ok: false,

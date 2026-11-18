@@ -1,10 +1,11 @@
+import { ItemId, MediaSourceId, type ServerUrl, staticStreamUrl } from "@harakiri/jellyfin";
 import type {
   BaseItemDto,
   MediaSourceInfo,
   PlaybackInfoResponse,
   TranscodeReason,
 } from "@harakiri/jellyfin/generated";
-import { ItemId, MediaSourceId, type ServerUrl, staticStreamUrl } from "@harakiri/jellyfin";
+
 import { mpvTrack, type PlayMethod, type TrackTable, trackTable } from "./tracks";
 
 const REASONS: Readonly<Record<TranscodeReason, string>> = {
@@ -84,7 +85,7 @@ export interface Resolution {
 export function resolve(
   response: PlaybackInfoResponse,
   request: ResolveRequest,
-  server: ServerUrl,
+  server: ServerUrl
 ): Resolution {
   if (response.ErrorCode) throw new Error(ERRORS[response.ErrorCode]);
   const sources = response.MediaSources ?? [];

@@ -15,7 +15,7 @@ export const imageUrl = (
   server: ServerUrl,
   itemId: ItemId,
   type: ImageType,
-  { maxWidth, tag, quality, index }: ImageSize,
+  { maxWidth, tag, quality, index }: ImageSize
 ): string => {
   const path =
     index === undefined

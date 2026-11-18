@@ -1,7 +1,9 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
+
 import { expectShortByAtMostOneMatFrame } from "./assertions";
 import { muxSpdif, remuxToMatroska, sha256 } from "./clips";
 import { elementaryStream, scanBursts } from "./iec61937";
@@ -43,13 +45,13 @@ describe("FATE: HBR streams through the extractor and mpv", () => {
       const bursts = scanBursts(spdif(sample(name), `${name}.spdif`, { dtshdRate: 768_000 }));
       expect([...new Set(bursts.map((b) => `${b.dataType}/${b.subtype}`))]).toEqual(["17/4"]);
       expect(sha256(elementaryStream(bursts).bytes)).toBe(sha256(readFileSync(sample(name))));
-    },
+    }
   );
 
   test("DTS-HD MA sent as core only (mpv's plain `dts` token) is caught", () => {
     const source = readFileSync(sample("master_audio_7.1_24bit.dts"));
     const extracted = elementaryStream(
-      scanBursts(spdif(sample("master_audio_7.1_24bit.dts"), "ma-core.spdif")),
+      scanBursts(spdif(sample("master_audio_7.1_24bit.dts"), "ma-core.spdif"))
     );
     expect(extracted.codec).toBe("dts");
     expect(extracted.bytes.length).toBeLessThan(source.length);
@@ -77,9 +79,9 @@ describe("FATE: HBR streams through the extractor and mpv", () => {
       const reference = spdif(
         mkv,
         `${name}.mkv.spdif`,
-        dtshdRate === undefined ? {} : { dtshdRate },
+        dtshdRate === undefined ? {} : { dtshdRate }
       );
       expect(sha256(readPcm16(readFileSync(wav)).data)).toBe(sha256(reference));
-    },
+    }
   );
 });

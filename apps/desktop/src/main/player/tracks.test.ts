@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { expect, test } from "vitest";
+
 import { mediaSource } from "./fixtures/load";
 import { mpvTrack, trackTable } from "./tracks";
 
@@ -38,7 +39,7 @@ test("a transcode carries only the server's audio and every subtitle as a sideca
     [8, 7],
   ]);
   expect(table.subtitleFiles[3]).toBe(
-    "http://jf.test/Videos/333d2fed-9dc9-bd77-0dfa-6843547d111a/333d2fed9dc9bd770dfa6843547d111a/Subtitles/5/0/Stream.subrip?ApiKey=REDACTED",
+    "http://jf.test/Videos/333d2fed-9dc9-bd77-0dfa-6843547d111a/333d2fed9dc9bd770dfa6843547d111a/Subtitles/5/0/Stream.subrip?ApiKey=REDACTED"
   );
 });
 
@@ -46,7 +47,7 @@ test("mpvTrack maps a Jellyfin index, turns -1 off, and leaves an unknown choice
   const { subtitles } = trackTable(
     mediaSource("dv-hdr10-truehd-atmos"),
     "DirectPlay",
-    "http://jf.test/",
+    "http://jf.test/"
   );
   expect(mpvTrack(subtitles, 1)).toBe(6);
   expect(mpvTrack(subtitles, 9)).toBe(3);

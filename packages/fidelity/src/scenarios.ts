@@ -141,7 +141,7 @@ export function simulate(
   sound: SoundSource | null,
   delivery: Delivery,
   output: AudioOutput,
-  then: (sent: FidelityView) => readonly Observation[],
+  then: (sent: FidelityView) => readonly Observation[]
 ): FidelityView {
   let state = startFidelity({ picture, sound, delivery, output });
   for (const observation of then(fidelityView(state))) state = observe(state, observation).state;

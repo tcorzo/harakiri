@@ -22,7 +22,7 @@ const BINDINGS: readonly Binding[] = [
 /** The `input.conf` for the app-owned mpv config dir. mpv's own bindings are disabled. */
 export function inputConf(): string {
   const lines = BINDINGS.flatMap(({ keys, action, repeat }) =>
-    keys.map((key) => `${key} ${repeat ? "repeatable " : ""}script-message harakiri ${action}`),
+    keys.map((key) => `${key} ${repeat ? "repeatable " : ""}script-message harakiri ${action}`)
   );
   return `${lines.join("\n")}\n`;
 }

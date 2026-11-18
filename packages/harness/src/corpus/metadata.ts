@@ -1,4 +1,5 @@
 import { match } from "ts-pattern";
+
 import type { EpisodeEntry, Metadata, MovieEntry } from "./catalog";
 
 /** Kodi-style NFO files, which Jellyfin's local metadata reader takes with no internet access. */
@@ -77,25 +78,25 @@ export function artworkGraph(kind: Artwork, index: number): string {
     `drawbox=x=${x}:y=${y}:w=${w}:h=${h}:color=${color}:t=fill${replace ? ":replace=1" : ""}`;
   const stripes = (width: number, height: number) =>
     Array.from({ length: 1 + (index % 4) }, (_, i) =>
-      bar(0, Math.round(height * (0.55 + i * 0.08)), width, Math.round(height * 0.04), accent),
+      bar(0, Math.round(height * (0.55 + i * 0.08)), width, Math.round(height * 0.04), accent)
     );
   return match(kind)
     .with("poster", () =>
       [`color=c=${base}:s=300x450:d=1`, bar(30, 40, 240, 120, accent), ...stripes(300, 450)].join(
-        ",",
-      ),
+        ","
+      )
     )
     .with("backdrop", () =>
       [
         `color=c=${base}:s=960x540:d=1`,
         bar(60 + (index % 5) * 120, 80, 240, 240, accent),
         ...stripes(960, 540),
-      ].join(","),
+      ].join(",")
     )
     .with("thumb", () =>
       [`color=c=${base}:s=480x270:d=1`, bar(40, 40, 120, 120, accent), ...stripes(480, 270)].join(
-        ",",
-      ),
+        ","
+      )
     )
     .with("logo", () =>
       [
@@ -103,7 +104,7 @@ export function artworkGraph(kind: Artwork, index: number): string {
         "format=rgba",
         bar(10, 30, 380, 60, `${accent}@1.0`, true),
         bar(30 + (index % 6) * 50, 45, 40, 30, "black@0.0", true),
-      ].join(","),
+      ].join(",")
     )
     .exhaustive();
 }

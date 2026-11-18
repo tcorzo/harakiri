@@ -1,4 +1,5 @@
 import { match, P } from "ts-pattern";
+
 import type { Session } from "../../../shared/bridge";
 
 /** What `GET /System/Info/Public` told us about a server that passed validation. */
@@ -130,10 +131,10 @@ export function onboarding(state: OnboardingState, event: OnboardingEvent): Onbo
     .with([{ step: "server" }, { type: "submitAddress" }], ([s]) => checking(s.address))
     .with([{ step: "server" }, { type: "pickServer" }], ([, e]) => checking(e.address))
     .with([{ step: "checking" }, { type: "serverFound" }], ([s, e]) =>
-      e.address === s.address ? { step: "chooseUser", server: e.info } : s,
+      e.address === s.address ? { step: "chooseUser", server: e.info } : s
     )
     .with([{ step: "checking" }, { type: "serverFailed" }], ([s, e]) =>
-      e.address === s.address ? { step: "server", address: s.address, problem: e.problem } : s,
+      e.address === s.address ? { step: "server", address: s.address, problem: e.problem } : s
     )
     .with([{ step: "chooseUser" }, { type: "pickUser" }], ([s, e]) => ({
       step: e.hasPassword ? "password" : "authenticating",
@@ -154,7 +155,7 @@ export function onboarding(state: OnboardingState, event: OnboardingEvent): Onbo
     .with([{ step: "username" }, { type: "submitUsername" }], ([s]) =>
       s.username.trim() === ""
         ? s
-        : { step: "password", server: s.server, username: s.username.trim(), password: "" },
+        : { step: "password", server: s.server, username: s.username.trim(), password: "" }
     )
     .with([{ step: "password" }, { type: "edit" }], ([s, e]) => ({
       step: "password",

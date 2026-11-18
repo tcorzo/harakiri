@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+
 import { focusedControl, until } from "./harakiri";
 
 export type Move = "up" | "down" | "left" | "right";
@@ -42,7 +43,7 @@ export async function typeOnScreen(page: Page, dpad: Dpad, keys: readonly string
       const at: Box | null = await centre(page, null);
       if (at === null) {
         throw new Error(
-          `Focus left the on-screen keyboard: ${JSON.stringify(await focusedControl(page))}`,
+          `Focus left the on-screen keyboard: ${JSON.stringify(await focusedControl(page))}`
         );
       }
       const dy = target.y - at.y;
@@ -50,14 +51,14 @@ export async function typeOnScreen(page: Page, dpad: Dpad, keys: readonly string
       if (Math.abs(dy) < at.h / 2 && Math.abs(dx) < at.w / 2) break;
       const before = (await focusedControl(page))?.name;
       await dpad.move(
-        Math.abs(dy) >= at.h / 2 ? (dy < 0 ? "up" : "down") : dx < 0 ? "left" : "right",
+        Math.abs(dy) >= at.h / 2 ? (dy < 0 ? "up" : "down") : dx < 0 ? "left" : "right"
       );
       await until(
         `a d-pad move off "${before}" moves focus`,
         async () => (await focusedControl(page))?.name,
         (name) => name !== before,
         2000,
-        20,
+        20
       );
     }
     await dpad.select();
@@ -83,7 +84,7 @@ export const arrowKeys = (page: Page): Dpad => ({
     page.keyboard.press(
       ({ up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight" } as const)[
         direction
-      ],
+      ]
     ),
   select: () => page.keyboard.press("Enter"),
 });
@@ -96,7 +97,7 @@ export async function focusField(page: Page, label: string): Promise<void> {
   }
   if ((await focusedControl(page))?.name !== label) {
     throw new Error(
-      `ArrowUp never reached the "${label}" field: ${JSON.stringify(await focusedControl(page))}`,
+      `ArrowUp never reached the "${label}" field: ${JSON.stringify(await focusedControl(page))}`
     );
   }
 }

@@ -18,8 +18,9 @@ import {
 } from "@noriginmedia/norigin-spatial-navigation";
 import { useEffect } from "react";
 import { match } from "ts-pattern";
-import { dispatch, guardNavigation } from "./handlers";
+
 import { touch } from "./activity";
+import { dispatch, guardNavigation } from "./handlers";
 import { inputMode } from "./mode";
 
 const noPad: PadSnapshot = { buttons: [], axes: [] };

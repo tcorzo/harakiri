@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
+
 import { place, remeasure, startSpatial, stopSpatial } from "../test/spatial";
 import { QuietAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
@@ -65,7 +66,7 @@ test("a held Enter selects once: its auto-repeats are swallowed, not passed to t
   const repeat = new KeyboardEvent("keydown", { key: "Enter", repeat: true, cancelable: true });
   window.dispatchEvent(repeat);
   window.dispatchEvent(
-    new KeyboardEvent("keydown", { key: "Enter", repeat: true, cancelable: true }),
+    new KeyboardEvent("keydown", { key: "Enter", repeat: true, cancelable: true })
   );
   await settle();
   expect(pressed).toEqual({ play: 1, programme: 0 });

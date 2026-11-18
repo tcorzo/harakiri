@@ -1,6 +1,7 @@
 import { type AudioOutput, startFidelity } from "@harakiri/fidelity";
 import { afterEach, expect, test } from "vitest";
 import type { z } from "zod";
+
 import { type FidelityMpv, type FidelityWatch, watchFidelity } from "./fidelity-watch";
 
 /**

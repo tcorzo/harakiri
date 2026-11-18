@@ -11,7 +11,7 @@ const TOKEN = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
  */
 export async function setHttpHeaders(
   client: Pick<MpvClient, "setProperty">,
-  headers: HttpHeaders,
+  headers: HttpHeaders
 ): Promise<void> {
   const fields = Object.entries(headers).map(([name, value]) => {
     // The value is never echoed: it is usually the secret.

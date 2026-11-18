@@ -1,4 +1,5 @@
 import { getLogger } from "@logtape/logtape";
+
 import type { UpdateStatus } from "../shared/bridge";
 
 const log = getLogger(["harakiri", "updates"]);

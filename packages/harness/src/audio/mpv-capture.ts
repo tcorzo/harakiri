@@ -1,4 +1,5 @@
 import { type AudioPassthrough, buildPlaybackArgs, configArg } from "@harakiri/mpv";
+
 import { runToolOrThrow } from "../process";
 
 export interface AudioOut {
@@ -16,7 +17,7 @@ export interface AudioOut {
 export function captureWithMpv(
   input: string,
   wavOut: string,
-  audioPassthrough?: AudioPassthrough,
+  audioPassthrough?: AudioPassthrough
 ): AudioOut {
   const { stdout, stderr } = runToolOrThrow("mpv", [
     configArg("none"),

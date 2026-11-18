@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+
 import type { MediaSourceInfo, PlaybackInfoResponse } from "@harakiri/jellyfin/generated";
 import { zMediaSourceInfo, zPlaybackInfoResponse } from "@harakiri/jellyfin/generated/zod";
 import { z } from "zod";
@@ -16,7 +17,7 @@ const Fixture = zPlaybackInfoResponse.extend({
           TranscodingUrl: true,
           SupportsDirectPlay: true,
         })
-        .extend({ RunTimeTicks: z.number().nullish() }),
+        .extend({ RunTimeTicks: z.number().nullish() })
     )
     .optional(),
 });
