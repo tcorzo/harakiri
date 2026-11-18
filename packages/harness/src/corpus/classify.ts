@@ -151,8 +151,9 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
   const built = new Set(manifest.entries.map((e) => e.id));
   const entries = CATALOG.filter((entry) => built.has(entry.id));
   options.log(
-    `corpus ${options.corpus}: ${entries.length} entries` +
-      (manifest.fate ? " (FATE tier included)" : " (FATE tier NOT built)")
+    `corpus ${options.corpus}: ${entries.length} entries${
+      manifest.fate ? " (FATE tier included)" : " (FATE tier NOT built)"
+    }`
   );
 
   await call("System/Info/Public");

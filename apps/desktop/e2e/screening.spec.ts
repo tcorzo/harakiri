@@ -173,7 +173,7 @@ for (const station of ["House", "Programme"] as const) {
 
     await page.keyboard.press("Enter");
     await until(
-      "the handoff reaches " + station,
+      `the handoff reaches ${station}`,
       async () => await stations(page),
       (s) => s.at(-1) === station,
       6000,

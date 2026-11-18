@@ -73,8 +73,9 @@ async function gen(out: string, fate: string, requireFate: boolean): Promise<num
   const seconds = ((performance.now() - t0) / 1000).toFixed(1);
   const mb = (treeBytes(resolve(out)) / 1e6).toFixed(1);
   outro(
-    `${manifest.entries.length} media files, ${mb} MB, ${seconds}s` +
-      (manifest.skipped.length > 0 ? `; ${manifest.skipped.length} FATE items left out` : "")
+    `${manifest.entries.length} media files, ${mb} MB, ${seconds}s${
+      manifest.skipped.length > 0 ? `; ${manifest.skipped.length} FATE items left out` : ""
+    }`
   );
 
   return 0;
