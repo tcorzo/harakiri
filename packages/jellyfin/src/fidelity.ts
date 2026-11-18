@@ -180,31 +180,43 @@ const pictureOf = (stream: MediaStream): PictureClass => {
   const rangeType = stream.VideoRangeType ?? "Unknown";
 
   switch (rangeType) {
-    case "SDR":
+    case "SDR": {
       return { range: "SDR", resolution, delivery: "native" };
-    case "HDR10":
+    }
+    case "HDR10": {
       return { range: "HDR10", resolution, delivery: "native" };
-    case "HDR10Plus":
+    }
+    case "HDR10Plus": {
       return { range: "HDR10+", resolution, delivery: "native" };
-    case "HLG":
+    }
+    case "HLG": {
       return { range: "HLG", resolution, delivery: "mapped" };
-    case "DOVI":
+    }
+    case "DOVI": {
       return dolbyVision(stream, resolution, "none");
-    case "DOVIWithHDR10":
+    }
+    case "DOVIWithHDR10": {
       return dolbyVision(stream, resolution, "HDR10");
-    case "DOVIWithHDR10Plus":
+    }
+    case "DOVIWithHDR10Plus": {
       return dolbyVision(stream, resolution, "HDR10", { hdr10Plus: true });
-    case "DOVIWithSDR":
+    }
+    case "DOVIWithSDR": {
       return dolbyVision(stream, resolution, "SDR");
-    case "DOVIWithHLG":
+    }
+    case "DOVIWithHLG": {
       return dolbyVision(stream, resolution, "HLG");
-    case "DOVIWithEL":
+    }
+    case "DOVIWithEL": {
       return dolbyVision(stream, resolution, "HDR10", { enhancementLayer: true });
-    case "DOVIWithELHDR10Plus":
+    }
+    case "DOVIWithELHDR10Plus": {
       return dolbyVision(stream, resolution, "HDR10", { hdr10Plus: true, enhancementLayer: true });
+    }
     case "DOVIInvalid":
-    case "Unknown":
+    case "Unknown": {
       return plain();
+    }
     default: {
       const unhandled: never = rangeType;
 

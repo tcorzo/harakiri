@@ -56,20 +56,23 @@ export function parseInboundLine(line: string): InboundMessage {
   }
 
   switch (event.data.event) {
-    case "property-change":
+    case "property-change": {
       return {
         kind: "property-change",
         change: propertyChangeSchema.parse(json),
         event: event.data,
       };
-    case "client-message":
+    }
+    case "client-message": {
       return {
         kind: "client-message",
         args: clientMessageSchema.parse(json).args,
         event: event.data,
       };
-    default:
+    }
+    default: {
       return { kind: "event", event: event.data };
+    }
   }
 }
 

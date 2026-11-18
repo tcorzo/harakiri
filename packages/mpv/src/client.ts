@@ -273,14 +273,16 @@ function createClient({
         settle(message.reply);
         return;
       }
-      case "property-change":
+      case "property-change": {
         propertyHandlers.get(message.change.id)?.(message.change.data);
         break;
-      case "client-message":
+      }
+      case "client-message": {
         for (const listener of clientMessageListeners) {
           listener(message.args);
         }
         break;
+      }
     }
 
     for (const listener of eventListeners) {
