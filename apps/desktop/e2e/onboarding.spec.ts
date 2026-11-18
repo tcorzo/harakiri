@@ -303,6 +303,9 @@ test.describe("with the server answering discovery on loopback", () => {
     await expect(facts).toContainText(`Signed in as${backend.user}`);
     await expect(facts).toContainText(`Server${info.name} · Jellyfin ${info.version}`);
     await expect(facts).toContainText(`Address${backend.server}`);
+    // Unpackaged e2e has no APPIMAGE: updates are unsupported, so only the version shows.
+    await expect(facts).toContainText(/AppVersion \d+\.\d+\.\d+$/);
+    await expect(page.getByRole("button", { name: /Restart to update/ })).toHaveCount(0);
     const signedOut = await page.evaluate(() => window.harakiri.session.get());
     const asSignedOut = () =>
       fetch(new URL("Users/Me", backend.server), {

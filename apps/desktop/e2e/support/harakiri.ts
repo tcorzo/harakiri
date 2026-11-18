@@ -145,8 +145,10 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
 
   launch: async ({ userDataDir, mpvArgs, extraEnv, apps }, use) => {
     // Without DISPLAY, Electron cannot fall back to the user's X session if the nested compositor is missing.
+    // A terminal that is itself an AppImage exports APPIMAGE, which would switch the updater on.
+    const dropped = new Set(["DISPLAY", "APPIMAGE"]);
     const inherited = Object.entries(process.env).filter(
-      (entry): entry is [string, string] => entry[0] !== "DISPLAY" && entry[1] !== undefined,
+      (entry): entry is [string, string] => !dropped.has(entry[0]) && entry[1] !== undefined,
     );
     await use(async () => {
       const app = await _electron.launch({

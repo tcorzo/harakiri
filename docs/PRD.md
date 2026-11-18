@@ -7,7 +7,6 @@ Related documents:
 - `CLAUDE.md`: how to work in the repo (commands, conventions, dependency ledger).
 - `apps/desktop/PRODUCT.md`: product truth in the format the impeccable design skill reads.
 - `apps/desktop/.impeccable/surfaces/src-renderer.md`: the visual direction contract.
-- `docs/decisions/autonomous-run.md`: decisions made without the owner, each with its alternative.
 - `docs/research/`: the research reports and the library census behind every choice here.
 
 ## Why harakiri exists
@@ -116,7 +115,7 @@ Acceptance:
   - Delivery: a server transcode is a downgrade per leg, with the server's reasons.
   - After a step-down, playback returns to the last moment an output was playing: with both outputs down, mpv has no clock and races through the file.
   - `docs/fidelity/compatibility.md` is the compatibility and downgrade table, generated from the engine (`mise run fidelity:table`). A test fails when it and the engine disagree.
-- **Run log.** Every run writes `harakiri-<start time>-<pid>.log` under Electron's logs dir (`~/.config/@harakiri/desktop/logs` on Linux), keeping the newest 10. It holds harakiri's debug log, mpv's verbose output with tokens redacted, renderer console warnings and errors, and crashed processes. A postmortem starts there, not in a terminal.
+- **Run log.** Every run writes `harakiri-<start time>-<pid>.log` under Electron's logs dir (`~/.config/harakiri/logs` for the AppImage, `~/.config/@harakiri/desktop/logs` in dev), keeping the newest 10. It holds harakiri's debug log, mpv's verbose output with tokens redacted, renderer console warnings and errors, and crashed processes. A postmortem starts there, not in a terminal.
 - **Jellyfin profile.** The device profile declares no CodecProfiles, wildcard DirectPlayProfiles, and `MaxStreamingBitrate` of 1e9 in the profile and in the request. It lists every subtitle format. PlaybackInfo requests send `SubtitleStreamIndex=-1`, so mpv picks tracks. A condition on `VideoRangeType` brings back the original bug.
 - **Signal-path vocabulary.** Each note has a delivery state. _Native_ means the signal passes as it is (HDR10 out, or a bitstream). _Mapped_ means harakiri converts it on purpose (Dolby Vision applied and delivered as HDR10). _Decoded_ means the sound becomes PCM because the format cannot be bitstreamed.
 
@@ -161,9 +160,15 @@ Everything committed runs and validates from a fresh clone on any machine: no NA
 - All web UI goes through the impeccable loop: direction contract, craft floor before every UI edit, the detector, critique, audit, and the finish review that writes `DESIGN.md`.
 - React code follows the vercel-react-best-practices rules and the related Vercel composition skills.
 - Adversarial reviews (interrogate) run after each build wave on UI design, architecture, and the code other agents wrote. At least two reviewers run on different models.
-- Decisions made without the owner go into `docs/decisions/autonomous-run.md` with the alternative the owner could choose.
 - Nothing is reported done until it was observed working: tests, the built app, or the harness.
 - Every memory-hungry process (test suites, builds, Electron, Playwright, compositors, containers, media batches) runs under a hard memory cap through `scripts/bounded.sh`, and a watchdog (`scripts/watchdog.sh`) stops the largest harakiri process when system headroom runs low.
+
+## Distribution and updates
+
+- harakiri ships as one Linux x64 AppImage, attached to each GitHub release of `tcorzo/harakiri`. Like a source checkout, it needs the system mpv (>= 0.41) on `PATH`.
+- release-please cuts releases: Conventional Commit titles on `main` keep a release PR open, merging it tags `vX.Y.Z`, and `.github/workflows/release.yml` builds `mise run package` and uploads the AppImage and `latest-linux.yml`.
+- A running AppImage checks the latest release at startup and every 6 hours (a failed check is retried after 15 minutes), downloads only while nothing plays (a download in progress stops within a minute of playback starting and resumes after it), and installs on the next quit after mpv has stopped. Settings shows the state and offers "Restart to update". The download is verified by the sha512 in `latest-linux.yml` only.
+- Not shipped: Flatpak, Snap, rpm, deb or pacman packages; a bundled mpv (issue #2); code or GPG signing; beta channels, rollback and staged rollouts.
 
 ## Out of scope for the MVP
 

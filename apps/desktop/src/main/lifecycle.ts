@@ -36,12 +36,21 @@ interface QuittingApp {
   exit(code?: number): void;
 }
 
-/** Holds every quit until playback has stopped (capped), then exits without re-entering quit. */
+interface HoldOptions {
+  readonly capMs?: number;
+  readonly afterStop?: () => void;
+}
+
+/**
+ * Holds every quit until playback has stopped (capped), then runs afterStop, then exits without
+ * re-entering quit. A throwing afterStop is logged and still exits.
+ */
 export function holdQuitUntilStopped(
   app: QuittingApp,
   stop: () => Promise<void>,
-  capMs = STOP_CAP_MS,
+  options: HoldOptions = {},
 ): void {
+  const capMs = options.capMs ?? STOP_CAP_MS;
   let stopping = false;
   app.on("before-quit", (event) => {
     event.preventDefault();
@@ -49,6 +58,11 @@ export function holdQuitUntilStopped(
     stopping = true;
     void stopWithin(stop, capMs).then((outcome) => {
       if (outcome === "timed-out") logger.warn("mpv did not stop within {capMs} ms", { capMs });
+      try {
+        options.afterStop?.();
+      } catch (error) {
+        logger.error("Installing the update on quit failed: {error}", { error });
+      }
       app.exit(0);
     });
   });

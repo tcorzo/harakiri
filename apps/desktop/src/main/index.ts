@@ -9,6 +9,8 @@ import { appVersion } from "../shared/identity";
 import { holdQuitUntilStopped, killOnExit, removeStaleMpvDirs } from "./lifecycle";
 import * as player from "./player/index";
 import { openRunLog } from "./run-log";
+import { electronUpdater } from "./updater";
+import { ownAppImage, startUpdates, type Updates } from "./updates";
 import {
   appUrlCheck,
   confineWebContents,
@@ -96,7 +98,8 @@ async function main(): Promise<void> {
   logProcessTrouble();
 
   killOnExit(player.mpvPid);
-  holdQuitUntilStopped(app, player.stop);
+  let updates: Updates | undefined;
+  holdQuitUntilStopped(app, player.stop, { afterStop: () => updates?.installIfReady() });
   app.on("second-instance", focusExistingWindow);
   app.on("web-contents-created", (_event, contents) => confineWebContents(contents, isAppUrl));
   app.on("window-all-closed", () => app.quit());
@@ -109,8 +112,20 @@ async function main(): Promise<void> {
   });
 
   await app.whenReady();
+  // electron-updater requests through Electron's net stack, which needs ready.
+  updates = startUpdates({
+    appImage: ownAppImage({
+      appImage: env.APPIMAGE,
+      appDir: env.APPDIR,
+      execPath: process.execPath,
+    }),
+    createUpdater: electronUpdater,
+    isPlaying: player.isPlaying,
+    releaseLock: () => app.releaseSingleInstanceLock(),
+    quit: () => app.quit(),
+  });
   installContentSecurityPolicy(session.defaultSession, isAppUrl, contentSecurityPolicy(appUrl));
-  registerIpc(isAppUrl);
+  registerIpc(isAppUrl, updates);
   createWindow();
 }
 

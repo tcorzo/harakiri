@@ -26,7 +26,7 @@ Adversarial review with two reviewers on different models: Reviewer A (Opus, 19 
 ## Noted
 
 - Profile tests restate constants (A, B). The real-server Jellyfin tier in the e2e wave is the real check.
-- Owner's NAS paths sit in `packages/harness/src/fixtures.ts` (B).
+- Owner's NAS paths sat in `packages/harness/src/fixtures.ts` (B). Fixed: that file is gone, and media comes from the corpus catalog (`packages/harness/src/corpus/catalog.ts`).
 
 ## Dismissed
 

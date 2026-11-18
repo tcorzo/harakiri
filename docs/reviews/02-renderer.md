@@ -27,7 +27,7 @@ Commit 4a454f1 adds the TV-first, gamepad-first renderer. It covers onboarding, 
 
 ## Consider
 
-- **Catalogue numbers are not stable** (A+B). They are positions in date-added order, so a deletion renumbers later titles. D14's claim is corrected to "stable while the library only grows"; storing numbers is not worth it for one user.
+- **Catalogue numbers are not stable** (A+B). They are positions in date-added order, so a deletion renumbers later titles. The catalogue-number stability claim is corrected to "stable while the library only grows"; storing numbers is not worth it for one user.
 - **The section label shows twice when a row is lit** (B). The margin band and the row header both say "Continue Watching". Left to the impeccable critique.
 
 ## Noted

@@ -113,6 +113,11 @@ if [ -z "${HARAKIRI_E2E_SERVER:-}" ]; then mise run media:fetch-fate; fi
 ../../scripts/bounded.sh e2e 4G -- bash e2e/headless.sh
 """
 
+[tasks.package]
+description = "Build the Linux AppImage and its update metadata into apps/desktop/dist"
+dir = "{{config_root}}/apps/desktop"
+run = "../../scripts/bounded.sh package 4G -- bun run package"
+
 [tasks."e2e:down"]
 description = "Stop and remove the e2e Jellyfin container (harakiri-jellyfin-e2e), keeping its scan in .cache/jellyfin-e2e"
 run = "JELLYFIN_DEV_NAME=harakiri-jellyfin-e2e JELLYFIN_DEV_STATE=.cache/jellyfin-e2e dev/jellyfin/jellyfin.sh down"
@@ -137,3 +142,7 @@ hk util check-conventional-commit "$msg" || {
 [tasks.check]
 description = "Everything CI gates on"
 depends = ["lint", "lint:skips", "lint:private", "typecheck", "test"]
+
+[tasks."package:check"]
+description = "Check apps/desktop/dist: latest-linux.yml matches the AppImage and the version, the feed is public GitHub, runtime deps are packed"
+run = "bun scripts/check-release.ts"

@@ -133,4 +133,6 @@ export async function probe(): Promise<PlayerProbe> {
 }
 
 /** The live mpv pid, for the exit hook that kills mpv if Electron dies first. */
+export const isPlaying = (): boolean => current !== undefined;
+
 export const mpvPid = (): number | undefined => current?.pid();
