@@ -25,7 +25,7 @@ async function startResponder(replies: string[]): Promise<{ port: number; probes
     }
   });
 
-  return new Promise((resolve) => {
+  return await new Promise((resolve) => {
     socket.bind(0, "127.0.0.1", () => {
       resolve({ port: socket.address().port, probes });
     });

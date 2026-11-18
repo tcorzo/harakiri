@@ -356,7 +356,7 @@ export class Jellyfin {
       throw new Error(`${init.method ?? "GET"} ${path}: HTTP ${response.status}`);
     }
 
-    return response.status === 204 ? undefined : response.json();
+    return response.status === 204 ? undefined : await response.json();
   }
 
   async userData(itemId: ItemId): Promise<UserData> {

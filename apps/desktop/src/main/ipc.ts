@@ -44,11 +44,13 @@ export function registerIpc(
   });
 
   const discoveryAddress = env.HARAKIRI_DISCOVERY_ADDRESS;
-  handle(channels.discover, async () =>
-    discoverServers(discoveryAddress === undefined ? {} : { address: discoveryAddress })
+  handle(
+    channels.discover,
+    async () =>
+      await discoverServers(discoveryAddress === undefined ? {} : { address: discoveryAddress })
   );
 
-  handle(channels.prepare, async (_event, payload) => prepare(PlayRequest.parse(payload)));
+  handle(channels.prepare, async (_event, payload) => await prepare(PlayRequest.parse(payload)));
   handle(channels.play, async (event, payload) => {
     const request = PlayRequest.parse(payload);
     const { sender } = event;
@@ -59,9 +61,9 @@ export function registerIpc(
       }
     });
   });
-  handle(channels.stop, async () => stop());
+  handle(channels.stop, async () => await stop());
 
   if (isE2E) {
-    handle(channels.testProbe, async () => probe());
+    handle(channels.testProbe, async () => await probe());
   }
 }

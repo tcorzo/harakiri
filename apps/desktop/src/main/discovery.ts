@@ -28,7 +28,7 @@ export async function discoverServers(options: DiscoveryOptions = {}): Promise<D
   const servers = new Map<string, DiscoveredServer>();
   const socket = createSocket("udp4");
 
-  return new Promise((resolve) => {
+  return await new Promise((resolve) => {
     let done = false;
 
     const finish = (): void => {

@@ -141,7 +141,7 @@ export const authenticate = async (
 ): Promise<SignInResult> => {
   const client = createJellyfinClient(server, identity);
 
-  return toSession(
+  return await toSession(
     server,
     identity,
     client,
@@ -191,7 +191,7 @@ export const authenticateWithQuickConnect = async (
 ): Promise<SignInResult> => {
   const client = createJellyfinClient(server, identity);
 
-  return toSession(
+  return await toSession(
     server,
     identity,
     client,

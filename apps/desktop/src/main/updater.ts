@@ -33,11 +33,11 @@ export function adaptUpdater(real: BaseUpdater): UpdaterLike {
   let token: CancellationToken | undefined;
 
   return {
-    check: async () => real.checkForUpdates(),
+    check: async () => await real.checkForUpdates(),
     download: async () => {
       token = new CancellationTokenClass();
 
-      return real.downloadUpdate(token);
+      return await real.downloadUpdate(token);
     },
     cancelDownload: () => {
       token?.cancel();

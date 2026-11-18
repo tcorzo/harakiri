@@ -40,12 +40,12 @@ async function get<T>(path: string): Promise<T> {
     }
     auth = await login();
 
-    return api<T>("GET", path, { token: auth.token });
+    return await api<T>("GET", path, { token: auth.token });
   }
 }
 
 async function counts(): Promise<Counts> {
-  return get<Counts>(`/Items/Counts?userId=${userId}`);
+  return await get<Counts>(`/Items/Counts?userId=${userId}`);
 }
 
 async function imageStats(type: string) {

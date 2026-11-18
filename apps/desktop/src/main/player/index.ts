@@ -33,7 +33,7 @@ async function serialized<T>(operation: () => Promise<T>): Promise<T> {
   const result = queue.then(operation, operation);
   queue = result.catch(() => {});
 
-  return result;
+  return await result;
 }
 
 // Whitespace-split only: e2e passes plain flags such as `--vo=null --ao=pcm --ao-pcm-file=/tmp/x`.
@@ -62,8 +62,8 @@ const audioOutput = async () => {
   const given = isE2E ? process.env.HARAKIRI_AUDIO_OUTPUT : undefined;
 
   return given === undefined
-    ? readAudioOutput()
-    : Promise.resolve(AudioOutputJson.parse(JSON.parse(given)));
+    ? await readAudioOutput()
+    : await Promise.resolve(AudioOutputJson.parse(JSON.parse(given)));
 };
 
 function deps(): Omit<PlaybackDeps, "audioOutput"> {
@@ -113,7 +113,7 @@ async function takePrepared(request: PlayRequest, session: Session): Promise<Pre
     return undefined;
   }
 
-  return kept.result.catch(() => undefined);
+  return await kept.result.catch(() => undefined);
 }
 
 /** Plays an item in mpv, replacing whatever is playing. Resolves once mpv has loaded the file. */
@@ -121,7 +121,7 @@ export async function play(
   request: PlayRequest,
   send: (event: PlayerEvent) => void
 ): Promise<void> {
-  return serialized(async () => {
+  return await serialized(async () => {
     await current?.stop();
     const playbackDeps = { ...deps(), audioOutput: await audioOutput() };
     const prepared = await takePrepared(request, playbackDeps.session);
@@ -137,13 +137,13 @@ export async function play(
 
 /** Quits mpv, reports the stop to Jellyfin, and resolves once mpv has exited. */
 export async function stop(): Promise<void> {
-  return serialized(async () => {
+  return await serialized(async () => {
     await current?.stop();
   });
 }
 
 export async function probe(): Promise<PlayerProbe> {
-  return current ? current.probe() : { running: false };
+  return current ? await current.probe() : { running: false };
 }
 
 /** The live mpv pid, for the exit hook that kills mpv if Electron dies first. */

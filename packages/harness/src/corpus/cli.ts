@@ -94,17 +94,19 @@ const parsed = run(parser, { programName: "corpus", help: "both" });
 
 try {
   process.exitCode = await match(parsed)
-    .with({ command: "gen" }, async (p) => gen(p.out, p.fate, p.requireFate))
-    .with({ command: "fetch-fate" }, async (p) => fetchFateCommand(p.dir, p.mirror))
-    .with({ command: "classify" }, async (p) =>
-      classifyCorpus({
-        corpus: resolve(p.corpus),
-        server: p.server,
-        waitSeconds: p.waitSeconds,
-        log: (line) => {
-          console.log(line);
-        },
-      })
+    .with({ command: "gen" }, async (p) => await gen(p.out, p.fate, p.requireFate))
+    .with({ command: "fetch-fate" }, async (p) => await fetchFateCommand(p.dir, p.mirror))
+    .with(
+      { command: "classify" },
+      async (p) =>
+        await classifyCorpus({
+          corpus: resolve(p.corpus),
+          server: p.server,
+          waitSeconds: p.waitSeconds,
+          log: (line) => {
+            console.log(line);
+          },
+        })
     )
     .exhaustive();
 } catch (error) {

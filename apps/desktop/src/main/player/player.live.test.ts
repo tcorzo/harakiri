@@ -171,10 +171,10 @@ const pickItem = (
 };
 
 const userData = async (session: Session, itemId: string) =>
-  api(`/UserItems/${itemId}/UserData?userId=${session.userId}`, UserData);
+  await api(`/UserItems/${itemId}/UserData?userId=${session.userId}`, UserData);
 
 const restoreUserData = async (session: Session, itemId: string, ticks: number | undefined) =>
-  api(`/UserItems/${itemId}/UserData?userId=${session.userId}`, z.unknown(), {
+  await api(`/UserItems/${itemId}/UserData?userId=${session.userId}`, z.unknown(), {
     method: "POST",
     body: JSON.stringify({ PlaybackPositionTicks: ticks ?? 0 }),
   });
@@ -206,7 +206,7 @@ function mpvSocket(): string {
 
 /** Sends one command over a second IPC connection and returns mpv's reply data. */
 async function mpvCommand(...command: unknown[]): Promise<unknown> {
-  return new Promise((resolve, reject) => {
+  return await new Promise((resolve, reject) => {
     const socket = createConnection(mpvSocket());
     let buffer = "";
     socket.setEncoding("utf-8");

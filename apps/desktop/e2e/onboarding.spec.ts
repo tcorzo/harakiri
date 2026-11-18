@@ -37,7 +37,7 @@ async function expectStoredSession(
   userId: string
 ) {
   const info = await publicInfo(backend.server);
-  const session = await page.evaluate(async () => window.harakiri.session.get());
+  const session = await page.evaluate(async () => await window.harakiri.session.get());
   expect(session).toMatchObject({
     serverUrl: backend.server,
     serverId: info.id,
@@ -163,8 +163,12 @@ test.describe("with the server answering discovery on loopback", () => {
   }) => {
     const { page } = await launch();
     // The server hides its one user, so its public list is served here; sign-in itself is real.
-    await page.route("**/Users/Public", async (route) =>
-      route.fulfill({ json: [{ Name: backend.user, Id: account.userId, HasPassword: true }] })
+    await page.route(
+      "**/Users/Public",
+      async (route) =>
+        await route.fulfill({
+          json: [{ Name: backend.user, Id: account.userId, HasPassword: true }],
+        })
     );
     await expectFocus(page, "Begin");
     await page.keyboard.press("Enter");
@@ -313,10 +317,10 @@ test.describe("with the server answering discovery on loopback", () => {
     // Unpackaged e2e has no APPIMAGE: updates are unsupported, so only the version shows.
     await expect(facts).toContainText(/AppVersion \d+\.\d+\.\d+$/);
     await expect(page.getByRole("button", { name: /Restart to update/ })).toHaveCount(0);
-    const signedOut = await page.evaluate(async () => window.harakiri.session.get());
+    const signedOut = await page.evaluate(async () => await window.harakiri.session.get());
 
     const asSignedOut = async () =>
-      fetch(new URL("Users/Me", backend.server), {
+      await fetch(new URL("Users/Me", backend.server), {
         headers: { Authorization: `MediaBrowser Token="${signedOut?.accessToken ?? ""}"` },
       });
 
@@ -327,7 +331,7 @@ test.describe("with the server answering discovery on loopback", () => {
     // Back on the same server's chooser, with the stored session gone.
     await expect(main(page, `Sign in to ${info.name}`)).toBeVisible();
     expect((await expectFocus(page, "Another user")).route).toBe("/onboarding");
-    expect(await page.evaluate(async () => window.harakiri.session.get())).toBeNull();
+    expect(await page.evaluate(async () => await window.harakiri.session.get())).toBeNull();
     // The server revoked the old token too, so a copy of it signs nobody in.
     expect((await asSignedOut()).status).toBe(401);
 
@@ -402,7 +406,7 @@ test.describe("with no server answering discovery", () => {
 
     await expect(main(page, "Welcome")).toBeVisible();
     expect((await expectFocus(page, "Begin")).route).toBe("/onboarding");
-    expect(await page.evaluate(async () => window.harakiri.session.get())).toBeNull();
+    expect(await page.evaluate(async () => await window.harakiri.session.get())).toBeNull();
 
     await submitAddress(page, backend.address);
     await signInOnScreen(page, backend);
@@ -552,7 +556,7 @@ test.describe("with no server answering discovery", () => {
         "The server refused this sign-in. The account may be disabled; ask whoever runs the server."
       );
       expect(stub.seen).toContain("POST /Users/AuthenticateByName");
-      expect(await page.evaluate(async () => window.harakiri.session.get())).toBeNull();
+      expect(await page.evaluate(async () => await window.harakiri.session.get())).toBeNull();
 
       await expectFocus(page, "Sign in");
       await page.keyboard.press("Escape");

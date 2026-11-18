@@ -11,7 +11,9 @@ test("a header mpv rejects fails without quoting the secret", async () => {
     setProperty: async (name: string, value: JsonValue) => {
       sent.push(value);
 
-      return Promise.reject(new MpvCommandError(["set_property", name, value], "error running"));
+      return await Promise.reject(
+        new MpvCommandError(["set_property", name, value], "error running")
+      );
     },
   };
 

@@ -42,21 +42,21 @@ export function createBridge(
   }
 
   return {
-    deviceId: async () => invoke(channels.deviceId, DeviceId),
+    deviceId: async () => await invoke(channels.deviceId, DeviceId),
     session: {
-      get: async () => invoke(channels.sessionGet, Session.nullable()),
-      save: async (session) => invoke(channels.sessionSave, z.undefined(), session),
-      clear: async () => invoke(channels.sessionClear, z.undefined()),
+      get: async () => await invoke(channels.sessionGet, Session.nullable()),
+      save: async (session) => await invoke(channels.sessionSave, z.undefined(), session),
+      clear: async () => await invoke(channels.sessionClear, z.undefined()),
     },
     updates: {
-      status: async () => invoke(channels.updateStatus, UpdateStatus),
-      restart: async () => invoke(channels.updateRestart, z.undefined()),
+      status: async () => await invoke(channels.updateStatus, UpdateStatus),
+      restart: async () => await invoke(channels.updateRestart, z.undefined()),
     },
-    discover: async () => invoke(channels.discover, z.array(DiscoveredServer)),
+    discover: async () => await invoke(channels.discover, z.array(DiscoveredServer)),
     player: {
-      prepare: async (request) => invoke(channels.prepare, SignalReport, request),
-      play: async (request) => invoke(channels.play, z.undefined(), request),
-      stop: async () => invoke(channels.stop, z.undefined()),
+      prepare: async (request) => await invoke(channels.prepare, SignalReport, request),
+      play: async (request) => await invoke(channels.play, z.undefined(), request),
+      stop: async () => await invoke(channels.stop, z.undefined()),
       onEvent: (listener) => {
         const handler = (_event: IpcRendererEvent, payload: unknown): void => {
           const parsed = PlayerEvent.safeParse(payload);
@@ -75,6 +75,8 @@ export function createBridge(
         };
       },
     },
-    ...(options.e2e && { test: { probe: async () => invoke(channels.testProbe, PlayerProbe) } }),
+    ...(options.e2e && {
+      test: { probe: async () => await invoke(channels.testProbe, PlayerProbe) },
+    }),
   };
 }

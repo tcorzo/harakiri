@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_signedIn/library")({
     void queryClient.prefetchQuery(recentQuery(signedIn));
     void queryClient.prefetchQuery(programmeQuery(signedIn));
 
-    return Promise.all([
+    return await Promise.all([
       queryClient.ensureQueryData(featuredQuery(signedIn)),
       queryClient.ensureQueryData(catalogueQuery(signedIn)),
     ]);

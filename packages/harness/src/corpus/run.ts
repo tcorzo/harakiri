@@ -8,7 +8,7 @@ export async function runAsync(
 ): Promise<{ stdout: string; stderr: string }> {
   const timeoutMs = options.timeoutMs ?? 300_000;
 
-  return new Promise((resolve, reject) => {
+  return await new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       stdio: ["ignore", "pipe", "pipe"],
       env: options.env ?? process.env,
@@ -61,14 +61,15 @@ export function limiter(limit: number) {
   };
 
   return async <T>(task: () => Promise<T>): Promise<T> =>
-    new Promise<T>((resolve, reject) => {
-      queue.push(async () =>
-        task()
-          .then(resolve, reject)
-          .finally(() => {
-            active--;
-            next();
-          })
+    await new Promise<T>((resolve, reject) => {
+      queue.push(
+        async () =>
+          await task()
+            .then(resolve, reject)
+            .finally(() => {
+              active--;
+              next();
+            })
       );
       next();
     });

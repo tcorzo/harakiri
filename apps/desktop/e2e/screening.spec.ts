@@ -130,7 +130,7 @@ test("Play from the title page: House, Programme, Picture, then mpv plays the it
   // Back on the title page, Resume focused and naming the time left from the server's new resume point.
   const saved = await until(
     "the server stores the new resume point",
-    async () => jellyfin.item(item.id),
+    async () => await jellyfin.item(item.id),
     (data) => (data.UserData?.PlaybackPositionTicks ?? 0) >= ticks(from + 85),
     5000
   );
@@ -174,7 +174,7 @@ for (const station of ["House", "Programme"] as const) {
     await page.keyboard.press("Enter");
     await until(
       "the handoff reaches " + station,
-      async () => stations(page),
+      async () => await stations(page),
       (s) => s.at(-1) === station,
       6000,
       50

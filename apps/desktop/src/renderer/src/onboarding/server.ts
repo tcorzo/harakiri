@@ -28,7 +28,7 @@ export async function checkServer(
   queryClient: QueryClient,
   urls: readonly string[]
 ): Promise<Checked> {
-  const checks = urls.map(async (url) => checkOne(queryClient, url));
+  const checks = urls.map(async (url) => await checkOne(queryClient, url));
 
   try {
     return await Promise.any(

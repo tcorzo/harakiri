@@ -66,7 +66,7 @@ async function get(path: string, token: string): Promise<unknown> {
     throw new Error(`GET ${path}: HTTP ${response.status}`);
   }
 
-  return response.json();
+  return await response.json();
 }
 
 /** Waits until the library scan is idle and has found every file in the corpus. */

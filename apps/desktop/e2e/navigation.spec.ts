@@ -30,7 +30,7 @@ function heroTitle(focus: FocusedControl): string {
 async function press(page: Page, key: string, name?: string | RegExp): Promise<FocusedControl> {
   await page.keyboard.press(key);
 
-  return expectFocus(page, name);
+  return await expectFocus(page, name);
 }
 
 /** Moves down a row at a time, checking focus after each move, until it rests in `section`. */
@@ -86,7 +86,7 @@ test("the arrow keys walk the hero, the rows and the title pages, and focus is n
   ).toContainText(`${left} min left`);
 
   // Down through every row in between, to Recently Added, which opens on the newest title.
-  const recent = await downTo(page, "Recently Added", async () => press(page, "ArrowDown"));
+  const recent = await downTo(page, "Recently Added", async () => await press(page, "ArrowDown"));
   expect(recent.name).toMatch(cardName(spokenTitle(latest[0] ?? picked)));
 
   for (const i of [1, 2, 3]) {
@@ -142,7 +142,7 @@ test("the gamepad walks the same way: d-pad, stick, A, B, and a held d-pad repea
   await tap(page, "left");
   await expectFocus(page, heroPlay);
 
-  await downTo(page, "Recently Added", async () => tap(page, "down"));
+  await downTo(page, "Recently Added", async () => await tap(page, "down"));
 
   const nth = (i: number): ShownItem => {
     const item = latest[i];

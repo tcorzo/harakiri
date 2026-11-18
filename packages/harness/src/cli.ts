@@ -60,5 +60,5 @@ await configure({
 const parsed = run(parser, { programName: "harakiri-harness", help: "both" });
 
 process.exitCode = await match(parsed.command)
-  .with("doctor", async () => doctor())
+  .with("doctor", async () => await doctor())
   .exhaustive();

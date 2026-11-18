@@ -108,7 +108,7 @@ export async function mpvCommand(userDataDir: string, ...command: JsonValue[]): 
 }
 
 export const pressKey = async (userDataDir: string, key: string) =>
-  mpvCommand(userDataDir, "keypress", key);
+  await mpvCommand(userDataDir, "keypress", key);
 
 /**
  * Lavapipe's Vulkan device UUID. libplacebo skips software devices unless one is named, and the

@@ -156,7 +156,7 @@ export async function spawnMpv(options: MpvSpawnOptions): Promise<MpvClient> {
     });
   });
 
-  const cleanedUp = exited.then(async () => rm(dir, { recursive: true, force: true }));
+  const cleanedUp = exited.then(async () => await rm(dir, { recursive: true, force: true }));
 
   const spawnFailed = new Promise<never>((_, reject) => {
     child.once("error", reject);
@@ -216,7 +216,7 @@ async function connectWhenReady(
 }
 
 async function connectOnce(path: string): Promise<Socket> {
-  return new Promise((resolve, reject) => {
+  return await new Promise((resolve, reject) => {
     const socket = createConnection(path);
     socket.once("error", reject);
     socket.once("connect", () => {
@@ -327,11 +327,11 @@ function createClient({
 
   const command = async (...args: JsonValue[]): Promise<unknown> => {
     if (closed) {
-      return Promise.reject(new MpvClosedError());
+      return await Promise.reject(new MpvClosedError());
     }
     const requestId = nextRequestId++;
 
-    return new Promise((resolve, reject) => {
+    return await new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         pending.delete(requestId);
         reject(new MpvTimeoutError(args, requestTimeoutMs));

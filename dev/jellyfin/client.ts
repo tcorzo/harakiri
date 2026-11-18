@@ -26,7 +26,7 @@ export async function api<T = unknown>(
   const auth = opts.token ? `${CLIENT_AUTH}, Token="${opts.token}"` : CLIENT_AUTH;
 
   const send = async () =>
-    fetch(BASE + path, {
+    await fetch(BASE + path, {
       method,
       headers: {
         Authorization: auth,

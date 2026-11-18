@@ -53,11 +53,11 @@ test("leaves dirs owned by another user", () => {
 });
 
 test("stopWithin reports a stop, a failure and a hang", async () => {
-  await expect(stopWithin(async () => Promise.resolve(), 1000)).resolves.toBe("stopped");
-  await expect(stopWithin(async () => Promise.reject(new Error("boom")), 1000)).resolves.toBe(
+  await expect(stopWithin(async () => await Promise.resolve(), 1000)).resolves.toBe("stopped");
+  await expect(stopWithin(async () => await Promise.reject(new Error("boom")), 1000)).resolves.toBe(
     "failed"
   );
-  await expect(stopWithin(async () => new Promise(() => {}), 20)).resolves.toBe("timed-out");
+  await expect(stopWithin(async () => await new Promise(() => {}), 20)).resolves.toBe("timed-out");
 });
 
 function fakeApp() {
@@ -94,7 +94,7 @@ test("quit waits for the player to stop, then exits once", async () => {
   holdQuitUntilStopped(app, async () => {
     stops += 1;
 
-    return stopped;
+    return await stopped;
   });
 
   expect(quit()).toBe("prevented");
@@ -110,7 +110,7 @@ test("quit waits for the player to stop, then exits once", async () => {
 
 test("quit exits after the cap when the player hangs", async () => {
   const { app, exits, quit } = fakeApp();
-  holdQuitUntilStopped(app, async () => new Promise(() => {}), { capMs: 20 });
+  holdQuitUntilStopped(app, async () => await new Promise(() => {}), { capMs: 20 });
 
   quit();
   await new Promise((resolve) => setTimeout(resolve, 60));
@@ -133,7 +133,7 @@ test("afterStop runs once, after the player stopped and before exit", async () =
 
 test("a throwing afterStop still exits", async () => {
   const { app, exits, quit } = fakeApp();
-  holdQuitUntilStopped(app, async () => Promise.resolve(), {
+  holdQuitUntilStopped(app, async () => await Promise.resolve(), {
     afterStop: () => {
       throw new Error("install failed");
     },

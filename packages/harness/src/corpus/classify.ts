@@ -144,7 +144,7 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
       throw new Error(`${init.method ?? "GET"} ${path}: HTTP ${response.status}`);
     }
 
-    return response.json();
+    return await response.json();
   }
 
   const manifest = readManifest(options.corpus);

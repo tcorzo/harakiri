@@ -8,7 +8,7 @@ import { ServerStatusError } from "./errors";
 
 export const sessionQuery = queryOptions({
   queryKey: ["session"],
-  queryFn: async () => window.harakiri.session.get(),
+  queryFn: async () => await window.harakiri.session.get(),
   staleTime: Infinity,
 });
 

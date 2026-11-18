@@ -14,8 +14,8 @@ function fakeUpdater() {
   } = {};
 
   const calls = { check: 0, download: 0, cancel: 0, installs: [] as boolean[] };
-  let checkResult: () => Promise<unknown> = async () => Promise.resolve();
-  let downloadResult: () => Promise<unknown> = async () => Promise.resolve();
+  let checkResult: () => Promise<unknown> = async () => await Promise.resolve();
+  let downloadResult: () => Promise<unknown> = async () => await Promise.resolve();
   let installResult: () => boolean = () => true;
   let cancelHook: () => void = () => {};
 
@@ -23,12 +23,12 @@ function fakeUpdater() {
     check: async () => {
       calls.check += 1;
 
-      return checkResult();
+      return await checkResult();
     },
     download: async () => {
       calls.download += 1;
 
-      return downloadResult();
+      return await downloadResult();
     },
     cancelDownload: () => {
       calls.cancel += 1;
@@ -61,15 +61,15 @@ function fakeUpdater() {
     on,
     calls,
     failChecks: (e: Error) => {
-      checkResult = async () => Promise.reject(e);
+      checkResult = async () => await Promise.reject(e);
     },
     failDownloads: (e: Error) => {
-      downloadResult = async () => Promise.reject(e);
+      downloadResult = async () => await Promise.reject(e);
     },
     /** Downloads hang until cancelled, then reject the way electron-updater's CancellationError does. */
     hangDownloadsUntilCancelled: () => {
       downloadResult = async () =>
-        new Promise((_resolve, reject) => {
+        await new Promise((_resolve, reject) => {
           cancelHook = () => {
             reject(new Error("cancelled"));
           };

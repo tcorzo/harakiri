@@ -64,7 +64,7 @@ const toTicks = (seconds: number) => Math.max(0, Math.round(seconds * TICKS_PER_
 
 // A failed report must never interrupt playback.
 const report = async (what: string, call: () => Promise<unknown>) =>
-  call().catch((error: unknown) => {
+  await call().catch((error: unknown) => {
     logger.warn("Reporting {what} to Jellyfin failed: {error}", { what, error });
   });
 
@@ -386,8 +386,10 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
 
   const reportProgress = () => {
     if (started) {
-      void report("progress", async () =>
-        reportPlaybackProgress({ client, throwOnError: true, body: progressBody() })
+      void report(
+        "progress",
+        async () =>
+          await reportPlaybackProgress({ client, throwOnError: true, body: progressBody() })
       );
     }
   };
@@ -484,16 +486,16 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
   };
 
   const execute = async (command: Command) =>
-    match(command)
-      .with({ type: "pause" }, async ({ paused }) => mpv.setProperty("pause", paused))
-      .with({ type: "seek" }, async ({ seconds }) => mpv.command("seek", seconds, "relative"))
+    await match(command)
+      .with({ type: "pause" }, async ({ paused }) => await mpv.setProperty("pause", paused))
+      .with({ type: "seek" }, async ({ seconds }) => await mpv.command("seek", seconds, "relative"))
       .with({ type: "track" }, async ({ property, id }) => {
         if (property === "aid") {
           await beforeAudioTrack(id);
         }
         await mpv.setProperty(property, id === false ? "no" : id);
       })
-      .with({ type: "stop" }, async () => finish({ phase: "stopped" }))
+      .with({ type: "stop" }, async () => await finish({ phase: "stopped" }))
       .exhaustive();
 
   function dispatch(input: ControlsInput) {
@@ -531,18 +533,20 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
       );
 
       const reported = started
-        ? report("stop", async () =>
-            reportPlaybackStopped({
-              client,
-              throwOnError: true,
-              body: {
-                ItemId: base.itemId,
-                MediaSourceId: resolution.mediaSourceId,
-                PlaySessionId: resolution.playSessionId ?? null,
-                PositionTicks: positionTicks,
-                Failed: outcome.phase === "error",
-              },
-            })
+        ? report(
+            "stop",
+            async () =>
+              await reportPlaybackStopped({
+                client,
+                throwOnError: true,
+                body: {
+                  ItemId: base.itemId,
+                  MediaSourceId: resolution.mediaSourceId,
+                  PlaySessionId: resolution.playSessionId ?? null,
+                  PositionTicks: positionTicks,
+                  Failed: outcome.phase === "error",
+                },
+              })
           )
         : undefined;
 
@@ -555,7 +559,7 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
       send({ ...base, ...signalNow(), phase: "reported", positionTicks });
     })();
 
-    return finished;
+    return await finished;
   }
 
   const loaded = new Promise<void>((resolveLoaded, rejectLoaded) => {
@@ -674,8 +678,9 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
   await addSidecarSubtitles(mpv, resolution);
 
   if (!finished) {
-    await report("start", async () =>
-      reportPlaybackStart({ client, throwOnError: true, body: progressBody() })
+    await report(
+      "start",
+      async () => await reportPlaybackStart({ client, throwOnError: true, body: progressBody() })
     );
   }
   emit();
@@ -693,7 +698,7 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
   );
 
   const read = async <T>(name: string, schema: z.ZodType<T>) =>
-    mpv.getProperty(name, schema).catch(() => undefined);
+    await mpv.getProperty(name, schema).catch(() => undefined);
 
   let mpvAlive = true;
   void mpv.exited.then(() => {
@@ -703,7 +708,7 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
   return {
     done: mpv.exited.then(() => finished),
     pid: () => (mpvAlive ? mpv.pid : undefined),
-    stop: async () => finish({ phase: "stopped" }),
+    stop: async () => await finish({ phase: "stopped" }),
     async probe() {
       if (finished) {
         return { running: false };

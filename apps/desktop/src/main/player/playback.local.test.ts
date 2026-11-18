@@ -62,7 +62,7 @@ class FakeJellyfin {
   async close(): Promise<void> {
     this.server.closeAllConnections();
 
-    return new Promise((resolve) =>
+    return await new Promise((resolve) =>
       this.server.close(() => {
         resolve();
       })
@@ -232,7 +232,7 @@ async function until(
 }
 
 const synthesize = async (out: string, seconds: number) =>
-  promisify(execFile)("ffmpeg", [
+  await promisify(execFile)("ffmpeg", [
     "-v",
     "error",
     "-f",

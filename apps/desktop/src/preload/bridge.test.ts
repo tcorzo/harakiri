@@ -15,7 +15,9 @@ function fakeIpc(replies: Record<string, unknown> = {}, failure?: (channel: stri
     invoke: async (channel: string, ...args: unknown[]) => {
       invoked.push([channel, ...args]);
 
-      return failure ? Promise.reject(failure(channel)) : Promise.resolve(replies[channel]);
+      return failure
+        ? await Promise.reject(failure(channel))
+        : await Promise.resolve(replies[channel]);
     },
     on: (channel: string, listener: (event: IpcRendererEvent, payload: unknown) => void) => {
       listeners.set(channel, listener);
