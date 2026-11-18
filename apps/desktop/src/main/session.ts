@@ -97,7 +97,7 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
     }
 
     try {
-      cachedDeviceId = DeviceId.parse(z.uuid().parse(readFileSync(deviceIdFile, "utf8").trim()));
+      cachedDeviceId = DeviceId.parse(z.uuid().parse(readFileSync(deviceIdFile, "utf-8").trim()));
     } catch {
       cachedDeviceId = DeviceId.parse(randomUUID());
       write(deviceIdFile, cachedDeviceId);
@@ -122,7 +122,7 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
       let raw: string;
 
       try {
-        raw = readFileSync(sessionFile, "utf8");
+        raw = readFileSync(sessionFile, "utf-8");
       } catch {
         return null;
       }

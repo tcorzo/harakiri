@@ -149,7 +149,7 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
       if (!existsSync(file)) {
         return;
       }
-      const deviceId = readFileSync(file, "utf8").trim();
+      const deviceId = readFileSync(file, "utf-8").trim();
 
       // A seeded profile shares the worker's device, which the worker fixture signs out itself.
       if (deviceId === account.deviceId) {

@@ -25,7 +25,7 @@ export function runTool(
   timeoutMs = DEFAULT_TIMEOUT_MS
 ): ToolRun {
   const result = spawnSync(command, args, {
-    encoding: "utf8",
+    encoding: "utf-8",
     maxBuffer: 64 * 1024 * 1024,
     timeout: timeoutMs,
     killSignal: "SIGKILL",

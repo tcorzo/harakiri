@@ -49,7 +49,7 @@ const escape = (text: string) => text.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const denied = (): Rule[] =>
   existsSync(DENYLIST)
-    ? readFileSync(DENYLIST, "utf8")
+    ? readFileSync(DENYLIST, "utf-8")
         .split("\n")
         .map((line) => line.trim())
         .filter((line) => line !== "" && !line.startsWith("#"))
@@ -61,7 +61,7 @@ const denied = (): Rule[] =>
 
 const tracked = (): string[] =>
   execFileSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], {
-    encoding: "utf8",
+    encoding: "utf-8",
   })
     .split("\0")
     // A file deleted or renamed in the working tree stays listed until it is staged.
@@ -77,7 +77,7 @@ const isRealDate = (date: string) => {
 const readText = (file: string): string | undefined => {
   const bytes = readFileSync(file);
 
-  return bytes.subarray(0, 8192).includes(0) ? undefined : bytes.toString("utf8");
+  return bytes.subarray(0, 8192).includes(0) ? undefined : bytes.toString("utf-8");
 };
 
 const today = new Date().toISOString().slice(0, 10);

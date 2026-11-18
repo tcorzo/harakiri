@@ -105,7 +105,7 @@ test("every recorded MediaSource fixture is already scrubbed", () => {
   for (const file of names) {
     const json = z
       .record(z.string(), z.unknown())
-      .parse(JSON.parse(readFileSync(new URL(file, import.meta.url), "utf8")));
+      .parse(JSON.parse(readFileSync(new URL(file, import.meta.url), "utf-8")));
 
     expect({ file, json }).toEqual({ file, json: scrubSource(json, file.slice(0, -5)) });
   }

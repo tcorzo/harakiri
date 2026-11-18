@@ -22,7 +22,7 @@ const mainOut = join(root, "apps/desktop/out/main");
 
 const version =
   process.argv[2] ??
-  JSON.parse(readFileSync(join(root, "apps/desktop/package.json"), "utf8")).version;
+  JSON.parse(readFileSync(join(root, "apps/desktop/package.json"), "utf-8")).version;
 
 let failed = false;
 const pass = (check: string) => {
@@ -80,7 +80,7 @@ const packageOf = (spec: string): string | undefined => {
 const parseYaml = (text: string): unknown =>
   (Bun as unknown as { YAML: { parse: (text: string) => unknown } }).YAML.parse(text);
 
-const meta: Meta = parseYaml(readFileSync(join(dist, "latest-linux.yml"), "utf8")) as Meta;
+const meta: Meta = parseYaml(readFileSync(join(dist, "latest-linux.yml"), "utf-8")) as Meta;
 const entry = meta.files?.[0];
 
 check(
@@ -125,7 +125,7 @@ try {
   execFileSync(file, ["--appimage-extract", "resources/*"], { cwd: tmp, stdio: "ignore" });
   const resources = join(tmp, "squashfs-root/resources");
 
-  const feed = parseYaml(readFileSync(join(resources, "app-update.yml"), "utf8")) as Record<
+  const feed = parseYaml(readFileSync(join(resources, "app-update.yml"), "utf-8")) as Record<
     string,
     unknown
   >;
@@ -144,13 +144,13 @@ try {
   const asar = execFileSync(
     "bun",
     ["x", "--package", "@electron/asar@3.4.1", "asar", "list", join(resources, "app.asar")],
-    { encoding: "utf8", maxBuffer: 1 << 28 }
+    { encoding: "utf-8", maxBuffer: 1 << 28 }
   );
 
   const needed = new Set<string>();
 
   for (const js of walk(mainOut).filter((f) => f.endsWith(".js"))) {
-    for (const spec of specifiers(readFileSync(js, "utf8"))) {
+    for (const spec of specifiers(readFileSync(js, "utf-8"))) {
       const pkg = packageOf(spec);
 
       if (pkg) {

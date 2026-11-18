@@ -74,7 +74,7 @@ class FakeJellyfin {
   }
 
   private async handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    req.setEncoding("utf8");
+    req.setEncoding("utf-8");
     let text = "";
 
     for await (const chunk of req) {
@@ -193,12 +193,12 @@ function serveFile(req: IncomingMessage, res: ServerResponse, bytes: Buffer): vo
 function mpvChild(): { pid: number; cmdline: string } {
   for (const pid of readdirSync("/proc").filter((name) => /^\d+$/.test(name))) {
     try {
-      const ppid = readFileSync(`/proc/${pid}/stat`, "utf8").split(") ")[1]?.split(" ")[1];
+      const ppid = readFileSync(`/proc/${pid}/stat`, "utf-8").split(") ")[1]?.split(" ")[1];
 
       if (Number(ppid) !== process.pid) {
         continue;
       }
-      const cmdline = readFileSync(`/proc/${pid}/cmdline`, "utf8");
+      const cmdline = readFileSync(`/proc/${pid}/cmdline`, "utf-8");
 
       if (cmdline.split("\0")[0]?.endsWith("mpv")) {
         return { pid: Number(pid), cmdline };

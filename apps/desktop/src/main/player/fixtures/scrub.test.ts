@@ -12,7 +12,7 @@ test("every recorded PlaybackInfo fixture is already scrubbed of the library it 
   for (const file of names) {
     const json = z
       .record(z.string(), z.unknown())
-      .parse(JSON.parse(readFileSync(new URL(file, import.meta.url), "utf8")));
+      .parse(JSON.parse(readFileSync(new URL(file, import.meta.url), "utf-8")));
 
     expect({ file, json }).toEqual({ file, json: scrubPlaybackInfo(json, file.slice(0, -5)) });
   }

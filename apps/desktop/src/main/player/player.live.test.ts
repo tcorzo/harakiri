@@ -185,12 +185,12 @@ const byIndex = (a: Stream, b: Stream) => a.Index - b.Index;
 function mpvSocket(): string {
   for (const pid of readdirSync("/proc").filter((name) => /^\d+$/.test(name))) {
     try {
-      const ppid = readFileSync(`/proc/${pid}/stat`, "utf8").split(") ")[1]?.split(" ")[1];
+      const ppid = readFileSync(`/proc/${pid}/stat`, "utf-8").split(") ")[1]?.split(" ")[1];
 
       if (Number(ppid) !== process.pid) {
         continue;
       }
-      const args = readFileSync(`/proc/${pid}/cmdline`, "utf8").split("\0");
+      const args = readFileSync(`/proc/${pid}/cmdline`, "utf-8").split("\0");
       const socket = args.find((arg) => arg.startsWith("--input-ipc-server="));
 
       if (socket) {
@@ -209,7 +209,7 @@ async function mpvCommand(...command: unknown[]): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const socket = createConnection(mpvSocket());
     let buffer = "";
-    socket.setEncoding("utf8");
+    socket.setEncoding("utf-8");
     socket.on("error", reject);
     socket.on("data", (chunk: string) => {
       buffer += chunk;

@@ -145,7 +145,7 @@ export default async function globalSetup(): Promise<void> {
 
   const manifest = readFileSync(resolve(CORPUS_DIR, MANIFEST));
   const fingerprint = createHash("sha256").update(manifest).digest("hex");
-  const scanned = existsSync(SCANNED) ? readFileSync(SCANNED, "utf8").trim() : undefined;
+  const scanned = existsSync(SCANNED) ? readFileSync(SCANNED, "utf-8").trim() : undefined;
 
   if (scanned !== fingerprint && existsSync(STATE)) {
     console.log("e2e: the corpus changed since the e2e Jellyfin scanned it; recreating it");

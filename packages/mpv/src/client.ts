@@ -288,7 +288,7 @@ function createClient({
     }
   };
 
-  socket.setEncoding("utf8");
+  socket.setEncoding("utf-8");
   socket.on(
     "data",
     createLineSplitter((line) => {

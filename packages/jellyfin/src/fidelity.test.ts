@@ -15,7 +15,7 @@ const Fixture = zMediaSourceInfo.pick({
 
 const fixture = (name: string) =>
   Fixture.parse(
-    JSON.parse(readFileSync(new URL(`./__fixtures__/${name}.json`, import.meta.url), "utf8"))
+    JSON.parse(readFileSync(new URL(`./__fixtures__/${name}.json`, import.meta.url), "utf-8"))
   );
 
 const dovInvalidSdrAac = fixture("dovi-invalid-sdr-aac");

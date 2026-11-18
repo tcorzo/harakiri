@@ -18,7 +18,7 @@ async function startResponder(replies: string[]): Promise<{ port: number; probes
   const socket = createSocket("udp4");
   responder = socket;
   socket.on("message", (message, from) => {
-    probes.push(message.toString("utf8"));
+    probes.push(message.toString("utf-8"));
 
     for (const reply of replies) {
       socket.send(reply, from.port, from.address);

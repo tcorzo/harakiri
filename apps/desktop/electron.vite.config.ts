@@ -9,7 +9,7 @@ import { defineConfig } from "electron-vite";
 const renderer = resolve(import.meta.dirname, "src/renderer/src");
 
 const { version, dependencies } = JSON.parse(
-  readFileSync(resolve(import.meta.dirname, "package.json"), "utf8")
+  readFileSync(resolve(import.meta.dirname, "package.json"), "utf-8")
 ) as {
   version: string;
   dependencies: Record<string, string>;

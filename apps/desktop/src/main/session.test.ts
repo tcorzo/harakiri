@@ -43,8 +43,8 @@ const expectedSession = {
 
 const prefixing: TokenCrypto = {
   isEncryptionAvailable: () => true,
-  encryptString: (plain) => Buffer.from(`enc:${plain}`, "utf8"),
-  decryptString: (encrypted) => encrypted.toString("utf8").replace(/^enc:/, ""),
+  encryptString: (plain) => Buffer.from(`enc:${plain}`, "utf-8"),
+  decryptString: (encrypted) => encrypted.toString("utf-8").replace(/^enc:/, ""),
   getSelectedStorageBackend: () => "gnome_libsecret",
 };
 
@@ -76,7 +76,7 @@ afterEach(() => {
 const store = (crypto: TokenCrypto, allowPlaintextToken = false) =>
   createSessionStore({ dir, crypto, allowPlaintextToken });
 
-const readStored = (): unknown => JSON.parse(readFileSync(join(dir, "session.json"), "utf8"));
+const readStored = (): unknown => JSON.parse(readFileSync(join(dir, "session.json"), "utf-8"));
 
 test("round-trips a session with the token encrypted on disk and main's device id", () => {
   store(prefixing).save(newSession);
@@ -169,7 +169,7 @@ test("the device id is generated once, survives a restart and is written 0600", 
 
   expect(first).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   expect(second).toBe(first);
-  expect(readFileSync(join(dir, "device-id"), "utf8")).toBe(first);
+  expect(readFileSync(join(dir, "device-id"), "utf-8")).toBe(first);
   expect(statSync(join(dir, "device-id")).mode & 0o777).toBe(0o600);
   expect(readdirSync(dir)).toEqual(["device-id"]);
 });

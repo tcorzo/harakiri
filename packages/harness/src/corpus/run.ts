@@ -16,8 +16,8 @@ export async function runAsync(
 
     let stdout = "";
     let stderr = "";
-    child.stdout.setEncoding("utf8").on("data", (chunk: string) => (stdout += chunk));
-    child.stderr.setEncoding("utf8").on("data", (chunk: string) => (stderr += chunk));
+    child.stdout.setEncoding("utf-8").on("data", (chunk: string) => (stdout += chunk));
+    child.stderr.setEncoding("utf-8").on("data", (chunk: string) => (stderr += chunk));
     const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
     child.on("error", (error: NodeJS.ErrnoException) => {
       clearTimeout(timer);

@@ -181,7 +181,7 @@ export function readManifest(dir: string): Manifest {
     throw new Error(`no corpus at ${dir}: run mise run media:gen`);
   }
 
-  return ManifestSchema.parse(JSON.parse(readFileSync(file, "utf8")));
+  return ManifestSchema.parse(JSON.parse(readFileSync(file, "utf-8")));
 }
 
 function describeFate(state: FateState, dir: string): string {

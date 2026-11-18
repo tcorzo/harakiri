@@ -47,7 +47,7 @@ export async function discoverServers(options: DiscoveryOptions = {}): Promise<D
       let json: unknown;
 
       try {
-        json = JSON.parse(message.toString("utf8"));
+        json = JSON.parse(message.toString("utf-8"));
       } catch {
         logger.debug("Ignoring a discovery reply that is not JSON");
 

@@ -45,7 +45,7 @@ async function start(
   return client;
 }
 
-const cmdline = (pid: number) => readFileSync(`/proc/${pid}/cmdline`, "utf8").split("\0");
+const cmdline = (pid: number) => readFileSync(`/proc/${pid}/cmdline`, "utf-8").split("\0");
 
 beforeAll(async () => {
   clipDir = await mkdtemp(join(tmpdir(), "harakiri-mpv-test-"));

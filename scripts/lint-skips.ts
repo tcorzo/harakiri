@@ -44,7 +44,7 @@ const tracked = (): string[] =>
       "*.spec.tsx",
     ],
     {
-      encoding: "utf8",
+      encoding: "utf-8",
     }
   )
     .split("\0")
@@ -87,7 +87,7 @@ const judge = (line: string): string | undefined => {
 const problems: string[] = [];
 
 for (const file of files) {
-  const lines = readFileSync(file, "utf8").split("\n");
+  const lines = readFileSync(file, "utf-8").split("\n");
 
   for (const [index, line] of lines.entries()) {
     const why = judge(line);

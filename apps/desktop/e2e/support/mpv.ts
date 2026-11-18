@@ -26,7 +26,7 @@ export function mpvProcesses(userDataDir: string): MpvProcess[] {
     let argv: string[];
 
     try {
-      argv = readFileSync(`/proc/${entry}/cmdline`, "utf8").split("\0");
+      argv = readFileSync(`/proc/${entry}/cmdline`, "utf-8").split("\0");
     } catch {
       continue;
     }
@@ -116,7 +116,7 @@ export const pressKey = async (userDataDir: string, key: string) =>
  * version, so it is read from mpv rather than written down.
  */
 export function lavapipeDeviceUuid(): string {
-  const list = execFileSync("mpv", ["--no-config", "--vulkan-device=help"], { encoding: "utf8" });
+  const list = execFileSync("mpv", ["--no-config", "--vulkan-device=help"], { encoding: "utf-8" });
   const uuid = /'llvmpipe[^']*'.*UUID ([0-9a-f-]{36})/.exec(list)?.[1];
 
   if (uuid === undefined) {

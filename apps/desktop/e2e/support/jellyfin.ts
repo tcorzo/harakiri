@@ -22,7 +22,7 @@ export const TICKS_PER_SECOND = 10_000_000;
 
 const { version } = z
   .object({ version: z.string() })
-  .parse(JSON.parse(readFileSync(resolve(import.meta.dirname, "../../package.json"), "utf8")));
+  .parse(JSON.parse(readFileSync(resolve(import.meta.dirname, "../../package.json"), "utf-8")));
 
 /**
  * The identity the app itself sends, version included (the bundles get it at build time, so

@@ -45,7 +45,7 @@ async function expectStoredSession(
     serverVersion: info.version,
     userId,
     userName: backend.user,
-    deviceId: readFileSync(join(userDataDir, "device-id"), "utf8").trim(),
+    deviceId: readFileSync(join(userDataDir, "device-id"), "utf-8").trim(),
   });
 }
 
