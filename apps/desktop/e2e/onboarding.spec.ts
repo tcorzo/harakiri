@@ -315,8 +315,8 @@ test.describe("with the server answering discovery on loopback", () => {
     await expect(facts).toContainText(`Server${info.name} · Jellyfin ${info.version}`);
     await expect(facts).toContainText(`Address${backend.server}`);
     // Unpackaged e2e has no APPIMAGE: updates are unsupported, so only the version shows.
-    await expect(facts).toContainText(/AppVersion \d+\.\d+\.\d+$/);
-    await expect(page.getByRole("button", { name: /Restart to update/ })).toHaveCount(0);
+    await expect(facts).toContainText(/AppVersion \d+\.\d+\.\d+$/u);
+    await expect(page.getByRole("button", { name: /Restart to update/u })).toHaveCount(0);
     const signedOut = await page.evaluate(async () => await window.harakiri.session.get());
 
     const asSignedOut = async () =>

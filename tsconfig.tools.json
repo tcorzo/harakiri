@@ -8,6 +8,7 @@
   "include": [
     "scripts",
     "dev",
+    "apps/desktop/package.json",
     "vitest.tiers.config.ts",
     "vitest.shared.ts",
     "apps/desktop/vitest.config.ts",
