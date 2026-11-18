@@ -55,13 +55,13 @@ describe("adaptUpdater", () => {
     expect(available).toHaveBeenCalledWith("0.3.0");
     expect(progress).toHaveBeenCalledWith(12.5);
     expect(downloaded).toHaveBeenCalledWith("0.3.0");
-    expect(notAvailable).toHaveBeenCalledTimes(1);
+    expect(notAvailable).toHaveBeenCalledOnce();
     expect(failed).toHaveBeenCalledWith(error);
 
     await updater.check();
     await updater.download();
-    expect(fake.checkForUpdates).toHaveBeenCalledTimes(1);
-    expect(fake.downloadUpdate).toHaveBeenCalledTimes(1);
+    expect(fake.checkForUpdates).toHaveBeenCalledOnce();
+    expect(fake.downloadUpdate).toHaveBeenCalledOnce();
     expect(updater.install(true)).toBe(true);
     expect(fake.install).toHaveBeenCalledWith(true, true);
   });

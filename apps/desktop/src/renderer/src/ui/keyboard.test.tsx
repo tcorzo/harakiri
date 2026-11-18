@@ -144,7 +144,7 @@ test("Space on a focused key types no space and reaches the hub, where it is Sel
 
   fireEvent.keyDown(screen.getByRole("button", { name: "q" }), { key: " " });
   expect(seen.typed).toBe("ab");
-  expect(hub).toHaveBeenCalledTimes(1);
+  expect(hub).toHaveBeenCalledOnce();
   expect(hub.mock.calls[0]?.[0].defaultPrevented).toBe(false);
   window.removeEventListener("keydown", hub);
 });

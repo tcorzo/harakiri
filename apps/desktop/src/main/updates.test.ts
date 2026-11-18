@@ -360,9 +360,9 @@ test("restart quits only when an update is ready", () => {
 
   fake.on.downloaded?.("0.3.0");
   updates.restart();
-  expect(quit).toHaveBeenCalledTimes(1);
+  expect(quit).toHaveBeenCalledOnce();
 
   updates.installIfReady();
-  expect(releaseLock).toHaveBeenCalledTimes(1);
+  expect(releaseLock).toHaveBeenCalledOnce();
   expect(fake.calls.installs).toEqual([true]);
 });

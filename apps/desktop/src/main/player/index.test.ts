@@ -82,7 +82,7 @@ test("play reuses the resolution the handoff prepared instead of asking the serv
   });
   await play(request, () => {});
 
-  expect(mocks.prepare).toHaveBeenCalledTimes(1);
+  expect(mocks.prepare).toHaveBeenCalledOnce();
   expect(mocks.start.mock.calls[0]?.[3]).toBe(prepared);
 });
 
