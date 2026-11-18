@@ -86,7 +86,7 @@ describe("FATE: HBR streams through the extractor and mpv", () => {
       remuxToMatroska(sample(name), mkv);
       const wav = join(dir, `${name}.wav`);
       const ao = captureWithMpv(mkv, wav);
-      expect(ao).toEqual({ sampleRate: 192000, channels: 8, format });
+      expect(ao).toEqual({ sampleRate: 192_000, channels: 8, format });
 
       const reference = spdif(
         mkv,

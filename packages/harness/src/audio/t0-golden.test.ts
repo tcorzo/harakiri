@@ -81,7 +81,7 @@ describe("T0: FFmpeg spdif muxer round trip through the extractor", () => {
 describe("T0: captures the harness must reject", () => {
   test("a plain PCM sine WAV holds no bursts, while the AC-3 capture beside it does", () => {
     const pcm = readPcm16(readFileSync(synthesizePcmWav(dir)));
-    expect(pcm).toMatchObject({ kind: "wav", channels: 2, sampleRate: 48000 });
+    expect(pcm).toMatchObject({ kind: "wav", channels: 2, sampleRate: 48_000 });
     expect(scanBursts(pcm.data)).toEqual([]);
     expect(() => elementaryStream(scanBursts(pcm.data))).toThrow(
       new Iec61937Error("no audio-carrying bursts")
@@ -92,7 +92,7 @@ describe("T0: captures the harness must reject", () => {
   test("a MAT frame whose middle code is damaged fails at the fixed offset", () => {
     const pcm = Uint8Array.from(spdifOf("truehd"));
     const firstPayload = 8;
-    pcm[firstPayload + 30708] = (pcm[firstPayload + 30708] ?? 0) ^ 0xff;
+    pcm[firstPayload + 30_708] = (pcm[firstPayload + 30_708] ?? 0) ^ 0xff;
     expect(() => elementaryStream(scanBursts(pcm))).toThrow(
       new Iec61937Error("MAT burst at byte 0: middle code missing at frame offset 30708")
     );

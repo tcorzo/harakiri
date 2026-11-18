@@ -109,7 +109,7 @@ export function hdr10plusJson(frames: number): string {
   const cut = Math.floor(frames / 2);
 
   const frame = (i: number) => {
-    const peak = i < cut ? 40000 : 8000;
+    const peak = i < cut ? 40_000 : 8000;
 
     return {
       SceneFrameIndex: i < cut ? i : i - cut,
@@ -122,8 +122,8 @@ export function hdr10plusJson(frames: number): string {
         MaxScl: [peak, peak, peak],
         LuminanceDistributions: {
           DistributionIndex: [1, 5, 10, 25, 50, 75, 90, 95, 99],
-          DistributionValues: [10, 50, 100, 500, 1000, 5000, 10000, 20000, 40000].map((v) =>
-            Math.floor((v * peak) / 40000)
+          DistributionValues: [10, 50, 100, 500, 1000, 5000, 10_000, 20_000, 40_000].map((v) =>
+            Math.floor((v * peak) / 40_000)
           ),
         },
       },

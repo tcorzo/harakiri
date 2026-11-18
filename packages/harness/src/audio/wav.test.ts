@@ -39,25 +39,25 @@ describe("readPcm16", () => {
   test("walks past an odd-sized LIST chunk to an extensible fmt and the data chunk", () => {
     const file = riff(
       chunk("LIST", [1, 2, 3]),
-      fmt(0xfffe, 8, 192000, 16),
+      fmt(0xff_fe, 8, 192_000, 16),
       chunk("data", [0x72, 0xf8, 0x1f, 0x4e])
     );
 
     expect(readPcm16(file)).toEqual({
       kind: "wav",
       channels: 8,
-      sampleRate: 192000,
+      sampleRate: 192_000,
       data: Uint8Array.of(0x72, 0xf8, 0x1f, 0x4e),
     });
   });
 
   test("clamps a placeholder data size to the bytes present", () => {
-    const head = riff(fmt(1, 2, 48000, 16));
-    const file = Uint8Array.from([...head, ...ascii("data"), ...le32(0x7ffff000), 9, 8, 7, 6]);
+    const head = riff(fmt(1, 2, 48_000, 16));
+    const file = Uint8Array.from([...head, ...ascii("data"), ...le32(0x7f_ff_f0_00), 9, 8, 7, 6]);
     expect(readPcm16(file)).toEqual({
       kind: "wav",
       channels: 2,
-      sampleRate: 48000,
+      sampleRate: 48_000,
       data: Uint8Array.of(9, 8, 7, 6),
     });
   });
@@ -70,7 +70,7 @@ describe("readPcm16", () => {
   });
 
   test("rejects 24-bit PCM, which cannot carry IEC 61937", () => {
-    const file = riff(fmt(1, 2, 48000, 24), chunk("data", [0, 0, 0]));
+    const file = riff(fmt(1, 2, 48_000, 24), chunk("data", [0, 0, 0]));
     expect(() => readPcm16(file)).toThrow(
       new WavError("fmt has 24 bits per sample, IEC 61937 needs 16")
     );

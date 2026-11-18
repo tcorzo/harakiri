@@ -58,9 +58,9 @@ const kinds = (bursts: readonly Burst[]) => [
 
 describe("T1: the player's mpv argv writes the IEC 61937 stream unmodified", () => {
   test.each([
-    { codec: "ac3", ao: { sampleRate: 48000, channels: 2, format: "spdif-ac3" } },
-    { codec: "dts", ao: { sampleRate: 48000, channels: 2, format: "spdif-dts" } },
-    { codec: "truehd", ao: { sampleRate: 192000, channels: 8, format: "spdif-truehd" } },
+    { codec: "ac3", ao: { sampleRate: 48_000, channels: 2, format: "spdif-ac3" } },
+    { codec: "dts", ao: { sampleRate: 48_000, channels: 2, format: "spdif-dts" } },
+    { codec: "truehd", ao: { sampleRate: 192_000, channels: 8, format: "spdif-truehd" } },
   ] as const)("$codec capture equals FFmpeg's spdif output byte for byte", ({ codec, ao }) => {
     const run = capture(codec);
     expect(run.ao).toEqual(ao);
@@ -80,7 +80,7 @@ describe("T1: the player's mpv argv writes the IEC 61937 stream unmodified", () 
   // are identical, so the tolerance is at most one trailing burst.
   test("eac3 capture is FFmpeg's spdif output, at most its final burst short", () => {
     const run = capture("eac3");
-    expect(run.ao).toEqual({ sampleRate: 192000, channels: 2, format: "spdif-eac3" });
+    expect(run.ao).toEqual({ sampleRate: 192_000, channels: 2, format: "spdif-eac3" });
     const reference = scanBursts(run.spdifReference);
     const captured = scanBursts(run.pcm.data);
     expect([kinds(captured), kinds(reference)]).toEqual([["21/0"], ["21/0"]]);
@@ -103,7 +103,7 @@ describe("T1: the player's mpv argv writes the IEC 61937 stream unmodified", () 
   test("without the codec in --audio-spdif mpv decodes to float PCM, which the harness refuses", () => {
     const wav = join(dir, "dts-decoded.wav");
     expect(captureWithMpv(clip("dts").mkv, wav, ["ac3"])).toEqual({
-      sampleRate: 48000,
+      sampleRate: 48_000,
       channels: 6,
       format: "float",
     });

@@ -11,8 +11,8 @@ export class WavError extends Error {
   override readonly name = "WavError";
 }
 
-const WAVE_FORMAT_PCM = 0x0001;
-const WAVE_FORMAT_EXTENSIBLE = 0xfffe;
+const WAVE_FORMAT_PCM = 0x00_01;
+const WAVE_FORMAT_EXTENSIBLE = 0xff_fe;
 
 function fourcc(bytes: Uint8Array, at: number): string {
   return String.fromCharCode(...bytes.subarray(at, at + 4));

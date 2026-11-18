@@ -24,7 +24,7 @@ describe("scanBursts", () => {
       0,
       0,
       0,
-      ...burst(0x0001, 32, [0x0b, 0x77, 0x12, 0x34], 24),
+      ...burst(0x00_01, 32, [0x0b, 0x77, 0x12, 0x34], 24),
     ]);
 
     expect(scanBursts(stream)).toEqual([
@@ -39,7 +39,7 @@ describe("scanBursts", () => {
   });
 
   test("reads Pd in bytes for E-AC-3 and keeps an odd final byte from the word's high half", () => {
-    const stream = Uint8Array.from(burst(0x0015, 3, [0x0b, 0x77, 0x99]));
+    const stream = Uint8Array.from(burst(0x00_15, 3, [0x0b, 0x77, 0x99]));
     expect(scanBursts(stream).map((b) => [b.name, [...b.payload]])).toEqual([
       ["eac3", [0x0b, 0x77, 0x99]],
     ]);
@@ -51,13 +51,13 @@ describe("scanBursts", () => {
   });
 
   test("rejects a reserved data type", () => {
-    expect(() => scanBursts(Uint8Array.from(burst(0x0014, 0, [])))).toThrow(
+    expect(() => scanBursts(Uint8Array.from(burst(0x00_14, 0, [])))).toThrow(
       new Iec61937Error("reserved data type 0x14 at byte 0")
     );
   });
 
   test("rejects a burst cut off by the end of the stream", () => {
-    const cut = burst(0x0015, 6, [1, 2, 3, 4, 5, 6]).slice(0, 12);
+    const cut = burst(0x00_15, 6, [1, 2, 3, 4, 5, 6]).slice(0, 12);
     expect(() => scanBursts(Uint8Array.from(cut))).toThrow(
       new Iec61937Error("eac3 burst at byte 0 needs 6 bytes, stream ends first")
     );
@@ -67,8 +67,8 @@ describe("scanBursts", () => {
 describe("elementaryStream", () => {
   test("unwraps DTS type IV frames by their inner length and reports the period subtype", () => {
     const stream = Uint8Array.from([
-      ...burst(0x0411, 16, [...DTSHD_HEADER, 0x00, 0x02, 0xaa, 0xbb, 0x00, 0x00]),
-      ...burst(0x0411, 16, [...DTSHD_HEADER, 0x00, 0x01, 0xcc, 0x00, 0x00, 0x00]),
+      ...burst(0x04_11, 16, [...DTSHD_HEADER, 0x00, 0x02, 0xaa, 0xbb, 0x00, 0x00]),
+      ...burst(0x04_11, 16, [...DTSHD_HEADER, 0x00, 0x01, 0xcc, 0x00, 0x00, 0x00]),
     ]);
 
     const bursts = scanBursts(stream);
@@ -85,9 +85,9 @@ describe("elementaryStream", () => {
 
   test("skips pause bursts between audio bursts", () => {
     const stream = Uint8Array.from([
-      ...burst(0x0001, 16, [0x0b, 0x77]),
-      ...burst(0x0003, 32, [0, 0x20, 0, 0]),
-      ...burst(0x0001, 16, [0x0b, 0x78]),
+      ...burst(0x00_01, 16, [0x0b, 0x77]),
+      ...burst(0x00_03, 32, [0, 0x20, 0, 0]),
+      ...burst(0x00_01, 16, [0x0b, 0x78]),
     ]);
 
     expect(elementaryStream(scanBursts(stream))).toEqual({
@@ -99,8 +99,8 @@ describe("elementaryStream", () => {
 
   test("rejects a capture that switches codec", () => {
     const stream = Uint8Array.from([
-      ...burst(0x0001, 16, [0x0b, 0x77]),
-      ...burst(0x0015, 2, [0x0b, 0x77]),
+      ...burst(0x00_01, 16, [0x0b, 0x77]),
+      ...burst(0x00_15, 2, [0x0b, 0x77]),
     ]);
 
     expect(() => elementaryStream(scanBursts(stream))).toThrow(
@@ -128,24 +128,24 @@ describe("elementaryStream", () => {
 
     const frame = (part: number[]) => [
       ...MAT_START,
-      ...part.slice(0, 30688),
+      ...part.slice(0, 30_688),
       ...MAT_MIDDLE,
-      ...part.slice(30688, 61376),
+      ...part.slice(30_688, 61_376),
       ...MAT_END,
     ];
 
     const stream = Uint8Array.from([
-      ...burst(0x0016, 61424, frame(data.slice(0, 61376)), 61440),
-      ...burst(0x0016, 61424, frame(data.slice(61376, 122752)), 61440),
+      ...burst(0x00_16, 61_424, frame(data.slice(0, 61_376)), 61_440),
+      ...burst(0x00_16, 61_424, frame(data.slice(61_376, 122_752)), 61_440),
     ]);
 
     const extracted = elementaryStream(scanBursts(stream));
     expect(extracted).toMatchObject({ codec: "truehd", bursts: 2, partialTailBytes: 2752 });
-    expect(extracted.bytes).toEqual(Uint8Array.from(data.slice(0, 120000)));
+    expect(extracted.bytes).toEqual(Uint8Array.from(data.slice(0, 120_000)));
   });
 
   test("rejects a DTS type IV burst without the DTS-HD start code", () => {
-    const stream = Uint8Array.from(burst(0x0411, 4, [0xde, 0xad, 0xbe, 0xef]));
+    const stream = Uint8Array.from(burst(0x04_11, 4, [0xde, 0xad, 0xbe, 0xef]));
     expect(() => elementaryStream(scanBursts(stream))).toThrow(
       new Iec61937Error("DTS type IV burst at byte 0 lacks the DTS-HD start code")
     );

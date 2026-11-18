@@ -74,7 +74,7 @@ export function rleLine(pixels: readonly number[]): Uint8Array {
     const c = pixels[i]!;
     let n = 1;
 
-    while (i + n < pixels.length && pixels[i + n] === c && n < 16383) {
+    while (i + n < pixels.length && pixels[i + n] === c && n < 16_383) {
       n++;
     }
 

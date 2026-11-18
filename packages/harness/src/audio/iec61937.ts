@@ -77,8 +77,8 @@ export class Iec61937Error extends Error {
   override readonly name = "Iec61937Error";
 }
 
-const PA = 0xf872;
-const PB = 0x4e1f;
+const PA = 0xf8_72;
+const PB = 0x4e_1f;
 const BURST_HEADER_SIZE = 8;
 
 /**
@@ -215,7 +215,7 @@ function unwrapDtsTypeIV(burst: Burst): Uint8Array {
   return payload.subarray(frameStart, frameStart + frameLength);
 }
 
-const MAT_FRAME_SIZE = 61424;
+const MAT_FRAME_SIZE = 61_424;
 
 const MAT_CODES = [
   {
@@ -246,12 +246,12 @@ const MAT_CODES = [
   },
   {
     label: "middle",
-    at: 30708,
+    at: 30_708,
     code: Uint8Array.of(0xc3, 0xc1, 0x42, 0x49, 0x3b, 0xfa, 0x82, 0x83, 0x49, 0x80, 0x77, 0xe0),
   },
   {
     label: "end",
-    at: 61408,
+    at: 61_408,
     code: Uint8Array.of(
       0xc3,
       0xc2,
@@ -322,7 +322,7 @@ function walkTrueHdAccessUnits(data: Uint8Array): { bytes: Uint8Array; partialTa
       continue;
     }
 
-    const length = (word & 0x0fff) * 2;
+    const length = (word & 0x0f_ff) * 2;
 
     if (at + length > data.length) {
       return { bytes: concat(units), partialTailBytes: data.length - at };

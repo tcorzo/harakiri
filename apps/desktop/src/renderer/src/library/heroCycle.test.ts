@@ -166,7 +166,7 @@ test("Play pressed right after any other press is not dropped", async () => {
   stubReducedMotion(false);
   const { result } = renderHook(() => useHeroCycle(films(3), true));
   await act(async () => {
-    vi.advanceTimersByTime(5_000);
+    vi.advanceTimersByTime(5000);
     touch();
   });
   expect(result.current.settled()).toBe(true);

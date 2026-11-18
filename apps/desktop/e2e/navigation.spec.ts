@@ -285,7 +285,7 @@ test.describe("the hero cycle", () => {
     await page.clock.runFor(19_000);
     expect(heroTitle(await expectFocus(page, heroPlay))).toBe(first);
     // The film changes at 20 s; the clock stops 500 ms later, inside the 800 ms settle.
-    await page.clock.runFor(1_500);
+    await page.clock.runFor(1500);
     const advanced = await expectFocus(page, new RegExp(`^(Play|Resume) ${escapeRegExp(second)}$`));
     expect(advanced.route).toBe("/library");
     const third = await nextTitle(page);
@@ -297,7 +297,7 @@ test.describe("the hero cycle", () => {
     expect((await expectFocus(page, heroPlay)).route).toBe("/library");
     expect(heroTitle(await expectFocus(page, heroPlay))).toBe(second);
 
-    await page.clock.runFor(1_000);
+    await page.clock.runFor(1000);
     await page.keyboard.press("Enter");
     await expect(main(page, `Screening ${second}`)).toBeVisible();
     // Cancel during the House station, before any mpv starts.
@@ -315,7 +315,7 @@ test.describe("the hero cycle", () => {
     await press(page, "ArrowLeft", heroPlay);
     await page.clock.fastForward(15_000);
     expect(heroTitle(await expectFocus(page, heroPlay))).toBe(first);
-    await page.clock.fastForward(6_000);
+    await page.clock.fastForward(6000);
     await until(
       "the hero advances 20 s after the last press",
       async () => heroTitle(await expectFocus(page, heroPlay)),
@@ -349,7 +349,7 @@ test.describe("the hero cycle", () => {
   test("Play answers a press right after moving back onto it", async ({ launch }) => {
     const { page } = await launch();
     const first = await withClock(page);
-    await page.clock.fastForward(2_000);
+    await page.clock.fastForward(2000);
     await press(page, "ArrowRight", `Programme notes for ${first}`);
     await press(page, "ArrowLeft", heroPlay);
     await page.keyboard.press("Enter");
@@ -366,7 +366,7 @@ test.describe("the hero cycle", () => {
     await page.clock.fastForward(21_000);
     const second = heroTitle(await expectFocus(page, heroPlay));
     expect(second).not.toBe(first);
-    await page.clock.fastForward(1_000);
+    await page.clock.fastForward(1000);
     await page.keyboard.press("Enter");
     await expect(main(page, `Screening ${second}`)).toBeVisible();
     await page.keyboard.press("Escape");
