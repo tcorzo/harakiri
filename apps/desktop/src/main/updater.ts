@@ -77,7 +77,7 @@ export function electronUpdater(): UpdaterLike {
   const updater = pkg.autoUpdater;
 
   if (!(updater instanceof BaseUpdaterClass)) {
-    throw new Error("electron-updater did not pick an installing updater on this platform");
+    throw new TypeError("electron-updater did not pick an installing updater on this platform");
   }
 
   return adaptUpdater(updater);
