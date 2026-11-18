@@ -691,7 +691,7 @@ git commit -m "feat(desktop): update the AppImage from GitHub releases on quit"
 
 - [ ] **Step 8 (manual, needs Task 5): Watch a real swap**
 
-While the local version is still `0.1.0`, copy `apps/desktop/dist/harakiri-x86_64.AppImage` to `~/Applications/` and start it. Expected in the run log (`~/.config/harakiri/logs/`): an update to `0.2.0` found, then downloaded. Start a play before the download completes: no download happens while playing. Quit. Expected: quit returns within about 5 s, the same path now holds 0.2.0, and the next start logs `harakiri 0.2.0`. If quit hangs, `APPIMAGE_EXIT_AFTER_INSTALL` is ignored by the runtime (outline open question 1). Stop and switch `installIfReady` to always install with relaunch before Phase 4.
+While the local version is still `0.1.0`, copy `apps/desktop/dist/harakiri-x86_64.AppImage` to `~/Applications/` and start it. Expected in the run log (`~/.config/harakiri/logs/`): an update to `0.2.0` found, then downloaded. Start a play before the download completes: within a minute the log shows the download cancelled and the status back to available; stop playing and within a minute it downloads again. Quit. Expected: quit returns within about 5 s, the same path now holds 0.2.0, and the next start logs `harakiri 0.2.0`. If quit hangs, `APPIMAGE_EXIT_AFTER_INSTALL` is ignored by the runtime (outline open question 1). Stop and switch `installIfReady` to always install with relaunch before Phase 4.
 
 ---
 
