@@ -11,7 +11,7 @@ import { fateState } from "../../../../packages/harness/src/corpus/fate";
 import { MANIFEST, readManifest } from "../../../../packages/harness/src/corpus/generate";
 import { CORPUS_DIR, E2E_CONTAINER_ENV, REAL_SERVER, REPO } from "./backend";
 
-const FATE_DIR = process.env["HARAKIRI_FATE_DIR"] ?? resolve(REPO, ".cache/fate");
+const FATE_DIR = process.env.HARAKIRI_FATE_DIR ?? resolve(REPO, ".cache/fate");
 const STATE = E2E_CONTAINER_ENV.JELLYFIN_DEV_STATE;
 
 /** The corpus manifest the container last finished scanning; a different one recreates it. */

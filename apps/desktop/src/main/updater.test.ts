@@ -26,9 +26,9 @@ describe("adaptUpdater", () => {
     expect(fake.autoDownload).toBe(false);
     expect(fake.autoInstallOnAppQuit).toBe(false);
     const logger = fake.logger as unknown as Record<string, unknown>;
-    expect(typeof logger["info"]).toBe("function");
-    expect(typeof logger["warn"]).toBe("function");
-    expect(typeof logger["error"]).toBe("function");
+    expect(typeof logger.info).toBe("function");
+    expect(typeof logger.warn).toBe("function");
+    expect(typeof logger.error).toBe("function");
   });
 
   it("maps events and calls", async () => {

@@ -56,13 +56,13 @@ const scrubStream = (stream: unknown, base: string | undefined, file: string): u
   for (const key of ["Title", "DisplayTitle"]) {
     if (typeof next[key] === "string") next[key] = scrubText(next[key]);
   }
-  const path = next["Path"];
+  const path = next.Path;
 
   if (typeof path === "string") {
-    next["Path"] =
+    next.Path =
       base !== undefined && path.startsWith(base)
         ? `${file}${path.slice(base.length)}`
-        : `${file}.${String(next["Index"])}${extension(path)}`;
+        : `${file}.${String(next.Index)}${extension(path)}`;
   }
 
   return next;
@@ -97,33 +97,33 @@ export const scrubSource = (source: Json, name: string): Json => {
   const next: Json = { ...source };
   const ids = new Map<string, string>();
   const file = `/media/movies/fixture-${name}`;
-  const path = typeof next["Path"] === "string" ? next["Path"] : undefined;
+  const path = typeof next.Path === "string" ? next.Path : undefined;
   const base = path === undefined ? undefined : withoutExtension(path);
 
   if (path !== undefined) {
-    next["Path"] = `${file}${extension(path)}`;
+    next.Path = `${file}${extension(path)}`;
   }
 
-  if (typeof next["Name"] === "string") {
-    next["Name"] = `Fixture ${name}`;
+  if (typeof next.Name === "string") {
+    next.Name = `Fixture ${name}`;
   }
 
-  if (typeof next["Id"] === "string" && HEX32.test(next["Id"])) {
-    ids.set(next["Id"], fakeHex(`item ${name}`));
+  if (typeof next.Id === "string" && HEX32.test(next.Id)) {
+    ids.set(next.Id, fakeHex(`item ${name}`));
   }
 
-  if (typeof next["ETag"] === "string") {
-    ids.set(next["ETag"], fakeHex(`etag ${name}`));
+  if (typeof next.ETag === "string") {
+    ids.set(next.ETag, fakeHex(`etag ${name}`));
   }
 
-  if (Array.isArray(next["MediaStreams"])) {
-    next["MediaStreams"] = next["MediaStreams"].map((stream) => scrubStream(stream, base, file));
+  if (Array.isArray(next.MediaStreams)) {
+    next.MediaStreams = next.MediaStreams.map((stream) => scrubStream(stream, base, file));
   }
 
-  if (Array.isArray(next["MediaAttachments"])) {
-    next["MediaAttachments"] = next["MediaAttachments"].map((attachment, index) =>
-      isRecord(attachment) && typeof attachment["FileName"] === "string"
-        ? { ...attachment, FileName: `attachment-${index}${extension(attachment["FileName"])}` }
+  if (Array.isArray(next.MediaAttachments)) {
+    next.MediaAttachments = next.MediaAttachments.map((attachment, index) =>
+      isRecord(attachment) && typeof attachment.FileName === "string"
+        ? { ...attachment, FileName: `attachment-${index}${extension(attachment.FileName)}` }
         : attachment
     );
   }
@@ -136,12 +136,12 @@ export const scrubSource = (source: Json, name: string): Json => {
 export const scrubPlaybackInfo = (info: Json, name: string): Json => {
   const next: Json = { ...info };
 
-  if (Array.isArray(next["MediaSources"])) {
-    next["MediaSources"] = next["MediaSources"].map((source, index) =>
+  if (Array.isArray(next.MediaSources)) {
+    next.MediaSources = next.MediaSources.map((source, index) =>
       isRecord(source) ? scrubSource(source, index === 0 ? name : `${name}-${index}`) : source
     );
   }
-  const session = next["PlaySessionId"];
+  const session = next.PlaySessionId;
 
   if (typeof session !== "string") {
     return next;

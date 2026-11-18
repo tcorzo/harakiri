@@ -116,12 +116,10 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
   const env = process.env;
 
   const base =
-    options.server ??
-    env["JELLYFIN_DEV_URL"] ??
-    `http://127.0.0.1:${env["JELLYFIN_DEV_PORT"] ?? "8096"}`;
+    options.server ?? env.JELLYFIN_DEV_URL ?? `http://127.0.0.1:${env.JELLYFIN_DEV_PORT ?? "8096"}`;
 
-  const user = env["JELLYFIN_DEV_USER"] ?? "harakiri";
-  const password = env["JELLYFIN_DEV_PASSWORD"] ?? "harakiri-dev";
+  const user = env.JELLYFIN_DEV_USER ?? "harakiri";
+  const password = env.JELLYFIN_DEV_PASSWORD ?? "harakiri-dev";
   const client = `MediaBrowser Client="harakiri-dev", Device="corpus-classify", DeviceId="harakiri-dev-corpus-classify", Version="0"`;
 
   async function call(path: string, init: RequestInit & { token?: string } = {}): Promise<unknown> {

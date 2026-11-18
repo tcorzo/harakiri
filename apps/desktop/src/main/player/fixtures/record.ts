@@ -19,7 +19,7 @@ import { scrubPlaybackInfo } from "@harakiri/jellyfin/fixture-scrub";
 import { authenticateUserByName, getPostedPlaybackInfo } from "@harakiri/jellyfin/generated";
 import { createClient } from "@harakiri/jellyfin/generated/client";
 
-const server = process.env["JELLYFIN_DEV_URL"] ?? "http://127.0.0.1:8096";
+const server = process.env.JELLYFIN_DEV_URL ?? "http://127.0.0.1:8096";
 
 const identity = {
   client: "harakiri-dev",
@@ -51,8 +51,8 @@ const { data: auth } = await authenticateUserByName({
   throwOnError: true,
   headers: { Authorization: authorizationHeader(identity) },
   body: {
-    Username: process.env["JELLYFIN_DEV_USER"] ?? "harakiri",
-    Pw: process.env["JELLYFIN_DEV_PASSWORD"] ?? "harakiri-dev",
+    Username: process.env.JELLYFIN_DEV_USER ?? "harakiri",
+    Pw: process.env.JELLYFIN_DEV_PASSWORD ?? "harakiri-dev",
   },
 });
 

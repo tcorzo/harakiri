@@ -14,8 +14,8 @@ import { Session } from "../../shared/bridge";
 import type { PlayerEvent, PlayerProbe } from "../../shared/bridge";
 
 const harness = vi.hoisted(() => {
-  process.env["HARAKIRI_E2E"] = "1";
-  process.env["HARAKIRI_MPV_ARGS"] = "--vo=null --ao=null";
+  process.env.HARAKIRI_E2E = "1";
+  process.env.HARAKIRI_MPV_ARGS = "--vo=null --ao=null";
 
   return { userData: "", session: null as z.infer<typeof Session> | null };
 });
@@ -31,7 +31,7 @@ vi.mock("../session", () => ({
 
 const { play, probe, stop } = await import("./index");
 
-const SERVER = process.env["JELLYFIN_DEV_URL"] ?? "http://127.0.0.1:8096";
+const SERVER = process.env.JELLYFIN_DEV_URL ?? "http://127.0.0.1:8096";
 const DEVICE_ID = "harakiri-player-test";
 const TICKS = 10_000_000;
 
@@ -121,8 +121,8 @@ async function signIn(): Promise<Session> {
   const auth = await api("/Users/AuthenticateByName", Auth, {
     method: "POST",
     body: JSON.stringify({
-      Username: process.env["JELLYFIN_DEV_USER"] ?? "harakiri",
-      Pw: process.env["JELLYFIN_DEV_PASSWORD"] ?? "harakiri-dev",
+      Username: process.env.JELLYFIN_DEV_USER ?? "harakiri",
+      Pw: process.env.JELLYFIN_DEV_PASSWORD ?? "harakiri-dev",
     }),
   });
 

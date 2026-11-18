@@ -10,7 +10,7 @@ import { z } from "zod";
 
 import { scrubSource } from "./scrub";
 
-const server = process.env["JELLYFIN_DEV_URL"] ?? "http://127.0.0.1:8096";
+const server = process.env.JELLYFIN_DEV_URL ?? "http://127.0.0.1:8096";
 
 const identity =
   'MediaBrowser Client="harakiri-dev", Device="fixture-recorder", DeviceId="harakiri-fixture-recorder", Version="0"';
@@ -88,8 +88,8 @@ const auth = SignedIn.parse(
   await call("/Users/AuthenticateByName", {
     method: "POST",
     body: JSON.stringify({
-      Username: process.env["JELLYFIN_DEV_USER"] ?? "harakiri",
-      Pw: process.env["JELLYFIN_DEV_PASSWORD"] ?? "harakiri-dev",
+      Username: process.env.JELLYFIN_DEV_USER ?? "harakiri",
+      Pw: process.env.JELLYFIN_DEV_PASSWORD ?? "harakiri-dev",
     }),
   })
 );
@@ -115,7 +115,7 @@ for (const { name, term } of fixtures) {
   const source = full.MediaSources[0] ?? {};
 
   const streams = (source.MediaStreams ?? []).filter(
-    (stream) => stream["Type"] === "Video" || stream["Type"] === "Audio"
+    (stream) => stream.Type === "Video" || stream.Type === "Audio"
   );
 
   const trimmed = {

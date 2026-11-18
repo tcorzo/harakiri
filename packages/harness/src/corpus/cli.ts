@@ -17,8 +17,8 @@ import { DEFAULT_FATE_MIRROR, fetchFate } from "./fate";
 import { generateCorpus, treeBytes } from "./generate";
 
 const REPO = resolve(import.meta.dirname, "../../../..");
-const DEFAULT_OUT = process.env["HARAKIRI_CORPUS_DIR"] ?? resolve(REPO, ".cache/corpus");
-const DEFAULT_FATE = process.env["HARAKIRI_FATE_DIR"] ?? resolve(REPO, ".cache/fate");
+const DEFAULT_OUT = process.env.HARAKIRI_CORPUS_DIR ?? resolve(REPO, ".cache/corpus");
+const DEFAULT_FATE = process.env.HARAKIRI_FATE_DIR ?? resolve(REPO, ".cache/fate");
 
 const parser = or(
   command(
@@ -38,7 +38,7 @@ const parser = or(
       dir: withDefault(option("--dir", string({ metavar: "DIR" })), DEFAULT_FATE),
       mirror: withDefault(
         option("--mirror", string({ metavar: "URL" })),
-        process.env["HARAKIRI_FATE_MIRROR"] ?? DEFAULT_FATE_MIRROR
+        process.env.HARAKIRI_FATE_MIRROR ?? DEFAULT_FATE_MIRROR
       ),
     }),
     { description: message`Fetch the pinned FFmpeg FATE samples (default .cache/fate).` }

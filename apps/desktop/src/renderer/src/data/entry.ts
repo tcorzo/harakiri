@@ -99,15 +99,14 @@ export function toEntry(item: BaseItemDto): Entry {
     unplayedCount: user?.UnplayedItemCount ?? null,
     backdrop,
     logo:
-      image(id, "Logo", tags["Logo"]) ??
-      image(item.ParentLogoItemId, "Logo", item.ParentLogoImageTag),
+      image(id, "Logo", tags.Logo) ?? image(item.ParentLogoItemId, "Logo", item.ParentLogoImageTag),
     poster:
-      image(id, "Primary", tags["Primary"]) ??
+      image(id, "Primary", tags.Primary) ??
       image(item.SeriesId, "Primary", item.SeriesPrimaryImageTag),
     still:
       kind === "Episode"
-        ? image(id, "Primary", tags["Primary"])
-        : (image(id, "Thumb", tags["Thumb"]) ?? backdrop),
+        ? image(id, "Primary", tags.Primary)
+        : (image(id, "Thumb", tags.Thumb) ?? backdrop),
     fidelity: classifyFidelity(item.MediaSources?.[0]),
   };
 }

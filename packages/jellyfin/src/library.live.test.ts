@@ -32,9 +32,9 @@ import type { SessionData } from "./session";
 
 // The dev Jellyfin from dev/jellyfin/COMMANDS.txt, or any server named by the JELLYFIN_DEV_*
 // variables dev/jellyfin/client.ts reads.
-const server = ServerUrl.parse(process.env["JELLYFIN_DEV_URL"] ?? "http://127.0.0.1:8096");
-const USER = process.env["JELLYFIN_DEV_USER"] ?? "harakiri";
-const PASSWORD = process.env["JELLYFIN_DEV_PASSWORD"] ?? "harakiri-dev";
+const server = ServerUrl.parse(process.env.JELLYFIN_DEV_URL ?? "http://127.0.0.1:8096");
+const USER = process.env.JELLYFIN_DEV_USER ?? "harakiri";
+const PASSWORD = process.env.JELLYFIN_DEV_PASSWORD ?? "harakiri-dev";
 
 const identity = {
   client: "harakiri-test",
@@ -168,7 +168,7 @@ describe(`the Jellyfin at ${server}`, () => {
 
     for (const film of films) {
       expect(film.BackdropImageTags?.length).toBe(1);
-      expect(typeof film.ImageTags?.["Logo"]).toBe("string");
+      expect(typeof film.ImageTags?.Logo).toBe("string");
     }
 
     const ranges = films.map(

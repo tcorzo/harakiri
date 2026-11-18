@@ -17,7 +17,7 @@ import { readPcm16 } from "./wav";
  * vendored. This is the FATE tier (`mise run test:fate`): it fails, never skips, when
  * HARAKIRI_FATE_DIR is unset or lacks a sample.
  */
-const fateDir = process.env["HARAKIRI_FATE_DIR"];
+const fateDir = process.env.HARAKIRI_FATE_DIR;
 const SAMPLES = ["master_audio_7.1_24bit.dts", "dtsx_7.1.4_24bit.dts", "atmos.thd"];
 const FETCH = "run `mise run media:fetch-fate` and export HARAKIRI_FATE_DIR to its directory";
 

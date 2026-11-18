@@ -98,14 +98,14 @@ const judge = (line: string): string | undefined => {
     return `${what}, without an allow-private exception`;
   }
   const allow = ALLOW_FULL.exec(line)?.groups;
-  const date = allow?.["date"];
+  const date = allow?.date;
 
   if (date === undefined || !isRealDate(date)) {
     return "malformed exception; write // allow-private: <reason> (expires YYYY-MM-DD, approved-by <name>)";
   }
 
   if (date < today) {
-    return `exception expired on ${date} (approved by ${allow?.["name"]}); remove the data or renew the approval`;
+    return `exception expired on ${date} (approved by ${allow?.name}); remove the data or renew the approval`;
   }
 
   return undefined;

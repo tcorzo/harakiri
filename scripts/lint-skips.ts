@@ -71,14 +71,14 @@ const judge = (line: string): string | undefined => {
     return "skips without an allow-skip exception";
   }
   const allow = ALLOW_FULL.exec(line)?.groups;
-  const date = allow?.["date"];
+  const date = allow?.date;
 
   if (date === undefined || !isRealDate(date)) {
     return "malformed exception; write // allow-skip: <reason> (expires YYYY-MM-DD, approved-by <name>)";
   }
 
   if (date < today) {
-    return `exception expired on ${date} (approved by ${allow?.["name"]}); fix the test or renew the approval`;
+    return `exception expired on ${date} (approved by ${allow?.name}); fix the test or renew the approval`;
   }
 
   return undefined;

@@ -10,9 +10,9 @@ import { DeviceId, ItemId, ServerUrl } from "../ids";
 import type { UserId } from "../ids";
 import { authenticate, createJellyfinClient } from "../session";
 
-export const SERVER = ServerUrl.parse(process.env["JELLYFIN_DEV_URL"] ?? "http://127.0.0.1:8096");
-const USER = process.env["JELLYFIN_DEV_USER"] ?? "harakiri";
-const PASSWORD = process.env["JELLYFIN_DEV_PASSWORD"] ?? "harakiri-dev";
+export const SERVER = ServerUrl.parse(process.env.JELLYFIN_DEV_URL ?? "http://127.0.0.1:8096");
+const USER = process.env.JELLYFIN_DEV_USER ?? "harakiri";
+const PASSWORD = process.env.JELLYFIN_DEV_PASSWORD ?? "harakiri-dev";
 
 export const serverUnreachable = async (): Promise<string | undefined> => {
   try {

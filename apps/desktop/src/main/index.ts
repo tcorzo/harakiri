@@ -27,7 +27,7 @@ if (env.HARAKIRI_USER_DATA !== undefined) {
 }
 
 const appUrl =
-  process.env["ELECTRON_RENDERER_URL"] ??
+  process.env.ELECTRON_RENDERER_URL ??
   pathToFileURL(join(import.meta.dirname, "../renderer/index.html")).href;
 
 const isAppUrl = appUrlCheck(appUrl);

@@ -38,7 +38,7 @@ async function serialized<T>(operation: () => Promise<T>): Promise<T> {
 
 // Whitespace-split only: e2e passes plain flags such as `--vo=null --ao=pcm --ao-pcm-file=/tmp/x`.
 const e2eMpvArgs = (): string[] =>
-  isE2E ? (process.env["HARAKIRI_MPV_ARGS"] ?? "").split(/\s+/).filter(Boolean) : [];
+  isE2E ? (process.env.HARAKIRI_MPV_ARGS ?? "").split(/\s+/).filter(Boolean) : [];
 
 /**
  * A prepared resolution belongs to one session as well as one request: it holds that session's
@@ -59,7 +59,7 @@ const requestKey = (request: PlayRequest, session: Session): string =>
 
 // e2e describes the output instead of probing the workstation's, e.g. a receiver for passthrough.
 const audioOutput = async () => {
-  const given = isE2E ? process.env["HARAKIRI_AUDIO_OUTPUT"] : undefined;
+  const given = isE2E ? process.env.HARAKIRI_AUDIO_OUTPUT : undefined;
 
   return given === undefined
     ? readAudioOutput()
