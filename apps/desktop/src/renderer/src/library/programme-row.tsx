@@ -57,8 +57,7 @@ const ProgrammeRowView = ({
   const scroller = useRef<HTMLDivElement>(null);
   const rem = rootRem();
 
-  // No React Compiler in this build, so the virtualizer's unmemoizable API is fine.
-  // oxlint-disable-next-line react/incompatible-library
+  // oxlint-disable-next-line react/incompatible-library -- no React Compiler in this build, so the virtualizer's unmemoizable API is fine
   const virtualizer = useVirtualizer({
     horizontal: true,
     count: entries.length,
