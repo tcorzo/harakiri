@@ -163,128 +163,130 @@ function useOpenEntry(): (entry: Entry) => void {
   );
 }
 
-const Programme = memo(function Programme({
-  server,
-  rows,
-  hero,
-}: {
-  readonly server: ServerUrl;
-  readonly rows: readonly PlannedRow[];
-  readonly hero: boolean;
-}) {
-  const ctx = useSignedIn();
-  const onPressEntry = useOpenEntry();
-  const queryClient = useQueryClient();
-  const { data: numbers } = useSuspenseQuery(catalogueQuery(ctx));
-  const activeId = useLit((s) => s.section.id);
-  const travelling = useLit((s) => s.travelling);
-  const found = rows.findIndex((row) => row.section.id === activeId) + 1;
-  // With no featured film there is no stage to rest on, so the first row leads.
-  const active = found === 0 && !hero ? 1 : found;
+const Programme = memo(
+  ({
+    server,
+    rows,
+    hero,
+  }: {
+    readonly server: ServerUrl;
+    readonly rows: readonly PlannedRow[];
+    readonly hero: boolean;
+  }) => {
+    const ctx = useSignedIn();
+    const onPressEntry = useOpenEntry();
+    const queryClient = useQueryClient();
+    const { data: numbers } = useSuspenseQuery(catalogueQuery(ctx));
+    const activeId = useLit((s) => s.section.id);
+    const travelling = useLit((s) => s.travelling);
+    const found = rows.findIndex((row) => row.section.id === activeId) + 1;
+    // With no featured film there is no stage to rest on, so the first row leads.
+    const active = found === 0 && !hero ? 1 : found;
 
-  const offset =
-    active === 0 ? `calc(100vh - ${peekRem}rem)` : `${rowAnchorRem - rowTop(rows, active)}rem`;
+    const offset =
+      active === 0 ? `calc(100vh - ${peekRem}rem)` : `${rowAnchorRem - rowTop(rows, active)}rem`;
 
-  const onFocusEntry = useCallback(
-    (entry: Entry, section: Section): void => {
-      const lit = useLit.getState();
-      // The section moves at once so a held d-pad scrolls; the field re-lights once focus rests.
-      lit.enter(section);
-      lit.remember({ section: section.id, entry: entry.id });
-      window.clearTimeout(relightTimer);
-      relightTimer = window.setTimeout(() => {
-        useLit.getState().light(entry, section);
-        // Only a card the owner rests on is worth fetching in full.
-        void queryClient.prefetchQuery(rawItemQuery(ctx, entry.id));
+    const onFocusEntry = useCallback(
+      (entry: Entry, section: Section): void => {
+        const lit = useLit.getState();
+        // The section moves at once so a held d-pad scrolls; the field re-lights once focus rests.
+        lit.enter(section);
+        lit.remember({ section: section.id, entry: entry.id });
+        window.clearTimeout(relightTimer);
+        relightTimer = window.setTimeout(() => {
+          useLit.getState().light(entry, section);
+          // Only a card the owner rests on is worth fetching in full.
+          void queryClient.prefetchQuery(rawItemQuery(ctx, entry.id));
 
-        if (entry.kind === "Series") {
-          void queryClient.prefetchQuery(seasonsQuery(ctx, entry.id));
-        }
+          if (entry.kind === "Series") {
+            void queryClient.prefetchQuery(seasonsQuery(ctx, entry.id));
+          }
 
-        if (entry.backdrop !== null) {
-          preload(backdropUrl(server, entry.backdrop), { as: "image" });
-        }
-      }, relightRestMs);
-    },
-    [ctx, queryClient, server]
-  );
+          if (entry.backdrop !== null) {
+            preload(backdropUrl(server, entry.backdrop), { as: "image" });
+          }
+        }, relightRestMs);
+      },
+      [ctx, queryClient, server]
+    );
 
-  // Up from the first row returns to the stage, which the spatial search cannot see while it is hidden.
-  const first = rows[0]?.section.id;
-  useNavigationGuard((direction) => {
-    if (direction !== "up" || !hero || first === undefined) {
-      return false;
-    }
-    // Typed as a string, but null while nothing has focus.
-    const key: string | null = getCurrentFocusKey();
+    // Up from the first row returns to the stage, which the spatial search cannot see while it is hidden.
+    const first = rows[0]?.section.id;
+    useNavigationGuard((direction) => {
+      if (direction !== "up" || !hero || first === undefined) {
+        return false;
+      }
+      // Typed as a string, but null while nothing has focus.
+      const key: string | null = getCurrentFocusKey();
 
-    if (key === null) {
-      return false;
-    }
+      if (key === null) {
+        return false;
+      }
 
-    if (!key.startsWith(cardKey(first, "")) && key !== retryKey(first)) {
-      return false;
-    }
+      if (!key.startsWith(cardKey(first, "")) && key !== retryKey(first)) {
+        return false;
+      }
 
-    return focusFirst("hero-play");
-  });
+      return focusFirst("hero-play");
+    });
 
-  // Returning from a title page lands back on the card the owner left, found by id.
-  const restored = useRef(false);
-  useEffect(() => {
-    if (restored.current) {
-      return;
-    }
-    restored.current = true;
-    const { place } = useLit.getState();
+    // Returning from a title page lands back on the card the owner left, found by id.
+    const restored = useRef(false);
+    useEffect(() => {
+      if (restored.current) {
+        return;
+      }
+      restored.current = true;
+      const { place } = useLit.getState();
 
-    if (place !== null || !hero) {
-      focusFirst(...restoreKeys(place, hero, first));
-    }
-  }, [hero, first]);
+      if (place !== null || !hero) {
+        focusFirst(...restoreKeys(place, hero, first));
+      }
+    }, [hero, first]);
 
-  return (
-    <div
-      // A held d-pad moves a row every 120 ms, faster than the 700 ms glide, so while it travels the
-      // rows jump with focus and the glide returns once it rests (the relight ends the travel).
-      className={`ease-curtain absolute inset-x-0 top-0 flex flex-col gap-12 pl-[calc(var(--spacing-safe-x)+var(--spacing-margin)+2.5rem)] ${
-        travelling ? "" : "transition-transform duration-700"
-      }`}
-      style={{ transform: `translateY(${offset})` }}
-    >
-      {rows.map((row, i) => (
-        <div
-          key={row.section.id}
-          // Rows waiting below dim their pictures only; their type keeps full contrast.
-          className={`transition-opacity duration-500 [&_img]:transition-opacity [&_img]:duration-500 ${
-            i + 1 < active ? "opacity-0" : "opacity-100"
-          } ${i + 1 > active && active !== 0 ? "[&_img]:opacity-50" : ""}`}
-        >
-          {row.kind === "failed" ? (
-            <FailedRow
-              sectionId={row.section.id}
-              sectionName={row.section.name}
-              onRetry={row.retry}
-            />
-          ) : (
-            <ProgrammeRow
-              sectionId={row.section.id}
-              sectionName={row.section.name}
-              entries={row.entries}
-              Card={row.Card}
-              pitchRem={row.pitchRem}
-              heightRem={row.heightRem}
-              server={server}
-              numbers={numbers}
-              onFocusEntry={onFocusEntry}
-              onPressEntry={onPressEntry}
-            />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-});
+    return (
+      <div
+        // A held d-pad moves a row every 120 ms, faster than the 700 ms glide, so while it travels the
+        // rows jump with focus and the glide returns once it rests (the relight ends the travel).
+        className={`ease-curtain absolute inset-x-0 top-0 flex flex-col gap-12 pl-[calc(var(--spacing-safe-x)+var(--spacing-margin)+2.5rem)] ${
+          travelling ? "" : "transition-transform duration-700"
+        }`}
+        style={{ transform: `translateY(${offset})` }}
+      >
+        {rows.map((row, i) => (
+          <div
+            key={row.section.id}
+            // Rows waiting below dim their pictures only; their type keeps full contrast.
+            className={`transition-opacity duration-500 [&_img]:transition-opacity [&_img]:duration-500 ${
+              i + 1 < active ? "opacity-0" : "opacity-100"
+            } ${i + 1 > active && active !== 0 ? "[&_img]:opacity-50" : ""}`}
+          >
+            {row.kind === "failed" ? (
+              <FailedRow
+                sectionId={row.section.id}
+                sectionName={row.section.name}
+                onRetry={row.retry}
+              />
+            ) : (
+              <ProgrammeRow
+                sectionId={row.section.id}
+                sectionName={row.section.name}
+                entries={row.entries}
+                Card={row.Card}
+                pitchRem={row.pitchRem}
+                heightRem={row.heightRem}
+                server={server}
+                numbers={numbers}
+                onFocusEntry={onFocusEntry}
+                onPressEntry={onPressEntry}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+);
 
 function UpNext({
   entry,
