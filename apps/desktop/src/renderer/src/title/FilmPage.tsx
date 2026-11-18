@@ -81,7 +81,7 @@ function creditOf(name: string, role: string | null | undefined): string {
   if (role == null || role === "") {
     return name;
   }
-  const part = role.replace(/\s*\((voice|uncredited)\)/gi, "").trim();
+  const part = role.replaceAll(/\s*\((voice|uncredited)\)/gi, "").trim();
 
   if (/\(voice\)/i.test(role)) {
     return `${name}, voice of ${part}`;

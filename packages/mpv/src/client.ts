@@ -122,7 +122,7 @@ const tokenField = /\b(Token=)(\\?")?[^"\s,\\]+/g;
  * param, and verbose mpv echoes the Authorization header it was given.
  */
 export function redactSecrets(line: string): string {
-  return line.replace(secretParam, "$1=REDACTED").replace(tokenField, "$1$2REDACTED");
+  return line.replaceAll(secretParam, "$1=REDACTED").replaceAll(tokenField, "$1$2REDACTED");
 }
 
 export async function spawnMpv(options: MpvSpawnOptions): Promise<MpvClient> {
