@@ -13,7 +13,7 @@ import {
   reset as resetLogging,
 } from "@logtape/logtape";
 import type { LogRecord } from "@logtape/logtape";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { buildPlaybackArgs } from "./args";
@@ -56,6 +56,14 @@ const rejectionOf = async (pending: Promise<unknown>): Promise<Error> => {
 };
 
 const cmdline = (pid: number) => readFileSync(`/proc/${pid}/cmdline`, "utf-8").split("\0");
+
+/** SIGSTOP lands asynchronously; until the kernel reports state T, mpv can still answer. */
+const freeze = async (pid: number): Promise<void> => {
+  process.kill(pid, "SIGSTOP");
+  await vi.waitFor(() => {
+    expect(readFileSync(`/proc/${pid}/stat`, "utf-8").split(") ")[1]?.[0]).toBe("T");
+  });
+};
 
 describe("mpv IPC client", () => {
   beforeAll(async () => {
@@ -152,7 +160,7 @@ describe("mpv IPC client", () => {
 
     it("rejects in-flight requests when mpv dies", async () => {
       const client = await start();
-      process.kill(client.pid, "SIGSTOP");
+      await freeze(client.pid);
       const inFlight = client.getProperty("mpv-version", z.string());
       process.kill(client.pid, "SIGKILL");
       await expect(inFlight).rejects.toBeInstanceOf(MpvClosedError);
@@ -167,7 +175,7 @@ describe("mpv IPC client", () => {
 
     it("a request mpv never answers times out, and the client kills that mpv", async () => {
       const client = await start(headless, { requestTimeoutMs: 200 });
-      process.kill(client.pid, "SIGSTOP");
+      await freeze(client.pid);
       const stalled = client.getProperty("mpv-version", z.string());
       await expect(stalled).rejects.toBeInstanceOf(MpvTimeoutError);
       await expect(stalled).rejects.toMatchObject({
@@ -324,7 +332,7 @@ describe("mpv IPC client", () => {
     it("a sub-add of a sidecar URL that mpv never answers names the command, not the URL", async () => {
       records.length = 0;
       const client = await start(headless, { requestTimeoutMs: 200 });
-      process.kill(client.pid, "SIGSTOP");
+      await freeze(client.pid);
       const url = `http://127.0.0.1:1/Videos/x/Subtitles/0/0/Stream.subrip?ApiKey=${TOKEN}`;
 
       const error = await rejectionOf(client.command("sub-add", url, "auto", "External 1"));
