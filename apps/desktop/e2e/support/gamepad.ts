@@ -101,6 +101,6 @@ export async function tap(page: Page, button: Button): Promise<void> {
 
 /** The pad's d-pad and A, for helpers written against any d-pad. */
 export const padDpad = (page: Page): Dpad => ({
-  move: (direction) => tap(page, direction),
-  select: () => tap(page, "a"),
+  move: async (direction) => tap(page, direction),
+  select: async () => tap(page, "a"),
 });

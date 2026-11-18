@@ -17,7 +17,7 @@ interface Box {
   readonly w: number;
 }
 
-const centre = (page: Page, key: string | null) =>
+const centre = async (page: Page, key: string | null) =>
   page.evaluate((label) => {
     const board = document.querySelector('fieldset[aria-label="On-screen keyboard"]');
 
@@ -102,13 +102,13 @@ export function keysFor(text: string, inserts: readonly string[] = []): string[]
 
 /** The arrow keys and Enter of a physical keyboard or a TV remote that sends them. */
 export const arrowKeys = (page: Page): Dpad => ({
-  move: (direction) =>
+  move: async (direction) =>
     page.keyboard.press(
       ({ up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight" } as const)[
         direction
       ]
     ),
-  select: () => page.keyboard.press("Enter"),
+  select: async () => page.keyboard.press("Enter"),
 });
 
 /** Moves focus up until it rests on the text field labelled `label`, as the d-pad leaves a keyboard. */

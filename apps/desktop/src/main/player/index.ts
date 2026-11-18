@@ -29,7 +29,7 @@ let pending:
 const PREPARED_FOR_MS = 60_000;
 
 /** Runs player operations one at a time, so two plays can never race to spawn two mpvs. */
-function serialized<T>(operation: () => Promise<T>): Promise<T> {
+async function serialized<T>(operation: () => Promise<T>): Promise<T> {
   const result = queue.then(operation, operation);
   queue = result.catch(() => {});
 
@@ -58,7 +58,7 @@ const requestKey = (request: PlayRequest, session: Session): string =>
   ]);
 
 // e2e describes the output instead of probing the workstation's, e.g. a receiver for passthrough.
-const audioOutput = () => {
+const audioOutput = async () => {
   const given = isE2E ? process.env["HARAKIRI_AUDIO_OUTPUT"] : undefined;
 
   return given === undefined
@@ -117,7 +117,10 @@ async function takePrepared(request: PlayRequest, session: Session): Promise<Pre
 }
 
 /** Plays an item in mpv, replacing whatever is playing. Resolves once mpv has loaded the file. */
-export function play(request: PlayRequest, send: (event: PlayerEvent) => void): Promise<void> {
+export async function play(
+  request: PlayRequest,
+  send: (event: PlayerEvent) => void
+): Promise<void> {
   return serialized(async () => {
     await current?.stop();
     const playbackDeps = { ...deps(), audioOutput: await audioOutput() };
@@ -133,7 +136,7 @@ export function play(request: PlayRequest, send: (event: PlayerEvent) => void): 
 }
 
 /** Quits mpv, reports the stop to Jellyfin, and resolves once mpv has exited. */
-export function stop(): Promise<void> {
+export async function stop(): Promise<void> {
   return serialized(async () => {
     await current?.stop();
   });

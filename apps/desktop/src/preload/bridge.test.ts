@@ -12,7 +12,7 @@ function fakeIpc(replies: Record<string, unknown> = {}, failure?: (channel: stri
   const invoked: unknown[][] = [];
 
   const ipc = {
-    invoke: (channel: string, ...args: unknown[]) => {
+    invoke: async (channel: string, ...args: unknown[]) => {
       invoked.push([channel, ...args]);
 
       return failure ? Promise.reject(failure(channel)) : Promise.resolve(replies[channel]);

@@ -11,7 +11,7 @@ test("a seeded session is read back whole, with the profile's device id", async 
   signIn();
   const { page } = await launch();
 
-  const [session, deviceId] = await page.evaluate(() =>
+  const [session, deviceId] = await page.evaluate(async () =>
     Promise.all([window.harakiri.session.get(), window.harakiri.deviceId()])
   );
 
@@ -28,29 +28,29 @@ test("signing out clears the session for good but keeps the device id", async ({
   signIn();
   const first = await launch();
 
-  await first.page.evaluate(() => window.harakiri.session.clear());
+  await first.page.evaluate(async () => window.harakiri.session.clear());
 
-  expect(await first.page.evaluate(() => window.harakiri.session.get())).toBeNull();
+  expect(await first.page.evaluate(async () => window.harakiri.session.get())).toBeNull();
   expect(existsSync(join(userDataDir, "session.json"))).toBe(false);
   await first.app.close();
   const second = await launch();
-  expect(await second.page.evaluate(() => window.harakiri.session.get())).toBeNull();
-  expect(await second.page.evaluate(() => window.harakiri.deviceId())).toBe(account.deviceId);
+  expect(await second.page.evaluate(async () => window.harakiri.session.get())).toBeNull();
+  expect(await second.page.evaluate(async () => window.harakiri.deviceId())).toBe(account.deviceId);
 });
 
 test("a session saved through the bridge survives a restart", async ({ launch, account }) => {
   const { accessToken, deviceId: _, ...rest } = account;
   const first = await launch();
-  const deviceId = await first.page.evaluate(() => window.harakiri.deviceId());
+  const deviceId = await first.page.evaluate(async () => window.harakiri.deviceId());
 
-  await first.page.evaluate((session) => window.harakiri.session.save(session), {
+  await first.page.evaluate(async (session) => window.harakiri.session.save(session), {
     ...rest,
     accessToken,
   });
   await first.app.close();
 
   const second = await launch();
-  expect(await second.page.evaluate(() => window.harakiri.session.get())).toEqual({
+  expect(await second.page.evaluate(async () => window.harakiri.session.get())).toEqual({
     ...rest,
     accessToken,
     deviceId,
@@ -77,10 +77,10 @@ test("an unreadable session file reads as signed out and the app keeps working",
 
   for (const contents of corrupt) {
     writeFileSync(sessionFile, contents);
-    expect(await page.evaluate(() => window.harakiri.session.get()), contents).toBeNull();
+    expect(await page.evaluate(async () => window.harakiri.session.get()), contents).toBeNull();
   }
 
-  expect(await page.evaluate(() => window.harakiri.deviceId())).toBe(account.deviceId);
+  expect(await page.evaluate(async () => window.harakiri.deviceId())).toBe(account.deviceId);
   signIn();
-  expect(await page.evaluate(() => window.harakiri.session.get())).toEqual(account);
+  expect(await page.evaluate(async () => window.harakiri.session.get())).toEqual(account);
 });

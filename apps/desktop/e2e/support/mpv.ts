@@ -108,7 +108,7 @@ export async function mpvCommand(userDataDir: string, ...command: JsonValue[]): 
   }
 }
 
-export const pressKey = (userDataDir: string, key: string) =>
+export const pressKey = async (userDataDir: string, key: string) =>
   mpvCommand(userDataDir, "keypress", key);
 
 /**

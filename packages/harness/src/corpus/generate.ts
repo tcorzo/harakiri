@@ -233,8 +233,8 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
 
   const limit = limiter(options.concurrency ?? Math.max(2, Math.min(4, availableParallelism())));
 
-  const ff = (args: readonly string[]) =>
-    limit(() =>
+  const ff = async (args: readonly string[]) =>
+    limit(async () =>
       runAsync(
         "ffmpeg",
         ["-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-fflags", "+bitexact", ...args],
@@ -242,12 +242,13 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
       )
     );
 
-  const tool = (command: string, args: readonly string[]) => limit(() => runAsync(command, args));
+  const tool = async (command: string, args: readonly string[]) =>
+    limit(async () => runAsync(command, args));
 
   // Shared intermediates, built once however many entries need them.
   const memo = new Map<string, Promise<string>>();
 
-  const once = (key: string, build: (path: string) => Promise<unknown>): Promise<string> => {
+  const once = async (key: string, build: (path: string) => Promise<unknown>): Promise<string> => {
     let promise = memo.get(key);
 
     if (!promise) {
@@ -259,8 +260,8 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
     return promise;
   };
 
-  const rawHevc = (key: string, vf: string, params: string, seconds: number) =>
-    once(`${key}-${seconds}.hevc`, (path) =>
+  const rawHevc = async (key: string, vf: string, params: string, seconds: number) =>
+    once(`${key}-${seconds}.hevc`, async (path) =>
       ff([
         "-f",
         "lavfi",
@@ -281,7 +282,12 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
   // Pass 2: decode the raw HEVC and re-encode. FFmpeg hands the decoder's side data (mastering
   // display, MaxCLL, DV RPU) to libx265, which exports it as container stream side data and,
   // with -dolbyvision, the DOVI configuration record. One lavfi -> x265 pass leaves it empty.
-  const reencode = (raw: string, path: string, params: string, extra: readonly string[] = []) =>
+  const reencode = async (
+    raw: string,
+    path: string,
+    params: string,
+    extra: readonly string[] = []
+  ) =>
     ff([
       "-framerate",
       String(FPS),
@@ -299,20 +305,20 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
       path,
     ]);
 
-  const hdr10plusFile = (seconds: number) =>
+  const hdr10plusFile = async (seconds: number) =>
     once(`hdr10plus-${seconds}.json`, async (path) =>
       writeFileSync(path, hdr10plusJson(seconds * FPS))
     );
 
-  const video = (recipe: VideoRecipe, seconds: number): Promise<string> =>
+  const video = async (recipe: VideoRecipe, seconds: number): Promise<string> =>
     match(recipe)
-      .with({ kind: "sdr-h264" }, () =>
-        once(`sdr-h264-${seconds}.mkv`, (path) =>
+      .with({ kind: "sdr-h264" }, async () =>
+        once(`sdr-h264-${seconds}.mkv`, async (path) =>
           ff(["-f", "lavfi", "-i", testsrc(seconds), "-vf", SDR_VF, ...X264, ...OF, "-an", path])
         )
       )
-      .with({ kind: "sdr-h264-still" }, () =>
-        once(`sdr-h264-still-${seconds}.mkv`, (path) =>
+      .with({ kind: "sdr-h264-still" }, async () =>
+        once(`sdr-h264-still-${seconds}.mkv`, async (path) =>
           ff([
             "-f",
             "lavfi",
@@ -336,8 +342,8 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
           ])
         )
       )
-      .with({ kind: "sdr-hevc" }, () =>
-        once(`sdr-hevc-${seconds}.mkv`, (path) =>
+      .with({ kind: "sdr-hevc" }, async () =>
+        once(`sdr-hevc-${seconds}.mkv`, async (path) =>
           ff([
             "-f",
             "lavfi",
@@ -354,8 +360,8 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
           ])
         )
       )
-      .with({ kind: "sdr-av1" }, () =>
-        once(`sdr-av1-${seconds}.mkv`, (path) =>
+      .with({ kind: "sdr-av1" }, async () =>
+        once(`sdr-av1-${seconds}.mkv`, async (path) =>
           ff([
             "-f",
             "lavfi",
@@ -379,17 +385,17 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
           ])
         )
       )
-      .with({ kind: "hdr10" }, () =>
+      .with({ kind: "hdr10" }, async () =>
         once(`hdr10-${seconds}.mkv`, async (path) =>
           reencode(await rawHevc("pq", PQ_VF, X265_PQ, seconds), path, X265_PQ)
         )
       )
-      .with({ kind: "hlg" }, () =>
+      .with({ kind: "hlg" }, async () =>
         once(`hlg-${seconds}.mkv`, async (path) =>
           reencode(await rawHevc("hlg", HLG_VF, X265_HLG, seconds), path, X265_HLG)
         )
       )
-      .with({ kind: "hdr10plus" }, () =>
+      .with({ kind: "hdr10plus" }, async () =>
         once(`hdr10plus-${seconds}.mkv`, async (path) => {
           // x265 writes the SMPTE 2094-40 SEI itself (dhdr10-info) and keeps the stream-level
           // mastering and MaxCLL side data, which hdr10plus_tool inject plus a remux loses.
@@ -401,7 +407,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
           return reencode(raw, path, `${X265_PQ}:dhdr10-info=${json}`);
         })
       )
-      .with({ kind: "dv" }, ({ profile, hdr10plus }) =>
+      .with({ kind: "dv" }, async ({ profile, hdr10plus }) =>
         once(`dv-p${profile}${hdr10plus ? "-hdr10plus" : ""}-${seconds}.mkv`, async (path) => {
           const [base, params] = match(profile)
             .with("5", () => [rawHevc("p5", P5_VF, X265_P5, seconds), X265_P5] as const)
@@ -446,12 +452,12 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
           return reencode(`${path}.hevc`, path, x265, ["-dolbyvision", "1"]);
         })
       )
-      .with({ kind: "fate-video" }, { kind: "fate-file" }, ({ sample }) =>
+      .with({ kind: "fate-video" }, { kind: "fate-file" }, async ({ sample }) =>
         Promise.resolve(join(fateDir, sample))
       )
       .exhaustive();
 
-  const subtitleFile = (format: SubtitleTrack["format"]) =>
+  const subtitleFile = async (format: SubtitleTrack["format"]) =>
     once(`sub.${format}`, async (path) =>
       writeFileSync(
         path,
@@ -585,7 +591,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
     }
   }
 
-  const art = (kind: Artwork, index: number, path: string) =>
+  const art = async (kind: Artwork, index: number, path: string) =>
     ff(["-f", "lavfi", "-i", artworkGraph(kind, index), "-frames:v", "1", ...OF, path]);
 
   async function writeMetadata(entries: readonly Entry[]): Promise<void> {

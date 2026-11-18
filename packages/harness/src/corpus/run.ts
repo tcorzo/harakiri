@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 
 /** Runs a tool to completion without blocking the event loop; throws with its stderr on failure. */
-export function runAsync(
+export async function runAsync(
   command: string,
   args: readonly string[],
   options: { timeoutMs?: number; env?: NodeJS.ProcessEnv } = {}
@@ -60,9 +60,9 @@ export function limiter(limit: number) {
     }
   };
 
-  return <T>(task: () => Promise<T>): Promise<T> =>
+  return async <T>(task: () => Promise<T>): Promise<T> =>
     new Promise<T>((resolve, reject) => {
-      queue.push(() =>
+      queue.push(async () =>
         task()
           .then(resolve, reject)
           .finally(() => {

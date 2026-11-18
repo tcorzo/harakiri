@@ -67,7 +67,7 @@ export async function stubServer(routes: Readonly<Record<string, StubReply>>): P
   return {
     address: `127.0.0.1:${port}`,
     seen,
-    close: () =>
+    close: async () =>
       new Promise<void>((resolve) => {
         server.closeAllConnections();
         server.close(() => resolve());

@@ -42,21 +42,21 @@ export function createBridge(
   }
 
   return {
-    deviceId: () => invoke(channels.deviceId, DeviceId),
+    deviceId: async () => invoke(channels.deviceId, DeviceId),
     session: {
-      get: () => invoke(channels.sessionGet, Session.nullable()),
-      save: (session) => invoke(channels.sessionSave, z.undefined(), session),
-      clear: () => invoke(channels.sessionClear, z.undefined()),
+      get: async () => invoke(channels.sessionGet, Session.nullable()),
+      save: async (session) => invoke(channels.sessionSave, z.undefined(), session),
+      clear: async () => invoke(channels.sessionClear, z.undefined()),
     },
     updates: {
-      status: () => invoke(channels.updateStatus, UpdateStatus),
-      restart: () => invoke(channels.updateRestart, z.undefined()),
+      status: async () => invoke(channels.updateStatus, UpdateStatus),
+      restart: async () => invoke(channels.updateRestart, z.undefined()),
     },
-    discover: () => invoke(channels.discover, z.array(DiscoveredServer)),
+    discover: async () => invoke(channels.discover, z.array(DiscoveredServer)),
     player: {
-      prepare: (request) => invoke(channels.prepare, SignalReport, request),
-      play: (request) => invoke(channels.play, z.undefined(), request),
-      stop: () => invoke(channels.stop, z.undefined()),
+      prepare: async (request) => invoke(channels.prepare, SignalReport, request),
+      play: async (request) => invoke(channels.play, z.undefined(), request),
+      stop: async () => invoke(channels.stop, z.undefined()),
       onEvent: (listener) => {
         const handler = (_event: IpcRendererEvent, payload: unknown): void => {
           const parsed = PlayerEvent.safeParse(payload);
@@ -75,6 +75,6 @@ export function createBridge(
         };
       },
     },
-    ...(options.e2e && { test: { probe: () => invoke(channels.testProbe, PlayerProbe) } }),
+    ...(options.e2e && { test: { probe: async () => invoke(channels.testProbe, PlayerProbe) } }),
   };
 }

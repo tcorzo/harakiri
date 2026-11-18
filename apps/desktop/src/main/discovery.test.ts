@@ -13,7 +13,7 @@ afterEach(() => {
   responder = undefined;
 });
 
-function startResponder(replies: string[]): Promise<{ port: number; probes: string[] }> {
+async function startResponder(replies: string[]): Promise<{ port: number; probes: string[] }> {
   const probes: string[] = [];
   const socket = createSocket("udp4");
   responder = socket;

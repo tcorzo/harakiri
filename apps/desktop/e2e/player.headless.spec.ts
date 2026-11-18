@@ -67,7 +67,7 @@ test("plays from a start position over a direct Jellyfin stream and reports it",
 
   const server = await until(
     "Jellyfin sees the item playing for this device",
-    () => jellyfin.nowPlaying(),
+    async () => jellyfin.nowPlaying(),
     (session) => session?.NowPlayingItem?.Id === item.id
   );
 
@@ -93,7 +93,7 @@ test("mpv's own key bindings pause, seek, resume and stop through the app", asyn
   await playerEventUntil(page, (event) => event.phase === "paused");
   await until(
     "Jellyfin sees the pause",
-    () => jellyfin.nowPlaying(),
+    async () => jellyfin.nowPlaying(),
     (session) => session?.PlayState?.IsPaused === true
   );
   const frozenAt = paused.timePos ?? 0;
@@ -110,7 +110,7 @@ test("mpv's own key bindings pause, seek, resume and stop through the app", asyn
   await probeUntil(page, (p) => (p.timePos ?? 0) >= (resumed.timePos ?? 0) + 1.5);
   await until(
     "a playing event after the pause",
-    () => playerEvents(page),
+    async () => playerEvents(page),
     (events) =>
       events.findLastIndex((e) => e.phase === "playing") >
       events.findIndex((e) => e.phase === "paused")
@@ -144,7 +144,7 @@ test("stopping saves the resume position on the server", async ({
 
   const saved = await until(
     "Jellyfin stores the resume point",
-    () => jellyfin.userData(item.id),
+    async () => jellyfin.userData(item.id),
     (data) => data.PlaybackPositionTicks > 0,
     5000
   );
@@ -155,7 +155,7 @@ test("stopping saves the resume position on the server", async ({
   expect(saved.Played).toBe(false);
   await until(
     "Jellyfin clears now playing",
-    () => jellyfin.nowPlaying(),
+    async () => jellyfin.nowPlaying(),
     (s) => s === undefined,
     5000
   );
@@ -179,7 +179,7 @@ test("a second play replaces the first: one mpv, and the first reports stopped",
 
   // Fired together, as a double press would: main must serialize them.
   await page.evaluate(
-    ([a, b]) => Promise.all([window.harakiri.player.play(a), window.harakiri.player.play(b)]),
+    async ([a, b]) => Promise.all([window.harakiri.player.play(a), window.harakiri.player.play(b)]),
     [request(first, 60), request(second, 60)] as const
   );
 
@@ -215,7 +215,7 @@ test("quitting the app mid-playback stops mpv and reports the stop", async ({
   expect(mpvProcesses(userDataDir)).toEqual([]);
   await until(
     "Jellyfin clears now playing",
-    () => jellyfin.nowPlaying(),
+    async () => jellyfin.nowPlaying(),
     (s) => s === undefined,
     5000
   );

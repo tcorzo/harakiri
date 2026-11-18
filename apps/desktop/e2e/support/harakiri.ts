@@ -193,8 +193,8 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
   },
 });
 
-const closeAll = (apps: readonly ElectronApplication[]) =>
-  Promise.all(apps.map((app) => app.close()));
+const closeAll = async (apps: readonly ElectronApplication[]) =>
+  Promise.all(apps.map(async (app) => app.close()));
 
 export { expect } from "@playwright/test";
 
@@ -215,7 +215,7 @@ export interface FocusedControl {
   readonly section: string | null;
 }
 
-export function focusedControl(page: Page): Promise<FocusedControl | null> {
+export async function focusedControl(page: Page): Promise<FocusedControl | null> {
   return page.evaluate(() => {
     const el = document.activeElement;
 
@@ -268,7 +268,7 @@ export async function expectFocus(
 ): Promise<FocusedControl> {
   const found = await until(
     `focus rests on a visible control${name === undefined ? "" : ` named ${String(name)}`}`,
-    () => focusedControl(page),
+    async () => focusedControl(page),
     (control) =>
       control !== null &&
       control.name !== "" &&
@@ -322,7 +322,7 @@ export async function waitForNoMpv(userDataDir: string, timeoutMs: number) {
 
 export async function probe(page: Page): Promise<PlayerProbe> {
   return PlayerProbe.parse(
-    await page.evaluate(() => {
+    await page.evaluate(async () => {
       if (!window.harakiri.test) {
         throw new Error("window.harakiri.test is missing without HARAKIRI_E2E=1");
       }
@@ -333,18 +333,18 @@ export async function probe(page: Page): Promise<PlayerProbe> {
 }
 
 /** Polls `window.harakiri.test.probe()` until `predicate` holds, and returns that probe. */
-export const probeUntil = (
+export const probeUntil = async (
   page: Page,
   predicate: (probe: PlayerProbe) => boolean,
   timeoutMs = 15_000
-): Promise<PlayerProbe> => until("probe matches", () => probe(page), predicate, timeoutMs);
+): Promise<PlayerProbe> => until("probe matches", async () => probe(page), predicate, timeoutMs);
 
 /** Calls the bridge's play exactly as the renderer does. */
-export const play = (page: Page, request: PlayRequest): Promise<void> =>
-  page.evaluate((r) => window.harakiri.player.play(r), request);
+export const play = async (page: Page, request: PlayRequest): Promise<void> =>
+  page.evaluate(async (r) => window.harakiri.player.play(r), request);
 
-export const stop = (page: Page): Promise<void> =>
-  page.evaluate(() => window.harakiri.player.stop());
+export const stop = async (page: Page): Promise<void> =>
+  page.evaluate(async () => window.harakiri.player.stop());
 
 /** Starts recording every PlayerEvent the renderer receives through the bridge. */
 export async function recordPlayerEvents(page: Page): Promise<void> {
@@ -369,7 +369,7 @@ export async function playerEventUntil(
 ): Promise<PlayerEvent> {
   const events = await until(
     "a matching player event arrives",
-    () => playerEvents(page),
+    async () => playerEvents(page),
     (seen) => seen.some(predicate),
     timeoutMs
   );

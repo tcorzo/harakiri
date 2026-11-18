@@ -27,8 +27,8 @@ export function adaptUpdater(real: BaseUpdater): UpdaterLike {
   let token: CancellationToken | undefined;
 
   return {
-    check: () => real.checkForUpdates(),
-    download: () => {
+    check: async () => real.checkForUpdates(),
+    download: async () => {
       token = new CancellationTokenClass();
 
       return real.downloadUpdate(token);

@@ -177,7 +177,7 @@ const searchAgainKey = "server-search-again";
 function DiscoveredList({ onPick }: { readonly onPick: (address: string) => void }) {
   const discovery = useQuery({
     queryKey: ["discover"],
-    queryFn: () => window.harakiri.discover(),
+    queryFn: async () => window.harakiri.discover(),
     staleTime: 0,
   });
 
@@ -314,7 +314,7 @@ function ChooseUser({
 
   const qc = useQuery({
     queryKey: ["quickConnectEnabled", server.url],
-    queryFn: () => quickConnectEnabled(server, identity),
+    queryFn: async () => quickConnectEnabled(server, identity),
   });
 
   const ready = users.status !== "pending";
@@ -537,7 +537,7 @@ function QuickConnectStep({
 
 const deviceIdQuery = {
   queryKey: ["deviceId"],
-  queryFn: () => window.harakiri.deviceId(),
+  queryFn: async () => window.harakiri.deviceId(),
   staleTime: Infinity,
 } as const;
 

@@ -129,7 +129,7 @@ const toSession = async (
   };
 };
 
-export const authenticate = (
+export const authenticate = async (
   server: ServerUrl,
   username: string,
   password: string,
@@ -180,7 +180,7 @@ export const pollQuickConnect = async (
   return data.Authenticated === true;
 };
 
-export const authenticateWithQuickConnect = (
+export const authenticateWithQuickConnect = async (
   server: ServerUrl,
   identity: ClientIdentity,
   secret: string

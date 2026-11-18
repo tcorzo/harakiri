@@ -237,7 +237,7 @@ export function watchFidelity(
 
   return {
     view: () => fidelityView(state),
-    selectSound: (sound) => learn({ kind: "soundTrack", sound }, false),
+    selectSound: async (sound) => learn({ kind: "soundTrack", sound }, false),
     audioOutputWarning: () => {
       audioWarnings += 1;
     },

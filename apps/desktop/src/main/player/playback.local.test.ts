@@ -59,7 +59,7 @@ class FakeJellyfin {
     return `http://127.0.0.1:${address.port}`;
   }
 
-  close(): Promise<void> {
+  async close(): Promise<void> {
     this.server.closeAllConnections();
 
     return new Promise((resolve) => this.server.close(() => resolve()));
@@ -224,7 +224,7 @@ async function until(
   throw new Error(`timed out waiting for ${what}; last probe ${JSON.stringify(last)}`);
 }
 
-const synthesize = (out: string, seconds: number) =>
+const synthesize = async (out: string, seconds: number) =>
   promisify(execFile)("ffmpeg", [
     "-v",
     "error",

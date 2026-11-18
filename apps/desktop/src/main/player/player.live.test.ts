@@ -170,10 +170,10 @@ const pickItem = (
   return item;
 };
 
-const userData = (session: Session, itemId: string) =>
+const userData = async (session: Session, itemId: string) =>
   api(`/UserItems/${itemId}/UserData?userId=${session.userId}`, UserData);
 
-const restoreUserData = (session: Session, itemId: string, ticks: number | undefined) =>
+const restoreUserData = async (session: Session, itemId: string, ticks: number | undefined) =>
   api(`/UserItems/${itemId}/UserData?userId=${session.userId}`, z.unknown(), {
     method: "POST",
     body: JSON.stringify({ PlaybackPositionTicks: ticks ?? 0 }),
@@ -205,7 +205,7 @@ function mpvSocket(): string {
 }
 
 /** Sends one command over a second IPC connection and returns mpv's reply data. */
-function mpvCommand(...command: unknown[]): Promise<unknown> {
+async function mpvCommand(...command: unknown[]): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const socket = createConnection(mpvSocket());
     let buffer = "";

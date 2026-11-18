@@ -23,7 +23,7 @@ export interface DiscoveryOptions {
 }
 
 /** Broadcasts Jellyfin's discovery probe and returns every distinct server that answers in time. */
-export function discoverServers(options: DiscoveryOptions = {}): Promise<DiscoveredServer[]> {
+export async function discoverServers(options: DiscoveryOptions = {}): Promise<DiscoveredServer[]> {
   const { address = "255.255.255.255", port = 7359, timeoutMs = 1500 } = options;
   const servers = new Map<string, DiscoveredServer>();
   const socket = createSocket("udp4");

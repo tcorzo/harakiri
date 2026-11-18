@@ -26,7 +26,7 @@ function Screening() {
 export const Route = createFileRoute("/_signedIn/screening/$id")({
   params: { parse: ({ id }) => ({ id: ItemId.parse(id) }), stringify: ({ id }) => ({ id }) },
   validateSearch: search,
-  loader: ({ context: { queryClient, signedIn }, params }) =>
+  loader: async ({ context: { queryClient, signedIn }, params }) =>
     queryClient.ensureQueryData(rawItemQuery(signedIn, params.id)),
   component: Screening,
 });

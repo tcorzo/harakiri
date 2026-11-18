@@ -19,7 +19,7 @@ export function SettingsScreen() {
   // Unsupported means a dev or unpackaged build: nothing will change, so stop asking.
   const updates = useQuery({
     queryKey: ["updates", "status"],
-    queryFn: () => window.harakiri.updates.status(),
+    queryFn: async () => window.harakiri.updates.status(),
     refetchInterval: (query) => (query.state.data?.state === "unsupported" ? false : 1000),
   });
 

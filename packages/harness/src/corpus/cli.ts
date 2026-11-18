@@ -90,9 +90,9 @@ const parsed = run(parser, { programName: "corpus", help: "both" });
 
 try {
   process.exitCode = await match(parsed)
-    .with({ command: "gen" }, (p) => gen(p.out, p.fate, p.requireFate))
-    .with({ command: "fetch-fate" }, (p) => fetchFateCommand(p.dir, p.mirror))
-    .with({ command: "classify" }, (p) =>
+    .with({ command: "gen" }, async (p) => gen(p.out, p.fate, p.requireFate))
+    .with({ command: "fetch-fate" }, async (p) => fetchFateCommand(p.dir, p.mirror))
+    .with({ command: "classify" }, async (p) =>
       classifyCorpus({
         corpus: resolve(p.corpus),
         server: p.server,

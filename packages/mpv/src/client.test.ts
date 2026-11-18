@@ -71,7 +71,7 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
-  await Promise.all(clients.splice(0).map((client) => client.quit()));
+  await Promise.all(clients.splice(0).map(async (client) => client.quit()));
 });
 
 afterAll(async () => {
