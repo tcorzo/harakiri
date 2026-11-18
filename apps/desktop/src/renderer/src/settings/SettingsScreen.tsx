@@ -1,5 +1,5 @@
 import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-navigation";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { appVersion } from "../../../shared/identity";
@@ -7,11 +7,18 @@ import { forgetSession } from "../data/forget";
 import { useSignedIn } from "../data/session";
 import { ListAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
+import { versionLine } from "./version-line";
 
 export function SettingsScreen() {
   const { session } = useSignedIn();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  // Unsupported means a dev or unpackaged build: nothing will change, so stop asking.
+  const updates = useQuery({
+    queryKey: ["updates", "status"],
+    queryFn: () => window.harakiri.updates.status(),
+    refetchInterval: (query) => (query.state.data?.state === "unsupported" ? false : 1000),
+  });
   const { ref, focusKey } = useFocusable<object, HTMLElement>({
     focusKey: "settings",
     trackChildren: true,
@@ -59,7 +66,9 @@ export function SettingsScreen() {
             <dt className="text-paper-dim stretch-condensed">Address</dt>
             <dd className="m-0 stretch-semicondensed">{session.serverUrl}</dd>
             <dt className="text-paper-dim stretch-condensed">App</dt>
-            <dd className="m-0">Version {appVersion}</dd>
+            <dd className="m-0" aria-live="polite">
+              {versionLine(appVersion, updates.data)}
+            </dd>
           </dl>
           <div className="flex flex-col">
             <ListAction
@@ -73,6 +82,14 @@ export function SettingsScreen() {
               detail="Find or type another server"
               onPress={() => void leave(false)}
             />
+            {updates.data?.state === "ready" ? (
+              <ListAction
+                focusKey="settings-restart"
+                label="Restart to update"
+                detail={`Installs ${updates.data.version} and opens harakiri again`}
+                onPress={() => void window.harakiri.updates.restart()}
+              />
+            ) : null}
           </div>
         </div>
       </main>
