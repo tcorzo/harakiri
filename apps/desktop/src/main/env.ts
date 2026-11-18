@@ -9,6 +9,8 @@ export const env = createEnv({
     HARAKIRI_DISCOVERY_ADDRESS: z.ipv4().optional(),
     /** Set by the AppImage runtime to the AppImage path; absent in dev, e2e and unpackaged runs. */
     APPIMAGE: z.string().min(1).optional(),
+    /** Set by the AppImage runtime to its mount point; an APPIMAGE is ours only if execPath is under it. */
+    APPDIR: z.string().min(1).optional(),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

@@ -1,10 +1,10 @@
 import { getLogger } from "@logtape/logtape";
 import pkg from "electron-updater";
-import type { BaseUpdater } from "electron-updater";
+import type { BaseUpdater, CancellationToken } from "electron-updater";
 import type { UpdaterLike } from "./updates";
 
 // electron-updater is CJS and the main bundle is ESM, so take the named exports off the default.
-const { BaseUpdater: BaseUpdaterClass } = pkg;
+const { BaseUpdater: BaseUpdaterClass, CancellationToken: CancellationTokenClass } = pkg;
 
 const log = getLogger(["harakiri", "updates", "electron-updater"]);
 
@@ -22,9 +22,19 @@ export function adaptUpdater(real: BaseUpdater): UpdaterLike {
     error: (message) => log.error("{m}", { m: text(message) }),
   };
 
+  // The token of the download in flight; cancelDownload cancels it.
+  let token: CancellationToken | undefined;
+
   return {
     check: () => real.checkForUpdates(),
-    download: () => real.downloadUpdate(),
+    download: () => {
+      token = new CancellationTokenClass();
+      return real.downloadUpdate(token);
+    },
+    cancelDownload: () => {
+      token?.cancel();
+      token = undefined;
+    },
     install: (relaunch) => real.install(true, relaunch),
     onAvailable: (listener) => {
       real.on("update-available", (info) => listener(info.version));

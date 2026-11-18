@@ -1,6 +1,6 @@
 // @vitest-environment node
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { type UpdateDeps, type UpdaterLike, startUpdates } from "./updates";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { type UpdateDeps, type UpdaterLike, ownAppImage, startUpdates } from "./updates";
 
 function fakeUpdater() {
   const on: {
@@ -10,10 +10,11 @@ function fakeUpdater() {
     downloaded?: (v: string) => void;
     error?: (e: Error) => void;
   } = {};
-  const calls = { check: 0, download: 0, installs: [] as boolean[] };
+  const calls = { check: 0, download: 0, cancel: 0, installs: [] as boolean[] };
   let checkResult: () => Promise<unknown> = () => Promise.resolve();
   let downloadResult: () => Promise<unknown> = () => Promise.resolve();
   let installResult: () => boolean = () => true;
+  let cancelHook: () => void = () => {};
   const updater: UpdaterLike = {
     check: () => {
       calls.check += 1;
@@ -22,6 +23,10 @@ function fakeUpdater() {
     download: () => {
       calls.download += 1;
       return downloadResult();
+    },
+    cancelDownload: () => {
+      calls.cancel += 1;
+      cancelHook();
     },
     install: (relaunch) => {
       calls.installs.push(relaunch);
@@ -52,6 +57,13 @@ function fakeUpdater() {
     },
     failDownloads: (e: Error) => {
       downloadResult = () => Promise.reject(e);
+    },
+    /** Downloads hang until cancelled, then reject the way electron-updater's CancellationError does. */
+    hangDownloadsUntilCancelled: () => {
+      downloadResult = () =>
+        new Promise((_resolve, reject) => {
+          cancelHook = () => reject(new Error("cancelled"));
+        });
     },
     failInstall: () => {
       installResult = () => {
@@ -136,7 +148,7 @@ test("does not check again while downloading or ready", () => {
   expect(fake.calls.check).toBe(1);
 });
 
-test("a failed check is reported and retried on the next interval", async () => {
+test("a failed check is reported and retried 15 minutes after it started", async () => {
   const fake = fakeUpdater();
   fake.failChecks(new Error("net::ERR_INTERNET_DISCONNECTED"));
   const updates = start(fake);
@@ -146,10 +158,27 @@ test("a failed check is reported and retried on the next interval", async () => 
     state: "failed",
     message: "net::ERR_INTERNET_DISCONNECTED",
   });
-  await vi.advanceTimersByTimeAsync(21_600_000);
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(fake.calls.check).toBe(1);
+  await vi.advanceTimersByTimeAsync(780_000); // +14 min
+  expect(fake.calls.check).toBe(1);
+  await vi.advanceTimersByTimeAsync(60_000); // +15 min
   expect(fake.calls.check).toBe(2);
   fake.on.notAvailable?.();
   expect(updates.status()).toEqual({ state: "idle" });
+  await vi.advanceTimersByTimeAsync(900_000);
+  expect(fake.calls.check).toBe(2);
+});
+
+test("the failed-check retry delay is injectable", async () => {
+  const fake = fakeUpdater();
+  const updates = start(fake, { retryAfterMs: 120_000 });
+  fake.on.error?.(new Error("ENOTFOUND"));
+  expect(updates.status().state).toBe("failed");
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(fake.calls.check).toBe(1);
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(fake.calls.check).toBe(2);
 });
 
 test("installIfReady does nothing unless an update is downloaded", () => {
@@ -191,8 +220,114 @@ test("a download that rejects without an error event fails and is retried", asyn
   fake.on.available?.("0.3.0");
   await vi.advanceTimersByTimeAsync(0);
   expect(updates.status()).toEqual({ state: "failed", message: "ECONNRESET" });
-  await vi.advanceTimersByTimeAsync(21_600_000);
+  await vi.advanceTimersByTimeAsync(900_000);
   expect(fake.calls.check).toBe(2);
+});
+
+test("a download stops when playback starts and resumes once nothing plays", async () => {
+  let playing = false;
+  const fake = fakeUpdater();
+  fake.hangDownloadsUntilCancelled();
+  const updates = start(fake, { isPlaying: () => playing });
+  fake.on.available?.("0.3.0");
+  fake.on.progress?.(20);
+  expect(updates.status()).toEqual({ state: "downloading", version: "0.3.0", percent: 20 });
+
+  playing = true;
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(fake.calls.cancel).toBe(1);
+  expect(updates.status()).toEqual({ state: "available", version: "0.3.0" });
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(fake.calls.cancel).toBe(1);
+  expect(fake.calls.download).toBe(1);
+  expect(updates.status()).toEqual({ state: "available", version: "0.3.0" });
+
+  playing = false;
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(fake.calls.download).toBe(2);
+  expect(updates.status()).toEqual({ state: "downloading", version: "0.3.0", percent: 0 });
+});
+
+test("a download is not cancelled while nothing plays", async () => {
+  const fake = fakeUpdater();
+  fake.hangDownloadsUntilCancelled();
+  const updates = start(fake);
+  fake.on.available?.("0.3.0");
+  await vi.advanceTimersByTimeAsync(300_000);
+  expect(fake.calls.cancel).toBe(0);
+  expect(updates.status().state).toBe("downloading");
+});
+
+test("a throwing createUpdater reports failed and leaves the app running", () => {
+  const quit = vi.fn<() => void>();
+  const releaseLock = vi.fn<() => void>();
+  const updates = startUpdates({
+    appImage: "/apps/harakiri-x86_64.AppImage",
+    createUpdater: () => {
+      throw new Error("electron-updater did not pick an installing updater on this platform");
+    },
+    isPlaying: () => false,
+    releaseLock,
+    quit,
+  });
+  expect(updates.status()).toEqual({
+    state: "failed",
+    message: "electron-updater did not pick an installing updater on this platform",
+  });
+  expect(() => updates.installIfReady()).not.toThrow();
+  updates.restart();
+  expect(quit).not.toHaveBeenCalled();
+  expect(releaseLock).not.toHaveBeenCalled();
+});
+
+describe("ownAppImage", () => {
+  const appImage = "/apps/harakiri-x86_64.AppImage";
+
+  test("is the AppImage when this process runs from its mount", () => {
+    expect(
+      ownAppImage({
+        appImage,
+        appDir: "/tmp/.mount_harakiAbC",
+        execPath: "/tmp/.mount_harakiAbC/harakiri",
+      }),
+    ).toBe(appImage);
+  });
+
+  test("ignores an APPIMAGE inherited from another AppImage's terminal", () => {
+    expect(
+      ownAppImage({
+        appImage: "/apps/Terminal.AppImage",
+        appDir: "/tmp/.mount_TerminXyZ",
+        execPath: "/repo/apps/desktop/dist/linux-unpacked/harakiri",
+      }),
+    ).toBeUndefined();
+  });
+
+  test("ignores an APPIMAGE without an APPDIR", () => {
+    expect(
+      ownAppImage({ appImage, appDir: undefined, execPath: "/tmp/.mount_harakiAbC/harakiri" }),
+    ).toBeUndefined();
+  });
+
+  test("ignores a mount that only shares a prefix with execPath", () => {
+    expect(
+      ownAppImage({
+        appImage,
+        appDir: "/tmp/.mount_harak",
+        execPath: "/tmp/.mount_harakiAbC/harakiri",
+      }),
+    ).toBeUndefined();
+  });
+
+  test("is undefined without an APPIMAGE", () => {
+    expect(
+      ownAppImage({
+        appImage: undefined,
+        appDir: "/tmp/.mount_harakiAbC",
+        execPath: "/tmp/.mount_harakiAbC/harakiri",
+      }),
+    ).toBeUndefined();
+  });
 });
 
 test("restart quits only when an update is ready", () => {

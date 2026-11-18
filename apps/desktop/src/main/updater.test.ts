@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { EventEmitter } from "node:events";
-import type { BaseUpdater } from "electron-updater";
+import type { BaseUpdater, CancellationToken } from "electron-updater";
 import { describe, expect, it, vi } from "vitest";
 import { adaptUpdater } from "./updater";
 
@@ -11,7 +11,7 @@ function fakeUpdater() {
     autoInstallOnAppQuit: true,
     logger: null,
     checkForUpdates: vi.fn<() => Promise<null>>(async () => null),
-    downloadUpdate: vi.fn<() => Promise<string[]>>(async () => []),
+    downloadUpdate: vi.fn<(token?: CancellationToken) => Promise<string[]>>(async () => []),
     install: vi.fn<(silent: boolean, relaunch: boolean) => boolean>(() => true),
   });
 }
@@ -61,5 +61,24 @@ describe("adaptUpdater", () => {
     expect(fake.downloadUpdate).toHaveBeenCalledTimes(1);
     expect(updater.install(true)).toBe(true);
     expect(fake.install).toHaveBeenCalledWith(true, true);
+  });
+
+  it("cancels only the download in flight, and each download gets a fresh token", async () => {
+    const fake = fakeUpdater();
+    const updater = adaptUpdater(fake as unknown as BaseUpdater);
+    expect(() => updater.cancelDownload()).not.toThrow();
+
+    await updater.download();
+    const first = fake.downloadUpdate.mock.calls[0]?.[0];
+    expect(first).toBeDefined();
+    expect(first?.cancelled).toBe(false);
+    updater.cancelDownload();
+    expect(first?.cancelled).toBe(true);
+
+    await updater.download();
+    const second = fake.downloadUpdate.mock.calls[1]?.[0];
+    expect(second).toBeDefined();
+    expect(second).not.toBe(first);
+    expect(second?.cancelled).toBe(false);
   });
 });

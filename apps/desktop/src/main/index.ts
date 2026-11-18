@@ -10,7 +10,7 @@ import { holdQuitUntilStopped, killOnExit, removeStaleMpvDirs } from "./lifecycl
 import * as player from "./player/index";
 import { openRunLog } from "./run-log";
 import { electronUpdater } from "./updater";
-import { startUpdates, type Updates } from "./updates";
+import { ownAppImage, startUpdates, type Updates } from "./updates";
 import {
   appUrlCheck,
   confineWebContents,
@@ -114,7 +114,11 @@ async function main(): Promise<void> {
   await app.whenReady();
   // electron-updater requests through Electron's net stack, which needs ready.
   updates = startUpdates({
-    appImage: env.APPIMAGE,
+    appImage: ownAppImage({
+      appImage: env.APPIMAGE,
+      appDir: env.APPDIR,
+      execPath: process.execPath,
+    }),
     createUpdater: electronUpdater,
     isPlaying: player.isPlaying,
     releaseLock: () => app.releaseSingleInstanceLock(),
