@@ -138,7 +138,7 @@ describe(`the Jellyfin at ${server}`, () => {
   });
 
   test("a wrong password is wrong-credentials", async () => {
-    expect(await authenticate(server, USER, "not-the-password", identity)).toEqual({
+    await expect(authenticate(server, USER, "not-the-password", identity)).resolves.toEqual({
       kind: "wrong-credentials",
     });
   });

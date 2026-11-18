@@ -32,9 +32,9 @@ afterEach(() => {
 
 test("the candidate that answers as Jellyfin wins over one that refuses the connection", async () => {
   network({ "http://films.example:8096": jellyfin });
-  expect(
-    await checkServer(fresh(), ["https://films.example/", "http://films.example:8096/"])
-  ).toEqual({
+  await expect(
+    checkServer(fresh(), ["https://films.example/", "http://films.example:8096/"])
+  ).resolves.toEqual({
     ok: true,
     info: {
       url: "http://films.example:8096/",
@@ -47,10 +47,10 @@ test("the candidate that answers as Jellyfin wins over one that refuses the conn
 
 test("when no candidate is Jellyfin, the one that answered names the problem", async () => {
   network({ "http://films.example:8096": { hello: "world" } });
-  expect(
-    await checkServer(fresh(), ["https://films.example/", "http://films.example:8096/"])
-  ).toEqual({ ok: false, problem: { kind: "notJellyfin" } });
-  expect(await checkServer(fresh(), ["https://films.example/"])).toEqual({
+  await expect(
+    checkServer(fresh(), ["https://films.example/", "http://films.example:8096/"])
+  ).resolves.toEqual({ ok: false, problem: { kind: "notJellyfin" } });
+  await expect(checkServer(fresh(), ["https://films.example/"])).resolves.toEqual({
     ok: false,
     problem: { kind: "unreachable" },
   });

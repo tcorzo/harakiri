@@ -445,7 +445,7 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
     expect(Date.now() - startedAt).toBeLessThan(1000);
     expect(prepared.resolution.method).toBe("DirectPlay");
 
-    expect(await prepared.entry).toEqual({ title: "Untitled", programme: "" });
+    await expect(prepared.entry).resolves.toEqual({ title: "Untitled", programme: "" });
     expect(Date.now() - startedAt).toBeGreaterThanOrEqual(2900);
   });
 
@@ -464,6 +464,6 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
     expect(jellyfin.posted("/Sessions/Playing/Stopped")).toEqual([
       expect.objectContaining({ ItemId: ITEM, Failed: true }),
     ]);
-    expect(await playback.probe()).toEqual({ running: false });
+    await expect(playback.probe()).resolves.toEqual({ running: false });
   });
 });

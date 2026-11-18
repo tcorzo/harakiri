@@ -154,7 +154,7 @@ test("update status is parsed and restart invokes its channel", async () => {
 
   const bridge = createBridge(ipc, { e2e: false, warn });
 
-  expect(await bridge.updates.status()).toEqual({ state: "ready", version: "0.3.0" });
+  await expect(bridge.updates.status()).resolves.toEqual({ state: "ready", version: "0.3.0" });
   await bridge.updates.restart();
   expect(invoked).toContainEqual([channels.updateRestart]);
 

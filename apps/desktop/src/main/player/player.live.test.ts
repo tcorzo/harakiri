@@ -323,7 +323,7 @@ describe(`player against the dev Jellyfin at ${SERVER}`, () => {
         );
 
         await stop();
-        expect(await probe()).toEqual({ running: false });
+        await expect(probe()).resolves.toEqual({ running: false });
 
         // stop() resolves after the stop report, so `reported` has already followed `stopped`.
         expect(events.slice(-2).map((e) => e.phase)).toEqual(["stopped", "reported"]);

@@ -30,7 +30,7 @@ test("each line is on disk as soon as it is logged, in a file only the owner can
   const { path, sink } = openRunLog(dir, new Date(Date.UTC(2026, 9, 30, 11, 2, 3)));
   sink(record("mpv: [ao/pipewire] no target node available"));
   expect(path).toBe(join(dir, `harakiri-2026-10-30T11-02-03-${process.pid}.log`));
-  expect(await readFile(path, "utf-8")).toBe(
+  await expect(readFile(path, "utf-8")).resolves.toBe(
     "2026-10-30 11:02:03.000 +00 [WRN] harakiri·player: mpv: [ao/pipewire] no target node available\n"
   );
   expect((await stat(path)).mode & 0o777).toBe(0o600);

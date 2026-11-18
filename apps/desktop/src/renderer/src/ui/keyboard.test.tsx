@@ -103,25 +103,25 @@ afterEach(() => {
 
 test("up from the top row of keys reaches the address field", async () => {
   await focus("kb-0-3");
-  expect(await press("up")).toBe("field");
+  await expect(press("up")).resolves.toBe("field");
 });
 
 test("left from the first key column reaches the servers found", async () => {
   await focus("kb-1-0");
-  expect(await press("left")).toBe("found-0");
+  await expect(press("left")).resolves.toBe("found-0");
 });
 
 test("the board holds focus at its right and bottom edges, where nothing lies", async () => {
   await focus("kb-1-9");
-  expect(await press("right")).toBe("kb-1-9");
+  await expect(press("right")).resolves.toBe("kb-1-9");
   await focus("kb-4-4");
-  expect(await press("down")).toBe("kb-4-4");
+  await expect(press("down")).resolves.toBe("kb-4-4");
 });
 
 test("inside the board the d-pad moves key by key", async () => {
   await focus("kb-1-0");
-  expect(await press("right")).toBe("kb-1-1");
-  expect(await press("down")).toBe("kb-2-1");
+  await expect(press("right")).resolves.toBe("kb-1-1");
+  await expect(press("down")).resolves.toBe("kb-2-1");
 });
 
 test("a physical Backspace on a focused key deletes, and never reaches the hub as Back", async () => {

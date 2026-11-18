@@ -99,7 +99,7 @@ const session = {
 };
 
 test("authenticate sends the client identity and returns everything a Session needs", async () => {
-  expect(await authenticate(server, "harakiri", "right", identity)).toEqual({
+  await expect(authenticate(server, "harakiri", "right", identity)).resolves.toEqual({
     kind: "signed-in",
     session,
   });
@@ -114,10 +114,10 @@ test("authenticate sends the client identity and returns everything a Session ne
 });
 
 test("a wrong password and a refusing server are told apart", async () => {
-  expect(await authenticate(server, "harakiri", "wrong", identity)).toEqual({
+  await expect(authenticate(server, "harakiri", "wrong", identity)).resolves.toEqual({
     kind: "wrong-credentials",
   });
-  expect(await authenticate(server, "harakiri", "rejected", identity)).toEqual({
+  await expect(authenticate(server, "harakiri", "rejected", identity)).resolves.toEqual({
     kind: "rejected",
     status: 403,
   });
@@ -130,13 +130,13 @@ test("an unreachable server says so", async () => {
 });
 
 test("Quick Connect: enabled, initiate, poll, then sign in with the secret", async () => {
-  expect(await quickConnectEnabled(server, identity)).toBe(true);
-  expect(await initiateQuickConnect(server, identity)).toEqual({
+  await expect(quickConnectEnabled(server, identity)).resolves.toBe(true);
+  await expect(initiateQuickConnect(server, identity)).resolves.toEqual({
     code: "123456",
     secret: "s3cret",
   });
-  expect(await pollQuickConnect(server, identity, "s3cret")).toBe(true);
-  expect(await authenticateWithQuickConnect(server, identity, "s3cret")).toEqual({
+  await expect(pollQuickConnect(server, identity, "s3cret")).resolves.toBe(true);
+  await expect(authenticateWithQuickConnect(server, identity, "s3cret")).resolves.toEqual({
     kind: "signed-in",
     session,
   });

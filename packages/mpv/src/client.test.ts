@@ -81,7 +81,7 @@ afterAll(async () => {
 describe("spawnMpv", () => {
   test("talks to the real mpv 0.41", async () => {
     const client = await start();
-    expect(await client.getProperty("mpv-version", z.string())).toMatch(/^mpv v0\.41\./);
+    await expect(client.getProperty("mpv-version", z.string())).resolves.toMatch(/^mpv v0\.41\./);
   });
 
   test("reports the duration of a loaded clip", async () => {
@@ -97,7 +97,7 @@ describe("spawnMpv", () => {
 
     await client.command("loadfile", clip);
     await loaded;
-    expect(await client.getProperty("duration", z.number())).toBeCloseTo(2, 1);
+    await expect(client.getProperty("duration", z.number())).resolves.toBeCloseTo(2, 1);
   });
 
   test("observes property changes until unsubscribed", async () => {
@@ -114,7 +114,7 @@ describe("spawnMpv", () => {
 
     unsubscribe();
     await client.setProperty("pause", true);
-    expect(await client.getProperty("pause", z.boolean())).toBe(true);
+    await expect(client.getProperty("pause", z.boolean())).resolves.toBe(true);
     expect(seen).toEqual([false, true, false]);
   });
 
@@ -126,7 +126,7 @@ describe("spawnMpv", () => {
     });
 
     await client.command("script-message", "harakiri", "up");
-    expect(await received).toEqual(["harakiri", "up"]);
+    await expect(received).resolves.toEqual(["harakiri", "up"]);
   });
 
   test("rejects a failed command with mpv's error string", async () => {
@@ -145,12 +145,12 @@ describe("spawnMpv", () => {
     const inFlight = client.getProperty("mpv-version", z.string());
     process.kill(client.pid, "SIGKILL");
     await expect(inFlight).rejects.toBeInstanceOf(MpvClosedError);
-    expect(await client.exited).toEqual({ code: null, signal: "SIGKILL" });
+    await expect(client.exited).resolves.toEqual({ code: null, signal: "SIGKILL" });
   });
 
   test("quit exits cleanly and later commands reject", async () => {
     const client = await start();
-    expect(await client.quit()).toEqual({ code: 0, signal: null });
+    await expect(client.quit()).resolves.toEqual({ code: 0, signal: null });
     await expect(client.command("get_property", "pause")).rejects.toBeInstanceOf(MpvClosedError);
   });
 
@@ -163,7 +163,7 @@ describe("spawnMpv", () => {
       command: "get_property",
       timeoutMs: 200,
     });
-    expect(await client.exited).toEqual({ code: null, signal: "SIGKILL" });
+    await expect(client.exited).resolves.toEqual({ code: null, signal: "SIGKILL" });
   });
 
   test("a request that fails before reaching the socket leaves no timer to kill mpv", async () => {
@@ -174,7 +174,7 @@ describe("spawnMpv", () => {
       TypeError
     );
     await delay(400);
-    expect(await client.getProperty("pause", z.boolean())).toBe(false);
+    await expect(client.getProperty("pause", z.boolean())).resolves.toBe(false);
   });
 
   test("quit resolves only after the socket dir is gone", async () => {
@@ -199,7 +199,7 @@ describe("spawnMpv", () => {
       await writeFile(join(dir, "mpv.conf"), "volume=37\n");
       const client = await start(headless, { config: { dir } });
       expect(cmdline(client.pid)[1]).toBe(`--config-dir=${dir}`);
-      expect(await client.getProperty("volume", z.number())).toBe(37);
+      await expect(client.getProperty("volume", z.number())).resolves.toBe(37);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -209,13 +209,15 @@ describe("spawnMpv", () => {
     const auth = 'MediaBrowser Token="s3cret-token", Client="harakiri"';
     const client = await start([...buildPlaybackArgs(), ...headless]);
     await setHttpHeaders(client, { Authorization: auth, "X-Trace": "1" });
-    expect(await client.getProperty("http-header-fields", z.array(z.string()))).toEqual([
+    await expect(client.getProperty("http-header-fields", z.array(z.string()))).resolves.toEqual([
       `Authorization: ${auth}`,
       "X-Trace: 1",
     ]);
     expect(cmdline(client.pid).join(" ")).not.toContain("s3cret-token");
-    expect(await client.getProperty("audio-spdif", z.string())).toBe("ac3,eac3,dts-hd,truehd");
-    expect(await client.getProperty("target-colorspace-hint", z.string())).toBe("auto");
+    await expect(client.getProperty("audio-spdif", z.string())).resolves.toBe(
+      "ac3,eac3,dts-hd,truehd"
+    );
+    await expect(client.getProperty("target-colorspace-hint", z.string())).resolves.toBe("auto");
   });
 
   test("setHttpHeaders refuses a header that would smuggle a second one", async () => {
@@ -223,7 +225,9 @@ describe("spawnMpv", () => {
     await expect(setHttpHeaders(client, { Authorization: "x\r\nCookie: y" })).rejects.toThrow(
       new TypeError('invalid HTTP header "Authorization"')
     );
-    expect(await client.getProperty("http-header-fields", z.array(z.string()))).toEqual([]);
+    await expect(client.getProperty("http-header-fields", z.array(z.string()))).resolves.toEqual(
+      []
+    );
   });
 });
 
@@ -292,7 +296,7 @@ describe("a failed command never carries its arguments", () => {
     await client
       .command("sub-add", `http://127.0.0.1:1/s.srt?ApiKey=${TOKEN}`)
       .catch(() => undefined);
-    expect(await client.getProperty("ytdl", z.boolean())).toBe(false);
+    await expect(client.getProperty("ytdl", z.boolean())).resolves.toBe(false);
     await client.quit();
 
     const lines = records.map((record) => defaultTextFormatter(record));
