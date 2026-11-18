@@ -3,16 +3,23 @@
 
 import { api, login, waitForServer } from "./client.ts";
 
-type Task = {
+interface Task {
   Key: string;
   State: "Idle" | "Cancelling" | "Running";
   CurrentProgressPercentage?: number;
   LastExecutionResult?: { Status: string; EndTimeUtc: string };
-};
+}
 
-type Item = { ImageTags?: Record<string, string>; BackdropImageTags?: string[] };
+interface Item {
+  ImageTags?: Record<string, string>;
+  BackdropImageTags?: string[];
+}
 
-type Counts = { MovieCount: number; SeriesCount: number; EpisodeCount: number };
+interface Counts {
+  MovieCount: number;
+  SeriesCount: number;
+  EpisodeCount: number;
+}
 
 const timeoutMin = Number(process.argv[2] ?? 180);
 const POLL_MS = 15_000;

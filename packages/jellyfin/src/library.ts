@@ -18,16 +18,16 @@ import type { BaseItemDto, ImageType, PublicSystemInfo, UserDto } from "./genera
 import type { ItemId, ServerUrl, UserId } from "./ids";
 
 /** A signed-in client (see createJellyfinClient) and the user it acts for. */
-export type LibraryContext = {
+export interface LibraryContext {
   readonly client: Client;
   readonly userId: UserId;
-};
+}
 
-export type ProgrammeSection = {
+export interface ProgrammeSection {
   readonly id: string;
   readonly title: string;
   readonly items: readonly BaseItemDto[];
-};
+}
 
 const HERO_POOL = 12;
 const HERO_FILMS = 5;

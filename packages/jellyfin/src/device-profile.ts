@@ -14,12 +14,12 @@ export const ServerVersion = z
 
 export type ServerVersion = z.output<typeof ServerVersion>;
 
-type SubtitleRule = {
+interface SubtitleRule {
   readonly format: string;
   readonly method: "Embed" | "External";
   readonly container?: string;
   readonly minServerMajor?: number;
-};
+}
 
 const TEXT_FORMATS = [
   "srt",
@@ -96,12 +96,12 @@ export type PlaybackSource =
       readonly audioStreamIndex?: number;
     };
 
-export type PlaybackInfoRequestInput = {
+export interface PlaybackInfoRequestInput {
   readonly userId: UserId;
   readonly server: ServerVersion;
   readonly source: PlaybackSource;
   readonly startTimeTicks?: number;
-};
+}
 
 export const playbackInfoRequest = ({
   userId,

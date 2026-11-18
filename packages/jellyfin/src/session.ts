@@ -15,7 +15,7 @@ import { authorizationHeader } from "./stream-url";
 import type { ClientIdentity } from "./stream-url";
 
 /** Everything the desktop app's Session needs, with ids branded. */
-export type SessionData = {
+export interface SessionData {
   readonly serverUrl: ServerUrl;
   readonly serverId: string;
   readonly serverName: string;
@@ -24,7 +24,7 @@ export type SessionData = {
   readonly userName: string;
   readonly accessToken: AccessToken;
   readonly deviceId: DeviceId;
-};
+}
 
 export type SignInResult =
   | { readonly kind: "signed-in"; readonly session: SessionData }
@@ -33,11 +33,11 @@ export type SignInResult =
   | { readonly kind: "rejected"; readonly status: number }
   | { readonly kind: "unreachable"; readonly message: string };
 
-export type QuickConnectCode = {
+export interface QuickConnectCode {
   /** Shown to the owner, who approves it from another signed-in device. */
   readonly code: string;
   readonly secret: string;
-};
+}
 
 /**
  * A generated-SDK client that sends the MediaBrowser Authorization header on
@@ -66,7 +66,11 @@ const ServerInfo = z.object({
   Version: z.string().min(1),
 });
 
-type Answer = { readonly data?: unknown; readonly error?: unknown; readonly response?: Response };
+interface Answer {
+  readonly data?: unknown;
+  readonly error?: unknown;
+  readonly response?: Response;
+}
 
 const describe = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);

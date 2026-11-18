@@ -1,7 +1,7 @@
 import type { ImageType } from "./generated/types.gen";
 import type { ItemId, ServerUrl } from "./ids";
 
-export type ImageSize = {
+export interface ImageSize {
   /** The rendered width in device pixels; the server scales down to it. */
   readonly maxWidth: number;
   /** The image tag from the item, so a changed image gets a new URL. */
@@ -9,7 +9,7 @@ export type ImageSize = {
   readonly quality?: number;
   /** Which backdrop, when an item has several. */
   readonly index?: number;
-};
+}
 
 export const imageUrl = (
   server: ServerUrl,

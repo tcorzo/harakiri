@@ -26,12 +26,12 @@ export const serverUnreachable = async (): Promise<string | undefined> => {
   }
 };
 
-export type ContractSession = {
+export interface ContractSession {
   readonly client: Client;
   readonly userId: UserId;
   readonly serverVersion: string;
   readonly end: () => Promise<void>;
-};
+}
 
 // Jellyfin keeps one session per DeviceId; a shared id would revoke other agents' tokens.
 export const signIn = async (): Promise<ContractSession> => {
@@ -60,14 +60,14 @@ export const signIn = async (): Promise<ContractSession> => {
   };
 };
 
-export type LibraryItem = {
+export interface LibraryItem {
   readonly id: ItemId;
   readonly name: string;
   readonly type: "Movie" | "Episode";
   /** The file's path as the server sees it. */
   readonly path: string;
   readonly sources: readonly MediaSourceInfo[];
-};
+}
 
 const label = (item: {
   Name?: string | null;

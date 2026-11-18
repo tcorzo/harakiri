@@ -90,10 +90,10 @@ export interface Playback {
   pid(): number | undefined;
 }
 
-type Finish = {
+interface Finish {
   readonly phase: Extract<PlayerPhase, "ended" | "stopped" | "error">;
   readonly error?: string;
-};
+}
 
 const endFile = z.object({ reason: z.string(), file_error: z.string().optional() });
 

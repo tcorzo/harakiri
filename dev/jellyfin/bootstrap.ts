@@ -9,12 +9,12 @@
 
 import { api, BASE, login, PASSWORD, USER, USING_DEFAULT_CREDS, waitForServer } from "./client.ts";
 
-type VirtualFolder = {
+interface VirtualFolder {
   Name: string;
   ItemId: string;
   Locations: string[];
   LibraryOptions: Record<string, unknown>;
-};
+}
 
 const OWN_LIBRARY = (process.env.JELLYFIN_DEV_LIBRARY ?? "corpus") === "own";
 

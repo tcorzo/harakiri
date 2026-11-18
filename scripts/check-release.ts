@@ -38,12 +38,12 @@ const check = (name: string, why: string | undefined) => {
   why ? fail(name, why) : pass(name);
 };
 
-type Meta = {
+interface Meta {
   version?: string;
   path?: string;
   sha512?: string;
   files?: { url?: string; sha512?: string; size?: number }[];
-};
+}
 
 const walk = (dir: string): string[] =>
   readdirSync(dir, { withFileTypes: true }).flatMap((e) =>

@@ -49,10 +49,10 @@ export type CorpusEntry = z.output<typeof Entry> & {
   readonly name: string;
 };
 
-export type Corpus = {
+export interface Corpus {
   readonly entries: readonly CorpusEntry[];
   readonly series: Readonly<Record<string, z.output<typeof Metadata>>>;
-};
+}
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -89,12 +89,12 @@ export const corpusEntry = (corpus: Corpus, id: string): CorpusEntry => {
   return entry;
 };
 
-export type CorpusMatch<T> = {
+export interface CorpusMatch<T> {
   /** The server's item for a catalog entry, or a loud error naming how to get it there. */
   readonly item: (entry: CorpusEntry) => T;
   /** The catalog entries the server holds. */
   readonly present: readonly CorpusEntry[];
-};
+}
 
 /**
  * The corpus view of a server's Movies and Episodes, or undefined when the server holds anything

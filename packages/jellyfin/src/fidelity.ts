@@ -49,7 +49,7 @@ export type SoundFormat =
  * Native: a bitstream the receiver decodes, or PCM that passes as it is.
  * Decoded: mpv decodes a format that cannot be bitstreamed to PCM.
  */
-export type SoundClass = {
+export interface SoundClass {
   readonly format: SoundFormat;
   /** The server's codec name, the label when the format is "Other". */
   readonly codec: string;
@@ -57,7 +57,7 @@ export type SoundClass = {
   readonly channels: string | null;
   readonly delivery: "native" | "decoded";
   readonly streamIndex: number;
-};
+}
 
 /** How a leg of the signal path reaches the TV or receiver (PRD signal-path vocabulary). */
 export const signalStates = ["native", "mapped", "decoded"] as const;
@@ -65,16 +65,16 @@ export const signalStates = ["native", "mapped", "decoded"] as const;
 export type SignalState = (typeof signalStates)[number];
 
 /** One leg of the signal path with how it reaches the TV or receiver. */
-export type SignalFact = {
+export interface SignalFact {
   readonly text: string;
   readonly state: SignalState;
-};
+}
 
 /** The facts as one line, e.g. "Dolby Vision mapped to HDR10 · TrueHD Atmos bitstream". */
 export const joinFacts = (facts: readonly SignalFact[]): string =>
   facts.map((fact) => fact.text).join(" · ");
 
-export type Fidelity = {
+export interface Fidelity {
   readonly picture: PictureClass;
   readonly sound: SoundClass | null;
   /** The signal path as facts: the picture leg, then the sound leg when there is sound. */
@@ -83,9 +83,12 @@ export type Fidelity = {
   readonly notes: string;
   /** The screening-handoff slug, e.g. "Dolby Vision mapped to HDR10 · TrueHD Atmos bitstream". */
   readonly signalPath: string;
-};
+}
 
-type SoundTraits = { readonly rank: number; readonly delivery: SoundClass["delivery"] };
+interface SoundTraits {
+  readonly rank: number;
+  readonly delivery: SoundClass["delivery"];
+}
 
 // rank breaks ties between tracks with the same spatial format and channel count.
 const SOUND: Record<SoundFormat, SoundTraits> = {
