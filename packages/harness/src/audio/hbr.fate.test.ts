@@ -44,6 +44,7 @@ describe("FATE: HBR streams through the extractor and mpv", () => {
   beforeAll(() => {
     dir = mkdtempSync(join(tmpdir(), "harness-fate-"));
   });
+
   afterAll(() => {
     rmSync(dir, { recursive: true, force: true });
   });
