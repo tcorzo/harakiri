@@ -104,7 +104,7 @@ export function soundPlan(sound: SoundSource | null, world: SoundWorld): SoundRe
   if (world.silent) {
     return lowered(silence, { kind: "outputFailed", output: outputName(world.output) });
   }
-  const carriage = sound.carriage;
+  const { carriage } = sound;
 
   if (carriage === "pcm" || carriage === "decode") {
     return { bitstream, fact: best, downgrade: null };

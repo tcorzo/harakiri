@@ -293,7 +293,7 @@ test.describe("with the server answering discovery on loopback", () => {
   }) => {
     const info = await publicInfo(backend.server);
     const first = await launch();
-    let page = first.page;
+    let { page } = first;
     await expectFocus(page, "Begin");
     await page.keyboard.press("Enter");
     await expectFocus(page, `${info.name}, ${backend.server}`);

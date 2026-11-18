@@ -91,7 +91,7 @@ export function useInputHub(): void {
 
     const poll = (now: number): void => {
       const snapshot = firstPad();
-      const mode = inputMode.getState().mode;
+      const { mode } = inputMode.getState();
 
       // Buttons already down when the mode flips (the B that stopped mpv) must not act on this side too.
       if (mode !== lastMode) {

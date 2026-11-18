@@ -79,7 +79,7 @@ export const ProgrammeRow = memo(function ProgrammeRow({
     initialRect: { width: window.innerWidth, height: 400 },
     // Returning from a title page reopens the row on the card the owner left, wherever it moved.
     initialOffset: () => {
-      const place = useLit.getState().place;
+      const { place } = useLit.getState();
 
       if (place?.section !== sectionId) {
         return 0;

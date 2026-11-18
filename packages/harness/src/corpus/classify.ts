@@ -113,7 +113,7 @@ export interface ClassifyOptions {
 }
 
 export async function classifyCorpus(options: ClassifyOptions): Promise<number> {
-  const env = process.env;
+  const { env } = process;
 
   const base =
     options.server ?? env.JELLYFIN_DEV_URL ?? `http://127.0.0.1:${env.JELLYFIN_DEV_PORT ?? "8096"}`;

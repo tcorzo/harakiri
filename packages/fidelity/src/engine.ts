@@ -115,7 +115,7 @@ function learn(state: FidelityState, observation: Observation): FidelityState {
   return (
     match(observation)
       .with({ kind: "audioOutputFailed" }, (): FidelityState => {
-        const sound = played(state).sound;
+        const { sound } = played(state);
 
         if (sound === null) {
           return state;
