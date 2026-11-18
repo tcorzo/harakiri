@@ -33,7 +33,7 @@ function createWindow(): void {
     show: false,
     fullscreen: app.isPackaged,
     autoHideMenuBar: true,
-    backgroundColor: "#0b0d12",
+    backgroundColor: "#0a0605",
     webPreferences: {
       preload: join(import.meta.dirname, "../preload/index.cjs"),
       contextIsolation: true,

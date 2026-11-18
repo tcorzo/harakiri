@@ -7,6 +7,7 @@ import { forgetSession } from "../data/forget";
 import { sessionQuery } from "../data/session";
 import { QuietAction } from "./actions";
 import { focusFirst } from "./focus";
+import { Notice } from "./marks";
 
 function wording(failure: Failure): { readonly title: string; readonly detail: string } {
   return match(failure)
@@ -70,7 +71,7 @@ export function ErrorScreen({ error, reset }: ErrorComponentProps) {
       <h1 className="m-0 max-w-[24ch] text-marquee font-[820] text-balance stretch-extra-wide">
         {title}
       </h1>
-      <p className="max-w-[62ch] text-body text-paper-dim">{detail}</p>
+      <Notice className="max-w-[62ch]">{detail}</Notice>
       {error instanceof Error ? (
         <p className="text-caption text-paper-faint stretch-condensed">{error.message}</p>
       ) : null}

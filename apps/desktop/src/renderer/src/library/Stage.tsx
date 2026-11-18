@@ -1,7 +1,7 @@
 import type { ServerUrl } from "@harakiri/jellyfin";
 import { useState, type ReactNode } from "react";
 import { imageUrl, programmeNotes, type Entry, type ImageRef } from "../data/entry";
-import { ProgrammeNotes, SeenMark } from "../ui/marks";
+import { ProgrammeNotes, SectionTab, SeenMark } from "../ui/marks";
 
 export function backdropUrl(server: ServerUrl, image: ImageRef): string {
   return imageUrl(
@@ -78,11 +78,7 @@ export function Margin({
           Seen
         </span>
       ) : null}
-      <div className="flex min-h-[12rem] w-[3.5rem] flex-1 items-end justify-center bg-band pb-4">
-        <span className="text-body font-[760] whitespace-nowrap text-paper stretch-wide [writing-mode:vertical-rl] rotate-180">
-          {section}
-        </span>
-      </div>
+      <SectionTab>{section}</SectionTab>
     </div>
   );
 }

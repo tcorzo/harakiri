@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useActionHandler } from "../input/handlers";
 import { ListAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
+import { SectionHead } from "../ui/marks";
 
 export interface TrackOption {
   readonly index: number;
@@ -45,9 +46,7 @@ export function TrackPicker({
         aria-label={title}
         className="absolute inset-y-0 right-0 z-20 flex w-[46rem] flex-col gap-6 bg-ink-raised pl-12 pr-safe-x py-safe-y shadow-[-1.5rem_0_4rem_var(--color-shade)]"
       >
-        <h2 className="m-0 bg-band px-4 py-1.5 self-start text-body font-[760] stretch-wide">
-          {title}
-        </h2>
+        <SectionHead>{title}</SectionHead>
         <div className="-mx-3 flex flex-col overflow-hidden px-3 py-2">
           {options.map((option, i) => (
             <ListAction

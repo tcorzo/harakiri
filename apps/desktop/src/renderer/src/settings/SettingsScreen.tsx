@@ -7,6 +7,7 @@ import { forgetSession } from "../data/forget";
 import { useSignedIn } from "../data/session";
 import { ListAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
+import { SectionTab } from "../ui/marks";
 import { versionLine } from "./version-line";
 
 export function SettingsScreen() {
@@ -48,11 +49,7 @@ export function SettingsScreen() {
       >
         <div className="flex w-margin shrink-0 flex-col items-start gap-6">
           <span className="text-heading font-[820] stretch-extra-wide">harakiri</span>
-          <div className="flex min-h-[16rem] w-[3.5rem] flex-1 items-end justify-center bg-band pb-4">
-            <span className="rotate-180 text-body font-[760] whitespace-nowrap text-paper stretch-wide [writing-mode:vertical-rl]">
-              Settings
-            </span>
-          </div>
+          <SectionTab>Settings</SectionTab>
         </div>
         <div className="flex max-w-[72rem] flex-1 flex-col pt-[7rem]">
           <h1 className="m-0 mb-10 text-title font-[800] stretch-extra-wide">Settings</h1>

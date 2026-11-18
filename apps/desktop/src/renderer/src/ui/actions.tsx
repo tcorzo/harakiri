@@ -30,7 +30,7 @@ function PlayGlyph() {
   );
 }
 
-/** The one place the reserved accent appears: Play and Resume. */
+/** The only red action: Play and Resume, paper on Harakiri Red. Bands share the red but never take focus. */
 export function PlayAction(props: ActionProps) {
   const { ref } = useAction(props);
   return (
@@ -48,7 +48,7 @@ export function PlayAction(props: ActionProps) {
   );
 }
 
-/** Every other action: paper type in a hairline frame, so Play stays the only lit object. */
+/** Every other action: paper type in a hairline frame, so Play stays the only red thing the d-pad lands on. */
 export function QuietAction(props: ActionProps) {
   const { ref } = useAction(props);
   return (

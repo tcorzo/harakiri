@@ -417,11 +417,13 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
     mpv.command(...args).catch(() => {});
   };
   const render = () => {
+    const fidelity = fidelityNow();
     overlay(
       controls.visible
         ? renderControls({
             ...entry,
-            signalPath: joinFacts(fidelityNow().facts),
+            signalPath: joinFacts(fidelity.facts),
+            downgraded: fidelity.downgrades.length > 0,
             // A file the server could not read is not a choice to convert it; say what happened.
             transcodeReasons: resolution.unreadable
               ? ["The server could not read this file"]

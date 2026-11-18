@@ -16,6 +16,7 @@ import { useActionHandler } from "../input/handlers";
 import { ListAction, QuietAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
 import { EntryField, firstKey, Keyboard } from "../ui/keyboard";
+import { Notice, SectionTab } from "../ui/marks";
 import {
   initialOnboarding,
   minimumServer,
@@ -54,13 +55,7 @@ function Frame({
     <main aria-label={title} className="flex h-screen gap-10 bg-ink px-safe-x py-safe-y">
       <div className="flex w-margin shrink-0 flex-col items-start gap-6">
         <span className="text-heading font-[820] stretch-extra-wide">harakiri</span>
-        {step === null ? null : (
-          <div className="flex min-h-[16rem] w-[3.5rem] flex-1 items-end justify-center bg-band pb-4">
-            <span className="rotate-180 text-body font-[760] whitespace-nowrap text-paper stretch-wide [writing-mode:vertical-rl]">
-              {step}
-            </span>
-          </div>
-        )}
+        {step === null ? null : <SectionTab>{step}</SectionTab>}
       </div>
       <div className="flex min-w-0 flex-1 flex-col pt-[7rem]">{children}</div>
     </main>
@@ -85,15 +80,7 @@ function Heading({
 }
 
 function Problem({ children }: { readonly children: ReactNode }) {
-  return (
-    <p role="alert" className="flex max-w-[56ch] items-start gap-4 text-body text-paper">
-      <span
-        aria-hidden="true"
-        className="mt-[0.55em] block h-[0.75rem] w-[0.75rem] shrink-0 bg-alert"
-      />
-      <span>{children}</span>
-    </p>
-  );
+  return <Notice className="max-w-[56ch]">{children}</Notice>;
 }
 
 function serverProblemText(problem: ServerProblem, address: string): string {
