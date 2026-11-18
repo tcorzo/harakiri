@@ -157,7 +157,7 @@ test("another user types a name first, and a blank name is not accepted", () => 
     { type: "edit", text: " ana " },
   ] satisfies OnboardingEvent[];
 
-  const state = named.reduce(onboarding, { step: "chooseUser", server } as OnboardingState);
+  const state = named.reduce<OnboardingState>(onboarding, { step: "chooseUser", server });
   expect(state).toEqual({ step: "username", server, username: " ana " });
   expect(onboarding(state, { type: "submitUsername" })).toEqual({
     step: "password",
