@@ -1,5 +1,9 @@
 appId: dev.harakiri.desktop
 productName: harakiri
+# electron-builder derives the update cache dir (app-update.yml updaterCacheDirName) from the package
+# name and ignores publish.updaterCacheDirName; renaming it after release would orphan users' update caches.
+extraMetadata:
+  name: harakiri
 directories:
   output: dist
 files:
