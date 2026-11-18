@@ -16,6 +16,8 @@ export const channels = {
   sessionSave: "session:save",
   sessionClear: "session:clear",
   deviceId: "device:id",
+  updateStatus: "updates:status",
+  updateRestart: "updates:restart",
   discover: "server:discover",
   prepare: "player:prepare",
   play: "player:play",
@@ -180,6 +182,11 @@ export interface HarakiriBridge {
     readonly clear: () => Promise<void>;
   };
   readonly discover: () => Promise<DiscoveredServer[]>;
+  readonly updates: {
+    readonly status: () => Promise<UpdateStatus>;
+    /** Quits and installs the downloaded update; does nothing unless one is ready. */
+    readonly restart: () => Promise<void>;
+  };
   readonly player: {
     /**
      * Resolves PlaybackInfo for the request and returns what the server decided, so the handoff

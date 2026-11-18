@@ -118,9 +118,10 @@ async function main(): Promise<void> {
     createUpdater: electronUpdater,
     isPlaying: player.isPlaying,
     releaseLock: () => app.releaseSingleInstanceLock(),
+    quit: () => app.quit(),
   });
   installContentSecurityPolicy(session.defaultSession, isAppUrl, contentSecurityPolicy(appUrl));
-  registerIpc(isAppUrl);
+  registerIpc(isAppUrl, updates);
   createWindow();
 }
 

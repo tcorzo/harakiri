@@ -67,6 +67,7 @@ const start = (fake: ReturnType<typeof fakeUpdater>, over: Partial<UpdateDeps> =
     createUpdater: () => fake.updater,
     isPlaying: () => false,
     releaseLock: () => {},
+    quit: () => {},
     ...over,
   });
 
@@ -86,6 +87,7 @@ test("unsupported without an AppImage, and electron-updater is never created", (
     },
     isPlaying: () => false,
     releaseLock: () => {},
+    quit: () => {},
   });
   expect(updates.status()).toEqual({ state: "unsupported" });
   expect(() => updates.installIfReady()).not.toThrow();
@@ -191,4 +193,22 @@ test("a download that rejects without an error event fails and is retried", asyn
   expect(updates.status()).toEqual({ state: "failed", message: "ECONNRESET" });
   await vi.advanceTimersByTimeAsync(21_600_000);
   expect(fake.calls.check).toBe(2);
+});
+
+test("restart quits only when an update is ready", () => {
+  const fake = fakeUpdater();
+  const quit = vi.fn<() => void>();
+  const releaseLock = vi.fn<() => void>();
+  const updates = start(fake, { quit, releaseLock });
+
+  updates.restart();
+  expect(quit).not.toHaveBeenCalled();
+
+  fake.on.downloaded?.("0.3.0");
+  updates.restart();
+  expect(quit).toHaveBeenCalledTimes(1);
+
+  updates.installIfReady();
+  expect(releaseLock).toHaveBeenCalledTimes(1);
+  expect(fake.calls.installs).toEqual([true]);
 });

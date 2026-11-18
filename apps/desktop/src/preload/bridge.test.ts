@@ -37,6 +37,7 @@ test("the test surface is exposed only for e2e", () => {
     "discover",
     "player",
     "session",
+    "updates",
   ]);
   expect(Object.keys(createBridge(ipc, { e2e: true, warn })).toSorted()).toEqual([
     "deviceId",
@@ -44,6 +45,7 @@ test("the test surface is exposed only for e2e", () => {
     "player",
     "session",
     "test",
+    "updates",
   ]);
 });
 
@@ -130,4 +132,20 @@ test("deviceId asks main and returns its id", async () => {
     "6f9619ff-8b86-4d01-b42d-00cf4fc964ff",
   );
   expect(invoked).toEqual([["device:id"]]);
+});
+
+test("update status is parsed and restart invokes its channel", async () => {
+  const { ipc, invoked } = fakeIpc({
+    [channels.updateStatus]: { state: "ready", version: "0.3.0" },
+  });
+  const bridge = createBridge(ipc, { e2e: false, warn });
+
+  expect(await bridge.updates.status()).toEqual({ state: "ready", version: "0.3.0" });
+  await bridge.updates.restart();
+  expect(invoked).toContainEqual([channels.updateRestart]);
+
+  const bad = fakeIpc({ [channels.updateStatus]: { state: "ready" } });
+  await expect(createBridge(bad.ipc, { e2e: false, warn }).updates.status()).rejects.toThrow(
+    /version/,
+  );
 });

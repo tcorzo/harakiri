@@ -9,6 +9,7 @@ import {
   PlayerProbe,
   Session,
   SignalReport,
+  UpdateStatus,
 } from "../shared/bridge";
 import { fromIpc } from "../shared/errors";
 
@@ -43,6 +44,10 @@ export function createBridge(
       get: () => invoke(channels.sessionGet, Session.nullable()),
       save: (session) => invoke(channels.sessionSave, z.undefined(), session),
       clear: () => invoke(channels.sessionClear, z.undefined()),
+    },
+    updates: {
+      status: () => invoke(channels.updateStatus, UpdateStatus),
+      restart: () => invoke(channels.updateRestart, z.undefined()),
     },
     discover: () => invoke(channels.discover, z.array(DiscoveredServer)),
     player: {

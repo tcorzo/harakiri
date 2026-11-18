@@ -21,6 +21,8 @@ export interface UpdateDeps {
   readonly createUpdater: () => UpdaterLike;
   readonly isPlaying: () => boolean;
   readonly releaseLock: () => void;
+  /** Quits the app; the quit hold stops mpv and then installs. */
+  readonly quit: () => void;
   readonly checkEveryMs?: number; // 21_600_000
   readonly idlePollMs?: number; // 60_000
 }
@@ -28,6 +30,8 @@ export interface UpdateDeps {
 export interface Updates {
   status(): UpdateStatus;
   installIfReady(): void;
+  /** Quits and relaunches into the downloaded update; does nothing unless one is ready. */
+  restart(): void;
 }
 
 const CHECK_EVERY_MS = 21_600_000;
@@ -40,12 +44,16 @@ const swallow = (what: string) => (error: unknown) => {
 
 export function startUpdates(deps: UpdateDeps): Updates {
   if (deps.appImage === undefined) {
-    return { status: () => ({ state: "unsupported" }), installIfReady: () => {} };
+    return {
+      status: () => ({ state: "unsupported" }),
+      installIfReady: () => {},
+      restart: () => {},
+    };
   }
 
   const updater = deps.createUpdater();
   let status: UpdateStatus = { state: "idle" };
-  const relaunch = false;
+  let relaunch = false;
 
   const set = (next: UpdateStatus): void => {
     status = next;
@@ -90,6 +98,11 @@ export function startUpdates(deps: UpdateDeps): Updates {
 
   return {
     status: () => status,
+    restart: () => {
+      if (status.state !== "ready") return;
+      relaunch = true;
+      deps.quit();
+    },
     installIfReady: () => {
       if (status.state !== "ready") return;
       if (relaunch) deps.releaseLock();

@@ -22,7 +22,7 @@ describe("adaptUpdater", () => {
     adaptUpdater(fake as unknown as BaseUpdater);
     expect(fake.autoDownload).toBe(false);
     expect(fake.autoInstallOnAppQuit).toBe(false);
-    const logger = fake.logger as Record<string, unknown>;
+    const logger = fake.logger as unknown as Record<string, unknown>;
     expect(typeof logger["info"]).toBe("function");
     expect(typeof logger["warn"]).toBe("function");
     expect(typeof logger["error"]).toBe("function");

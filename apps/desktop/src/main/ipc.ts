@@ -3,6 +3,7 @@ import { channels, NewSession, PlayRequest } from "../shared/bridge";
 import { discoverServers } from "./discovery";
 import { env, isE2E } from "./env";
 import { forgetPrepared, play, prepare, probe, stop } from "./player/index";
+import type { Updates } from "./updates";
 import { type AppUrlCheck, fromAppOnly } from "./security";
 import { clearSession, deviceId, loadSession, saveSession } from "./session";
 
@@ -10,7 +11,10 @@ import { clearSession, deviceId, loadSession, saveSession } from "./session";
  * Registers every main-process handler. Only frames showing the app may call them, and payloads
  * from the renderer are untrusted and parsed here.
  */
-export function registerIpc(isAppUrl: AppUrlCheck): void {
+export function registerIpc(
+  isAppUrl: AppUrlCheck,
+  updates: Pick<Updates, "status" | "restart">,
+): void {
   const handle = (
     channel: string,
     handler: (event: IpcMainInvokeEvent, payload: unknown) => unknown,
@@ -19,6 +23,11 @@ export function registerIpc(isAppUrl: AppUrlCheck): void {
   };
 
   handle(channels.deviceId, () => deviceId());
+
+  handle(channels.updateStatus, () => updates.status());
+  handle(channels.updateRestart, () => {
+    updates.restart();
+  });
 
   handle(channels.sessionGet, () => loadSession());
   // A resolution prepared under the old session holds its token: it must not outlive it.
