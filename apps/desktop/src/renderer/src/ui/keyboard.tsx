@@ -143,12 +143,24 @@ export function Keyboard({
 
   const press = (key: Key): void => {
     match(key)
-      .with({ kind: "char" }, (k) => onChange(value + k.char))
-      .with({ kind: "insert" }, (k) => onChange(value + k.text))
-      .with({ kind: "case" }, (k) => setLetterCase(k.to))
-      .with({ kind: "space" }, () => onChange(`${value} `))
-      .with({ kind: "delete" }, () => onChange(value.slice(0, -1)))
-      .with({ kind: "submit" }, () => onSubmit())
+      .with({ kind: "char" }, (k) => {
+        onChange(value + k.char);
+      })
+      .with({ kind: "insert" }, (k) => {
+        onChange(value + k.text);
+      })
+      .with({ kind: "case" }, (k) => {
+        setLetterCase(k.to);
+      })
+      .with({ kind: "space" }, () => {
+        onChange(`${value} `);
+      })
+      .with({ kind: "delete" }, () => {
+        onChange(value.slice(0, -1));
+      })
+      .with({ kind: "submit" }, () => {
+        onSubmit();
+      })
       .exhaustive();
   };
 
@@ -188,7 +200,9 @@ export function Keyboard({
               spoken={spokenLabel(key, submitLabel)}
               wide={key.kind !== "char"}
               primary={key.kind === "submit"}
-              onPress={() => press(key)}
+              onPress={() => {
+                press(key);
+              }}
               onKeyDown={onKeyDown}
             />
           ))
@@ -228,7 +242,9 @@ export function EntryField({
         spellCheck={false}
         autoComplete="off"
         autoCapitalize="off"
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          onChange(event.target.value);
+        }}
         onKeyDown={(event) => {
           if (event.key !== "Enter") {
             return;

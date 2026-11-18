@@ -33,7 +33,9 @@ test.use({
   },
 });
 
-test.beforeEach(({ signIn }) => signIn());
+test.beforeEach(({ signIn }) => {
+  signIn();
+});
 
 const cases = [
   {

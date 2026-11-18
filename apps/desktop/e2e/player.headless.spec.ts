@@ -29,7 +29,9 @@ const request = (item: PickedItem, startSeconds: number) => ({
   startPositionTicks: ticks(startSeconds),
 });
 
-test.beforeEach(({ signIn }) => signIn());
+test.beforeEach(({ signIn }) => {
+  signIn();
+});
 
 test("plays from a start position over a direct Jellyfin stream and reports it", async ({
   launch,

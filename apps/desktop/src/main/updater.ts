@@ -18,9 +18,15 @@ export function adaptUpdater(real: BaseUpdater): UpdaterLike {
   real.autoDownload = false;
   real.autoInstallOnAppQuit = false;
   real.logger = {
-    info: (message) => log.info("{m}", { m: text(message) }),
-    warn: (message) => log.warn("{m}", { m: text(message) }),
-    error: (message) => log.error("{m}", { m: text(message) }),
+    info: (message) => {
+      log.info("{m}", { m: text(message) });
+    },
+    warn: (message) => {
+      log.warn("{m}", { m: text(message) });
+    },
+    error: (message) => {
+      log.error("{m}", { m: text(message) });
+    },
   };
 
   // The token of the download in flight; cancelDownload cancels it.
@@ -39,19 +45,29 @@ export function adaptUpdater(real: BaseUpdater): UpdaterLike {
     },
     install: (relaunch) => real.install(true, relaunch),
     onAvailable: (listener) => {
-      real.on("update-available", (info) => listener(info.version));
+      real.on("update-available", (info) => {
+        listener(info.version);
+      });
     },
     onNotAvailable: (listener) => {
-      real.on("update-not-available", () => listener());
+      real.on("update-not-available", () => {
+        listener();
+      });
     },
     onProgress: (listener) => {
-      real.on("download-progress", (info) => listener(info.percent));
+      real.on("download-progress", (info) => {
+        listener(info.percent);
+      });
     },
     onDownloaded: (listener) => {
-      real.on("update-downloaded", (event) => listener(event.version));
+      real.on("update-downloaded", (event) => {
+        listener(event.version);
+      });
     },
     onError: (listener) => {
-      real.on("error", (error) => listener(error));
+      real.on("error", (error) => {
+        listener(error);
+      });
     },
   };
 }

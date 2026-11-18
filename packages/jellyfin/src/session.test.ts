@@ -74,14 +74,18 @@ const mock = setupServer(
   })
 );
 
-beforeAll(() => mock.listen({ onUnhandledFrame: "error" }));
+beforeAll(() => {
+  mock.listen({ onUnhandledFrame: "error" });
+});
 
 afterEach(() => {
   received.length = 0;
   mock.resetHandlers();
 });
 
-afterAll(() => mock.close());
+afterAll(() => {
+  mock.close();
+});
 
 const session = {
   serverUrl: "http://jf.test/",

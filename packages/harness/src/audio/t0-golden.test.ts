@@ -21,7 +21,9 @@ beforeAll(() => {
   }
 });
 
-afterAll(() => rmSync(dir, { recursive: true, force: true }));
+afterAll(() => {
+  rmSync(dir, { recursive: true, force: true });
+});
 
 function clip(codec: ClipCodec): Clip {
   const found = clips.get(codec);

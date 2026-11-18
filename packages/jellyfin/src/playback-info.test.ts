@@ -18,9 +18,13 @@ const server = setupServer(
   })
 );
 
-beforeAll(() => server.listen({ onUnhandledFrame: "error" }));
+beforeAll(() => {
+  server.listen({ onUnhandledFrame: "error" });
+});
 
-afterAll(() => server.close());
+afterAll(() => {
+  server.close();
+});
 
 test("the server receives a condition-free profile and the auth header through the generated ky client", async () => {
   const identity = {

@@ -38,5 +38,12 @@ export function openRunLog(
     writeSync(fd, format(record));
   };
 
-  return { path, sink: Object.assign(sink, { [Symbol.dispose]: () => closeSync(fd) }) };
+  return {
+    path,
+    sink: Object.assign(sink, {
+      [Symbol.dispose]: () => {
+        closeSync(fd);
+      },
+    }),
+  };
 }

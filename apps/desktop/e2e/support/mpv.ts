@@ -79,10 +79,9 @@ export async function mpvCommand(userDataDir: string, ...command: JsonValue[]): 
     const requestId = Math.floor(Math.random() * 2 ** 31);
 
     const reply = new Promise<unknown>((resolve, reject) => {
-      const timer = setTimeout(
-        () => reject(new Error(`mpv did not answer ${JSON.stringify(command)}`)),
-        5000
-      );
+      const timer = setTimeout(() => {
+        reject(new Error(`mpv did not answer ${JSON.stringify(command)}`));
+      }, 5000);
 
       createInterface({ input: socket }).on("line", (line) => {
         const message = Reply.safeParse(JSON.parse(line));

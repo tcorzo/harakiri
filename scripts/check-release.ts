@@ -25,14 +25,18 @@ const version =
   JSON.parse(readFileSync(join(root, "apps/desktop/package.json"), "utf8")).version;
 
 let failed = false;
-const pass = (check: string) => console.log(`ok: ${check}`);
+const pass = (check: string) => {
+  console.log(`ok: ${check}`);
+};
 
 const fail = (check: string, why: string) => {
   failed = true;
   console.log(`FAIL: ${check}: ${why}`);
 };
 
-const check = (name: string, why: string | undefined) => (why ? fail(name, why) : pass(name));
+const check = (name: string, why: string | undefined) => {
+  why ? fail(name, why) : pass(name);
+};
 
 type Meta = {
   version?: string;

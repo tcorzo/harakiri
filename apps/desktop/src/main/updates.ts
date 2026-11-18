@@ -129,14 +129,20 @@ export function startUpdates(deps: UpdateDeps): Updates {
       download(version);
     }
   });
-  updater.onNotAvailable(() => set({ state: "idle" }));
+  updater.onNotAvailable(() => {
+    set({ state: "idle" });
+  });
   updater.onProgress((percent) => {
     if (status.state === "downloading") {
       status = { state: "downloading", version: status.version, percent };
     }
   });
-  updater.onDownloaded((version) => set({ state: "ready", version }));
-  updater.onError((error) => set({ state: "failed", message: error.message }));
+  updater.onDownloaded((version) => {
+    set({ state: "ready", version });
+  });
+  updater.onError((error) => {
+    set({ state: "failed", message: error.message });
+  });
 
   check();
   setInterval(() => {

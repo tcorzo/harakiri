@@ -22,7 +22,9 @@ test.use({
 // Software decode of a 4K HEVC remux plus lavapipe rendering; measured at 5 to 8 s per test.
 test.setTimeout(90_000);
 
-test.beforeEach(({ signIn }) => signIn());
+test.beforeEach(({ signIn }) => {
+  signIn();
+});
 
 const ColourParams = z.object({
   gamma: z.string(),

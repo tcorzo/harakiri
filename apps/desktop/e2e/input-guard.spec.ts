@@ -65,7 +65,9 @@ async function stopInMpv(page: Page, shown: ShownItem, userDataDir: string): Pro
   );
 }
 
-test.beforeEach(({ signIn }) => signIn());
+test.beforeEach(({ signIn }) => {
+  signIn();
+});
 
 test("while mpv plays, every pad button reaches nothing in the renderer; once it stops the pad works again", async ({
   launch,

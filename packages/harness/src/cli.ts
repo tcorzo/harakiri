@@ -18,10 +18,12 @@ const parser = command("doctor", object({ command: constant("doctor") }), {
 function report({ check, verdict }: CheckResult): void {
   const line = `${check.label}: ${verdict.detail}`;
   match(verdict.status)
-    .with("ok", () => log.success(line))
-    .with("missing", "outdated", () =>
-      check.required ? log.error(line) : log.warn(`${line} (optional)`)
-    )
+    .with("ok", () => {
+      log.success(line);
+    })
+    .with("missing", "outdated", () => {
+      check.required ? log.error(line) : log.warn(`${line} (optional)`);
+    })
     .exhaustive();
 }
 

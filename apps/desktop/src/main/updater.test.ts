@@ -69,7 +69,9 @@ describe("adaptUpdater", () => {
   it("cancels only the download in flight, and each download gets a fresh token", async () => {
     const fake = fakeUpdater();
     const updater = adaptUpdater(fake as unknown as BaseUpdater);
-    expect(() => updater.cancelDownload()).not.toThrow();
+    expect(() => {
+      updater.cancelDownload();
+    }).not.toThrow();
 
     await updater.download();
     const first = fake.downloadUpdate.mock.calls[0]?.[0];

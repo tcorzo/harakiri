@@ -517,7 +517,9 @@ export function LibraryScreen() {
                     label={`Programme notes for ${hero.title}`}
                     focusable={holding}
                     onFocus={lightHero}
-                    onPress={() => openEntry(hero)}
+                    onPress={() => {
+                      openEntry(hero);
+                    }}
                   >
                     Programme
                   </QuietAction>

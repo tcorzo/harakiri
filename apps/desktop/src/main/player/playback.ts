@@ -340,9 +340,9 @@ async function addSidecarSubtitles(mpv: MpvClient, resolution: Resolution): Prom
   // If mpv died meanwhile, its exit already ends playback with an error.
   await mpv
     .setProperty("sid", resolution.sid === false ? "no" : resolution.sid)
-    .catch((error: unknown) =>
-      logger.warn("mpv could not select the subtitle: {error}", { error })
-    );
+    .catch((error: unknown) => {
+      logger.warn("mpv could not select the subtitle: {error}", { error });
+    });
 }
 
 interface RunContext {
@@ -478,7 +478,9 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
 
   const scheduleHide = () => {
     clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => dispatch({ type: "hide" }), HIDE_AFTER_MS);
+    hideTimer = setTimeout(() => {
+      dispatch({ type: "hide" });
+    }, HIDE_AFTER_MS);
   };
 
   const execute = async (command: Command) =>
@@ -584,9 +586,9 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
         fail(`mpv could not play the file: ${fileError ?? "unknown error"}`);
       }
     });
-    void mpv.exited.then((exit) =>
-      fail(`mpv exited unexpectedly (code ${exit.code ?? exit.signal})`)
-    );
+    void mpv.exited.then((exit) => {
+      fail(`mpv exited unexpectedly (code ${exit.code ?? exit.signal})`);
+    });
 
     // Before the file loads, startPlayback owns the failure and its error event.
     const fail = (error: string) => {
@@ -629,12 +631,12 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
       reportProgress();
       emit();
     }),
-    mpv.observeProperty("aid", mpvTrackId, (aid) =>
-      dispatch({ type: "tracks", aid, sid: controls.sid })
-    ),
-    mpv.observeProperty("sid", mpvTrackId, (sid) =>
-      dispatch({ type: "tracks", aid: controls.aid, sid })
-    ),
+    mpv.observeProperty("aid", mpvTrackId, (aid) => {
+      dispatch({ type: "tracks", aid, sid: controls.sid });
+    }),
+    mpv.observeProperty("sid", mpvTrackId, (sid) => {
+      dispatch({ type: "tracks", aid: controls.aid, sid });
+    }),
   ]);
 
   watch = watchFidelity(mpv, context.fidelity, {

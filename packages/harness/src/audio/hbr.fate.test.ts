@@ -44,7 +44,9 @@ describe("FATE: HBR streams through the extractor and mpv", () => {
   beforeAll(() => {
     dir = mkdtempSync(join(tmpdir(), "harness-fate-"));
   });
-  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  afterAll(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
 
   test.each(["master_audio_7.1_24bit.dts", "dtsx_7.1.4_24bit.dts"])(
     "%s at dtshd_rate 768000 round-trips byte for byte in type IV bursts",

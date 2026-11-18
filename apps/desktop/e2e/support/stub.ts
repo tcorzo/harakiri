@@ -70,7 +70,9 @@ export async function stubServer(routes: Readonly<Record<string, StubReply>>): P
     close: async () =>
       new Promise<void>((resolve) => {
         server.closeAllConnections();
-        server.close(() => resolve());
+        server.close(() => {
+          resolve();
+        });
       }),
   };
 }

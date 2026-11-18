@@ -72,7 +72,9 @@ export function confineWebContents(contents: GuardedContents, isAppUrl: AppUrlCh
       event.preventDefault();
     }
   });
-  contents.on("will-attach-webview", (event) => event.preventDefault());
+  contents.on("will-attach-webview", (event) => {
+    event.preventDefault();
+  });
   contents.setWindowOpenHandler(() => ({ action: "deny" }));
 }
 

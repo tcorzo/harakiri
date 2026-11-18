@@ -70,7 +70,9 @@ function fakeUpdater() {
     hangDownloadsUntilCancelled: () => {
       downloadResult = async () =>
         new Promise((_resolve, reject) => {
-          cancelHook = () => reject(new Error("cancelled"));
+          cancelHook = () => {
+            reject(new Error("cancelled"));
+          };
         });
     },
     failInstall: () => {
@@ -111,7 +113,9 @@ test("unsupported without an AppImage, and electron-updater is never created", (
   });
 
   expect(updates.status()).toEqual({ state: "unsupported" });
-  expect(() => updates.installIfReady()).not.toThrow();
+  expect(() => {
+    updates.installIfReady();
+  }).not.toThrow();
 });
 
 test("checks at start and every 6 hours", () => {
@@ -218,7 +222,9 @@ test("an install that throws marks the update failed", () => {
   fake.failInstall();
   const updates = start(fake);
   fake.on.downloaded?.("0.3.0");
-  expect(() => updates.installIfReady()).not.toThrow();
+  expect(() => {
+    updates.installIfReady();
+  }).not.toThrow();
   expect(updates.status()).toEqual({ state: "failed", message: "EACCES" });
 });
 
@@ -285,7 +291,9 @@ test("a throwing createUpdater reports failed and leaves the app running", () =>
     state: "failed",
     message: "electron-updater did not pick an installing updater on this platform",
   });
-  expect(() => updates.installIfReady()).not.toThrow();
+  expect(() => {
+    updates.installIfReady();
+  }).not.toThrow();
   updates.restart();
   expect(quit).not.toHaveBeenCalled();
   expect(releaseLock).not.toHaveBeenCalled();

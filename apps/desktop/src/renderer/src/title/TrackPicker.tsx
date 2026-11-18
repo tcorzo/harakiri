@@ -57,8 +57,12 @@ export function TrackPicker({
               focusKey={`track-${i}`}
               label={`${option.label}${option.index === chosen ? ", chosen" : ""}`}
               detail={option.index === chosen ? "Chosen" : option.detail}
-              onFocus={({ node }) => node.scrollIntoView({ block: "nearest" })}
-              onPress={() => onChoose(option.index)}
+              onFocus={({ node }) => {
+                node.scrollIntoView({ block: "nearest" });
+              }}
+              onPress={() => {
+                onChoose(option.index);
+              }}
             >
               {option.label}
             </ListAction>

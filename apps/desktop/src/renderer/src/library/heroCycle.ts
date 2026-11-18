@@ -51,7 +51,9 @@ function subscribeReducedMotion(onChange: () => void): () => void {
   const list = window.matchMedia(reducedMotionQuery);
   list.addEventListener("change", onChange);
 
-  return () => list.removeEventListener("change", onChange);
+  return () => {
+    list.removeEventListener("change", onChange);
+  };
 }
 
 export function useReducedMotion(): boolean {
@@ -118,14 +120,18 @@ export function useHeroCycle(ids: readonly string[], holding: boolean) {
 
     arm();
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [auto, count, state.since]);
 
   return {
     index,
     since: state.since,
     auto,
-    next: () => send({ type: "next", now: Date.now(), count }),
+    next: () => {
+      send({ type: "next", now: Date.now(), count });
+    },
     settled: () => settled(state, Date.now()),
   };
 }

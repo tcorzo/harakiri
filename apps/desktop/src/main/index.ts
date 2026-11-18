@@ -48,7 +48,9 @@ function createWindow(): void {
     },
   });
 
-  window.once("ready-to-show", () => window.show());
+  window.once("ready-to-show", () => {
+    window.show();
+  });
   window.on("closed", () => void player.stop());
   void window.loadURL(appUrl);
 }
@@ -116,8 +118,12 @@ async function main(): Promise<void> {
   let updates: Updates | undefined;
   holdQuitUntilStopped(app, player.stop, { afterStop: () => updates?.installIfReady() });
   app.on("second-instance", focusExistingWindow);
-  app.on("web-contents-created", (_event, contents) => confineWebContents(contents, isAppUrl));
-  app.on("window-all-closed", () => app.quit());
+  app.on("web-contents-created", (_event, contents) => {
+    confineWebContents(contents, isAppUrl);
+  });
+  app.on("window-all-closed", () => {
+    app.quit();
+  });
 
   removeStaleMpvDirs({
     dir: tmpdir(),
@@ -136,8 +142,12 @@ async function main(): Promise<void> {
     }),
     createUpdater: electronUpdater,
     isPlaying: player.isPlaying,
-    releaseLock: () => app.releaseSingleInstanceLock(),
-    quit: () => app.quit(),
+    releaseLock: () => {
+      app.releaseSingleInstanceLock();
+    },
+    quit: () => {
+      app.quit();
+    },
   });
   installContentSecurityPolicy(session.defaultSession, isAppUrl, contentSecurityPolicy(appUrl));
   registerIpc(isAppUrl, updates);

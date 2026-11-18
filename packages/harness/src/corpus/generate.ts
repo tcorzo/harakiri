@@ -306,9 +306,9 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
     ]);
 
   const hdr10plusFile = async (seconds: number) =>
-    once(`hdr10plus-${seconds}.json`, async (path) =>
-      writeFileSync(path, hdr10plusJson(seconds * FPS))
-    );
+    once(`hdr10plus-${seconds}.json`, async (path) => {
+      writeFileSync(path, hdr10plusJson(seconds * FPS));
+    });
 
   const video = async (recipe: VideoRecipe, seconds: number): Promise<string> =>
     match(recipe)
@@ -458,7 +458,7 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
       .exhaustive();
 
   const subtitleFile = async (format: SubtitleTrack["format"]) =>
-    once(`sub.${format}`, async (path) =>
+    once(`sub.${format}`, async (path) => {
       writeFileSync(
         path,
         match(format)
@@ -471,8 +471,8 @@ export async function generateCorpus(options: GenerateOptions): Promise<Manifest
             ])
           )
           .exhaustive()
-      )
-    );
+      );
+    });
 
   /** Input args and per-output-stream codec args for one audio track. */
   function audioArgs(track: AudioTrack, n: number, seconds: number, input: number) {

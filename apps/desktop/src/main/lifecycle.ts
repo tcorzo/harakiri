@@ -15,7 +15,9 @@ export async function stopWithin(
   let timer: NodeJS.Timeout | undefined;
 
   const timeout = new Promise<"timed-out">((resolve) => {
-    timer = setTimeout(() => resolve("timed-out"), capMs);
+    timer = setTimeout(() => {
+      resolve("timed-out");
+    }, capMs);
   });
 
   try {

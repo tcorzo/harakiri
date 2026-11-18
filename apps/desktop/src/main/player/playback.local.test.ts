@@ -62,7 +62,11 @@ class FakeJellyfin {
   async close(): Promise<void> {
     this.server.closeAllConnections();
 
-    return new Promise((resolve) => this.server.close(() => resolve()));
+    return new Promise((resolve) =>
+      this.server.close(() => {
+        resolve();
+      })
+    );
   }
 
   posted(path: string): unknown[] {
@@ -92,7 +96,8 @@ class FakeJellyfin {
     const path = url.split("?")[0];
 
     if (path === `/Items/${ITEM}/PlaybackInfo`) {
-      return json(res, this.playbackInfo());
+      json(res, this.playbackInfo());
+      return;
     }
 
     if (path === `/Items/${ITEM}` && this.stallItem) {
@@ -100,7 +105,8 @@ class FakeJellyfin {
     }
 
     if (path === `/Items/${ITEM}`) {
-      return json(res, { Name: "Synthetic", Type: "Movie", RunTimeTicks: this.runTimeTicks });
+      json(res, { Name: "Synthetic", Type: "Movie", RunTimeTicks: this.runTimeTicks });
+      return;
     }
 
     if (path === "/Sessions/Playing/Stopped") {
@@ -125,7 +131,8 @@ class FakeJellyfin {
     }
 
     if (path === `/Videos/${ITEM}/stream`) {
-      return serveFile(req, res, await readFile(this.media));
+      serveFile(req, res, await readFile(this.media));
+      return;
     }
     res.writeHead(404).end();
   }

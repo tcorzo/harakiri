@@ -168,7 +168,9 @@ export function SeriesPage({
     if (chosen !== undefined) {
       seriesPlace.set(series.id, { season: chosen.id, episode: null });
     }
-    startTransition(() => setPicked(index));
+    startTransition(() => {
+      setPicked(index);
+    });
   };
 
   const rememberEpisode = (episode: Entry): void => {
@@ -230,7 +232,9 @@ export function SeriesPage({
                   season={s}
                   index={i}
                   selected={i === picked}
-                  onPick={() => pick(i)}
+                  onPick={() => {
+                    pick(i);
+                  }}
                 />
               ))}
             </fieldset>
@@ -240,8 +244,12 @@ export function SeriesPage({
                   <EpisodeLine
                     key={episode.id}
                     episode={episode}
-                    onFocus={() => rememberEpisode(episode)}
-                    onPress={() => open(episode)}
+                    onFocus={() => {
+                      rememberEpisode(episode);
+                    }}
+                    onPress={() => {
+                      open(episode);
+                    }}
                   />
                 ))}
               </div>

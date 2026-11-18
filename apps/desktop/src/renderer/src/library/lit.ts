@@ -51,7 +51,7 @@ export const useLit = create<LitState>()((set) => ({
   heroId: null,
   movedAt: 0,
   travelling: false,
-  enter: (section) =>
+  enter: (section) => {
     set((state) => {
       if (state.section.id === section.id) {
         return state;
@@ -59,16 +59,22 @@ export const useLit = create<LitState>()((set) => ({
       const now = Date.now();
 
       return { section, movedAt: now, travelling: now - state.movedAt < travelMs };
-    }),
-  light: (entry, section) =>
+    });
+  },
+  light: (entry, section) => {
     set((state) =>
       state.section.id === section.id
         ? { entry, travelling: false }
         : { entry, section, movedAt: Date.now(), travelling: false }
-    ),
-  remember: (place) => set({ place }),
-  setHeroId: (heroId) => set({ heroId }),
-  forget: () =>
+    );
+  },
+  remember: (place) => {
+    set({ place });
+  },
+  setHeroId: (heroId) => {
+    set({ heroId });
+  },
+  forget: () => {
     set({
       entry: null,
       section: tonight,
@@ -76,7 +82,8 @@ export const useLit = create<LitState>()((set) => ({
       heroId: null,
       movedAt: 0,
       travelling: false,
-    }),
+    });
+  },
 }));
 
 export const cardKey = (section: string, entry: string): string => `card|${section}|${entry}`;

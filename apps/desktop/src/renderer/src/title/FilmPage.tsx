@@ -221,11 +221,18 @@ export function FilmPage({
                   <PlayAction
                     focusKey="title-play"
                     label={`Resume ${entry.title}`}
-                    onPress={() => play(entry.positionTicks)}
+                    onPress={() => {
+                      play(entry.positionTicks);
+                    }}
                   >
                     Resume{left === null ? "" : ` · ${left} min left`}
                   </PlayAction>
-                  <QuietAction label="Play from the start" onPress={() => play(0)}>
+                  <QuietAction
+                    label="Play from the start"
+                    onPress={() => {
+                      play(0);
+                    }}
+                  >
                     From the start
                   </QuietAction>
                 </>
@@ -233,7 +240,9 @@ export function FilmPage({
                 <PlayAction
                   focusKey="title-play"
                   label={`Play ${entry.title}`}
-                  onPress={() => play(0)}
+                  onPress={() => {
+                    play(0);
+                  }}
                 >
                   Play
                 </PlayAction>
@@ -242,7 +251,9 @@ export function FilmPage({
                 <QuietAction
                   focusKey="title-sound"
                   label={`Sound: ${audioLabel}`}
-                  onPress={() => setPicking("audio")}
+                  onPress={() => {
+                    setPicking("audio");
+                  }}
                 >
                   <span className="text-paper-dim">Sound</span>
                   <span className="max-w-[22rem] truncate">{audioLabel}</span>
@@ -252,7 +263,9 @@ export function FilmPage({
                 <QuietAction
                   focusKey="title-subtitles"
                   label={`Subtitles: ${subtitleLabel}`}
-                  onPress={() => setPicking("subtitle")}
+                  onPress={() => {
+                    setPicking("subtitle");
+                  }}
                 >
                   <span className="text-paper-dim">Subtitles</span>
                   <span className="max-w-[18rem] truncate">{subtitleLabel}</span>
@@ -291,7 +304,9 @@ export function FilmPage({
               setAudio(index);
               closePicker("title-sound");
             }}
-            onClose={() => closePicker("title-sound")}
+            onClose={() => {
+              closePicker("title-sound");
+            }}
           />
         ) : picking === "subtitle" ? (
           <TrackPicker
@@ -302,7 +317,9 @@ export function FilmPage({
               setSubtitle(index);
               closePicker("title-subtitles");
             }}
-            onClose={() => closePicker("title-subtitles")}
+            onClose={() => {
+              closePicker("title-subtitles");
+            }}
           />
         ) : null}
       </main>

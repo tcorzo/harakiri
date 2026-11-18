@@ -104,7 +104,9 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
   },
 
   signIn: async ({ userDataDir, account }, use) => {
-    await use(() => seedSession(userDataDir, account));
+    await use(() => {
+      seedSession(userDataDir, account);
+    });
   },
 
   apps: async ({ userDataDir }, use) => {

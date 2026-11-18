@@ -13,5 +13,7 @@ export const seriesPlace = {
   set: (series: ItemId, place: SeriesPlace): void => {
     places.set(series, place);
   },
-  clear: (): void => places.clear(),
+  clear: (): void => {
+    places.clear();
+  },
 };

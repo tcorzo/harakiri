@@ -131,7 +131,9 @@ export const ProgrammeRow = memo(function ProgrammeRow({
                       });
                       onFocusEntry(entry, section);
                     }}
-                    onPress={() => onPressEntry(entry)}
+                    onPress={() => {
+                      onPressEntry(entry);
+                    }}
                   />
                 </div>
               );

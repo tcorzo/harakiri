@@ -50,8 +50,9 @@ function run(what: string, command: string, args: readonly string[]): void {
   }
 }
 
-const jellyfinSh = (command: string) =>
+const jellyfinSh = (command: string) => {
   run(`jellyfin.sh ${command}`, resolve(REPO, "dev/jellyfin/jellyfin.sh"), [command]);
+};
 
 const AUTH =
   'MediaBrowser Client="harakiri-e2e-setup", Device="setup", DeviceId="harakiri-e2e-setup", Version="0"';

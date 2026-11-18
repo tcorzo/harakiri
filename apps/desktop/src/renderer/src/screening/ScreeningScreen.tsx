@@ -208,7 +208,8 @@ export function ScreeningScreen() {
   /** A token the server refused is not a failed screening: the owner has to sign in again. */
   const failWith = (error: unknown): void => {
     if (classifyFailure(error).kind !== "signedOut") {
-      return fail(messageOf(error));
+      fail(messageOf(error));
+      return;
     }
     inputMode.getState().setMode("ui");
     setOutcome({ kind: "signedOut", error });
@@ -233,7 +234,8 @@ export function ScreeningScreen() {
 
   const offerNext = async (): Promise<void> => {
     if (entry.kind !== "Episode" || entry.series === null) {
-      return leaveAfterPlayback();
+      leaveAfterPlayback();
+      return;
     }
 
     const next = await queryClient
@@ -306,7 +308,13 @@ export function ScreeningScreen() {
       });
   });
 
-  useEffect(() => window.harakiri.player.onEvent((next) => onPlayerEvent(next)), []);
+  useEffect(
+    () =>
+      window.harakiri.player.onEvent((next) => {
+        onPlayerEvent(next);
+      }),
+    []
+  );
 
   useEffect(() => {
     mounted.current = true;
@@ -323,7 +331,9 @@ export function ScreeningScreen() {
           failWith(error);
         }
       });
-    const house = window.setTimeout(() => setHouseDone(true), handoffTiming.houseMs);
+    const house = window.setTimeout(() => {
+      setHouseDone(true);
+    }, handoffTiming.houseMs);
 
     return () => {
       mounted.current = false;
@@ -342,9 +352,13 @@ export function ScreeningScreen() {
     }
 
     setElapsed("slug");
-    const picture = window.setTimeout(() => handOff(), handoffTiming.slugMs);
+    const picture = window.setTimeout(() => {
+      handOff();
+    }, handoffTiming.slugMs);
 
-    return () => window.clearTimeout(picture);
+    return () => {
+      window.clearTimeout(picture);
+    };
   }, [slugReady]);
 
   useEffect(() => {
@@ -361,7 +375,9 @@ export function ScreeningScreen() {
     } else if (outcome.kind === "failed" || elapsed !== "picture") {
       cancel();
     } else {
-      void window.harakiri.player.stop().catch(() => leaveAfterPlayback());
+      void window.harakiri.player.stop().catch(() => {
+        leaveAfterPlayback();
+      });
     }
   });
 
@@ -439,7 +455,9 @@ export function ScreeningScreen() {
             ) : outcome.kind === "next" ? (
               <NextEpisode
                 next={outcome.next}
-                onPlay={() => playNext(outcome.next)}
+                onPlay={() => {
+                  playNext(outcome.next);
+                }}
                 onLeave={leaveAfterPlayback}
               />
             ) : outcome.kind === "ended" ? (

@@ -24,7 +24,9 @@ export function dispatch(action: Handled): boolean {
 export function useActionHandler(action: Handled, handler: () => void): void {
   const onAction = useEffectEvent(handler);
   useEffect(() => {
-    const entry = (): void => onAction();
+    const entry = (): void => {
+      onAction();
+    };
     stacks[action].push(entry);
 
     return () => {

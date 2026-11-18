@@ -65,7 +65,9 @@ async function gen(out: string, fate: string, requireFate: boolean): Promise<num
     out: resolve(out),
     fateDir: resolve(fate),
     requireFate,
-    log: (line) => (line.startsWith("FATE TIER NOT BUILT") ? log.warn(line) : log.step(line)),
+    log: (line) => {
+      line.startsWith("FATE TIER NOT BUILT") ? log.warn(line) : log.step(line);
+    },
   });
 
   const seconds = ((performance.now() - t0) / 1000).toFixed(1);
@@ -80,7 +82,9 @@ async function gen(out: string, fate: string, requireFate: boolean): Promise<num
 
 async function fetchFateCommand(dir: string, mirror: string): Promise<number> {
   intro(`fetch FATE samples from ${mirror} -> ${dir}`);
-  await fetchFate(resolve(dir), mirror, (line) => log.step(line));
+  await fetchFate(resolve(dir), mirror, (line) => {
+    log.step(line);
+  });
   outro("all FATE samples verified");
 
   return 0;
@@ -97,7 +101,9 @@ try {
         corpus: resolve(p.corpus),
         server: p.server,
         waitSeconds: p.waitSeconds,
-        log: (line) => console.log(line),
+        log: (line) => {
+          console.log(line);
+        },
       })
     )
     .exhaustive();

@@ -189,6 +189,10 @@ function electronStore(): SessionStore {
 }
 
 export const loadSession = (): Session | null => electronStore().load();
-export const saveSession = (session: NewSession): void => electronStore().save(session);
-export const clearSession = (): void => electronStore().clear();
+export const saveSession = (session: NewSession): void => {
+  electronStore().save(session);
+};
+export const clearSession = (): void => {
+  electronStore().clear();
+};
 export const deviceId = (): DeviceId => electronStore().deviceId();

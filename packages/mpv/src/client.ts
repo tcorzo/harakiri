@@ -160,9 +160,9 @@ export async function spawnMpv(options: MpvSpawnOptions): Promise<MpvClient> {
 
   const spawnFailed = new Promise<never>((_, reject) => {
     child.once("error", reject);
-    void exited.then((e) =>
-      reject(new Error(`mpv exited before its IPC socket was ready (code ${e.code})`))
-    );
+    void exited.then((e) => {
+      reject(new Error(`mpv exited before its IPC socket was ready (code ${e.code})`));
+    });
   });
 
   let socket: Socket;
@@ -269,8 +269,10 @@ function createClient({
 
   const dispatch = (message: InboundMessage) => {
     switch (message.kind) {
-      case "reply":
-        return settle(message.reply);
+      case "reply": {
+        settle(message.reply);
+        return;
+      }
       case "property-change":
         propertyHandlers.get(message.change.id)?.(message.change.data);
         break;
@@ -369,7 +371,8 @@ function createClient({
       const id = nextObserveId++;
       propertyHandlers.set(id, (data) => {
         if (data === undefined) {
-          return onChange(undefined);
+          onChange(undefined);
+          return;
         }
         const parsed = schema.safeParse(data);
 
@@ -405,7 +408,9 @@ function createClient({
     async quit(timeoutMs = 3000) {
       // mpv may close the socket before replying to `quit`.
       command("quit").catch(() => {});
-      const timer = setTimeout(() => kill("SIGKILL"), timeoutMs);
+      const timer = setTimeout(() => {
+        kill("SIGKILL");
+      }, timeoutMs);
       const result = await exited;
       clearTimeout(timer);
       await cleanedUp;

@@ -52,7 +52,9 @@ Object.defineProperty(window, "harakiri", {
   },
 });
 
-afterEach(() => listeners.clear());
+afterEach(() => {
+  listeners.clear();
+});
 
 test("the played item is refetched only once the server has the stop report, and only once", () => {
   const queryClient = new QueryClient();

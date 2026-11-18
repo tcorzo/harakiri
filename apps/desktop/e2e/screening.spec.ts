@@ -56,7 +56,9 @@ const stations = async (page: Page) =>
 
 const ticks = (seconds: number) => seconds * TICKS_PER_SECOND;
 
-test.beforeEach(({ signIn }) => signIn());
+test.beforeEach(({ signIn }) => {
+  signIn();
+});
 
 test("Play from the title page: House, Programme, Picture, then mpv plays the item from its resume point, and stopping lands back on an updated Resume", async ({
   launch,

@@ -140,9 +140,9 @@ export function watchFidelity(
     if (failure) {
       await mpv
         .setProperty("time-pos", lastHealthy ?? options.startSeconds)
-        .catch((error: unknown) =>
-          logger.warn("Returning after a step-down failed: {error}", { error })
-        );
+        .catch((error: unknown) => {
+          logger.warn("Returning after a step-down failed: {error}", { error });
+        });
     }
 
     const view = fidelityView(state);
@@ -246,12 +246,14 @@ export function watchFidelity(
     },
     start: () => {
       timer ??= setInterval(() => {
-        void sample().catch((error: unknown) =>
-          logger.warn("Fidelity sample failed: {error}", { error })
-        );
+        void sample().catch((error: unknown) => {
+          logger.warn("Fidelity sample failed: {error}", { error });
+        });
       }, options.intervalMs ?? 500);
     },
     sample,
-    stop: () => clearInterval(timer),
+    stop: () => {
+      clearInterval(timer);
+    },
   };
 }

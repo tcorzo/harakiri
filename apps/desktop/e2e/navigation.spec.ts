@@ -51,7 +51,9 @@ async function downTo(
   throw new Error(`Six moves down never reached ${section}`);
 }
 
-test.beforeEach(({ signIn }) => signIn());
+test.beforeEach(({ signIn }) => {
+  signIn();
+});
 
 test("the arrow keys walk the hero, the rows and the title pages, and focus is never lost", async ({
   launch,

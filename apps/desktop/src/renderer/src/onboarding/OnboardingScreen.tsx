@@ -162,7 +162,9 @@ function Welcome({ send }: { readonly send: Send }) {
           <QuietAction
             focusKey="welcome-begin"
             label="Begin"
-            onPress={() => send({ type: "begin" })}
+            onPress={() => {
+              send({ type: "begin" });
+            }}
           >
             Begin
           </QuietAction>
@@ -227,7 +229,9 @@ function DiscoveredList({ onPick }: { readonly onPick: (address: string) => void
                   focusKey={`server-found-${i}`}
                   label={`${server.name}, ${server.address}`}
                   detail={server.address}
-                  onPress={() => onPick(server.address)}
+                  onPress={() => {
+                    onPick(server.address);
+                  }}
                 >
                   {server.name}
                 </ListAction>
@@ -277,7 +281,9 @@ function ServerStep({ state, send }: Flow) {
             label="Server address"
             value={address}
             masked={false}
-            onChange={(text) => send({ type: "edit", text })}
+            onChange={(text) => {
+              send({ type: "edit", text });
+            }}
             onSubmit={() => void check(address, { type: "submitAddress" })}
           />
           <div className="min-h-[4.5rem]" aria-live="polite">
@@ -291,7 +297,9 @@ function ServerStep({ state, send }: Flow) {
             focusKey="address"
             layout="address"
             value={address}
-            onChange={(text) => send({ type: "edit", text })}
+            onChange={(text) => {
+              send({ type: "edit", text });
+            }}
             onSubmit={() => void check(address, { type: "submitAddress" })}
             submitLabel="Connect"
           />
@@ -342,26 +350,30 @@ function ChooseUser({
             focusKey={`user-${i}`}
             label={user.Name ?? "User"}
             detail={user.HasPassword === false ? "No password" : "Password"}
-            onPress={() =>
+            onPress={() => {
               send({
                 type: "pickUser",
                 username: user.Name ?? "",
                 hasPassword: user.HasPassword !== false,
-              })
-            }
+              });
+            }}
           />
         ))}
         <ListAction
           focusKey={`user-${listed.length === 0 ? 0 : listed.length}`}
           label="Another user"
           detail="Type a user name"
-          onPress={() => send({ type: "otherUser" })}
+          onPress={() => {
+            send({ type: "otherUser" });
+          }}
         />
         {qc.data === true ? (
           <ListAction
             label="Quick Connect"
             detail="Approve a code from another device"
-            onPress={() => send({ type: "startQuickConnect" })}
+            onPress={() => {
+              send({ type: "startQuickConnect" });
+            }}
           />
         ) : null}
       </div>
@@ -383,15 +395,23 @@ function UsernameStep({ username, send }: { readonly username: string; readonly 
           label="User name"
           value={username}
           masked={false}
-          onChange={(text) => send({ type: "edit", text })}
-          onSubmit={() => send({ type: "submitUsername" })}
+          onChange={(text) => {
+            send({ type: "edit", text });
+          }}
+          onSubmit={() => {
+            send({ type: "submitUsername" });
+          }}
         />
         <Keyboard
           focusKey="username"
           layout="text"
           value={username}
-          onChange={(text) => send({ type: "edit", text })}
-          onSubmit={() => send({ type: "submitUsername" })}
+          onChange={(text) => {
+            send({ type: "edit", text });
+          }}
+          onSubmit={() => {
+            send({ type: "submitUsername" });
+          }}
           submitLabel="Next"
         />
       </div>
@@ -422,8 +442,12 @@ function PasswordStep({
           label="Password"
           value={state.password}
           masked
-          onChange={(text) => send({ type: "edit", text })}
-          onSubmit={() => send({ type: "submitPassword" })}
+          onChange={(text) => {
+            send({ type: "edit", text });
+          }}
+          onSubmit={() => {
+            send({ type: "submitPassword" });
+          }}
         />
         <div className="min-h-[4.5rem]" aria-live="polite">
           {state.step === "authenticating" ? (
@@ -436,8 +460,12 @@ function PasswordStep({
           focusKey="password"
           layout="text"
           value={state.password}
-          onChange={(text) => send({ type: "edit", text })}
-          onSubmit={() => send({ type: "submitPassword" })}
+          onChange={(text) => {
+            send({ type: "edit", text });
+          }}
+          onSubmit={() => {
+            send({ type: "submitPassword" });
+          }}
           submitLabel="Sign in"
         />
       </div>
@@ -494,13 +522,19 @@ function QuickConnectStep({
         return;
       }
       match(outcome)
-        .with({ kind: "code" }, (o) => send({ type: "quickConnectCode", code: o.code }))
-        .with({ kind: "failed" }, (o) => send({ type: "quickConnectFailed", problem: o.problem }))
+        .with({ kind: "code" }, (o) => {
+          send({ type: "quickConnectCode", code: o.code });
+        })
+        .with({ kind: "failed" }, (o) => {
+          send({ type: "quickConnectFailed", problem: o.problem });
+        })
         .with({ kind: "signedIn" }, (o) => void finish(o.session))
         .exhaustive();
     });
 
-    return () => abort.abort();
+    return () => {
+      abort.abort();
+    };
   }, [server, identity, send, finish]);
 
   useEffect(() => {
@@ -528,7 +562,9 @@ function QuickConnectStep({
         <QuietAction
           focusKey="quick-connect-back"
           label="Use a password instead"
-          onPress={() => send({ type: "back" })}
+          onPress={() => {
+            send({ type: "back" });
+          }}
         />
       </div>
     </Frame>
@@ -567,13 +603,13 @@ export function OnboardingScreen() {
     if (resumeAddress === undefined || resumeUrls === undefined) {
       return;
     }
-    void checkServer(queryClient, resumeUrls).then((result) =>
+    void checkServer(queryClient, resumeUrls).then((result) => {
       send(
         result.ok
           ? { type: "serverFound", address: resumeAddress, info: result.info }
           : { type: "serverFailed", address: resumeAddress, problem: result.problem }
-      )
-    );
+      );
+    });
   }, [resumeAddress, resumeUrls, queryClient]);
   const navigate = useNavigate();
 
@@ -583,7 +619,9 @@ export function OnboardingScreen() {
     forceFocus: true,
   });
 
-  useActionHandler("back", () => send({ type: "back" }));
+  useActionHandler("back", () => {
+    send({ type: "back" });
+  });
 
   const [finish] = useState(() => async (session: Session): Promise<void> => {
     const { deviceId: _ownedByMain, ...fresh } = session;
