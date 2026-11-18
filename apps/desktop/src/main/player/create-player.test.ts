@@ -45,7 +45,7 @@ const preparePlayback = vi.fn<PlayerWiring["preparePlayback"]>();
 const startPlayback = vi.fn<PlayerWiring["startPlayback"]>();
 const send = vi.fn<(event: PlayerEvent) => void>();
 
-const { forgetPrepared, play, prepare } = createPlayer({
+const wiring: PlayerWiring = {
   loadSession: () => session(token),
   userData: () => "/tmp/harakiri-create-player-test",
   extraArgs: () => [],
@@ -55,7 +55,9 @@ const { forgetPrepared, play, prepare } = createPlayer({
   }),
   preparePlayback,
   startPlayback,
-});
+};
+
+const { forgetPrepared, play, prepare } = createPlayer(wiring);
 
 const preparedFor = () => startPlayback.mock.calls.map((call) => call[3]);
 
@@ -66,6 +68,25 @@ describe("the player", () => {
     forgetPrepared();
     preparePlayback.mockReset().mockResolvedValue(prepared);
     startPlayback.mockReset().mockResolvedValue(idle);
+  });
+
+  it("is playing from play until mpv exits, so the updater never installs under a film", async () => {
+    const exited = Promise.withResolvers<undefined>();
+
+    const player = createPlayer({
+      ...wiring,
+      startPlayback: vi.fn<PlayerWiring["startPlayback"]>().mockResolvedValue({
+        ...idle,
+        done: exited.promise,
+      }),
+    });
+
+    expect(player.isPlaying()).toBe(false);
+    await player.play({ itemId }, send);
+    expect(player.isPlaying()).toBe(true);
+    exited.resolve(undefined);
+    await exited.promise;
+    expect(player.isPlaying()).toBe(false);
   });
 
   it("play reuses the resolution the handoff prepared instead of asking the server again", async () => {
