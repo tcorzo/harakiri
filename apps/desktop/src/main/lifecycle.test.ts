@@ -103,9 +103,36 @@ test("quit waits for the player to stop, then exits once", async () => {
 
 test("quit exits after the cap when the player hangs", async () => {
   const { app, exits, quit } = fakeApp();
-  holdQuitUntilStopped(app, () => new Promise(() => {}), 20);
+  holdQuitUntilStopped(app, () => new Promise(() => {}), { capMs: 20 });
 
   quit();
   await new Promise((resolve) => setTimeout(resolve, 60));
+  expect(exits).toEqual([0]);
+});
+
+test("afterStop runs once, after the player stopped and before exit", async () => {
+  const { app, exits, quit } = fakeApp();
+  const order: string[] = [];
+  holdQuitUntilStopped(app, async () => void order.push("stop"), {
+    afterStop: () => void order.push(`afterStop exits=${exits.length}`),
+  });
+
+  quit();
+  quit();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(order).toEqual(["stop", "afterStop exits=0"]);
+  expect(exits).toEqual([0]);
+});
+
+test("a throwing afterStop still exits", async () => {
+  const { app, exits, quit } = fakeApp();
+  holdQuitUntilStopped(app, () => Promise.resolve(), {
+    afterStop: () => {
+      throw new Error("install failed");
+    },
+  });
+
+  quit();
+  await new Promise((resolve) => setTimeout(resolve, 0));
   expect(exits).toEqual([0]);
 });
