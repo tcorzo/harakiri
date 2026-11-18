@@ -168,7 +168,7 @@ describe(`the Jellyfin at ${server}`, () => {
 
     for (const film of films) {
       expect(film.BackdropImageTags?.length).toBe(1);
-      expect(typeof film.ImageTags?.Logo).toBe("string");
+      expect(film.ImageTags?.Logo).toBeTypeOf("string");
     }
 
     const ranges = films.map(
