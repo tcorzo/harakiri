@@ -115,28 +115,29 @@ Chosen on 2026-10-30 after a researched ledger. Versions are pinned in `mise.tom
 
 ### Chosen
 
-| Problem               | Choice                                                                                                                              | Job                                                    |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| toolchain             | mise: bun 1.4.4, node 26.13.0, hk 2.10.0, dovi_tool 2.3.4, hdr10plus_tool 1.7.2                                                     | exact pins, one onboarding command                     |
-| shell                 | electron 45.1.0                                                                                                                     | TS main process, mature Chromium input                 |
-| dev build / packaging | electron-vite 6.0.0, electron-builder 26.18.0                                                                                       | dev server; AppImage                                   |
-| video                 | system mpv 0.41.0 + libplacebo 7.360.1 + RPM Fusion ffmpeg 8.1.3                                                                    | playback, HDR, passthrough                             |
-| mpv control           | hand-rolled JSON IPC client (`packages/mpv`)                                                                                        | every npm client is stale                              |
-| player controls       | hand-rolled `osd-overlay` ASS from the main process                                                                                 | Wayland cannot stack a web window over mpv             |
-| Jellyfin client       | @hey-api/openapi-ts 0.99.0 + ky 2.2.0, from a pinned 12.4.0 spec                                                                    | generated typed client, zod and Query plugins          |
-| hey-api compiler      | typescript as `npm:@typescript/typescript6@6.0.2` in `packages/jellyfin` only                                                       | TS 7 has no compiler API                               |
-| UI                    | react 19.3.1, vite 8.3.5, tailwindcss 4.3.3, @tanstack/react-router 1.170.46, @tanstack/react-query 5.105.0, zustand 5.0.16         | renderer stack                                         |
-| focus navigation      | @noriginmedia/norigin-spatial-navigation 3.4.0, @tanstack/react-virtual 3.14.24                                                     | d-pad navigation over virtualized rows                 |
-| gamepad               | Gamepad API in the renderer; mpv `--input-gamepad` during playback                                                                  | no native addon                                        |
-| validation / types    | zod 4.6.7, ts-pattern 5.9.2, es-toolkit 1.53.0, type-fest 5.10.0                                                                    | IO edges, exhaustive matching                          |
-| config                | @t3-oss/env-core 0.13.11                                                                                                            | validated env                                          |
-| logging               | @logtape/logtape 2.4.2, @logtape/pretty 2.4.2                                                                                       | one API in main, renderer and CLI                      |
-| harness CLI           | @optique/core, @optique/run, @optique/zod 1.3.6, @clack/prompts 1.8.1                                                               | typed subcommands, terminal output                     |
-| IEC 61937 extraction  | hand-rolled (`packages/harness`)                                                                                                    | FFmpeg's spdif demuxer cannot read TrueHD or DTS-HD    |
-| tests                 | vitest 5.0.5, @vitest/browser-playwright 5.0.5, @playwright/test 1.64.1, @testing-library/react 16.3.3, happy-dom 21.0.4, msw 3.0.3 | unit, browser-mode focus tests, Electron e2e           |
-| lint / format / types | oxlint 1.90.0 + oxlint-tsgolint 7.0.2005, oxfmt 0.75.0, typescript 7.0.2                                                            |                                                        |
-| hooks                 | hk 2.10.0 (`hk.pkl`)                                                                                                                | lint and format on commit, typecheck and tests on push |
-| headless HDR          | kwin_wayland `--virtual`, weston 15 headless, lavapipe                                                                              | HDR harness without a display                          |
+| Problem               | Choice                                                                                                                              | Job                                                                  |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| toolchain             | mise: bun 1.4.4, node 26.13.0, hk 2.10.0, dovi_tool 2.3.4, hdr10plus_tool 1.7.2                                                     | exact pins, one onboarding command                                   |
+| shell                 | electron 45.1.0                                                                                                                     | TS main process, mature Chromium input                               |
+| dev build / packaging | electron-vite 6.0.0, electron-builder 26.18.0                                                                                       | dev server; AppImage                                                 |
+| video                 | system mpv 0.41.0 + libplacebo 7.360.1 + RPM Fusion ffmpeg 8.1.3                                                                    | playback, HDR, passthrough                                           |
+| mpv control           | hand-rolled JSON IPC client (`packages/mpv`)                                                                                        | every npm client is stale                                            |
+| player controls       | hand-rolled `osd-overlay` ASS from the main process                                                                                 | Wayland cannot stack a web window over mpv                           |
+| Jellyfin client       | @hey-api/openapi-ts 0.99.0 + ky 2.2.0, from a pinned 12.4.0 spec                                                                    | generated typed client, zod and Query plugins                        |
+| hey-api compiler      | typescript as `npm:@typescript/typescript6@6.0.2` in `packages/jellyfin` only                                                       | TS 7 has no compiler API                                             |
+| UI                    | react 19.3.1, vite 8.3.5, tailwindcss 4.3.3, @tanstack/react-router 1.170.46, @tanstack/react-query 5.105.0, zustand 5.0.16         | renderer stack                                                       |
+| focus navigation      | @noriginmedia/norigin-spatial-navigation 3.4.0, @tanstack/react-virtual 3.14.24                                                     | d-pad navigation over virtualized rows                               |
+| gamepad               | Gamepad API in the renderer; mpv `--input-gamepad` during playback                                                                  | no native addon                                                      |
+| validation / types    | zod 4.6.7, ts-pattern 5.9.2, es-toolkit 1.53.0, type-fest 5.10.0                                                                    | IO edges, exhaustive matching                                        |
+| config                | @t3-oss/env-core 0.13.11                                                                                                            | validated env                                                        |
+| logging               | @logtape/logtape 2.4.2, @logtape/pretty 2.4.2                                                                                       | one API in main, renderer and CLI                                    |
+| harness CLI           | @optique/core, @optique/run, @optique/zod 1.3.6, @clack/prompts 1.8.1                                                               | typed subcommands, terminal output                                   |
+| IEC 61937 extraction  | hand-rolled (`packages/harness`)                                                                                                    | FFmpeg's spdif demuxer cannot read TrueHD or DTS-HD                  |
+| tests                 | vitest 5.0.5, @vitest/browser-playwright 5.0.5, @playwright/test 1.64.1, @testing-library/react 16.3.3, happy-dom 21.0.4, msw 3.0.3 | unit, browser-mode focus tests, Electron e2e                         |
+| lint / format / types | oxlint 1.90.0 + oxlint-tsgolint 7.0.2005, oxfmt 0.75.0, typescript 7.0.2                                                            |                                                                      |
+| hooks                 | hk 2.10.0 (`hk.pkl`)                                                                                                                | lint and format on commit, typecheck and tests on push               |
+| headless HDR          | kwin_wayland `--virtual`, weston 15 headless, lavapipe                                                                              | HDR harness without a display                                        |
+| releases              | googleapis/release-please-action v5 (release-please 17.6.0)                                                                         | version, changelog, tag and GitHub release from Conventional Commits |
 
 ### Considered, rejected
 

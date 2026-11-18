@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to rebuild and re-upload, e.g. v0.2.0"
+        required: true
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  release-please:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+    steps:
+      - id: rp
+        uses: googleapis/release-please-action@v5
+      # release-please bumps apps/desktop/package.json but not bun.lock, which records it too.
+      - if: steps.rp.outputs.pr
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ fromJSON(steps.rp.outputs.pr).headBranchName }}
+      - if: steps.rp.outputs.pr
+        uses: jdx/mise-action@v4
+        with:
+          install_args: bun
+      - if: steps.rp.outputs.pr
+        shell: bash
+        run: |
+          set -euo pipefail
+          bun install --ignore-scripts
+          git diff --quiet -- bun.lock && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: sync bun.lock with the release version" -- bun.lock
+          git push
+
+  package:
+    needs: release-please
+    if: ${{ !cancelled() && (needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-24.04 # pinned: an older glibc keeps the AppImage portable
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
+    steps:
+      - shell: bash
+        run: '[[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a release tag: $TAG" >&2; exit 1; }'
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: jdx/mise-action@v4
+        with:
+          install_args: bun node
+      - run: bun install --frozen-lockfile
+      - run: mise run lint && mise run lint:skips && mise run lint:private && mise run typecheck
+      - run: mise run package
+      - run: mise run package:check "${TAG#v}"
+      - run: gh release upload "$TAG" apps/desktop/dist/harakiri-x86_64.AppImage apps/desktop/dist/latest-linux.yml --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
