@@ -20,6 +20,9 @@ const Sinks = z.array(
   z.object({ name: z.string(), description: z.string().optional(), formats: z.array(z.string()) }),
 );
 
+/** A format's encoding: PipeWire may append attributes, as in `ac3-iec61937, format.rate = "…"`. */
+const encoding = (format: string): string => format.split(",", 1)[0]!.trim();
+
 /**
  * The default sink, where mpv's `audio-device=auto` plays, from `pactl --format=json info` and
  * `list sinks`. A sink that lists only `pcm` (analog outputs, headsets, an HDMI port whose
@@ -32,7 +35,9 @@ export function outputFromPactl(info: unknown, sinks: unknown): AudioOutput {
   return {
     kind: "known",
     name: sink.description ?? sink.name,
-    bitstream: [...new Set(sink.formats.flatMap((format) => CODEC_BY_FORMAT[format] ?? []))],
+    bitstream: [
+      ...new Set(sink.formats.flatMap((format) => CODEC_BY_FORMAT[encoding(format)] ?? [])),
+    ],
   };
 }
 

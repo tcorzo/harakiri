@@ -23,6 +23,30 @@ test("an HDMI sink with passthrough on takes exactly the codecs PipeWire lists",
   ).toEqual({ kind: "known", name: "AV receiver", bitstream: ["ac3", "eac3", "truehd", "dts-hd"] });
 });
 
+test("a format carrying PipeWire's rate attribute still names its codec", () => {
+  const rate = 'format.rate = "{ \\"min\\": 32000, \\"max\\": 192000 }"';
+  expect(
+    outputFromPactl(info, [
+      {
+        name: "alsa_output.hdmi",
+        description: "AV receiver",
+        formats: [
+          "pcm",
+          `dts-iec61937, ${rate}`,
+          `ac3-iec61937, ${rate}`,
+          `eac3-iec61937, ${rate}`,
+          `truehd-iec61937, ${rate}`,
+          `dtshd-iec61937, ${rate}`,
+        ],
+      },
+    ]),
+  ).toEqual({
+    kind: "known",
+    name: "AV receiver",
+    bitstream: ["dts", "ac3", "eac3", "truehd", "dts-hd"],
+  });
+});
+
 test("an analog sink takes no bitstream", () => {
   expect(
     outputFromPactl({ default_sink_name: "usb-interface" }, [
