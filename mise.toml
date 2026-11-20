@@ -122,6 +122,11 @@ description = "Build the Linux AppImage and its update metadata into apps/deskto
 dir = "{{config_root}}/apps/desktop"
 run = "../../scripts/bounded.sh package 4G -- bun run package"
 
+[tasks."package:icons"]
+description = "Render the AppImage icons in apps/desktop/build/icons from docs/assets/readme/icon.svg (needs ImageMagick with librsvg)"
+dir = "{{config_root}}"
+run = "for s in 256 512; do magick -background none RSVG:docs/assets/readme/icon.svg -resize ${s}x${s} -strip PNG32:apps/desktop/build/icons/${s}x${s}.png; done"
+
 [tasks."e2e:down"]
 description = "Stop and remove the e2e Jellyfin container (harakiri-jellyfin-e2e), keeping its scan in .cache/jellyfin-e2e"
 run = "JELLYFIN_DEV_NAME=harakiri-jellyfin-e2e JELLYFIN_DEV_STATE=.cache/jellyfin-e2e dev/jellyfin/jellyfin.sh down"

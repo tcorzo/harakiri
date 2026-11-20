@@ -2,7 +2,8 @@
 /**
  * Fails when apps/desktop/dist does not match its own metadata: latest-linux.yml must describe the
  * AppImage (version, path, sha512, size), the embedded app-update.yml must point at the public
- * GitHub feed with no token, and every package the main bundle imports must be packed in app.asar.
+ * GitHub feed with no token, every package the main bundle imports must be packed in app.asar, and
+ * the desktop entry must carry package.json's desktopName and harakiri's icon, not Electron's.
  *
  *   bun scripts/check-release.ts [version]   version defaults to apps/desktop/package.json's
  *
@@ -64,6 +65,8 @@ const check = (name: string, why: string | undefined) => {
     fail(name, why);
   }
 };
+
+const sha256 = (file: string) => createHash("sha256").update(readFileSync(file)).digest("hex");
 
 const walk = (dir: string): string[] =>
   readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
@@ -145,7 +148,40 @@ const tmp = mkdtempSync(path.join(tmpdir(), "harakiri-release-"));
 try {
   // --appimage-extract works without FUSE.
   execFileSync(file, ["--appimage-extract", "resources/*"], { cwd: tmp, stdio: "ignore" });
-  const resources = path.join(tmp, "squashfs-root/resources");
+  execFileSync(file, ["--appimage-extract", "*.desktop"], { cwd: tmp, stdio: "ignore" });
+  // The root icon is a symlink into the hicolor theme.
+  execFileSync(file, ["--appimage-extract", "*.png"], { cwd: tmp, stdio: "ignore" });
+  execFileSync(file, ["--appimage-extract", "usr/share/icons/*"], { cwd: tmp, stdio: "ignore" });
+  const appDir = path.join(tmp, "squashfs-root");
+  const resources = path.join(appDir, "resources");
+
+  // The AppImage spec puts exactly one desktop entry at the root.
+  const entryName = readdirSync(appDir).find((f) => f.endsWith(".desktop")) ?? "";
+  const desktopEntry = readFileSync(path.join(appDir, entryName), "utf-8");
+  const wmClass = desktopPackage.desktopName.replace(/\.desktop$/u, "");
+
+  check(
+    "desktop entry",
+    [
+      entryName !== desktopPackage.desktopName &&
+        `the entry is ${entryName}, expected ${desktopPackage.desktopName}`,
+      !desktopEntry.includes(`\nStartupWMClass=${wmClass}\n`) && `StartupWMClass is not ${wmClass}`,
+    ]
+      .filter(Boolean)
+      .join("; ")
+  );
+
+  const iconName = /^Icon=(?<name>.+)$/mu.exec(desktopEntry)?.groups?.name ?? "";
+  const iconPath = path.join(appDir, `${iconName}.png`);
+  const iconsDir = path.join(root, "apps/desktop/build/icons");
+  const ourIcons = new Set(readdirSync(iconsDir).map((f) => sha256(path.join(iconsDir, f))));
+
+  check(
+    "icon",
+    existsSync(iconPath) && ourIcons.has(sha256(iconPath))
+      ? undefined
+      : `${iconName}.png is not one of apps/desktop/build/icons`
+  );
 
   const feed = parseYaml(readFileSync(path.join(resources, "app-update.yml"), "utf-8"));
 

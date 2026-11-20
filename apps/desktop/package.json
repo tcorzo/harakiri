@@ -47,5 +47,6 @@
     "tailwindcss": "4.3.3",
     "type-fest": "catalog:",
     "vite": "8.3.5"
-  }
+  },
+  "desktopName": "harakiri.desktop"
 }
