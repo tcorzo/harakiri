@@ -1,3 +1,6 @@
+# 2026.9.16 is the first mise that reads lockfile_version 3. Older ones rewrite mise.lock as version 2 and drop every checksum.
+min_version = "2026.9.16"
+
 [settings]
 lockfile = true
 
