@@ -74,7 +74,19 @@ url = "https://github.com/quietvoid/dovi_tool/releases/download/2.3.4/dovi_tool-
 url_api = "https://api.github.com/repos/quietvoid/dovi_tool/releases/assets/553833101"
 provenance = "github-attestations"
 
+[tools."github:quietvoid/dovi_tool"."platforms.linux-x64-baseline"]
+checksum = "sha256:1844258e13c26607b32224bf1fa82b595d3b35949f5467405fda560daad32b3f"
+url = "https://github.com/quietvoid/dovi_tool/releases/download/2.3.4/dovi_tool-2.3.4-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/quietvoid/dovi_tool/releases/assets/553833101"
+provenance = "github-attestations"
+
 [tools."github:quietvoid/dovi_tool"."platforms.linux-x64-musl"]
+checksum = "sha256:1844258e13c26607b32224bf1fa82b595d3b35949f5467405fda560daad32b3f"
+url = "https://github.com/quietvoid/dovi_tool/releases/download/2.3.4/dovi_tool-2.3.4-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/quietvoid/dovi_tool/releases/assets/553833101"
+provenance = "github-attestations"
+
+[tools."github:quietvoid/dovi_tool"."platforms.linux-x64-musl-baseline"]
 checksum = "sha256:1844258e13c26607b32224bf1fa82b595d3b35949f5467405fda560daad32b3f"
 url = "https://github.com/quietvoid/dovi_tool/releases/download/2.3.4/dovi_tool-2.3.4-x86_64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/quietvoid/dovi_tool/releases/assets/553833101"
@@ -92,7 +104,19 @@ url = "https://github.com/quietvoid/dovi_tool/releases/download/2.3.4/dovi_tool-
 url_api = "https://api.github.com/repos/quietvoid/dovi_tool/releases/assets/553833100"
 provenance = "github-attestations"
 
+[tools."github:quietvoid/dovi_tool"."platforms.macos-x64-baseline"]
+checksum = "sha256:30d4f512eb67b7f1632cd28be5c62989bedad23f4710578aafc20c384b48ece6"
+url = "https://github.com/quietvoid/dovi_tool/releases/download/2.3.4/dovi_tool-2.3.4-universal-macOS.zip"
+url_api = "https://api.github.com/repos/quietvoid/dovi_tool/releases/assets/553833100"
+provenance = "github-attestations"
+
 [tools."github:quietvoid/dovi_tool"."platforms.windows-x64"]
+checksum = "sha256:0d9733d311dfe49f9dca0c350f7e6d978182673d333c6f07f7365daf9e6c81eb"
+url = "https://github.com/quietvoid/dovi_tool/releases/download/2.3.4/dovi_tool-2.3.4-x86_64-pc-windows-msvc.zip"
+url_api = "https://api.github.com/repos/quietvoid/dovi_tool/releases/assets/553833103"
+provenance = "github-attestations"
+
+[tools."github:quietvoid/dovi_tool"."platforms.windows-x64-baseline"]
 checksum = "sha256:0d9733d311dfe49f9dca0c350f7e6d978182673d333c6f07f7365daf9e6c81eb"
 url = "https://github.com/quietvoid/dovi_tool/releases/download/2.3.4/dovi_tool-2.3.4-x86_64-pc-windows-msvc.zip"
 url_api = "https://api.github.com/repos/quietvoid/dovi_tool/releases/assets/553833103"
@@ -121,7 +145,19 @@ url = "https://github.com/quietvoid/hdr10plus_tool/releases/download/1.7.2/hdr10
 url_api = "https://api.github.com/repos/quietvoid/hdr10plus_tool/releases/assets/333494427"
 provenance = "github-attestations"
 
+[tools."github:quietvoid/hdr10plus_tool"."platforms.linux-x64-baseline"]
+checksum = "sha256:06385f37a639d61ba21d4be3150c863846933bc3b58110e094d8fc8f1c2249f2"
+url = "https://github.com/quietvoid/hdr10plus_tool/releases/download/1.7.2/hdr10plus_tool-1.7.2-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/quietvoid/hdr10plus_tool/releases/assets/333494427"
+provenance = "github-attestations"
+
 [tools."github:quietvoid/hdr10plus_tool"."platforms.linux-x64-musl"]
+checksum = "sha256:06385f37a639d61ba21d4be3150c863846933bc3b58110e094d8fc8f1c2249f2"
+url = "https://github.com/quietvoid/hdr10plus_tool/releases/download/1.7.2/hdr10plus_tool-1.7.2-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/quietvoid/hdr10plus_tool/releases/assets/333494427"
+provenance = "github-attestations"
+
+[tools."github:quietvoid/hdr10plus_tool"."platforms.linux-x64-musl-baseline"]
 checksum = "sha256:06385f37a639d61ba21d4be3150c863846933bc3b58110e094d8fc8f1c2249f2"
 url = "https://github.com/quietvoid/hdr10plus_tool/releases/download/1.7.2/hdr10plus_tool-1.7.2-x86_64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/quietvoid/hdr10plus_tool/releases/assets/333494427"
@@ -131,6 +167,30 @@ provenance = "github-attestations"
 checksum = "sha256:d76977ed2ea90f8d6bce9035e37ea9dbffcead4725ceb1acf455c25d8658ff28"
 url = "https://github.com/quietvoid/hdr10plus_tool/releases/download/1.7.2/hdr10plus_tool-1.7.2-universal-macOS.zip"
 url_api = "https://api.github.com/repos/quietvoid/hdr10plus_tool/releases/assets/333494434"
+provenance = "github-attestations"
+
+[tools."github:quietvoid/hdr10plus_tool"."platforms.macos-x64"]
+checksum = "sha256:d76977ed2ea90f8d6bce9035e37ea9dbffcead4725ceb1acf455c25d8658ff28"
+url = "https://github.com/quietvoid/hdr10plus_tool/releases/download/1.7.2/hdr10plus_tool-1.7.2-universal-macOS.zip"
+url_api = "https://api.github.com/repos/quietvoid/hdr10plus_tool/releases/assets/333494434"
+provenance = "github-attestations"
+
+[tools."github:quietvoid/hdr10plus_tool"."platforms.macos-x64-baseline"]
+checksum = "sha256:d76977ed2ea90f8d6bce9035e37ea9dbffcead4725ceb1acf455c25d8658ff28"
+url = "https://github.com/quietvoid/hdr10plus_tool/releases/download/1.7.2/hdr10plus_tool-1.7.2-universal-macOS.zip"
+url_api = "https://api.github.com/repos/quietvoid/hdr10plus_tool/releases/assets/333494434"
+provenance = "github-attestations"
+
+[tools."github:quietvoid/hdr10plus_tool"."platforms.windows-x64"]
+checksum = "sha256:82b2d560073941b14c6511a431f429e33e134e5caefb60d7e8f6f6e6da8e16ba"
+url = "https://github.com/quietvoid/hdr10plus_tool/releases/download/1.7.2/hdr10plus_tool-1.7.2-x86_64-pc-windows-msvc.zip"
+url_api = "https://api.github.com/repos/quietvoid/hdr10plus_tool/releases/assets/333494435"
+provenance = "github-attestations"
+
+[tools."github:quietvoid/hdr10plus_tool"."platforms.windows-x64-baseline"]
+checksum = "sha256:82b2d560073941b14c6511a431f429e33e134e5caefb60d7e8f6f6e6da8e16ba"
+url = "https://github.com/quietvoid/hdr10plus_tool/releases/download/1.7.2/hdr10plus_tool-1.7.2-x86_64-pc-windows-msvc.zip"
+url_api = "https://api.github.com/repos/quietvoid/hdr10plus_tool/releases/assets/333494435"
 provenance = "github-attestations"
 
 [[tools.hk]]
@@ -156,11 +216,23 @@ url = "https://github.com/jdx/hk/releases/download/v2.10.0/hk-x86_64-unknown-lin
 signer = "sigstore-oidc:https://github.com/jdx/hk/.github/workflows/release.yml"
 repository_ids = { repository = "922514152", owner = "216188" }
 
+[tools.hk."platforms.linux-x64-baseline"]
+checksum = "sha256:3a1d580ba031d684307a88ce07f1751d792325f2fdace7d24dfc59b816766ad5"
+url = "https://github.com/jdx/hk/releases/download/v2.10.0/hk-x86_64-unknown-linux-gnu.tar.gz"
+signer = "sigstore-oidc:https://github.com/jdx/hk/.github/workflows/release.yml"
+repository_ids = { repository = "922514152" }
+
 [tools.hk."platforms.linux-x64-musl"]
 checksum = "sha256:bb537bcfe3d949323f4c8fefdd6011d2cff32fd2a22d6ed09ec02eb78f183e02"
 url = "https://github.com/jdx/hk/releases/download/v2.10.0/hk-x86_64-unknown-linux-musl.tar.gz"
 signer = "sigstore-oidc:https://github.com/jdx/hk/.github/workflows/release.yml"
 repository_ids = { repository = "922514152", owner = "216188" }
+
+[tools.hk."platforms.linux-x64-musl-baseline"]
+checksum = "sha256:bb537bcfe3d949323f4c8fefdd6011d2cff32fd2a22d6ed09ec02eb78f183e02"
+url = "https://github.com/jdx/hk/releases/download/v2.10.0/hk-x86_64-unknown-linux-musl.tar.gz"
+signer = "sigstore-oidc:https://github.com/jdx/hk/.github/workflows/release.yml"
+repository_ids = { repository = "922514152" }
 
 [tools.hk."platforms.macos-arm64"]
 checksum = "sha256:ab54862e724bd4a1ef9180ef535cfeef7f7ff98ace911bd5ea36bb41fa4ebc94"
@@ -173,6 +245,12 @@ checksum = "sha256:0dc2485dcf4542d7be2f37890072e6bc5de664f41295449cae761e7833603
 url = "https://github.com/jdx/hk/releases/download/v2.10.0/hk-x86_64-pc-windows-msvc.zip"
 signer = "sigstore-oidc:https://github.com/jdx/hk/.github/workflows/release.yml"
 repository_ids = { repository = "922514152", owner = "216188" }
+
+[tools.hk."platforms.windows-x64-baseline"]
+checksum = "sha256:0dc2485dcf4542d7be2f37890072e6bc5de664f41295449cae761e78336031d4"
+url = "https://github.com/jdx/hk/releases/download/v2.10.0/hk-x86_64-pc-windows-msvc.zip"
+signer = "sigstore-oidc:https://github.com/jdx/hk/.github/workflows/release.yml"
+repository_ids = { repository = "922514152" }
 
 [[tools.node]]
 version = "26.13.0"
@@ -191,7 +269,15 @@ url = "https://unofficial-builds.nodejs.org/download/release/v26.13.0/node-v26.1
 checksum = "sha256:5848553868b402d3fabb5b09270649977780a390f832155721025a08b5104455"
 url = "https://nodejs.org/dist/v26.13.0/node-v26.13.0-linux-x64.tar.gz"
 
+[tools.node."platforms.linux-x64-baseline"]
+checksum = "sha256:5848553868b402d3fabb5b09270649977780a390f832155721025a08b5104455"
+url = "https://nodejs.org/dist/v26.13.0/node-v26.13.0-linux-x64.tar.gz"
+
 [tools.node."platforms.linux-x64-musl"]
+checksum = "sha256:c6c738fe564c3eb053172bfd4ca1166eec8bc076f84231a2ea70165e316f5809"
+url = "https://unofficial-builds.nodejs.org/download/release/v26.13.0/node-v26.13.0-linux-x64-musl.tar.gz"
+
+[tools.node."platforms.linux-x64-musl-baseline"]
 checksum = "sha256:c6c738fe564c3eb053172bfd4ca1166eec8bc076f84231a2ea70165e316f5809"
 url = "https://unofficial-builds.nodejs.org/download/release/v26.13.0/node-v26.13.0-linux-x64-musl.tar.gz"
 
@@ -203,6 +289,14 @@ url = "https://nodejs.org/dist/v26.13.0/node-v26.13.0-darwin-arm64.tar.gz"
 checksum = "sha256:525c9b29bb0263d687de60a4cec0e2a6db876a8eb032369e5795eca71e7c358e"
 url = "https://nodejs.org/dist/v26.13.0/node-v26.13.0-darwin-x64.tar.gz"
 
+[tools.node."platforms.macos-x64-baseline"]
+checksum = "sha256:525c9b29bb0263d687de60a4cec0e2a6db876a8eb032369e5795eca71e7c358e"
+url = "https://nodejs.org/dist/v26.13.0/node-v26.13.0-darwin-x64.tar.gz"
+
 [tools.node."platforms.windows-x64"]
+checksum = "sha256:dcc60d59a0746999f99064a01c020445d54d84228c691cdbf25b49ac3b59150a"
+url = "https://nodejs.org/dist/v26.13.0/node-v26.13.0-win-x64.zip"
+
+[tools.node."platforms.windows-x64-baseline"]
 checksum = "sha256:dcc60d59a0746999f99064a01c020445d54d84228c691cdbf25b49ac3b59150a"
 url = "https://nodejs.org/dist/v26.13.0/node-v26.13.0-win-x64.zip"
