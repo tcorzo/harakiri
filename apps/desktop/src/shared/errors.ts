@@ -15,19 +15,24 @@ export class ServerStatusError extends Error {
 }
 
 /** What Electron puts before a handler's error message: `Error invoking remote method 'x': Name: `. */
-const ipcWrapper = /^Error invoking remote method '[^']*': (?:[A-Za-z]*Error: )?/;
-const statusMessage = /^The server answered (\d{3}) for (\S+)$/;
+const ipcWrapper = /^Error invoking remote method '[^']*': (?:[A-Za-z]*Error: )?/u;
+const statusMessage = /^The server answered (?<code>\d{3}) for (?<where>\S+)$/u;
 
 /**
  * Electron carries only a handler error's message across IPC, wrapped in its own words. This
  * unwraps it, and rebuilds a `ServerStatusError` so the renderer still knows the status.
  */
-export function fromIpc(error: unknown): unknown {
-  if (!(error instanceof Error)) return error;
-  const message = error.message.replace(ipcWrapper, "");
-  const status = statusMessage.exec(message);
-  if (status?.[1] !== undefined && status[2] !== undefined) {
-    return new ServerStatusError(Number(status[1]), status[2]);
+export const fromIpc = (cause: unknown) => {
+  if (!(cause instanceof Error)) {
+    return cause;
   }
-  return message === error.message ? error : new Error(message);
-}
+
+  const message = cause.message.replace(ipcWrapper, "");
+  const status = statusMessage.exec(message)?.groups;
+
+  if (status?.code !== undefined && status.where !== undefined) {
+    return new ServerStatusError(Number(status.code), status.where);
+  }
+
+  return message === cause.message ? cause : new Error(message);
+};

@@ -1,10 +1,5 @@
-import {
-  classifyFidelity,
-  imageUrl as serverImageUrl,
-  type Fidelity,
-  ItemId,
-  type ServerUrl,
-} from "@harakiri/jellyfin";
+import { classifyFidelity, imageUrl as serverImageUrl, ItemId } from "@harakiri/jellyfin";
+import type { Fidelity, ServerUrl } from "@harakiri/jellyfin";
 import type { BaseItemDto, ImageType } from "@harakiri/jellyfin/generated";
 
 import type { SignalState } from "../../../shared/bridge";
@@ -61,108 +56,143 @@ const ticksPerMinute = 600_000_000;
 
 const kinds: readonly EntryKind[] = ["Movie", "Series", "Season", "Episode"];
 
-export function kindOf(type: string | null | undefined): EntryKind {
-  return kinds.find((kind) => kind === type) ?? "Other";
-}
+export const kindOf = (type: string | null | undefined): EntryKind =>
+  kinds.find((kind) => kind === type) ?? "Other";
 
 const asId = (raw: string): ItemId => ItemId.parse(raw);
 
-function image(itemId: string | null | undefined, type: ImageType, tag: string | null | undefined) {
-  return itemId == null || tag == null ? null : { itemId: asId(itemId), type, tag };
-}
+const image = (
+  itemId: string | null | undefined,
+  type: ImageType,
+  tag: string | null | undefined
+) =>
+  itemId === undefined || itemId === null || tag === undefined || tag === null
+    ? null
+    : { itemId: asId(itemId), type, tag };
 
-export function toEntry(item: BaseItemDto): Entry {
-  const id = asId(item.Id ?? "");
-  const kind = kindOf(item.Type);
+const minutesOf = (ticks: number | null | undefined): number | null =>
+  ticks === undefined || ticks === null ? null : Math.round(ticks / ticksPerMinute);
+
+const progressOf = (percent: number | null): number | null =>
+  percent !== null && percent > 0 && percent < 100 ? percent / 100 : null;
+
+const seriesOf = (item: BaseItemDto): Entry["series"] =>
+  item.SeriesId === undefined || item.SeriesId === null
+    ? null
+    : {
+        id: asId(item.SeriesId),
+        name: item.SeriesName ?? "",
+        season: item.ParentIndexNumber ?? null,
+        episode: item.IndexNumber ?? null,
+      };
+
+const artworkOf = (item: BaseItemDto, id: ItemId, kind: EntryKind) => {
   const tags = item.ImageTags ?? {};
-  const user = item.UserData;
-  const percent = user?.PlayedPercentage ?? null;
+
   const backdrop =
     image(id, "Backdrop", item.BackdropImageTags?.[0]) ??
     image(item.ParentBackdropItemId, "Backdrop", item.ParentBackdropImageTags?.[0]);
+
+  return {
+    backdrop,
+    logo:
+      image(id, "Logo", tags.Logo) ?? image(item.ParentLogoItemId, "Logo", item.ParentLogoImageTag),
+    poster:
+      image(id, "Primary", tags.Primary) ??
+      image(item.SeriesId, "Primary", item.SeriesPrimaryImageTag),
+    still:
+      kind === "Episode"
+        ? image(id, "Primary", tags.Primary)
+        : (image(id, "Thumb", tags.Thumb) ?? backdrop),
+  };
+};
+
+export const toEntry = (item: BaseItemDto): Entry => {
+  const id = asId(item.Id ?? "");
+  const kind = kindOf(item.Type);
+  const user = item.UserData;
+  const percent = user?.PlayedPercentage ?? null;
+
   return {
     id,
     kind,
     title: item.Name ?? "Untitled",
     year: item.ProductionYear ?? null,
-    minutes: item.RunTimeTicks == null ? null : Math.round(item.RunTimeTicks / ticksPerMinute),
+    minutes: minutesOf(item.RunTimeTicks),
     overview: item.Overview ?? null,
     played: user?.Played ?? false,
     positionTicks: user?.PlaybackPositionTicks ?? 0,
-    progress: percent !== null && percent > 0 && percent < 100 ? percent / 100 : null,
-    series:
-      item.SeriesId == null
-        ? null
-        : {
-            id: asId(item.SeriesId),
-            name: item.SeriesName ?? "",
-            season: item.ParentIndexNumber ?? null,
-            episode: item.IndexNumber ?? null,
-          },
+    progress: progressOf(percent),
+    series: seriesOf(item),
     unplayedCount: user?.UnplayedItemCount ?? null,
-    backdrop,
-    logo:
-      image(id, "Logo", tags["Logo"]) ??
-      image(item.ParentLogoItemId, "Logo", item.ParentLogoImageTag),
-    poster:
-      image(id, "Primary", tags["Primary"]) ??
-      image(item.SeriesId, "Primary", item.SeriesPrimaryImageTag),
-    still:
-      kind === "Episode"
-        ? image(id, "Primary", tags["Primary"])
-        : (image(id, "Thumb", tags["Thumb"]) ?? backdrop),
+    ...artworkOf(item, id, kind),
     fidelity: classifyFidelity(item.MediaSources?.[0]),
   };
-}
+};
 
-function fact(text: string, delivery: SignalState): NoteFact {
+const fact = (text: string, delivery: SignalState): NoteFact => {
   const state = markedState(delivery);
+
   return state === undefined ? { text } : { text, state };
-}
+};
 
 /** The programme note line: year · runtime · picture · sound; mapped and decoded facts carry their state. */
-export function programmeNotes(
+export const programmeNotes = (
   entry: Entry,
-  fidelity: Fidelity | null = entry.fidelity,
-): NoteFact[] {
+  fidelity: Fidelity | null = entry.fidelity
+): NoteFact[] => {
   const facts: NoteFact[] = [];
-  if (entry.year !== null) facts.push({ text: String(entry.year) });
-  if (entry.minutes !== null && entry.kind !== "Series")
+
+  if (entry.year !== null) {
+    facts.push({ text: String(entry.year) });
+  }
+
+  if (entry.minutes !== null && entry.kind !== "Series") {
     facts.push({ text: `${entry.minutes} min` });
+  }
+
   if (fidelity !== null) {
     const { picture, sound } = fidelity;
     facts.push(
       fact(
         [picture.resolution, picture.range].filter((part) => part !== null).join(" "),
-        picture.delivery,
-      ),
+        picture.delivery
+      )
     );
+
     if (sound !== null) {
       const format = sound.format === "Other" ? sound.codec.toUpperCase() : sound.format;
       facts.push(
-        fact([format, sound.channels].filter((part) => part !== null).join(" "), sound.delivery),
+        fact([format, sound.channels].filter((part) => part !== null).join(" "), sound.delivery)
       );
     }
   }
+
   return facts;
-}
+};
 
-export function episodeCode(entry: Entry): string | null {
+export const episodeCode = (entry: Entry): string | null => {
   const s = entry.series;
-  if (s === null || s.season === null || s.episode === null) return null;
-  return `S${String(s.season).padStart(2, "0")} E${String(s.episode).padStart(2, "0")}`;
-}
 
-export function minutesLeft(entry: Entry): number | null {
-  if (entry.progress === null || entry.minutes === null) return null;
+  if (s === null || s.season === null || s.episode === null) {
+    return null;
+  }
+
+  return `S${String(s.season).padStart(2, "0")} E${String(s.episode).padStart(2, "0")}`;
+};
+
+export const minutesLeft = (entry: Entry): number | null => {
+  if (entry.progress === null || entry.minutes === null) {
+    return null;
+  }
+
   return Math.max(1, Math.round(entry.minutes * (1 - entry.progress)));
-}
+};
 
 /** An image at the width it is shown, in device pixels. */
-export function imageUrl(server: ServerUrl, ref: ImageRef, width: number): string {
-  return serverImageUrl(server, ref.itemId, ref.type, {
+export const imageUrl = (server: ServerUrl, ref: ImageRef, width: number): string =>
+  serverImageUrl(server, ref.itemId, ref.type, {
     maxWidth: width,
     tag: ref.tag,
     quality: 90,
   });
-}

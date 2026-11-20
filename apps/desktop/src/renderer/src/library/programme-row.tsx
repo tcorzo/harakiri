@@ -1,13 +1,16 @@
 import type { ServerUrl } from "@harakiri/jellyfin";
 import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-navigation";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { memo, useRef, type ComponentType, type ReactNode } from "react";
+import { memo, useRef } from "react";
+import type { ComponentType, ReactNode } from "react";
+
 import type { Entry } from "../data/entry";
 import { QuietAction } from "../ui/actions";
 import { Notice, rootRem, SectionHead } from "../ui/marks";
 import type { CardProps } from "./cards";
-import { useReducedMotion } from "./heroCycle";
-import { cardKey, rowKey, useLit, type Section } from "./lit";
+import { useReducedMotion } from "./hero-cycle";
+import { cardKey, rowKey, useLit } from "./lit";
+import type { Section } from "./lit";
 import { numberFor } from "./sections";
 
 export interface ProgrammeRowProps {
@@ -26,21 +29,15 @@ export interface ProgrammeRowProps {
 
 const gapRem = 2;
 
-function RowHeader({ name, children }: { readonly name: string; readonly children: ReactNode }) {
-  return (
-    <header className="flex h-[3rem] items-center gap-6 pr-safe-x">
-      <SectionHead>{name}</SectionHead>
-      <span aria-hidden="true" className="h-0 flex-1 border-t-2 hairline" />
-      {children}
-    </header>
-  );
-}
+const RowHeader = ({ name, children }: { readonly name: string; readonly children: ReactNode }) => (
+  <header className="pr-safe-x flex h-[3rem] items-center gap-6">
+    <SectionHead>{name}</SectionHead>
+    <span aria-hidden="true" className="hairline h-0 flex-1 border-t-2" />
+    {children}
+  </header>
+);
 
-/**
- * One programme section: a section head, a hairline, and a horizontally virtualized run of entries.
- * Memoized, with primitive and stable props, so moving between rows re-renders none of them.
- */
-export const ProgrammeRow = memo(function ProgrammeRow({
+const ProgrammeRowView = ({
   sectionId,
   sectionName,
   entries,
@@ -51,15 +48,16 @@ export const ProgrammeRow = memo(function ProgrammeRow({
   numbers,
   onFocusEntry,
   onPressEntry,
-}: ProgrammeRowProps) {
+}: ProgrammeRowProps) => {
   const { ref, focusKey } = useFocusable<object, HTMLElement>({
     focusKey: rowKey(sectionId),
     saveLastFocusedChild: true,
   });
+
   const scroller = useRef<HTMLDivElement>(null);
   const rem = rootRem();
-  // No React Compiler in this build, so the virtualizer's unmemoizable API is fine.
-  // oxlint-disable-next-line react/incompatible-library
+
+  // oxlint-disable-next-line react/incompatible-library -- no React Compiler in this build, so the virtualizer's unmemoizable API is fine
   const virtualizer = useVirtualizer({
     horizontal: true,
     count: entries.length,
@@ -74,12 +72,18 @@ export const ProgrammeRow = memo(function ProgrammeRow({
     initialRect: { width: window.innerWidth, height: 400 },
     // Returning from a title page reopens the row on the card the owner left, wherever it moved.
     initialOffset: () => {
-      const place = useLit.getState().place;
-      if (place?.section !== sectionId) return 0;
+      const { place } = useLit.getState();
+
+      if (place?.section !== sectionId) {
+        return 0;
+      }
+
       const at = entries.findIndex((entry) => entry.id === place.entry);
+
       return at === -1 ? 0 : at * pitchRem * rem;
     },
   });
+
   const reduced = useReducedMotion();
   const section: Section = { id: sectionId, name: sectionName };
 
@@ -87,18 +91,22 @@ export const ProgrammeRow = memo(function ProgrammeRow({
     <FocusContext.Provider value={focusKey}>
       <section ref={ref} aria-label={sectionName} className="flex flex-col gap-5">
         <RowHeader name={sectionName}>
-          <span className="text-caption font-[600] text-paper-dim stretch-condensed">
+          <span className="text-caption text-paper-dim stretch-condensed font-[600]">
             {entries.length} {entries.length === 1 ? "title" : "titles"}
           </span>
         </RowHeader>
-        <div ref={scroller} className="-ml-6 overflow-x-hidden py-6 pr-safe-x">
+        <div ref={scroller} className="pr-safe-x -ml-6 overflow-x-hidden py-6">
           <div
             className="relative"
             style={{ width: virtualizer.getTotalSize(), height: `${heightRem}rem` }}
           >
             {virtualizer.getVirtualItems().map((item) => {
               const entry = entries[item.index];
-              if (entry === undefined) return null;
+
+              if (entry === undefined) {
+                return null;
+              }
+
               return (
                 <div
                   key={entry.id}
@@ -117,7 +125,9 @@ export const ProgrammeRow = memo(function ProgrammeRow({
                       });
                       onFocusEntry(entry, section);
                     }}
-                    onPress={() => onPressEntry(entry)}
+                    onPress={() => {
+                      onPressEntry(entry);
+                    }}
                   />
                 </div>
               );
@@ -127,13 +137,18 @@ export const ProgrammeRow = memo(function ProgrammeRow({
       </section>
     </FocusContext.Provider>
   );
-});
+};
+
+/**
+ * One programme section: a section head, a hairline, and a horizontally virtualized run of entries.
+ * Memoized, with primitive and stable props, so moving between rows re-renders none of them.
+ */
+export const ProgrammeRow = memo(ProgrammeRowView);
 
 /** Focus key of a failed section's retry, the one thing in it the d-pad can reach. */
 export const retryKey = (sectionId: string): string => `retry|${sectionId}`;
 
-/** A section whose request failed: the rest of the programme still shows, and this one can retry. */
-export const FailedRow = memo(function FailedRow({
+const FailedRowView = ({
   sectionId,
   sectionName,
   onRetry,
@@ -141,13 +156,14 @@ export const FailedRow = memo(function FailedRow({
   readonly sectionId: string;
   readonly sectionName: string;
   readonly onRetry: () => void;
-}) {
+}) => {
   const { ref, focusKey } = useFocusable<object, HTMLElement>({ focusKey: rowKey(sectionId) });
+
   return (
     <FocusContext.Provider value={focusKey}>
       <section ref={ref} aria-label={sectionName} className="flex flex-col gap-5">
         <RowHeader name={sectionName}>{null}</RowHeader>
-        <div className="flex items-center gap-8 py-6 pr-safe-x">
+        <div className="pr-safe-x flex items-center gap-8 py-6">
           <Notice>This section did not load from the server.</Notice>
           <QuietAction
             focusKey={retryKey(sectionId)}
@@ -160,4 +176,7 @@ export const FailedRow = memo(function FailedRow({
       </section>
     </FocusContext.Provider>
   );
-});
+};
+
+/** A section whose request failed: the rest of the programme still shows, and this one can retry. */
+export const FailedRow = memo(FailedRowView);

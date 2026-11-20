@@ -2,6 +2,7 @@ import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-naviga
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
+
 import { appVersion } from "../../../shared/identity";
 import { forgetSession } from "../data/forget";
 import { useSignedIn } from "../data/session";
@@ -10,16 +11,18 @@ import { focusFirst } from "../ui/focus";
 import { SectionTab } from "../ui/marks";
 import { versionLine } from "./version-line";
 
-export function SettingsScreen() {
+export const SettingsScreen = () => {
   const { session } = useSignedIn();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
   // Unsupported means a dev or unpackaged build: nothing will change, so stop asking.
   const updates = useQuery({
     queryKey: ["updates", "status"],
-    queryFn: () => window.harakiri.updates.status(),
+    queryFn: async () => await window.harakiri.updates.status(),
     refetchInterval: (query) => (query.state.data?.state === "unsupported" ? false : 1000),
   });
+
   const { ref, focusKey } = useFocusable<object, HTMLElement>({
     focusKey: "settings",
     trackChildren: true,
@@ -45,15 +48,15 @@ export function SettingsScreen() {
       <main
         ref={ref}
         aria-label="Settings"
-        className="flex h-screen gap-10 bg-ink px-safe-x py-safe-y"
+        className="bg-ink px-safe-x py-safe-y flex h-screen gap-10"
       >
-        <div className="flex w-margin shrink-0 flex-col items-start gap-6">
-          <span className="text-heading font-[820] stretch-extra-wide">harakiri</span>
+        <div className="w-margin flex shrink-0 flex-col items-start gap-6">
+          <span className="text-heading stretch-extra-wide font-[820]">harakiri</span>
           <SectionTab>Settings</SectionTab>
         </div>
         <div className="flex max-w-[72rem] flex-1 flex-col pt-[7rem]">
-          <h1 className="m-0 mb-10 text-title font-[800] stretch-extra-wide">Settings</h1>
-          <dl className="m-0 mb-12 grid grid-cols-[12rem_1fr] gap-x-8 gap-y-3 text-body">
+          <h1 className="text-title stretch-extra-wide m-0 mb-10 font-[800]">Settings</h1>
+          <dl className="text-body m-0 mb-12 grid grid-cols-[12rem_1fr] gap-x-8 gap-y-3">
             <dt className="text-paper-dim stretch-condensed">Signed in as</dt>
             <dd className="m-0">{session.userName}</dd>
             <dt className="text-paper-dim stretch-condensed">Server</dt>
@@ -61,7 +64,7 @@ export function SettingsScreen() {
               {session.serverName} · Jellyfin {session.serverVersion}
             </dd>
             <dt className="text-paper-dim stretch-condensed">Address</dt>
-            <dd className="m-0 stretch-semicondensed">{session.serverUrl}</dd>
+            <dd className="stretch-semicondensed m-0">{session.serverUrl}</dd>
             <dt className="text-paper-dim stretch-condensed">App</dt>
             <dd className="m-0" aria-live="polite">
               {versionLine(appVersion, updates.data)}
@@ -72,19 +75,25 @@ export function SettingsScreen() {
               focusKey="settings-sign-out"
               label="Sign out"
               detail={`Choose another user on ${session.serverName}`}
-              onPress={() => void leave(true)}
+              onPress={() => {
+                void leave(true);
+              }}
             />
             <ListAction
               label="Change server"
               detail="Find or type another server"
-              onPress={() => void leave(false)}
+              onPress={() => {
+                void leave(false);
+              }}
             />
             {updates.data?.state === "ready" ? (
               <ListAction
                 focusKey="settings-restart"
                 label="Restart to update"
                 detail={`Installs ${updates.data.version} and opens harakiri again`}
-                onPress={() => void window.harakiri.updates.restart()}
+                onPress={() => {
+                  void window.harakiri.updates.restart();
+                }}
               />
             ) : null}
           </div>
@@ -92,4 +101,4 @@ export function SettingsScreen() {
       </main>
     </FocusContext.Provider>
   );
-}
+};

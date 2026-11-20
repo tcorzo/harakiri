@@ -1,14 +1,15 @@
-import { type Downgrade as FidelityDowngrade, renderers } from "@harakiri/fidelity";
+import { renderers } from "@harakiri/fidelity";
+import type { Downgrade as FidelityDowngrade } from "@harakiri/fidelity";
 import {
   AccessToken,
   DeviceId,
   ItemId,
   MediaSourceId,
   ServerUrl,
-  type SignalFact as FidelityFact,
   signalStates,
   UserId,
 } from "@harakiri/jellyfin";
+import type { SignalFact as FidelityFact } from "@harakiri/jellyfin";
 import { z } from "zod";
 
 export const channels = {
@@ -41,10 +42,12 @@ export const Session = z.object({
   /** Injected by the main process from its one stored device id; the renderer never supplies it. */
   deviceId: DeviceId,
 });
+
 export type Session = z.output<typeof Session>;
 
 /** What the renderer hands to `session.save`: a session without the device id, which main owns. */
 export const NewSession = Session.omit({ deviceId: true });
+
 export type NewSession = z.output<typeof NewSession>;
 
 /** A server that answered Jellyfin's UDP discovery broadcast on port 7359. */
@@ -53,6 +56,7 @@ export const DiscoveredServer = z.object({
   name: z.string(),
   address: ServerUrl,
 });
+
 export type DiscoveredServer = z.infer<typeof DiscoveredServer>;
 
 /**
@@ -67,10 +71,12 @@ export const PlayRequest = z.object({
   audioStreamIndex: z.number().int().optional(),
   subtitleStreamIndex: z.number().int().optional(),
 });
+
 export type PlayRequest = z.output<typeof PlayRequest>;
 
 /** How a leg of the signal path reaches the TV or receiver, from the one list in `@harakiri/jellyfin`. */
 export const SignalState = z.enum(signalStates);
+
 export type SignalState = z.infer<typeof SignalState>;
 
 /** One leg of the signal path, for example `{ text: "TrueHD Atmos bitstream", state: "native" }`. */
@@ -78,6 +84,7 @@ export const SignalFact = z.object({
   text: z.string(),
   state: SignalState,
 }) satisfies z.ZodType<FidelityFact>;
+
 export type SignalFact = FidelityFact;
 
 const DowngradeReason = z.discriminatedUnion("kind", [
@@ -99,6 +106,7 @@ export const Downgrade = z.object({
   reason: DowngradeReason,
   message: z.string(),
 }) satisfies z.ZodType<FidelityDowngrade>;
+
 export type Downgrade = FidelityDowngrade;
 
 /**
@@ -115,6 +123,7 @@ export const SignalReport = z.object({
   /** The server holds no stream information for the file, so it cannot send it as it is. */
   unreadable: z.boolean(),
 });
+
 export type SignalReport = z.infer<typeof SignalReport>;
 
 /**
@@ -131,6 +140,7 @@ export const PlayerPhase = z.enum([
   "error",
   "reported",
 ]);
+
 export type PlayerPhase = z.infer<typeof PlayerPhase>;
 
 /** Pushed from main to the renderer whenever playback changes phase or position. */
@@ -141,6 +151,7 @@ export const PlayerEvent = SignalReport.extend({
   durationTicks: z.number().int().nonnegative().optional(),
   error: z.string().optional(),
 });
+
 export type PlayerEvent = z.infer<typeof PlayerEvent>;
 
 /** Live mpv state for end-to-end tests. Only answered when HARAKIRI_E2E=1. */
@@ -157,6 +168,7 @@ export const PlayerProbe = z.object({
   videoPrimaries: z.string().optional(),
   osdVisible: z.boolean().optional(),
 });
+
 export type PlayerProbe = z.infer<typeof PlayerProbe>;
 
 export const UpdateStatus = z.discriminatedUnion("state", [
@@ -167,6 +179,7 @@ export const UpdateStatus = z.discriminatedUnion("state", [
   z.object({ state: z.literal("ready"), version: z.string() }),
   z.object({ state: z.literal("failed"), message: z.string() }),
 ]);
+
 export type UpdateStatus = z.infer<typeof UpdateStatus>;
 
 /** What the preload exposes on `window.harakiri`. Every value crossing IPC is parsed with the schemas above. */

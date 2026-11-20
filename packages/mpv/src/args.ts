@@ -47,8 +47,9 @@ type MpvOption = readonly [name: string, value: string];
 
 const flag = (on: boolean) => (on ? "yes" : "no");
 
-export function buildPlaybackArgs(config: PlaybackConfig = {}): string[] {
+export const buildPlaybackArgs = (config: PlaybackConfig = {}): string[] => {
   const passthrough = config.audioPassthrough ?? PRD_PASSTHROUGH;
+
   const options: MpvOption[] = [
     ["vo", "gpu-next"],
     ["gpu-api", "vulkan"],
@@ -59,10 +60,17 @@ export function buildPlaybackArgs(config: PlaybackConfig = {}): string[] {
     // After a failed load, the ytdl hook starts yt-dlp with the URL, `api_key=` and all, in argv.
     ["ytdl", "no"],
   ];
-  if (passthrough !== "none") options.push(["audio-spdif", [...new Set(passthrough)].join(",")]);
-  if (config.audioDevice !== undefined) options.push(["audio-device", config.audioDevice]);
+
+  if (passthrough !== "none") {
+    options.push(["audio-spdif", [...new Set(passthrough)].join(",")]);
+  }
+
+  if (config.audioDevice !== undefined) {
+    options.push(["audio-device", config.audioDevice]);
+  }
+
   return options.map(([name, value]) => `--${name}=${value}`);
-}
+};
 
 /**
  * Where mpv reads its config. The shipped player always passes an app-owned dir, so a personal

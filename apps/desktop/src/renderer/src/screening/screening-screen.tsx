@@ -2,20 +2,25 @@ import { joinFacts, MediaSourceId } from "@harakiri/jellyfin";
 import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-navigation";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, useRouter } from "@tanstack/react-router";
+import { noop } from "es-toolkit";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
+import type { ReactNode } from "react";
+
 import type { PlayerEvent, PlayRequest, SignalFact, SignalReport } from "../../../shared/bridge";
-import { episodeCode, markedState, type Entry } from "../data/entry";
+import { episodeCode, markedState } from "../data/entry";
+import type { Entry } from "../data/entry";
 import { classifyFailure } from "../data/errors";
 import { catalogueQuery, nextEpisodeQuery, refetchWhenReported, titleQuery } from "../data/queries";
 import { useSignedIn } from "../data/session";
 import { useActionHandler } from "../input/handlers";
 import { inputMode } from "../input/mode";
-import { backdropUrl } from "../library/Stage";
 import { numberFor } from "../library/sections";
+import { backdropUrl } from "../library/stage";
 import { PlayAction, QuietAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
 import { catalogueLabel, Notice, StateMark } from "../ui/marks";
-import { handoffTiming, stationOf, stations, type Station } from "./stations";
+import { handoffTiming, stationOf, stations } from "./stations";
+import type { Station } from "./stations";
 
 const route = getRouteApi("/_signedIn/screening/$id");
 
@@ -29,18 +34,19 @@ type Outcome =
   /** An episode played to its end and the series has another: it is offered, not started. */
   | { readonly kind: "next"; readonly next: Entry };
 
-const messageOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
+const messageOf = (cause: unknown): string =>
+  cause instanceof Error ? cause.message : String(cause);
 
-function StationRule({ current }: { readonly current: Station }) {
+const StationRule = ({ current }: { readonly current: Station }) => {
   const at = stations.indexOf(current);
+
   return (
     <ol aria-label="Handoff" className="m-0 flex list-none gap-10 p-0">
       {stations.map((station, i) => (
         <li
           key={station}
           aria-current={station === current ? "step" : undefined}
-          className={`flex flex-col gap-2 text-caption font-[620] tracking-[0.1em] uppercase stretch-condensed transition-colors duration-500 ${
+          className={`text-caption stretch-condensed flex flex-col gap-2 font-[620] tracking-[0.1em] uppercase transition-colors duration-500 ${
             i <= at ? "text-paper" : "text-paper-faint"
           }`}
         >
@@ -53,21 +59,23 @@ function StationRule({ current }: { readonly current: Station }) {
       ))}
     </ol>
   );
-}
+};
 
 /**
  * The server's own signal path, one fact per leg. A native leg is stated bare; a mapped or
  * decoded leg already says so in words, and its mark repeats that in shape.
  */
-export function SignalSlug({ facts }: { readonly facts: readonly SignalFact[] }) {
+export const SignalSlug = ({ facts }: { readonly facts: readonly SignalFact[] }) => {
   const path = joinFacts(facts);
+
   return (
     <p
       aria-label={`Signal path: ${path}`}
-      className="m-0 flex flex-wrap items-baseline gap-x-6 gap-y-3 text-title font-[460] stretch-condensed"
+      className="text-title stretch-condensed m-0 flex flex-wrap items-baseline gap-x-6 gap-y-3 font-[460]"
     >
       {facts.map((fact, i) => {
         const state = markedState(fact.state);
+
         return (
           <span key={fact.text} className="flex items-baseline gap-6">
             {i > 0 ? (
@@ -77,7 +85,7 @@ export function SignalSlug({ facts }: { readonly facts: readonly SignalFact[] })
             ) : null}
             <span>{fact.text}</span>
             {state === undefined ? null : (
-              <span className="self-center text-notes text-paper-dim">
+              <span className="text-notes text-paper-dim self-center">
                 <StateMark state={state} />
               </span>
             )}
@@ -86,10 +94,10 @@ export function SignalSlug({ facts }: { readonly facts: readonly SignalFact[] })
       })}
     </p>
   );
-}
+};
 
 /** What the server decided, stated before mpv takes the screen (PRD principle 1). */
-export function ServerDecision({ report }: { readonly report: SignalReport }) {
+export const ServerDecision = ({ report }: { readonly report: SignalReport }) => {
   if (report.unreadable) {
     return (
       <Notice className="max-w-[64ch]">
@@ -98,23 +106,26 @@ export function ServerDecision({ report }: { readonly report: SignalReport }) {
       </Notice>
     );
   }
+
   if (report.transcodeReasons.length > 0) {
     return (
       <>
-        <p className="m-0 text-title font-[460] stretch-condensed">Server transcode</p>
+        <p className="text-title stretch-condensed m-0 font-[460]">Server transcode</p>
         <Notice className="max-w-[64ch]">{`The server is converting this file instead of sending it as it is, because: ${report.transcodeReasons.join("; ")}.`}</Notice>
       </>
     );
   }
+
   if (report.facts.length === 0) {
     return (
-      <p className="m-0 text-heading text-paper-dim">The server has not described this file yet.</p>
+      <p className="text-heading text-paper-dim m-0">The server has not described this file yet.</p>
     );
   }
-  return <SignalSlug facts={report.facts} />;
-}
 
-function NextEpisode({
+  return <SignalSlug facts={report.facts} />;
+};
+
+const NextEpisode = ({
   next,
   onPlay,
   onLeave,
@@ -122,21 +133,22 @@ function NextEpisode({
   readonly next: Entry;
   readonly onPlay: () => void;
   readonly onLeave: () => void;
-}) {
+}) => {
   const code = episodeCode(next);
   const { ref, focusKey } = useFocusable<object, HTMLDivElement>({ focusKey: "screening-next" });
   useEffect(() => {
     focusFirst("screening-play-next");
   }, []);
+
   return (
     <FocusContext.Provider value={focusKey}>
       <div ref={ref} className="flex flex-col gap-6">
-        <p className="m-0 flex items-baseline gap-6 text-heading font-[620] stretch-semicondensed">
-          <span className="text-caption font-[620] tracking-[0.1em] text-paper-dim uppercase stretch-condensed">
+        <p className="text-heading stretch-semicondensed m-0 flex items-baseline gap-6 font-[620]">
+          <span className="text-caption text-paper-dim stretch-condensed font-[620] tracking-[0.1em] uppercase">
             Next
           </span>
           <span>
-            {code === null ? null : <span className="mr-4 text-paper-dim">{code}</span>}
+            {code === null ? null : <span className="text-paper-dim mr-4">{code}</span>}
             {next.title}
           </span>
         </p>
@@ -153,10 +165,10 @@ function NextEpisode({
       </div>
     </FocusContext.Provider>
   );
-}
+};
 
 /** The screening handoff: the house dims, the slug states the server's signal path, then mpv takes the screen. */
-export function ScreeningScreen() {
+export const ScreeningScreen = () => {
   const { id } = route.useParams();
   const search = route.useSearch();
   const ctx = useSignedIn();
@@ -166,13 +178,26 @@ export function ScreeningScreen() {
   const { data: numbers } = useSuspenseQuery(catalogueQuery(ctx));
   const { entry, item } = data;
   const sourceId = item.MediaSources?.[0]?.Id;
-  const [request] = useState<PlayRequest>(() => ({
-    itemId: id,
-    ...(sourceId == null ? {} : { mediaSourceId: MediaSourceId.parse(sourceId) }),
-    startPositionTicks: search.start,
-    ...(search.audio === undefined ? {} : { audioStreamIndex: search.audio }),
-    ...(search.subtitle === undefined ? {} : { subtitleStreamIndex: search.subtitle }),
-  }));
+
+  // oxlint-disable-next-line react/hook-use-state -- the request is fixed for the life of this screening, so there is no setter
+  const [request] = useState<PlayRequest>(() => {
+    const built: PlayRequest = { itemId: id, startPositionTicks: search.start };
+
+    if (sourceId !== undefined && sourceId !== null) {
+      built.mediaSourceId = MediaSourceId.parse(sourceId);
+    }
+
+    if (search.audio !== undefined) {
+      built.audioStreamIndex = search.audio;
+    }
+
+    if (search.subtitle !== undefined) {
+      built.subtitleStreamIndex = search.subtitle;
+    }
+
+    return built;
+  });
+
   const [houseDone, setHouseDone] = useState(false);
   const [elapsed, setElapsed] = useState<"house" | "slug" | "picture">("house");
   const [report, setReport] = useState<SignalReport | null>(null);
@@ -181,6 +206,7 @@ export function ScreeningScreen() {
   const mounted = useRef(true);
   const station = stationOf(elapsed, event);
   const number = numberFor(numbers, entry);
+
   const { ref, focusKey } = useFocusable<object, HTMLElement>({
     focusKey: "screening",
     trackChildren: true,
@@ -193,10 +219,15 @@ export function ScreeningScreen() {
   };
 
   /** A token the server refused is not a failed screening: the owner has to sign in again. */
-  const failWith = (error: unknown): void => {
-    if (classifyFailure(error).kind !== "signedOut") return fail(messageOf(error));
+  const failWith = (cause: unknown): void => {
+    if (classifyFailure(cause).kind !== "signedOut") {
+      fail(messageOf(cause));
+
+      return;
+    }
+
     inputMode.getState().setMode("ui");
-    setOutcome({ kind: "signedOut", error });
+    setOutcome({ kind: "signedOut", error: cause });
   };
 
   /** Before anything played: back where the owner came from. */
@@ -208,6 +239,7 @@ export function ScreeningScreen() {
   /** After playback: the title page, which refetches the resume point once the server holds it. */
   const leaveAfterPlayback = (): void => {
     inputMode.getState().setMode("ui");
+
     if (search.after === "title") {
       void router.navigate({ to: "/title/$id", params: { id }, replace: true });
     } else {
@@ -216,105 +248,213 @@ export function ScreeningScreen() {
   };
 
   const offerNext = async (): Promise<void> => {
-    if (entry.kind !== "Episode" || entry.series === null) return leaveAfterPlayback();
+    if (entry.kind !== "Episode" || entry.series === null) {
+      leaveAfterPlayback();
+
+      return;
+    }
+
     const next = await queryClient
-      .fetchQuery(nextEpisodeQuery(ctx, entry.series.id, entry.id))
+      .query(nextEpisodeQuery(ctx, entry.series.id, entry.id))
       .catch(() => null);
-    if (!mounted.current) return;
-    if (next === null) leaveAfterPlayback();
-    else setOutcome({ kind: "next", next });
+
+    if (!mounted.current) {
+      return;
+    }
+
+    if (next === null) {
+      leaveAfterPlayback();
+    } else {
+      setOutcome({ kind: "next", next });
+    }
   };
 
   const playNext = (next: Entry): void => {
     void router.navigate({
       to: "/screening/$id",
       params: { id: next.id },
-      search: {
-        start: next.positionTicks,
-        ...(search.after === undefined ? {} : { after: search.after }),
-      },
+      search:
+        search.after === undefined
+          ? { start: next.positionTicks }
+          : { start: next.positionTicks, after: search.after },
       replace: true,
     });
   };
 
   const onPlayerEvent = useEffectEvent((next: PlayerEvent) => {
-    if (next.itemId !== id) return;
+    if (next.itemId !== id) {
+      return;
+    }
+
     setEvent(next);
+
     // The server stores the resume point after these arrive; the refetch waits for `reported`.
     if (next.phase === "stopped" || next.phase === "ended") {
       refetchWhenReported(queryClient, ctx, entry);
     }
-    if (next.phase === "stopped") leaveAfterPlayback();
+
+    if (next.phase === "stopped") {
+      leaveAfterPlayback();
+    }
+
     if (next.phase === "ended") {
       inputMode.getState().setMode("ui");
       setOutcome({ kind: "ended" });
       void offerNext();
     }
-    if (next.phase === "error") fail(next.error ?? "The player stopped with an error.");
+
+    if (next.phase === "error") {
+      fail(next.error ?? "The player stopped with an error.");
+    }
   });
 
-  const handOff = useEffectEvent(() => {
+  const handOff = useEffectEvent(async (): Promise<void> => {
     setElapsed("picture");
-    window.harakiri.player
-      .play(request)
-      .then(() => {
-        // Only now does mpv have the file and the gamepad; until then the renderer keeps it.
-        if (mounted.current) inputMode.getState().setMode("player");
-      })
-      .catch((error: unknown) => {
-        if (mounted.current) failWith(error);
-      });
+
+    try {
+      await window.harakiri.player.play(request);
+
+      // Only now does mpv have the file and the gamepad; until then the renderer keeps it.
+      if (mounted.current) {
+        inputMode.getState().setMode("player");
+      }
+    } catch (error) {
+      if (mounted.current) {
+        failWith(error);
+      }
+    }
   });
 
-  useEffect(() => window.harakiri.player.onEvent((next) => onPlayerEvent(next)), []);
+  useEffect(
+    () =>
+      window.harakiri.player.onEvent((next) => {
+        onPlayerEvent(next);
+      }),
+    []
+  );
+
+  const prepare = useEffectEvent(async (): Promise<void> => {
+    try {
+      const decided = await window.harakiri.player.prepare(request);
+
+      if (mounted.current) {
+        setReport(decided);
+      }
+    } catch (error) {
+      if (mounted.current) {
+        failWith(error);
+      }
+    }
+  });
 
   useEffect(() => {
     mounted.current = true;
     // The server resolves the file while the house dims, so the slug states its decision.
-    window.harakiri.player
-      .prepare(request)
-      .then((decided) => {
-        if (mounted.current) setReport(decided);
-      })
-      .catch((error: unknown) => {
-        if (mounted.current) failWith(error);
-      });
-    const house = window.setTimeout(() => setHouseDone(true), handoffTiming.houseMs);
+    // oxlint-disable-next-line react/set-state-in-effect -- setReport runs after the await, never synchronously
+    void prepare();
+
+    const house = window.setTimeout(() => {
+      setHouseDone(true);
+    }, handoffTiming.houseMs);
+
     return () => {
       mounted.current = false;
       window.clearTimeout(house);
       inputMode.getState().setMode("ui");
     };
-    // The request is fixed for the life of this screening.
-    // oxlint-disable-next-line react/exhaustive-deps
   }, []);
 
   // The programme slug holds once both the house has dimmed and the server has answered.
   const slugReady = houseDone && report !== null && outcome.kind === "running";
-  useEffect(() => {
-    if (!slugReady) return () => {};
+
+  if (slugReady && elapsed === "house") {
     setElapsed("slug");
-    const picture = window.setTimeout(() => handOff(), handoffTiming.slugMs);
-    return () => window.clearTimeout(picture);
+  }
+
+  useEffect(() => {
+    if (!slugReady) {
+      return noop;
+    }
+
+    const picture = window.setTimeout(() => {
+      void handOff();
+    }, handoffTiming.slugMs);
+
+    return () => {
+      window.clearTimeout(picture);
+    };
   }, [slugReady]);
 
   useEffect(() => {
-    if (outcome.kind === "failed") focusFirst("screening-back");
+    if (outcome.kind === "failed") {
+      focusFirst("screening-back");
+    }
   }, [outcome.kind]);
 
   // Before the picture starts, Back cancels the screening; once mpv has it, Back asks mpv to stop.
   // Once the file has ended, mpv is gone and Back leaves.
   useActionHandler("back", () => {
-    if (outcome.kind === "next" || outcome.kind === "ended") leaveAfterPlayback();
-    else if (outcome.kind === "failed" || elapsed !== "picture") cancel();
-    else void window.harakiri.player.stop().catch(() => leaveAfterPlayback());
+    if (outcome.kind === "next" || outcome.kind === "ended") {
+      leaveAfterPlayback();
+    } else if (outcome.kind === "failed" || elapsed !== "picture") {
+      cancel();
+    } else {
+      void window.harakiri.player.stop().catch(() => {
+        leaveAfterPlayback();
+      });
+    }
   });
 
   // The route's error screen says the server signed this device out and offers to sign in again.
-  if (outcome.kind === "signedOut") throw outcome.error;
+  if (outcome.kind === "signedOut") {
+    throw outcome.error;
+  }
 
   const name = entry.kind === "Episode" && entry.series !== null ? entry.series.name : entry.title;
   const code = episodeCode(entry);
+
+  const footer = (): ReactNode => {
+    if (outcome.kind === "failed") {
+      return (
+        <div className="flex flex-col gap-6">
+          <Notice className="max-w-[64ch]">It did not start. {outcome.message}</Notice>
+          <div>
+            <QuietAction focusKey="screening-back" label="Back to the programme" onPress={cancel} />
+          </div>
+        </div>
+      );
+    }
+
+    if (outcome.kind === "next") {
+      return (
+        <NextEpisode
+          next={outcome.next}
+          onPlay={() => {
+            playNext(outcome.next);
+          }}
+          onLeave={leaveAfterPlayback}
+        />
+      );
+    }
+
+    if (outcome.kind === "ended") {
+      return (
+        <p aria-live="polite" className="text-body text-paper-dim m-0">
+          Played to the end. Press Back to leave.
+        </p>
+      );
+    }
+
+    if (station === "Picture") {
+      return (
+        <p aria-live="polite" className="text-body text-paper-dim m-0">
+          Now screening in the player. Press Back to stop.
+        </p>
+      );
+    }
+
+    return <p className="text-body text-paper-faint m-0">Press Back to cancel.</p>;
+  };
 
   return (
     <FocusContext.Provider value={focusKey}>
@@ -322,14 +462,14 @@ export function ScreeningScreen() {
         ref={ref}
         aria-label={`Screening ${entry.title}`}
         data-station={station}
-        className="relative h-screen w-screen overflow-hidden bg-house"
+        className="bg-house relative h-screen w-screen overflow-hidden"
       >
         {entry.backdrop === null ? null : (
           <img
             alt=""
             aria-hidden="true"
             src={backdropUrl(ctx.server, entry.backdrop)}
-            className="absolute inset-0 h-full w-full object-cover transition-[filter,opacity] ease-house"
+            className="ease-house absolute inset-0 h-full w-full object-cover transition-[filter,opacity]"
             style={{
               transitionDuration: `${handoffTiming.houseMs}ms`,
               filter:
@@ -340,10 +480,10 @@ export function ScreeningScreen() {
             }}
           />
         )}
-        <div className="absolute inset-x-safe-x top-safe-y bottom-safe-y flex flex-col justify-between">
+        <div className="inset-x-safe-x top-safe-y bottom-safe-y absolute flex flex-col justify-between">
           <StationRule current={station} />
           <div
-            className="flex flex-col gap-10 transition-[opacity,transform] duration-700 ease-curtain"
+            className="ease-curtain flex flex-col gap-10 transition-[opacity,transform] duration-700"
             style={{
               opacity: elapsed === "house" ? 0 : 1,
               transform: elapsed === "house" ? "translateY(1.5rem)" : "none",
@@ -351,54 +491,25 @@ export function ScreeningScreen() {
           >
             <div className="flex items-baseline gap-8">
               {number === null ? null : (
-                <span className="shrink-0 text-heading font-[300] whitespace-nowrap text-paper-dim stretch-condensed">
+                <span className="text-heading text-paper-dim stretch-condensed shrink-0 font-[300] whitespace-nowrap">
                   {catalogueLabel(number)}
                 </span>
               )}
-              <h1 className="m-0 text-marquee font-[820] text-balance stretch-extra-wide">
+              <h1 className="text-marquee stretch-extra-wide m-0 font-[820] text-balance">
                 {name}
               </h1>
             </div>
             {entry.kind === "Episode" ? (
-              <p className="m-0 text-heading font-[620] stretch-semicondensed">
+              <p className="text-heading stretch-semicondensed m-0 font-[620]">
                 {code} {entry.title}
               </p>
             ) : null}
             {/* Once an episode has ended, the screen is about what comes next, not the file that played. */}
             {report === null || outcome.kind === "next" ? null : <ServerDecision report={report} />}
           </div>
-          <div className="flex min-h-[5rem] items-end justify-between">
-            {outcome.kind === "failed" ? (
-              <div className="flex flex-col gap-6">
-                <Notice className="max-w-[64ch]">It did not start. {outcome.message}</Notice>
-                <div>
-                  <QuietAction
-                    focusKey="screening-back"
-                    label="Back to the programme"
-                    onPress={cancel}
-                  />
-                </div>
-              </div>
-            ) : outcome.kind === "next" ? (
-              <NextEpisode
-                next={outcome.next}
-                onPlay={() => playNext(outcome.next)}
-                onLeave={leaveAfterPlayback}
-              />
-            ) : outcome.kind === "ended" ? (
-              <p aria-live="polite" className="m-0 text-body text-paper-dim">
-                Played to the end. Press Back to leave.
-              </p>
-            ) : station === "Picture" ? (
-              <p aria-live="polite" className="m-0 text-body text-paper-dim">
-                Now screening in the player. Press Back to stop.
-              </p>
-            ) : (
-              <p className="m-0 text-body text-paper-faint">Press Back to cancel.</p>
-            )}
-          </div>
+          <div className="flex min-h-[5rem] items-end justify-between">{footer()}</div>
         </div>
       </main>
     </FocusContext.Provider>
   );
-}
+};

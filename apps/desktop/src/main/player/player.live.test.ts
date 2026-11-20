@@ -2,30 +2,39 @@
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { createConnection } from "node:net";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { afterAll, describe, expect, test, vi } from "vitest";
-import { z } from "zod";
-import { ItemId, joinFacts } from "@harakiri/jellyfin";
-import { type CorpusMatch, corpusEntry, loadCorpus, matchCorpus } from "@harakiri/jellyfin/corpus";
-import { type PlayerEvent, type PlayerProbe, Session } from "../../shared/bridge";
+import path from "node:path";
+import { setTimeout } from "node:timers/promises";
 
-const harness = vi.hoisted(() => {
-  process.env["HARAKIRI_E2E"] = "1";
-  process.env["HARAKIRI_MPV_ARGS"] = "--vo=null --ao=null";
-  return { userData: "", session: null as z.infer<typeof Session> | null };
+import { ItemId, joinFacts } from "@harakiri/jellyfin";
+import { corpusEntry, loadCorpus, matchCorpus } from "@harakiri/jellyfin/corpus";
+import type { CorpusMatch } from "@harakiri/jellyfin/corpus";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { z } from "zod";
+
+import { Session } from "../../shared/bridge";
+import type { PlayerEvent, PlayerProbe } from "../../shared/bridge";
+import { readAudioOutput } from "./audio-output";
+import { createPlayer } from "./create-player";
+import { preparePlayback, startPlayback } from "./playback";
+
+/** What the player reads from the app, which each test sets: the user data dir and the session. */
+interface Harness {
+  userData: string;
+  session: Session | null;
+}
+
+const harness: Harness = { userData: "", session: null };
+
+const { play, probe, stop } = createPlayer({
+  loadSession: () => harness.session,
+  userData: () => harness.userData,
+  extraArgs: () => ["--vo=null", "--ao=null"],
+  audioOutput: readAudioOutput,
+  preparePlayback,
+  startPlayback,
 });
 
-vi.mock("electron", () => ({
-  app: { getPath: () => harness.userData, getVersion: () => "0.0.0-test" },
-}));
-vi.mock("../session", () => ({
-  loadSession: () => harness.session,
-  deviceId: () => harness.session?.deviceId ?? "none",
-}));
-
-const { play, probe, stop } = await import("./index");
-
-const SERVER = process.env["JELLYFIN_DEV_URL"] ?? "http://127.0.0.1:8096";
+const SERVER = process.env.JELLYFIN_DEV_URL ?? "http://127.0.0.1:8096";
 const DEVICE_ID = "harakiri-player-test";
 const TICKS = 10_000_000;
 
@@ -34,33 +43,43 @@ const TICKS = 10_000_000;
 const reachable = await fetch(`${SERVER}/System/Info/Public`, { signal: AbortSignal.timeout(2000) })
   .then((response) => response.ok)
   .catch(() => false);
-if (!reachable)
+
+if (!reachable) {
   throw new Error(
-    `the Jellyfin at ${SERVER} is unreachable: set JELLYFIN_DEV_URL (and JELLYFIN_DEV_USER, JELLYFIN_DEV_PASSWORD) to your server, or run \`mise run jellyfin:up\` for the dev container`,
+    `the Jellyfin at ${SERVER} is unreachable: set JELLYFIN_DEV_URL (and JELLYFIN_DEV_USER, JELLYFIN_DEV_PASSWORD) to your server, or run \`mise run jellyfin:up\` for the dev container`
   );
+}
 
 const clientHeader = (token?: string) =>
-  `MediaBrowser Client="harakiri-test", Device="vitest", DeviceId="${DEVICE_ID}", Version="0"${token ? `, Token="${token}"` : ""}`;
+  `MediaBrowser Client="harakiri-test", Device="vitest", DeviceId="${DEVICE_ID}", Version="0"${token === undefined || token === "" ? "" : `, Token="${token}"`}`;
 
-async function api<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${SERVER}${path}`, {
+const api = async <T>(route: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> => {
+  const response = await fetch(`${SERVER}${route}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
       Authorization: clientHeader(harness.session?.accessToken),
     },
   });
-  if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
+
+  if (!response.ok) {
+    throw new Error(`${route}: HTTP ${response.status}`);
+  }
+
   const body = await response.text();
+
   return schema.parse(body ? JSON.parse(body) : undefined);
-}
+};
 
 const SystemInfo = z.object({ Id: z.string(), ServerName: z.string(), Version: z.string() });
+
 const Auth = z.object({
   AccessToken: z.string(),
   User: z.object({ Id: z.string(), Name: z.string() }),
 });
+
 const UserData = z.object({ PlaybackPositionTicks: z.number().optional() });
+
 const Stream = z.object({
   Type: z.string(),
   Index: z.number(),
@@ -68,7 +87,9 @@ const Stream = z.object({
   VideoRangeType: z.string().nullish(),
   IsExternal: z.boolean().optional(),
 });
+
 type Stream = z.infer<typeof Stream>;
+
 const Items = z.object({
   Items: z.array(
     z.object({
@@ -76,15 +97,17 @@ const Items = z.object({
       Path: z.string().nullish(),
       RunTimeTicks: z.number().nullish(),
       MediaStreams: z.array(Stream).nullish(),
-    }),
+    })
   ),
 });
+
 const MpvReply = z.object({
   request_id: z.number().optional(),
   error: z.string().optional(),
   // Events arriving on the same connection carry no `data`.
   data: z.unknown().optional(),
 });
+
 const TrackList = z.array(
   z.object({
     type: z.string(),
@@ -93,18 +116,20 @@ const TrackList = z.array(
     external: z.boolean(),
     "external-filename": z.string().optional(),
     title: z.string().optional(),
-  }),
+  })
 );
 
-async function signIn(): Promise<Session> {
+const signIn = async (): Promise<Session> => {
   const info = await api("/System/Info/Public", SystemInfo);
+
   const auth = await api("/Users/AuthenticateByName", Auth, {
     method: "POST",
     body: JSON.stringify({
-      Username: process.env["JELLYFIN_DEV_USER"] ?? "harakiri",
-      Pw: process.env["JELLYFIN_DEV_PASSWORD"] ?? "harakiri-dev",
+      Username: process.env.JELLYFIN_DEV_USER ?? "harakiri",
+      Pw: process.env.JELLYFIN_DEV_PASSWORD ?? "harakiri-dev",
     }),
   });
+
   return Session.parse({
     serverUrl: SERVER,
     serverId: info.Id,
@@ -115,15 +140,17 @@ async function signIn(): Promise<Session> {
     accessToken: auth.AccessToken,
     deviceId: DEVICE_ID,
   });
-}
+};
 
-const libraryItems = async (session: Session) =>
-  (
-    await api(
-      `/Items?userId=${session.userId}&Recursive=true&IncludeItemTypes=Movie,Episode&Fields=MediaStreams,Path&SortBy=RunTimeTicks&SortOrder=Ascending`,
-      Items,
-    )
-  ).Items.map((item) => ({ ...item, path: item.Path ?? "" }));
+const libraryItems = async (session: Session) => {
+  const listed = await api(
+    `/Items?userId=${session.userId}&Recursive=true&IncludeItemTypes=Movie,Episode&Fields=MediaStreams,Path&SortBy=RunTimeTicks&SortOrder=Ascending`,
+    Items
+  );
+
+  return listed.Items.map((item) => ({ ...item, path: item.Path ?? "" }));
+};
+
 type Item = Awaited<ReturnType<typeof libraryItems>>[number];
 
 const catalog = await loadCorpus();
@@ -137,18 +164,22 @@ const pickItem = (
   corpus: CorpusMatch<Item> | undefined,
   id: string,
   fits: (item: Item) => boolean,
-  what: string,
+  what: string
 ): Item => {
   const item = corpus ? corpus.item(corpusEntry(catalog, id)) : items.find(fits);
-  if (!item) throw new Error(`the library at ${SERVER} has no ${what}`);
+
+  if (!item) {
+    throw new Error(`the library at ${SERVER} has no ${what}`);
+  }
+
   return item;
 };
 
-const userData = (session: Session, itemId: string) =>
-  api(`/UserItems/${itemId}/UserData?userId=${session.userId}`, UserData);
+const userData = async (session: Session, itemId: string) =>
+  await api(`/UserItems/${itemId}/UserData?userId=${session.userId}`, UserData);
 
-const restoreUserData = (session: Session, itemId: string, ticks: number | undefined) =>
-  api(`/UserItems/${itemId}/UserData?userId=${session.userId}`, z.unknown(), {
+const restoreUserData = async (session: Session, itemId: string, ticks: number | undefined) =>
+  await api(`/UserItems/${itemId}/UserData?userId=${session.userId}`, z.unknown(), {
     method: "POST",
     body: JSON.stringify({ PlaybackPositionTicks: ticks ?? 0 }),
   });
@@ -156,78 +187,135 @@ const restoreUserData = (session: Session, itemId: string, ticks: number | undef
 const byIndex = (a: Stream, b: Stream) => a.Index - b.Index;
 
 /** The IPC socket of the mpv this test process spawned, found the way any second client would. */
-function mpvSocket(): string {
-  for (const pid of readdirSync("/proc").filter((name) => /^\d+$/.test(name))) {
+const mpvSocket = (): string => {
+  for (const pid of readdirSync("/proc").filter((name) => /^\d+$/u.test(name))) {
     try {
-      const ppid = readFileSync(`/proc/${pid}/stat`, "utf8").split(") ")[1]?.split(" ")[1];
-      if (Number(ppid) !== process.pid) continue;
-      const args = readFileSync(`/proc/${pid}/cmdline`, "utf8").split("\0");
+      const ppid = readFileSync(`/proc/${pid}/stat`, "utf-8").split(") ")[1]?.split(" ")[1];
+
+      if (Number(ppid) !== process.pid) {
+        continue;
+      }
+
+      const args = readFileSync(`/proc/${pid}/cmdline`, "utf-8").split("\0");
       const socket = args.find((arg) => arg.startsWith("--input-ipc-server="));
-      if (socket) return socket.slice("--input-ipc-server=".length);
+
+      if (socket !== undefined) {
+        return socket.slice("--input-ipc-server=".length);
+      }
     } catch {
       // The process exited while we looked.
     }
   }
-  throw new Error("no mpv child process");
-}
 
-/** Sends one command over a second IPC connection and returns mpv's reply data. */
-function mpvCommand(...command: unknown[]): Promise<unknown> {
-  return new Promise((resolve, reject) => {
+  throw new Error("no mpv child process");
+};
+
+/** Sends one command over a second IPC connection and returns mpv's reply data, parsed. */
+const mpvCommand = async <T>(schema: z.ZodType<T>, ...command: (string | number)[]): Promise<T> =>
+  // oxlint-disable-next-line promise/avoid-new -- wraps the socket's data and error events, which have no promise form
+  await new Promise((resolve, reject) => {
     const socket = createConnection(mpvSocket());
     let buffer = "";
-    socket.setEncoding("utf8");
+    socket.setEncoding("utf-8");
     socket.on("error", reject);
     socket.on("data", (chunk: string) => {
       buffer += chunk;
+
       for (const line of buffer.split("\n").slice(0, -1)) {
         const message = MpvReply.parse(JSON.parse(line));
-        if (message.request_id !== 7) continue;
+
+        if (message.request_id !== 7) {
+          continue;
+        }
+
         socket.end();
-        if (message.error === "success") resolve(message.data);
-        else reject(new Error(`${JSON.stringify(command)}: ${message.error}`));
+
+        if (message.error === "success") {
+          resolve(schema.parse(message.data));
+        } else {
+          reject(new Error(`${JSON.stringify(command)}: ${message.error}`));
+        }
       }
+
       buffer = buffer.slice(buffer.lastIndexOf("\n") + 1);
     });
     socket.write(`${JSON.stringify({ command, request_id: 7 })}\n`);
   });
-}
 
-async function until(
+/** Polls the player every 200 ms until `check` holds, and fails with the last probe after the timeout. */
+const until = async (
   what: string,
   check: (probe: PlayerProbe) => boolean,
-  timeoutMs = 30_000,
-): Promise<PlayerProbe> {
+  timeoutMs = 30_000
+): Promise<PlayerProbe> => {
   const deadline = Date.now() + timeoutMs;
-  let last: PlayerProbe = { running: false };
-  while (Date.now() < deadline) {
-    last = await probe();
-    if (check(last)) return last;
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  }
-  throw new Error(`timed out waiting for ${what}; last probe ${JSON.stringify(last)}`);
-}
+
+  const poll = async (): Promise<PlayerProbe> => {
+    const last = await probe();
+
+    if (check(last)) {
+      return last;
+    }
+
+    if (Date.now() >= deadline) {
+      throw new Error(`timed out waiting for ${what}; last probe ${JSON.stringify(last)}`);
+    }
+
+    await setTimeout(200);
+
+    return await poll();
+  };
+
+  return await poll();
+};
 
 const userDataDirs: string[] = [];
+
 const freshUserData = (): string => {
-  const dir = mkdtempSync(join(tmpdir(), "harakiri-player-test-"));
+  const dir = mkdtempSync(path.join(tmpdir(), "harakiri-player-test-"));
   userDataDirs.push(dir);
+
   return dir;
 };
 
-afterAll(async () => {
-  await stop();
-  for (const dir of userDataDirs) rmSync(dir, { recursive: true, force: true });
-});
-
 describe(`player against the dev Jellyfin at ${SERVER}`, () => {
-  test(
-    "plays from 60 s, pauses on select, and the stop position becomes the server's resume point",
-    { timeout: 90_000 },
-    async () => {
+  afterAll(async () => {
+    await stop();
+
+    for (const dir of userDataDirs) {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  describe("plays from 60 s, pauses on select, and the stop position becomes the server's resume point", () => {
+    /** What one play of the item showed, observed in `beforeAll` and checked by each test. */
+    interface Observed {
+      readonly item: Item;
+      readonly advancing: PlayerProbe;
+      readonly paused: PlayerProbe;
+      readonly repaused: PlayerProbe;
+      readonly probeAfterStop: PlayerProbe;
+      readonly events: readonly PlayerEvent[];
+      readonly after: z.infer<typeof UserData>;
+    }
+
+    let observed: Observed | undefined;
+
+    const seen = (): Observed => {
+      if (observed === undefined) {
+        throw new Error("the play in beforeAll did not finish");
+      }
+
+      return observed;
+    };
+
+    const stoppedTicks = () => seen().events.at(-2)?.positionTicks ?? 0;
+
+    beforeAll(async () => {
       harness.userData = freshUserData();
       harness.session = await signIn();
       const items = await libraryItems(harness.session);
+
       const item = pickItem(
         items,
         matchCorpus(catalog, items),
@@ -238,59 +326,85 @@ describe(`player against the dev Jellyfin at ${SERVER}`, () => {
           (candidate.RunTimeTicks ?? 0) > 360 * TICKS &&
           (candidate.RunTimeTicks ?? 0) < 1200 * TICKS &&
           (candidate.MediaStreams ?? []).some(
-            (s) => s.Type === "Video" && s.Codec === "h264" && s.VideoRangeType === "SDR",
+            (s) => s.Type === "Video" && s.Codec === "h264" && s.VideoRangeType === "SDR"
           ),
-        "SDR H.264 item between 6 and 20 minutes",
+        "SDR H.264 item between 6 and 20 minutes"
       );
+
       const before = await userData(harness.session, item.Id);
 
       const events: PlayerEvent[] = [];
+
       try {
-        await play({ itemId: ItemId.parse(item.Id), startPositionTicks: 60 * TICKS }, (event) =>
-          events.push(event),
-        );
+        await play({ itemId: ItemId.parse(item.Id), startPositionTicks: 60 * TICKS }, (event) => {
+          events.push(event);
+        });
 
         const advancing = await until("time-pos past 61 s", (p) => (p.timePos ?? 0) > 61);
-        expect(advancing).toMatchObject({ running: true, pause: false });
-        expect(advancing.path).toContain(`/Videos/${item.Id}/stream?static=true`);
 
-        await mpvCommand("script-message", "harakiri", "select");
+        await mpvCommand(z.unknown(), "script-message", "harakiri", "select");
         const paused = await until("pause after select", (p) => p.pause === true);
-        expect(paused.osdVisible).toBe(true);
 
-        await mpvCommand("keypress", "ENTER");
+        await mpvCommand(z.unknown(), "keypress", "ENTER");
         await until("ENTER through input.conf resumes", (p) => p.pause === false);
-        await mpvCommand("keypress", "GAMEPAD_ACTION_DOWN");
+        await mpvCommand(z.unknown(), "keypress", "GAMEPAD_ACTION_DOWN");
+
         const repaused = await until(
           "gamepad A through input.conf pauses",
-          (p) => p.pause === true,
+          (p) => p.pause === true
         );
 
         await stop();
-        expect(await probe()).toEqual({ running: false });
-
-        // stop() resolves after the stop report, so `reported` has already followed `stopped`.
-        expect(events.slice(-2).map((e) => e.phase)).toEqual(["stopped", "reported"]);
-        const stopped = events.at(-2);
-        const stoppedTicks = stopped?.positionTicks ?? 0;
-        expect(Math.abs(stoppedTicks - (repaused.timePos ?? 0) * TICKS)).toBeLessThan(TICKS);
-        expect(events.map((e) => e.phase)).toEqual(
-          expect.arrayContaining(["starting", "playing", "paused", "stopped"]),
-        );
-        expect(joinFacts(events[0]?.facts ?? [])).toMatch(/^SDR · /);
-        expect(events[0]?.transcodeReasons).toEqual([]);
+        const probeAfterStop = await probe();
 
         const after = await userData(harness.session, item.Id);
-        expect(stoppedTicks).toBeGreaterThan(61 * TICKS);
-        expect(Math.abs((after.PlaybackPositionTicks ?? 0) - stoppedTicks)).toBeLessThan(2 * TICKS);
+
+        observed = { item, advancing, paused, repaused, probeAfterStop, events, after };
       } finally {
         await stop();
         await restoreUserData(harness.session, item.Id, before.PlaybackPositionTicks);
       }
-    },
-  );
+    }, 90_000);
 
-  test(
+    it("starts the item from 60 s, straight from the server", () => {
+      const { advancing, item } = seen();
+
+      expect(advancing).toMatchObject({ running: true, pause: false });
+      expect(advancing.path).toContain(`/Videos/${item.Id}/stream?static=true`);
+    });
+
+    it("select pauses and shows the controls", () => {
+      expect(seen().paused.osdVisible).toBe(true);
+    });
+
+    it("stop ends mpv and reports stopped, then reported, at the paused position", () => {
+      const { probeAfterStop, events, repaused } = seen();
+
+      expect(probeAfterStop).toStrictEqual({ running: false });
+      // stop() resolves after the stop report, so `reported` has already followed `stopped`.
+      expect(events.slice(-2).map((e) => e.phase)).toStrictEqual(["stopped", "reported"]);
+      expect(Math.abs(stoppedTicks() - (repaused.timePos ?? 0) * TICKS)).toBeLessThan(TICKS);
+      expect(events.map((e) => e.phase)).toStrictEqual(
+        expect.arrayContaining(["starting", "playing", "paused", "stopped"])
+      );
+    });
+
+    it("the first event states a direct SDR play", () => {
+      const { events } = seen();
+
+      expect(joinFacts(events[0]?.facts ?? [])).toMatch(/^SDR · /u);
+      expect(events[0]?.transcodeReasons).toStrictEqual([]);
+    });
+
+    it("the stop position becomes the server's resume point", () => {
+      const { after } = seen();
+
+      expect(stoppedTicks()).toBeGreaterThan(61 * TICKS);
+      expect(Math.abs((after.PlaybackPositionTicks ?? 0) - stoppedTicks())).toBeLessThan(2 * TICKS);
+    });
+  });
+
+  it(
     "the chosen Jellyfin audio and sidecar subtitle land on the matching mpv tracks",
     { timeout: 90_000 },
     async () => {
@@ -298,34 +412,42 @@ describe(`player against the dev Jellyfin at ${SERVER}`, () => {
       harness.session ??= await signIn();
       const items = await libraryItems(harness.session);
       const corpus = matchCorpus(catalog, items);
+
       const item = pickItem(
         items,
         corpus,
         "sdr-h264-tracks",
         (candidate) => {
           const streams = candidate.MediaStreams ?? [];
+
           return (
             streams.filter((s) => s.Type === "Audio").length >= 2 &&
-            streams.some((s) => s.Type === "Subtitle" && s.IsExternal) &&
-            streams.some((s) => s.Type === "Subtitle" && !s.IsExternal)
+            streams.some((s) => s.Type === "Subtitle" && s.IsExternal === true) &&
+            streams.some((s) => s.Type === "Subtitle" && s.IsExternal !== true)
           );
         },
-        "item with two audio tracks and embedded and sidecar subtitles",
+        "item with two audio tracks and embedded and sidecar subtitles"
       );
+
       const streams = item.MediaStreams ?? [];
-      const sidecars = streams.filter((s) => s.Type === "Subtitle" && s.IsExternal);
-      const embeddedSubs = streams.filter((s) => s.Type === "Subtitle" && !s.IsExternal);
-      const secondAudio = streams.filter((s) => s.Type === "Audio").toSorted(byIndex)[1];
-      const sidecar = sidecars.toSorted(byIndex)[0];
-      if (!secondAudio || !sidecar) throw new Error("unreachable: checked by the find above");
+      const sidecars = streams.filter((s) => s.Type === "Subtitle" && s.IsExternal === true);
+      const embeddedSubs = streams.filter((s) => s.Type === "Subtitle" && s.IsExternal !== true);
+      const [, secondAudio] = streams.filter((s) => s.Type === "Audio").toSorted(byIndex);
+      const [sidecar] = sidecars.toSorted(byIndex);
+
+      if (!secondAudio || !sidecar) {
+        throw new Error("unreachable: checked by the find above");
+      }
+
       const counts = {
         audio: streams.filter((s) => s.Type === "Audio").length,
         embedded: embeddedSubs.length,
         external: sidecars.length,
       };
+
       const declared = corpusEntry(catalog, "sdr-h264-tracks").expect;
-      expect(counts).toEqual(
-        corpus ? { audio: declared.audio.length, ...declared.subtitles } : counts,
+      expect(counts).toStrictEqual(
+        corpus ? { audio: declared.audio.length, ...declared.subtitles } : counts
       );
       const before = await userData(harness.session, item.Id);
 
@@ -336,27 +458,29 @@ describe(`player against the dev Jellyfin at ${SERVER}`, () => {
             audioStreamIndex: secondAudio.Index,
             subtitleStreamIndex: sidecar.Index,
           },
-          () => {},
+          () => {}
         );
+
         const playing = await until(
           "tracks selected",
-          (p) => typeof p.aid === "number" && typeof p.sid === "number",
+          (p) => p.aid !== undefined && p.aid !== false && p.sid !== undefined && p.sid !== false
         );
-        expect([playing.aid, playing.sid]).toEqual([2, embeddedSubs.length + 1]);
 
-        const trackList = TrackList.parse(await mpvCommand("get_property", "track-list"));
+        expect([playing.aid, playing.sid]).toStrictEqual([2, embeddedSubs.length + 1]);
+
+        const trackList = await mpvCommand(TrackList, "get_property", "track-list");
         const audio = trackList.find((t) => t.type === "audio" && t.id === 2);
         expect(audio?.["ff-index"]).toBe(secondAudio.Index - sidecars.length);
         const subtitle = trackList.find((t) => t.type === "sub" && t.id === playing.sid);
         expect(subtitle?.external).toBe(true);
         expect(subtitle?.["external-filename"]).toContain(`/Subtitles/${sidecar.Index}/0/`);
-        expect(trackList.filter((t) => t.external).map((t) => t.title)).toEqual(
-          sidecars.map((_, i) => `External ${i + 1}`),
+        expect(trackList.filter((t) => t.external).map((t) => t.title)).toStrictEqual(
+          sidecars.map((_, i) => `External ${i + 1}`)
         );
       } finally {
         await stop();
         await restoreUserData(harness.session, item.Id, before.PlaybackPositionTicks);
       }
-    },
+    }
   );
 });

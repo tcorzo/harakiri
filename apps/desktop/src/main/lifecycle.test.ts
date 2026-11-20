@@ -1,68 +1,28 @@
 // @vitest-environment node
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { afterEach, beforeEach, expect, test } from "vitest";
+import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
+
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
 import { holdQuitUntilStopped, removeStaleMpvDirs, stopWithin } from "./lifecycle";
-
-let dir: string;
-
-beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "harakiri-lifecycle-"));
-});
-
-afterEach(() => {
-  rmSync(dir, { recursive: true, force: true });
-});
 
 const uid = process.getuid?.() ?? -1;
 const NOW = Date.UTC(2026, 9, 30, 12, 0, 0);
 
-function makeDir(name: string, ageMs: number): void {
-  const path = join(dir, name);
-  mkdirSync(path);
-  writeFileSync(join(path, "ipc.sock"), "");
-  const at = new Date(NOW - ageMs);
-  utimesSync(path, at, at);
-}
+const hang = async () => {
+  await Promise.withResolvers<undefined>().promise;
+};
 
-test("removes old harakiri-mpv dirs this user owns and keeps fresh or unrelated ones", () => {
-  makeDir("harakiri-mpv-old", 120_000);
-  makeDir("harakiri-mpv-fresh", 10_000);
-  makeDir("other-old", 120_000);
-  writeFileSync(join(dir, "harakiri-mpv-file"), "");
-  utimesSync(join(dir, "harakiri-mpv-file"), new Date(0), new Date(0));
-
-  const removed = removeStaleMpvDirs({ dir, uid, now: NOW, minAgeMs: 60_000 });
-
-  expect(removed).toEqual([join(dir, "harakiri-mpv-old")]);
-  expect(readdirSync(dir).toSorted()).toEqual([
-    "harakiri-mpv-file",
-    "harakiri-mpv-fresh",
-    "other-old",
-  ]);
-});
-
-test("leaves dirs owned by another user", () => {
-  makeDir("harakiri-mpv-theirs", 120_000);
-
-  expect(removeStaleMpvDirs({ dir, uid: uid + 1, now: NOW, minAgeMs: 60_000 })).toEqual([]);
-  expect(readdirSync(dir)).toEqual(["harakiri-mpv-theirs"]);
-});
-
-test("stopWithin reports a stop, a failure and a hang", async () => {
-  await expect(stopWithin(() => Promise.resolve(), 1000)).resolves.toBe("stopped");
-  await expect(stopWithin(() => Promise.reject(new Error("boom")), 1000)).resolves.toBe("failed");
-  await expect(stopWithin(() => new Promise(() => {}), 20)).resolves.toBe("timed-out");
-});
-
-function fakeApp() {
-  let listener: ((event: { preventDefault(): void }) => void) | undefined;
+const fakeApp = () => {
+  let listener: ((event: { preventDefault: () => void }) => void) | undefined;
   const exits: number[] = [];
+
   return {
     exits,
     app: {
-      on: (_name: "before-quit", l: (event: { preventDefault(): void }) => void) => {
+      on: (_name: "before-quit", l: (event: { preventDefault: () => void }) => void) => {
         listener = l;
       },
       exit: (code = 0) => {
@@ -76,63 +36,141 @@ function fakeApp() {
           prevented = true;
         },
       });
+
       return prevented ? "prevented" : "allowed";
     },
   };
-}
+};
 
-test("quit waits for the player to stop, then exits once", async () => {
-  const { app, exits, quit } = fakeApp();
-  const { promise: stopped, resolve: finishStop } = Promise.withResolvers<void>();
-  let stops = 0;
-  holdQuitUntilStopped(app, () => {
-    stops += 1;
-    return stopped;
+describe(removeStaleMpvDirs, () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(path.join(tmpdir(), "harakiri-lifecycle-"));
   });
 
-  expect(quit()).toBe("prevented");
-  expect(quit()).toBe("prevented");
-  await Promise.resolve();
-  expect(exits).toEqual([]);
-
-  finishStop();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  expect(exits).toEqual([0]);
-  expect(stops).toBe(1);
-});
-
-test("quit exits after the cap when the player hangs", async () => {
-  const { app, exits, quit } = fakeApp();
-  holdQuitUntilStopped(app, () => new Promise(() => {}), { capMs: 20 });
-
-  quit();
-  await new Promise((resolve) => setTimeout(resolve, 60));
-  expect(exits).toEqual([0]);
-});
-
-test("afterStop runs once, after the player stopped and before exit", async () => {
-  const { app, exits, quit } = fakeApp();
-  const order: string[] = [];
-  holdQuitUntilStopped(app, async () => void order.push("stop"), {
-    afterStop: () => void order.push(`afterStop exits=${exits.length}`),
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
   });
 
-  quit();
-  quit();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  expect(order).toEqual(["stop", "afterStop exits=0"]);
-  expect(exits).toEqual([0]);
-});
+  const makeDir = (name: string, ageMs: number): void => {
+    const dirPath = path.join(dir, name);
+    mkdirSync(dirPath);
+    writeFileSync(path.join(dirPath, "ipc.sock"), "");
+    const at = new Date(NOW - ageMs);
+    utimesSync(dirPath, at, at);
+  };
 
-test("a throwing afterStop still exits", async () => {
-  const { app, exits, quit } = fakeApp();
-  holdQuitUntilStopped(app, () => Promise.resolve(), {
-    afterStop: () => {
-      throw new Error("install failed");
-    },
+  it("removes old harakiri-mpv dirs this user owns and keeps fresh or unrelated ones", () => {
+    makeDir("harakiri-mpv-old", 120_000);
+    makeDir("harakiri-mpv-fresh", 10_000);
+    makeDir("other-old", 120_000);
+    writeFileSync(path.join(dir, "harakiri-mpv-file"), "");
+    utimesSync(path.join(dir, "harakiri-mpv-file"), new Date(0), new Date(0));
+
+    const removed = removeStaleMpvDirs({ dir, uid, now: NOW, minAgeMs: 60_000 });
+
+    expect(removed).toStrictEqual([path.join(dir, "harakiri-mpv-old")]);
+    expect(readdirSync(dir).toSorted()).toStrictEqual([
+      "harakiri-mpv-file",
+      "harakiri-mpv-fresh",
+      "other-old",
+    ]);
   });
 
-  quit();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  expect(exits).toEqual([0]);
+  it("leaves dirs owned by another user", () => {
+    makeDir("harakiri-mpv-theirs", 120_000);
+
+    expect(removeStaleMpvDirs({ dir, uid: uid + 1, now: NOW, minAgeMs: 60_000 })).toStrictEqual([]);
+    expect(readdirSync(dir)).toStrictEqual(["harakiri-mpv-theirs"]);
+  });
+});
+
+describe(stopWithin, () => {
+  it("reports a stop, a failure and a hang", async () => {
+    await expect(
+      stopWithin(async () => {
+        await Promise.resolve();
+      }, 1000)
+    ).resolves.toBe("stopped");
+    await expect(
+      stopWithin(async () => {
+        await Promise.reject(new Error("boom"));
+      }, 1000)
+    ).resolves.toBe("failed");
+    await expect(stopWithin(hang, 20)).resolves.toBe("timed-out");
+  });
+});
+
+describe(holdQuitUntilStopped, () => {
+  it("waits for the player to stop, then exits once", async () => {
+    const { app, exits, quit } = fakeApp();
+    const { promise: stopped, resolve: finishStop } = Promise.withResolvers<undefined>();
+    let stops = 0;
+    holdQuitUntilStopped(app, async () => {
+      stops += 1;
+      await stopped;
+    });
+
+    expect(quit()).toBe("prevented");
+    expect(quit()).toBe("prevented");
+    await Promise.resolve();
+    expect(exits).toStrictEqual([]);
+
+    finishStop(undefined);
+    await delay(0);
+    expect(exits).toStrictEqual([0]);
+    expect(stops).toBe(1);
+  });
+
+  it("exits after the cap when the player hangs", async () => {
+    const { app, exits, quit } = fakeApp();
+    holdQuitUntilStopped(app, hang, { capMs: 20 });
+
+    quit();
+    await delay(60);
+    expect(exits).toStrictEqual([0]);
+  });
+
+  it("runs afterStop once, after the player stopped and before exit", async () => {
+    const { app, exits, quit } = fakeApp();
+    const order: string[] = [];
+    holdQuitUntilStopped(
+      app,
+      async () => {
+        order.push("stop");
+        await Promise.resolve();
+      },
+      {
+        afterStop: () => {
+          order.push(`afterStop exits=${exits.length}`);
+        },
+      }
+    );
+
+    quit();
+    quit();
+    await delay(0);
+    expect(order).toStrictEqual(["stop", "afterStop exits=0"]);
+    expect(exits).toStrictEqual([0]);
+  });
+
+  it("still exits when afterStop throws", async () => {
+    const { app, exits, quit } = fakeApp();
+    holdQuitUntilStopped(
+      app,
+      async () => {
+        await Promise.resolve();
+      },
+      {
+        afterStop: () => {
+          throw new Error("install failed");
+        },
+      }
+    );
+
+    quit();
+    await delay(0);
+    expect(exits).toStrictEqual([0]);
+  });
 });

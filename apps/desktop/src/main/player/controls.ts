@@ -1,5 +1,6 @@
 import type { Action } from "@harakiri/input";
 import { match, P } from "ts-pattern";
+
 import type { TrackTable } from "./tracks";
 
 /** What mpv's bindings send as `script-message harakiri <action>`. `stop` is the window's close button. */
@@ -79,15 +80,18 @@ const clamp = (value: number, max: number) => Math.min(Math.max(value, 0), Math.
 
 const openMenu = (state: ControlsState, rows: readonly MenuRow[]): ControlsState => {
   const current = rows.findIndex((row) => row.property === "aid" && row.id === state.aid);
+
   return { ...state, menu: { cursor: Math.max(current, 0) } };
 };
 
 const onAction = (state: ControlsState, action: PlayerAction, rows: readonly MenuRow[]): Step => {
   const shown = { ...state, visible: true };
+
   const togglePause: Step = {
     state: shown,
     commands: [{ type: "pause", paused: !state.paused }],
   };
+
   return match({ menu: state.menu, action })
     .with({ action: "stop" }, () => ({ state: shown, commands: [{ type: "stop" } as const] }))
     .with({ action: "playPause" }, () => togglePause)
@@ -121,7 +125,7 @@ const onAction = (state: ControlsState, action: PlayerAction, rows: readonly Men
           menu: { cursor: clamp(menu.cursor + (direction === "up" ? -1 : 1), rows.length - 1) },
         },
         commands: [],
-      }),
+      })
     )
     .with({ menu: P.nonNullable, action: P.union("left", "right") }, () => ({
       state: shown,
@@ -129,6 +133,7 @@ const onAction = (state: ControlsState, action: PlayerAction, rows: readonly Men
     }))
     .with({ menu: P.nonNullable, action: "select" }, ({ menu }) => {
       const row = rows[menu.cursor];
+
       return {
         state: { ...shown, menu: null },
         commands: row ? [{ type: "track", property: row.property, id: row.id } as const] : [],
@@ -138,8 +143,8 @@ const onAction = (state: ControlsState, action: PlayerAction, rows: readonly Men
 };
 
 /** The player's control logic: mpv input and mpv state in, new state and mpv commands out. */
-export function step(state: ControlsState, input: ControlsInput, rows: readonly MenuRow[]): Step {
-  return match(input)
+export const step = (state: ControlsState, input: ControlsInput, rows: readonly MenuRow[]): Step =>
+  match(input)
     .with({ type: "action" }, ({ action }) => onAction(state, action, rows))
     .with({ type: "hide" }, () => ({
       // Paused or browsing tracks, the controls are the point; only playback hides them.
@@ -152,4 +157,3 @@ export function step(state: ControlsState, input: ControlsInput, rows: readonly 
     }))
     .with({ type: "tracks" }, ({ aid, sid }) => ({ state: { ...state, aid, sid }, commands: [] }))
     .exhaustive();
-}

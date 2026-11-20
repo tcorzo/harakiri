@@ -8,8 +8,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createHashHistory, createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+
 import { routeTree } from "./routeTree.gen";
-import { ErrorScreen } from "./ui/ErrorScreen";
+import { ErrorScreen } from "./ui/error-screen";
+
 import "./styles.css";
 
 init({
@@ -18,6 +20,7 @@ init({
   shouldFocusDOMNode: true,
   domNodeFocusOptions: { preventScroll: true, focusVisible: true },
 });
+
 // The input hub is the only key path, so norigin's own keydown handling is switched off.
 setKeyMap({ left: [], up: [], right: [], down: [], enter: [] });
 
@@ -42,13 +45,16 @@ declare module "@tanstack/react-router" {
   }
 }
 
-const root = document.getElementById("root");
-if (root === null) throw new Error("index.html is missing #root");
+const root = document.querySelector("#root");
+
+if (root === null) {
+  throw new Error("index.html is missing #root");
+}
 
 createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
     </QueryClientProvider>
-  </StrictMode>,
+  </StrictMode>
 );

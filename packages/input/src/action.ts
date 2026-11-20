@@ -19,6 +19,4 @@ export type InputSource = "keyboard" | "gamepad";
 
 const directions: ReadonlySet<Action> = new Set<Direction>(["up", "down", "left", "right"]);
 
-export function isDirection(action: Action): action is Direction {
-  return directions.has(action);
-}
+export const isDirection = (action: Action): action is Direction => directions.has(action);

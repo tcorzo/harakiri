@@ -1,8 +1,9 @@
 import { ItemId } from "@harakiri/jellyfin";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+
 import { rawItemQuery } from "../../data/queries";
-import { ScreeningScreen } from "../../screening/ScreeningScreen";
+import { ScreeningScreen } from "../../screening/screening-screen";
 
 const search = z.object({
   start: z.number().int().nonnegative().catch(0),
@@ -15,16 +16,17 @@ const search = z.object({
   after: z.enum(["back", "title"]).optional().catch(undefined),
 });
 
-function Screening() {
+const Screening = () => {
   const { id } = Route.useParams();
+
   // Playing the next episode replaces the route with a new id: a new screening, from the house.
   return <ScreeningScreen key={id} />;
-}
+};
 
 export const Route = createFileRoute("/_signedIn/screening/$id")({
   params: { parse: ({ id }) => ({ id: ItemId.parse(id) }), stringify: ({ id }) => ({ id }) },
   validateSearch: search,
-  loader: ({ context: { queryClient, signedIn }, params }) =>
-    queryClient.ensureQueryData(rawItemQuery(signedIn, params.id)),
+  loader: async ({ context: { queryClient, signedIn }, params }) =>
+    await queryClient.query({ ...rawItemQuery(signedIn, params.id), staleTime: "static" }),
   component: Screening,
 });

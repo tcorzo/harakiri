@@ -7,14 +7,7 @@
 // - corpus (default): the generated corpus, metadata from its NFO files and artwork only, offline.
 // - own: your own library; internet metadata providers stay on so posters and logos arrive.
 
-import { api, BASE, login, PASSWORD, USER, USING_DEFAULT_CREDS, waitForServer } from "./client.ts";
-
-type VirtualFolder = {
-  Name: string;
-  ItemId: string;
-  Locations: string[];
-  LibraryOptions: Record<string, unknown>;
-};
+import { api, BASE, login, PASSWORD, USER, USING_DEFAULT_CREDS, waitForServer } from "./client";
 
 const OWN_LIBRARY = (process.env.JELLYFIN_DEV_LIBRARY ?? "corpus") === "own";
 
@@ -31,7 +24,7 @@ const OFFLINE_TYPE_OPTIONS = ["Movie", "Series", "Season", "Episode"].map((Type)
 // Cheap on CPU: no trickplay, no chapter images, no realtime watcher (CIFS has no inotify anyway).
 // Own library: metadata and image fetchers stay enabled (TypeOptions left at defaults) so posters,
 // backdrops and logos arrive. Nothing is written next to the media: the mounts are read-only.
-const LIBRARY_OPTIONS = {
+const BASE_LIBRARY_OPTIONS = {
   Enabled: true,
   EnableRealtimeMonitor: false,
   EnableTrickplayImageExtraction: false,
@@ -42,7 +35,6 @@ const LIBRARY_OPTIONS = {
   EnableInternetProviders: OWN_LIBRARY,
   LocalMetadataReaderOrder: ["Nfo"],
   DisabledLocalMetadataReaders: [],
-  ...(OWN_LIBRARY ? {} : { TypeOptions: OFFLINE_TYPE_OPTIONS }),
   SaveLocalMetadata: false,
   MetadataSavers: [],
   SaveSubtitlesWithMedia: false,
@@ -53,22 +45,44 @@ const LIBRARY_OPTIONS = {
   AutomaticRefreshIntervalDays: 0,
 };
 
+type LibraryOptions = Partial<typeof BASE_LIBRARY_OPTIONS> & {
+  TypeOptions?: typeof OFFLINE_TYPE_OPTIONS;
+};
+
+interface VirtualFolder {
+  Name: string;
+  ItemId: string;
+  Locations: string[];
+  LibraryOptions: LibraryOptions;
+}
+
+const libraryOptions = (): LibraryOptions =>
+  OWN_LIBRARY
+    ? BASE_LIBRARY_OPTIONS
+    : { ...BASE_LIBRARY_OPTIONS, TypeOptions: OFFLINE_TYPE_OPTIONS };
+
+const LIBRARY_OPTIONS = libraryOptions();
+
 const LIBRARIES = [
   { name: "Movies", collectionType: "movies", path: "/media/movies" },
   { name: "Shows", collectionType: "tvshows", path: "/media/series" },
 ];
 
 const info = await waitForServer();
+
 console.log(
-  `server ${BASE} up, Jellyfin ${info.Version}, wizard completed: ${info.StartupWizardCompleted}`,
+  `server ${BASE} up, Jellyfin ${info.Version}, wizard completed: ${info.StartupWizardCompleted}`
 );
+
 if (USING_DEFAULT_CREDS) {
   console.log(
-    `using default DEV-ONLY credentials ${USER} / ${PASSWORD} (set JELLYFIN_DEV_USER / JELLYFIN_DEV_PASSWORD to override)`,
+    `using default DEV-ONLY credentials ${USER} / ${PASSWORD} (set JELLYFIN_DEV_USER / JELLYFIN_DEV_PASSWORD to override)`
   );
 }
 
-if (!info.StartupWizardCompleted) {
+if (info.StartupWizardCompleted) {
+  console.log("startup wizard already completed, skipping");
+} else {
   await api("POST", "/Startup/Configuration", {
     body: {
       ServerName: "harakiri-dev",
@@ -77,18 +91,18 @@ if (!info.StartupWizardCompleted) {
       PreferredMetadataLanguage: "en",
     },
   });
-  await api("GET", "/Startup/User"); // initialises the first user record
+  // Initialises the first user record.
+  await api("GET", "/Startup/User");
   await api("POST", "/Startup/User", { body: { Name: USER, Password: PASSWORD } });
   // The port is published on 127.0.0.1 only; remote access must stay on so the
   // forwarded (non-loopback) source address inside the container is not rejected.
   await api("POST", "/Startup/RemoteAccess", { body: { EnableRemoteAccess: true } });
   await api("POST", "/Startup/Complete");
   console.log("startup wizard completed");
-} else {
-  console.log("startup wizard already completed, skipping");
 }
 
 const { token, userId } = await login();
+
 console.log(`authenticated as ${USER}`);
 
 // Bound scan parallelism: each concurrent ffprobe (-probesize 1G) can take >1 GB, and the
@@ -100,47 +114,67 @@ const SERVER_CONFIG = {
   // The app's onboarding and the e2e approve sign-ins through Quick Connect.
   QuickConnectAvailable: true,
 };
-const serverConfig = await api<Record<string, unknown>>("GET", "/System/Configuration", { token });
-const drift = Object.entries(SERVER_CONFIG).filter(([k, v]) => serverConfig[k] !== v);
+
+const CONFIG_KEYS = [
+  "LibraryScanFanoutConcurrency",
+  "LibraryMetadataRefreshConcurrency",
+  "ParallelImageEncodingLimit",
+  "QuickConnectAvailable",
+] as const;
+
+const serverConfig = await api<Partial<typeof SERVER_CONFIG>>("GET", "/System/Configuration", {
+  token,
+});
+
+const drift = CONFIG_KEYS.filter((key) => serverConfig[key] !== SERVER_CONFIG[key]);
+
 if (drift.length > 0) {
   await api("POST", "/System/Configuration", {
     token,
     body: { ...serverConfig, ...SERVER_CONFIG },
   });
-  console.log(`server config updated: ${drift.map(([k, v]) => `${k}=${v}`).join(", ")}`);
+  console.log(
+    `server config updated: ${drift.map((key) => `${key}=${String(SERVER_CONFIG[key])}`).join(", ")}`
+  );
 } else {
   console.log("server scan concurrency already bounded");
 }
 
 // The dev user is hidden from /Users/Public: onboarding then shows the typed sign-in, and the
 // tests that need a "Who is watching" list fake it.
-const user = await api<{ Policy: Record<string, unknown> }>("GET", `/Users/${userId}`, { token });
-if (user.Policy.IsHidden !== true) {
+const user = await api<{ Policy: { IsHidden?: boolean } }>("GET", `/Users/${userId}`, { token });
+
+if (user.Policy.IsHidden === true) {
+  console.log(`user ${USER} already hidden`);
+} else {
   await api("POST", `/Users/${userId}/Policy`, { token, body: { ...user.Policy, IsHidden: true } });
   console.log(`user ${USER} hidden from the public user list`);
-} else {
-  console.log(`user ${USER} already hidden`);
 }
 
 const existing = await api<VirtualFolder[]>("GET", "/Library/VirtualFolders", { token });
 let created = 0;
+
+/* oxlint-disable eslint/no-await-in-loop -- libraries are created one after another: each call changes the folder list the next reads */
 for (const lib of LIBRARIES) {
   const found = existing.find((f) => f.Name === lib.name);
+
   if (!found) {
     const q = new URLSearchParams({
       name: lib.name,
       collectionType: lib.collectionType,
       refreshLibrary: "false",
     });
+
     q.append("paths", lib.path);
-    await api("POST", `/Library/VirtualFolders?${q}`, {
+    await api("POST", `/Library/VirtualFolders?${q.toString()}`, {
       token,
       body: { LibraryOptions: { ...LIBRARY_OPTIONS, PathInfos: [{ Path: lib.path }] } },
     });
-    created++;
+    created += 1;
     console.log(`library ${lib.name} created (${lib.collectionType}, ${lib.path})`);
     continue;
   }
+
   if (!found.Locations.includes(lib.path)) {
     await api("POST", "/Library/VirtualFolders/Paths?refreshLibrary=false", {
       token,
@@ -148,12 +182,14 @@ for (const lib of LIBRARIES) {
     });
     console.log(`library ${lib.name}: added path ${lib.path}`);
   }
+
   await api("POST", "/Library/VirtualFolders/LibraryOptions", {
     token,
     body: { Id: found.ItemId, LibraryOptions: { ...found.LibraryOptions, ...LIBRARY_OPTIONS } },
   });
   console.log(`library ${lib.name} exists, options re-applied`);
 }
+/* oxlint-enable eslint/no-await-in-loop */
 
 if (created > 0 || process.argv.includes("--scan")) {
   await api("POST", "/Library/Refresh", { token });

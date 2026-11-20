@@ -1,18 +1,20 @@
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import path from "node:path";
+
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "electron-vite";
+import { z } from "zod";
 
-const renderer = resolve(import.meta.dirname, "src/renderer/src");
-const { version, dependencies } = JSON.parse(
-  readFileSync(resolve(import.meta.dirname, "package.json"), "utf8"),
-) as {
-  version: string;
-  dependencies: Record<string, string>;
-};
+const renderer = path.resolve(import.meta.dirname, "src/renderer/src");
+
+const { version, dependencies } = z
+  .object({ version: z.string(), dependencies: z.record(z.string(), z.string()) })
+  .parse(JSON.parse(readFileSync(path.resolve(import.meta.dirname, "package.json"), "utf-8")));
+
 const workspacePackages = Object.keys(dependencies).filter((name) => name.startsWith("@harakiri/"));
+
 // Run unpackaged, Electron reports its own version from app.getVersion(), so every bundle gets ours
 // (src/shared/identity.ts).
 const define = { HARAKIRI_APP_VERSION: JSON.stringify(version) };
@@ -29,7 +31,7 @@ export default defineConfig({
     build: {
       // Sandboxed preloads cannot load ESM or require npm modules, so ship one CommonJS bundle.
       externalizeDeps: false,
-      rollupOptions: { output: { format: "cjs", entryFileNames: "[name].cjs" } },
+      rolldownOptions: { output: { format: "cjs", entryFileNames: "[name].cjs" } },
     },
   },
   renderer: {
@@ -38,8 +40,8 @@ export default defineConfig({
       tanstackRouter({
         target: "react",
         autoCodeSplitting: true,
-        routesDirectory: resolve(renderer, "routes"),
-        generatedRouteTree: resolve(renderer, "routeTree.gen.ts"),
+        routesDirectory: path.resolve(renderer, "routes"),
+        generatedRouteTree: path.resolve(renderer, "routeTree.gen.ts"),
         quoteStyle: "double",
         semicolons: true,
       }),

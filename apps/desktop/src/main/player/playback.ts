@@ -1,18 +1,12 @@
 // The generated Jellyfin client is typed against the DOM fetch types (its package builds with lib DOM).
 /// <reference lib="dom" />
 import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import {
-  type AudioOutput,
-  type FidelityState,
-  type FidelityView,
-  fidelityView,
-  startFidelity,
-} from "@harakiri/fidelity";
-import { getLogger } from "@logtape/logtape";
+import path from "node:path";
+
+import { fidelityView, startFidelity } from "@harakiri/fidelity";
+import type { AudioOutput, FidelityState, FidelityView } from "@harakiri/fidelity";
 import {
   AccessToken,
-  type ClientIdentity,
   DeviceId,
   ItemId,
   joinFacts,
@@ -23,6 +17,8 @@ import {
   authorizationHeader,
   playbackInfoRequest,
 } from "@harakiri/jellyfin";
+import type { ClientIdentity } from "@harakiri/jellyfin";
+import type { BaseItemDto } from "@harakiri/jellyfin/generated";
 import {
   getItem,
   getPostedPlaybackInfo,
@@ -30,17 +26,14 @@ import {
   reportPlaybackStart,
   reportPlaybackStopped,
 } from "@harakiri/jellyfin/generated";
-import { type Client, createClient } from "@harakiri/jellyfin/generated/client";
-import {
-  type AudioPassthrough,
-  buildPlaybackArgs,
-  type MpvClient,
-  type MpvEvent,
-  setHttpHeaders,
-  spawnMpv,
-} from "@harakiri/mpv";
+import { createClient } from "@harakiri/jellyfin/generated/client";
+import type { Client } from "@harakiri/jellyfin/generated/client";
+import { buildPlaybackArgs, setHttpHeaders, spawnMpv } from "@harakiri/mpv";
+import type { AudioPassthrough, MpvClient, MpvEvent } from "@harakiri/mpv";
+import { getLogger } from "@logtape/logtape";
 import { match } from "ts-pattern";
 import { z } from "zod";
+
 import type {
   PlayerEvent,
   PlayerPhase,
@@ -50,20 +43,15 @@ import type {
   SignalReport,
 } from "../../shared/bridge";
 import { ServerStatusError } from "../../shared/errors";
-import {
-  type Command,
-  type ControlsInput,
-  type ControlsState,
-  initialControls,
-  menuRows,
-  parsePlayerAction,
-  step,
-} from "./controls";
+import { initialControls, menuRows, parsePlayerAction, step } from "./controls";
+import type { Command, ControlsInput, ControlsState } from "./controls";
+import { deliveryOf, fileStreams } from "./fidelity-input";
+import { watchFidelity } from "./fidelity-watch";
+import type { FidelityWatch } from "./fidelity-watch";
 import { inputConf } from "./input-conf";
 import { OVERLAY_HEIGHT, OVERLAY_WIDTH, renderControls } from "./overlay";
-import { deliveryOf, fileStreams } from "./fidelity-input";
-import { type FidelityWatch, watchFidelity } from "./fidelity-watch";
-import { programmeEntry, type ProgrammeEntry, type Resolution, resolve } from "./resolve";
+import { programmeEntry, resolve } from "./resolve";
+import type { ProgrammeEntry, Resolution } from "./resolve";
 
 const logger = getLogger(["harakiri", "player"]);
 
@@ -76,10 +64,13 @@ const TICKS_PER_SECOND = 10_000_000;
 const toTicks = (seconds: number) => Math.max(0, Math.round(seconds * TICKS_PER_SECOND));
 
 // A failed report must never interrupt playback.
-const report = (what: string, call: () => Promise<unknown>) =>
-  call().catch((error: unknown) => {
+const report = async <T>(what: string, call: () => Promise<T>): Promise<void> => {
+  try {
+    await call();
+  } catch (error) {
     logger.warn("Reporting {what} to Jellyfin failed: {error}", { what, error });
-  });
+  }
+};
 
 const mpvTrackId = z.union([z.number(), z.literal(false)]);
 
@@ -97,18 +88,19 @@ export interface PlaybackDeps {
 export interface Playback {
   /** Settles once playback has finished and mpv has exited. */
   readonly done: Promise<void>;
-  stop(): Promise<void>;
-  probe(): Promise<PlayerProbe>;
+  stop: () => Promise<void>;
+  probe: () => Promise<PlayerProbe>;
   /** The mpv pid while it runs, undefined once it has exited, so a reused pid is never killed. */
-  pid(): number | undefined;
+  pid: () => number | undefined;
 }
 
-type Finish = {
+interface Finish {
   readonly phase: Extract<PlayerPhase, "ended" | "stopped" | "error">;
   readonly error?: string;
-};
+}
 
 const endFile = z.object({ reason: z.string(), file_error: z.string().optional() });
+
 const logMessage = z.object({
   event: z.literal("log-message"),
   prefix: z.string(),
@@ -119,39 +111,45 @@ const trackArg = (name: "aid" | "sid", id: number | false | undefined): string[]
   id === undefined ? [] : [`--${name}=${id === false ? "no" : id}`];
 
 // argv is world-readable through /proc: the token and the `ApiKey=` sidecar URLs go over IPC.
-function mpvArgs(
+const mpvArgs = (
   resolution: Resolution,
   title: string,
   request: PlayRequest,
   deps: PlaybackDeps,
-  fidelity: FidelityView,
-) {
-  return [
-    ...buildPlaybackArgs({ audioPassthrough: passthroughOf(fidelity) }),
-    // Verbose, so the run log shows which audio and video outputs mpv opened and why one failed.
-    "--msg-level=all=v",
-    "--no-osc",
-    "--input-default-bindings=no",
-    "--input-builtin-bindings=no",
-    "--osd-level=0",
-    `--start=${(request.startPositionTicks ?? 0) / TICKS_PER_SECOND}`,
-    ...trackArg("aid", resolution.aid),
-    ...trackArg("sid", resolution.sid),
-    `--force-media-title=${title}`,
-    ...deps.extraArgs,
-  ];
-}
+  fidelity: FidelityView
+) => [
+  ...buildPlaybackArgs({ audioPassthrough: passthroughOf(fidelity) }),
+  // Verbose, so the run log shows which audio and video outputs mpv opened and why one failed.
+  "--msg-level=all=v",
+  "--no-osc",
+  "--input-default-bindings=no",
+  "--input-builtin-bindings=no",
+  "--osd-level=0",
+  `--start=${(request.startPositionTicks ?? 0) / TICKS_PER_SECOND}`,
+  ...trackArg("aid", resolution.aid),
+  ...trackArg("sid", resolution.sid),
+  `--force-media-title=${title}`,
+  ...deps.extraArgs,
+];
 
-function jellyfinClient(session: Session, auth: string): Client {
-  const client = createClient({ baseUrl: session.serverUrl.replace(/\/+$/, ""), auth: () => auth });
+const jellyfinClient = (session: Session, auth: string): Client => {
+  const client = createClient({
+    baseUrl: session.serverUrl.replace(/\/+$/u, ""),
+    auth: () => auth,
+  });
+
   // ky 2 consumes an error response's body before the generated client reads it, which loses the
   // status behind "body already used". The status crosses IPC, so a 401 reads as signed out.
   client.interceptors.response.use((response) => {
-    if (!response.ok) throw new ServerStatusError(response.status, response.url);
+    if (!response.ok) {
+      throw new ServerStatusError(response.status, response.url);
+    }
+
     return response;
   });
+
   return client;
-}
+};
 
 /** A play request resolved against the server: what to play, and what the server decided. */
 export interface Prepared {
@@ -166,10 +164,11 @@ export interface Prepared {
 const ENTRY_TIMEOUT_MS = 3000;
 
 /** Where fidelity starts for a resolution: the file, how the server sends it, and the output. */
-export function startingFidelity(resolution: Resolution, output: AudioOutput): FidelityState {
+export const startingFidelity = (resolution: Resolution, output: AudioOutput): FidelityState => {
   const file = fileStreams(resolution.source, resolution.audioStreamIndex);
+
   return startFidelity({ ...file, delivery: deliveryOf(resolution, file), output });
-}
+};
 
 /** What the handoff states: how the file will play, every downgrade, and the server's reasons. */
 export const signalReport = (resolution: Resolution, view: FidelityView): SignalReport => ({
@@ -184,7 +183,26 @@ const hasPicture = (state: FidelityState): boolean =>
 
 const passthroughOf = (view: FidelityView): AudioPassthrough => {
   const [first, ...rest] = view.bitstream;
+
   return first === undefined ? "none" : [first, ...rest];
+};
+
+/** The overlay's entry for the fetched item; a failed fetch logs and yields null, never a rejection. */
+const entryOf = async (
+  item: Promise<{ readonly data: BaseItemDto }>,
+  itemId: ItemId
+): Promise<ProgrammeEntry | null> => {
+  let data: BaseItemDto;
+
+  try {
+    ({ data } = await item);
+  } catch (error) {
+    logger.warn("Fetching the title of {itemId} failed: {error}", { itemId, error });
+
+    return null;
+  }
+
+  return programmeEntry(data);
 };
 
 /**
@@ -192,18 +210,21 @@ const passthroughOf = (view: FidelityView): AudioPassthrough => {
  * the handoff can state the decision. The programme entry is fetched alongside, and a slow or
  * failed fetch only costs the overlay its title.
  */
-export async function preparePlayback(
+export const preparePlayback = async (
   request: PlayRequest,
-  deps: Pick<PlaybackDeps, "session" | "identity">,
-): Promise<Prepared> {
+  deps: Pick<PlaybackDeps, "session" | "identity">
+): Promise<Prepared> => {
   const { session } = deps;
   const itemId = ItemId.parse(request.itemId);
+
   const auth = authorizationHeader(
     { ...deps.identity, deviceId: DeviceId.parse(session.deviceId) },
-    AccessToken.parse(session.accessToken),
+    AccessToken.parse(session.accessToken)
   );
+
   const client = jellyfinClient(session, auth);
   const userId = UserId.parse(session.userId);
+
   const item = getItem({
     client,
     throwOnError: true,
@@ -211,14 +232,10 @@ export async function preparePlayback(
     query: { userId },
     signal: AbortSignal.timeout(ENTRY_TIMEOUT_MS),
   });
+
   // Handled now, so a failure that lands while PlaybackInfo is still pending is never unhandled.
-  const fetched = item.then(
-    ({ data }) => programmeEntry(data),
-    (error: unknown) => {
-      logger.warn("Fetching the title of {itemId} failed: {error}", { itemId, error });
-      return undefined;
-    },
-  );
+  const fetched = entryOf(item, itemId);
+
   const info = await getPostedPlaybackInfo({
     client,
     throwOnError: true,
@@ -232,37 +249,38 @@ export async function preparePlayback(
           : {
               kind: "chosen",
               mediaSourceId: MediaSourceId.parse(request.mediaSourceId),
-              ...(request.audioStreamIndex === undefined
-                ? {}
-                : { audioStreamIndex: request.audioStreamIndex }),
+              audioStreamIndex: request.audioStreamIndex,
             },
       startTimeTicks: request.startPositionTicks ?? 0,
     }),
   });
+
   const resolution = resolve(info.data, request, ServerUrl.parse(session.serverUrl));
+
   return {
     client,
     auth,
     resolution,
     entry: fetched.then(
-      (entry) => entry ?? programmeEntry({ Name: resolution.source.Name ?? null, Type: "Movie" }),
+      (entry) => entry ?? programmeEntry({ Name: resolution.source.Name ?? null, Type: "Movie" })
     ),
   };
-}
+};
 
 /**
  * Starts mpv on the item and runs it until it ends, fails, or is stopped. Reuses `prepared` when
  * the handoff already resolved the request, otherwise resolves it first.
  * Resolves once mpv has loaded the file; rejects (after an `error` event) if it never does.
  */
-export async function startPlayback(
+export const startPlayback = async (
   request: PlayRequest,
   send: (event: PlayerEvent) => void,
   deps: PlaybackDeps,
-  prepared?: Prepared,
-): Promise<Playback> {
+  prepared?: Prepared
+): Promise<Playback> => {
   const itemId = ItemId.parse(request.itemId);
   const startTicks = request.startPositionTicks ?? 0;
+
   let base: Omit<PlayerEvent, "phase" | "positionTicks"> = {
     itemId,
     facts: [],
@@ -272,48 +290,58 @@ export async function startPlayback(
   };
 
   let mpv: MpvClient | undefined;
+
   try {
     const ready = prepared ?? (await preparePlayback(request, deps));
     const { client, auth, resolution } = ready;
     const fidelity = startingFidelity(resolution, deps.audioOutput);
-    base = {
-      itemId,
-      ...signalReport(resolution, fidelityView(fidelity)),
-      ...(resolution.durationTicks === undefined
-        ? {}
-        : { durationTicks: resolution.durationTicks }),
-    };
+    const signal = signalReport(resolution, fidelityView(fidelity));
+
+    base =
+      resolution.durationTicks === undefined
+        ? { itemId, ...signal }
+        : { itemId, ...signal, durationTicks: resolution.durationTicks };
     send({ ...base, phase: "starting", positionTicks: startTicks });
     const entry = await ready.entry;
 
     await mkdir(deps.configDir, { recursive: true });
-    await writeFile(join(deps.configDir, "input.conf"), inputConf());
+    await writeFile(path.join(deps.configDir, "input.conf"), inputConf());
     mpv = await spawnMpv({
       config: { dir: deps.configDir },
       args: mpvArgs(resolution, entry.title, request, deps, fidelityView(fidelity)),
     });
     await setHttpHeaders(mpv, { Authorization: auth });
+
     return await run(mpv, { client, resolution, entry, base, send, startTicks, fidelity });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error("Playback of {itemId} failed to start: {message}", { itemId, message });
-    if (mpv) await mpv.quit();
+
+    if (mpv) {
+      await mpv.quit();
+    }
+
     send({ ...base, phase: "error", positionTicks: startTicks, error: message });
     throw error;
   }
-}
+};
 
 /**
  * Sidecars are added after the file loads, in `subtitleFiles` order, so mpv numbers them after
  * the embedded subtitles exactly as the track table expects. A sidecar `sid` could not be
  * selected before its track existed, so it is applied again once they are all in.
  */
-async function addSidecarSubtitles(mpv: MpvClient, resolution: Resolution): Promise<void> {
+const addSidecarSubtitles = async (mpv: MpvClient, resolution: Resolution): Promise<void> => {
   const files = resolution.tracks.subtitleFiles;
-  if (files.length === 0) return;
+
+  if (files.length === 0) {
+    return;
+  }
+
   for (const [index, url] of files.entries()) {
     try {
       // Without a title mpv names the track after its URL, which puts the ApiKey in track-list.
+      // oxlint-disable-next-line eslint/no-await-in-loop -- mpv numbers sidecars in the order they are added, which the track table relies on
       await mpv.command("sub-add", url, "auto", `External ${index + 1}`);
     } catch (error) {
       // A missing sidecar must not stop playback, but the ids after it would shift. mpv's errors
@@ -321,14 +349,18 @@ async function addSidecarSubtitles(mpv: MpvClient, resolution: Resolution): Prom
       logger.warn("mpv could not load a sidecar subtitle: {error}", { error });
     }
   }
-  if (resolution.sid === undefined) return;
+
+  if (resolution.sid === undefined) {
+    return;
+  }
+
   // If mpv died meanwhile, its exit already ends playback with an error.
-  await mpv
-    .setProperty("sid", resolution.sid === false ? "no" : resolution.sid)
-    .catch((error: unknown) =>
-      logger.warn("mpv could not select the subtitle: {error}", { error }),
-    );
-}
+  try {
+    await mpv.setProperty("sid", resolution.sid === false ? "no" : resolution.sid);
+  } catch (error) {
+    logger.warn("mpv could not select the subtitle: {error}", { error });
+  }
+};
 
 interface RunContext {
   readonly client: Client;
@@ -340,15 +372,17 @@ interface RunContext {
   readonly fidelity: FidelityState;
 }
 
-async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
+const run = async (mpv: MpvClient, context: RunContext): Promise<Playback> => {
   const { client, resolution, entry, base, send } = context;
   const rows = menuRows(resolution.tracks);
   let controls: ControlsState = { ...initialControls, aid: resolution.aid, sid: resolution.sid };
   let position = context.startTicks / TICKS_PER_SECOND;
+
   let duration =
     resolution.durationTicks === undefined
       ? undefined
       : resolution.durationTicks / TICKS_PER_SECOND;
+
   let started = false;
   let finished: Promise<void> | undefined;
   let lastOverlay: string | undefined;
@@ -366,28 +400,44 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
     AudioStreamIndex: resolution.audioStreamIndex ?? null,
     SubtitleStreamIndex: resolution.subtitleStreamIndex ?? null,
   });
+
   const reportProgress = () => {
-    if (started)
-      void report("progress", () =>
-        reportPlaybackProgress({ client, throwOnError: true, body: progressBody() }),
+    if (started) {
+      void report(
+        "progress",
+        async () =>
+          await reportPlaybackProgress({ client, throwOnError: true, body: progressBody() })
       );
+    }
   };
+
+  // oxlint-disable-next-line eslint/prefer-const -- the closures below read it before the watcher exists; it is assigned once mpv's properties are observed
   let watch: FidelityWatch | undefined;
   const fidelityNow = () => watch?.view() ?? fidelityView(context.fidelity);
+
   const signalNow = () => {
     const view = fidelityNow();
+
     return { facts: [...view.facts], downgrades: [...view.downgrades] };
   };
+
   // A new audio track may bitstream where the last could not, or the reverse, so mpv is told
   // what it may bitstream for it before it opens the track. A transcode plays the server's sound.
   const beforeAudioTrack = async (id: number | false) => {
-    if (watch === undefined || resolution.method === "Transcode") return;
+    if (watch === undefined || resolution.method === "Transcode") {
+      return;
+    }
+
     const index = resolution.tracks.audio.find((track) => track.mpvId === id)?.index;
     const sound = id === false ? null : fileStreams(resolution.source, index).sound;
     await watch.selectSound(sound);
   };
+
   const emit = () => {
-    if (finished) return;
+    if (finished) {
+      return;
+    }
+
     send({
       ...base,
       ...signalNow(),
@@ -396,10 +446,23 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
     });
   };
 
+  const drawOverlay = async (args: (string | number | boolean)[]) => {
+    try {
+      await mpv.command(...args);
+    } catch {
+      // An overlay mpv cannot draw is never worth interrupting playback for.
+    }
+  };
+
   const overlay = (ass: string | undefined) => {
     const key = ass ?? "";
-    if (key === lastOverlay) return;
+
+    if (key === lastOverlay) {
+      return;
+    }
+
     lastOverlay = key;
+
     const args =
       ass === undefined
         ? ["osd-overlay", OVERLAY_ID, "none", "", 0, 0, 0, false, false]
@@ -414,8 +477,10 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
             false,
             false,
           ];
-    mpv.command(...args).catch(() => {});
+
+    void drawOverlay(args);
   };
+
   const render = () => {
     const fidelity = fidelityNow();
     overlay(
@@ -438,63 +503,96 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
               sid: controls.sid,
             },
           })
-        : undefined,
+        : undefined
     );
   };
+
   const scheduleHide = () => {
     clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => dispatch({ type: "hide" }), HIDE_AFTER_MS);
+    hideTimer = setTimeout(() => {
+      dispatch({ type: "hide" });
+    }, HIDE_AFTER_MS);
   };
 
-  const execute = (command: Command) =>
-    match(command)
-      .with({ type: "pause" }, ({ paused }) => mpv.setProperty("pause", paused))
-      .with({ type: "seek" }, ({ seconds }) => mpv.command("seek", seconds, "relative"))
+  const execute = async (command: Command) =>
+    await match(command)
+      .with({ type: "pause" }, async ({ paused }) => {
+        await mpv.setProperty("pause", paused);
+      })
+      .with({ type: "seek" }, async ({ seconds }) => await mpv.command("seek", seconds, "relative"))
       .with({ type: "track" }, async ({ property, id }) => {
-        if (property === "aid") await beforeAudioTrack(id);
+        if (property === "aid") {
+          await beforeAudioTrack(id);
+        }
+
         await mpv.setProperty(property, id === false ? "no" : id);
       })
-      .with({ type: "stop" }, () => finish({ phase: "stopped" }))
+      .with({ type: "stop" }, async () => {
+        await finish({ phase: "stopped" });
+      })
       .exhaustive();
 
-  function dispatch(input: ControlsInput) {
-    if (finished) return;
+  const executeOrWarn = async (command: Command) => {
+    try {
+      await execute(command);
+    } catch (error) {
+      logger.warn("mpv command {command} failed: {error}", { command, error });
+    }
+  };
+
+  const dispatch = (input: ControlsInput) => {
+    if (finished) {
+      return;
+    }
+
     const next = step(controls, input, rows);
     controls = next.state;
-    for (const command of next.commands) {
-      void Promise.resolve(execute(command)).catch((error: unknown) => {
-        logger.warn("mpv command {command} failed: {error}", { command, error });
-      });
-    }
-    if (input.type === "action") scheduleHide();
-    render();
-  }
 
-  function finish(outcome: Finish): Promise<void> {
+    for (const command of next.commands) {
+      void executeOrWarn(command);
+    }
+
+    if (input.type === "action") {
+      scheduleHide();
+    }
+
+    render();
+  };
+
+  const finish = async (outcome: Finish): Promise<void> => {
     finished ??= (async () => {
       clearTimeout(hideTimer);
-      for (const timer of timers) clearInterval(timer);
+
+      for (const timer of timers) {
+        clearInterval(timer);
+      }
+
       watch?.stop();
+
       // At eof mpv has already unloaded the file, and the last time-pos notification can lag
       // the real end (it did by 5 s when ao_pcm decoded faster than real time).
       const positionTicks = toTicks(
-        outcome.phase === "ended" && duration !== undefined ? duration : position,
+        outcome.phase === "ended" && duration !== undefined ? duration : position
       );
+
       const reported = started
-        ? report("stop", () =>
-            reportPlaybackStopped({
-              client,
-              throwOnError: true,
-              body: {
-                ItemId: base.itemId,
-                MediaSourceId: resolution.mediaSourceId,
-                PlaySessionId: resolution.playSessionId ?? null,
-                PositionTicks: positionTicks,
-                Failed: outcome.phase === "error",
-              },
-            }),
+        ? report(
+            "stop",
+            async () =>
+              await reportPlaybackStopped({
+                client,
+                throwOnError: true,
+                body: {
+                  ItemId: base.itemId,
+                  MediaSourceId: resolution.mediaSourceId,
+                  PlaySessionId: resolution.playSessionId ?? null,
+                  PositionTicks: positionTicks,
+                  Failed: outcome.phase === "error",
+                },
+              })
           )
         : undefined;
+
       await mpv.quit();
       // The renderer takes the screen back as soon as mpv is gone; the stop report can lag the
       // server by seconds and must not hold the owner on a dark screen with a dead gamepad.
@@ -503,55 +601,101 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
       // Only now does the server hold the final resume point, so only now may screens refetch it.
       send({ ...base, ...signalNow(), phase: "reported", positionTicks });
     })();
-    return finished;
-  }
 
-  const loaded = new Promise<void>((resolveLoaded, rejectLoaded) => {
-    mpv.onEvent((event: MpvEvent) => {
-      if (event.event === "file-loaded") resolveLoaded();
-      if (event.event === "playback-restart" && started) reportProgress();
-      if (event.event !== "end-file") return;
-      const end = endFile.safeParse(event);
-      if (!end.success) return;
-      const { reason, file_error: fileError } = end.data;
-      if (reason === "eof") void finish({ phase: "ended" });
-      if (reason === "error") fail(`mpv could not play the file: ${fileError ?? "unknown error"}`);
-    });
-    void mpv.exited.then((exit) =>
-      fail(`mpv exited unexpectedly (code ${exit.code ?? exit.signal})`),
-    );
-    // Before the file loads, startPlayback owns the failure and its error event.
-    const fail = (error: string) => {
-      if (started) void finish({ phase: "error", error });
-      else rejectLoaded(new Error(error));
-    };
+    await finished;
+  };
+
+  const {
+    promise: loaded,
+    resolve: resolveLoaded,
+    reject: rejectLoaded,
+  } = Promise.withResolvers<MpvEvent>();
+
+  // Before the file loads, startPlayback owns the failure and its error event.
+  const fail = (error: string) => {
+    if (started) {
+      void finish({ phase: "error", error });
+    } else {
+      rejectLoaded(new Error(error));
+    }
+  };
+
+  const failOnExit = async () => {
+    const exit = await mpv.exited;
+    fail(`mpv exited unexpectedly (code ${exit.code ?? exit.signal})`);
+  };
+
+  mpv.onEvent((event: MpvEvent) => {
+    if (event.event === "file-loaded") {
+      resolveLoaded(event);
+    }
+
+    if (event.event === "playback-restart" && started) {
+      reportProgress();
+    }
+
+    if (event.event !== "end-file") {
+      return;
+    }
+
+    const end = endFile.safeParse(event);
+
+    if (!end.success) {
+      return;
+    }
+
+    const { reason, file_error: fileError } = end.data;
+
+    if (reason === "eof") {
+      void finish({ phase: "ended" });
+    }
+
+    if (reason === "error") {
+      fail(`mpv could not play the file: ${fileError ?? "unknown error"}`);
+    }
   });
-  loaded.catch(() => {});
+  void failOnExit();
+
+  // Handled now: a failure before `await loaded` below must not count as an unhandled rejection.
+  void Promise.allSettled([loaded]);
 
   mpv.onClientMessage(([target, raw]) => {
-    if (target !== "harakiri") return;
+    if (target !== "harakiri") {
+      return;
+    }
+
     const action = parsePlayerAction(raw);
-    if (action) dispatch({ type: "action", action });
+
+    if (action) {
+      dispatch({ type: "action", action });
+    }
   });
   await Promise.all([
     mpv.observeProperty("time-pos", z.number(), (value) => {
-      if (value !== undefined) position = value;
+      if (value !== undefined) {
+        position = value;
+      }
     }),
     mpv.observeProperty("duration", z.number(), (value) => {
-      if (value !== undefined) duration = value;
+      if (value !== undefined) {
+        duration = value;
+      }
     }),
     mpv.observeProperty("pause", z.boolean(), (value) => {
-      if (value === undefined || value === controls.paused) return;
+      if (value === undefined || value === controls.paused) {
+        return;
+      }
+
       dispatch({ type: "paused", paused: value });
       reportProgress();
       emit();
     }),
-    mpv.observeProperty("aid", mpvTrackId, (aid) =>
-      dispatch({ type: "tracks", aid, sid: controls.sid }),
-    ),
-    mpv.observeProperty("sid", mpvTrackId, (sid) =>
-      dispatch({ type: "tracks", aid: controls.aid, sid }),
-    ),
+    mpv.observeProperty("aid", mpvTrackId, (aid) => {
+      dispatch({ type: "tracks", aid, sid: controls.sid });
+    }),
+    mpv.observeProperty("sid", mpvTrackId, (sid) => {
+      dispatch({ type: "tracks", aid: controls.aid, sid });
+    }),
   ]);
 
   watch = watchFidelity(mpv, context.fidelity, {
@@ -567,9 +711,18 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
   // Subscribed before the file loads: a renderer that cannot start fails during the load.
   mpv.onEvent((event) => {
     const log = logMessage.safeParse(event);
-    if (!log.success) return;
-    if (log.data.prefix.startsWith("ao")) watch?.audioOutputWarning();
-    if (log.data.prefix.startsWith("vo") && log.data.level !== "warn") watch?.rendererError();
+
+    if (!log.success) {
+      return;
+    }
+
+    if (log.data.prefix.startsWith("ao")) {
+      watch?.audioOutputWarning();
+    }
+
+    if (log.data.prefix.startsWith("vo") && log.data.level !== "warn") {
+      watch?.rendererError();
+    }
   });
   await mpv.command("request_log_messages", "warn");
   await mpv.command("loadfile", resolution.url);
@@ -578,50 +731,86 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
   watch.start();
 
   await addSidecarSubtitles(mpv, resolution);
-  if (!finished)
-    await report("start", () =>
-      reportPlaybackStart({ client, throwOnError: true, body: progressBody() }),
+
+  if (!finished) {
+    await report(
+      "start",
+      async () => await reportPlaybackStart({ client, throwOnError: true, body: progressBody() })
     );
+  }
+
   emit();
   scheduleHide();
   render();
   timers.push(
     setInterval(() => {
       emit();
-      if (controls.visible) render();
+
+      if (controls.visible) {
+        render();
+      }
     }, EVENT_EVERY_MS),
-    setInterval(reportProgress, PROGRESS_EVERY_MS),
+    setInterval(reportProgress, PROGRESS_EVERY_MS)
   );
 
-  const read = <T>(name: string, schema: z.ZodType<T>) =>
-    mpv.getProperty(name, schema).catch(() => undefined);
+  const read = async <T>(name: string, schema: z.ZodType<T>): Promise<T | undefined> => {
+    try {
+      return await mpv.getProperty(name, schema);
+    } catch {
+      return undefined;
+    }
+  };
 
   let mpvAlive = true;
-  void mpv.exited.then(() => {
+
+  const markExited = async () => {
+    await mpv.exited;
     mpvAlive = false;
-  });
+  };
+
+  void markExited();
+
+  const untilDone = async (): Promise<void> => {
+    await mpv.exited;
+    await finished;
+  };
 
   return {
-    done: mpv.exited.then(() => finished),
+    done: untilDone(),
     pid: () => (mpvAlive ? mpv.pid : undefined),
-    stop: () => finish({ phase: "stopped" }),
-    async probe() {
-      if (finished) return { running: false };
-      const [path, timePos, pause, aid, sid, audioCodec, audioFormat, videoGamma, videoPrimaries] =
-        await Promise.all([
-          read("path", z.string()),
-          read("time-pos", z.number()),
-          read("pause", z.boolean()),
-          read("aid", mpvTrackId),
-          read("sid", mpvTrackId),
-          read("audio-codec-name", z.string()),
-          read("audio-params/format", z.string()),
-          read("video-params/gamma", z.string()),
-          read("video-params/primaries", z.string()),
-        ]);
+    stop: async () => {
+      await finish({ phase: "stopped" });
+    },
+    probe: async () => {
+      if (finished) {
+        return { running: false };
+      }
+
+      const [
+        filePath,
+        timePos,
+        pause,
+        aid,
+        sid,
+        audioCodec,
+        audioFormat,
+        videoGamma,
+        videoPrimaries,
+      ] = await Promise.all([
+        read("path", z.string()),
+        read("time-pos", z.number()),
+        read("pause", z.boolean()),
+        read("aid", mpvTrackId),
+        read("sid", mpvTrackId),
+        read("audio-codec-name", z.string()),
+        read("audio-params/format", z.string()),
+        read("video-params/gamma", z.string()),
+        read("video-params/primaries", z.string()),
+      ]);
+
       return {
         running: true,
-        path,
+        path: filePath,
         timePos,
         pause,
         aid,
@@ -634,4 +823,4 @@ async function run(mpv: MpvClient, context: RunContext): Promise<Playback> {
       };
     },
   };
-}
+};

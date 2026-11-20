@@ -1,4 +1,5 @@
 import { match, P } from "ts-pattern";
+
 import type { Session } from "../../../shared/bridge";
 
 /** What `GET /System/Info/Public` told us about a server that passed validation. */
@@ -69,59 +70,85 @@ export const initialOnboarding: OnboardingState = { step: "welcome" };
 /** Jellyfin's default HTTP port, tried when the owner types a bare host. */
 const defaultPort = "8096";
 
-const scheme = /^[a-z][a-z0-9+.-]*:\/\//i;
+const scheme = /^[a-z][a-z0-9+.-]*:\/\//iu;
 
-function baseUrl(url: URL): string {
+const baseUrl = (url: URL): string => {
   const path = url.pathname.endsWith("/") ? url.pathname : `${url.pathname}/`;
+
   return `${url.protocol}//${url.host}${path}`;
-}
+};
 
 /**
  * Turns what the owner typed into the base URLs it could mean, or null when it cannot be one.
  * A typed scheme is taken as is. Without one, a bare host is tried over HTTPS on 443 (a server
  * behind a reverse proxy) and over HTTP on Jellyfin's own port; a host with a port, over both.
  */
-export function serverCandidates(typed: string): readonly string[] | null {
+export const serverCandidates = (typed: string): readonly string[] | null => {
   const trimmed = typed.trim();
-  if (trimmed === "") return null;
+
+  if (trimmed === "") {
+    return null;
+  }
+
   const typedScheme = scheme.test(trimmed);
   let url: URL;
+
   try {
     url = new URL(typedScheme ? trimmed : `http://${trimmed}`);
   } catch {
     return null;
   }
-  if (url.protocol !== "http:" && url.protocol !== "https:") return null;
-  if (url.hostname === "") return null;
-  if (typedScheme) return [baseUrl(url)];
+
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return null;
+  }
+
+  if (url.hostname === "") {
+    return null;
+  }
+
+  if (typedScheme) {
+    return [baseUrl(url)];
+  }
+
   const secure = new URL(url);
   secure.protocol = "https:";
-  if (url.port === "") url.port = defaultPort;
+
+  if (url.port === "") {
+    url.port = defaultPort;
+  }
+
   return [baseUrl(secure), baseUrl(url)];
-}
+};
 
 /** The oldest server whose API harakiri's device profile and Quick Connect calls are written against. */
 export const minimumServer = { major: 10, minor: 10 } as const;
 
-export function isServerSupported(version: string): boolean {
-  const found = /^(\d+)\.(\d+)/.exec(version);
-  if (found === null) return false;
-  const major = Number(found[1]);
-  const minor = Number(found[2]);
+export const isServerSupported = (version: string): boolean => {
+  const found = /^(?<major>\d+)\.(?<minor>\d+)/u.exec(version);
+
+  if (found === null) {
+    return false;
+  }
+
+  const major = Number(found.groups?.major);
+  const minor = Number(found.groups?.minor);
+
   return (
     major > minimumServer.major || (major === minimumServer.major && minor >= minimumServer.minor)
   );
-}
+};
 
-function checking(address: string): OnboardingState {
+const checking = (address: string): OnboardingState => {
   const urls = serverCandidates(address);
+
   return urls === null
     ? { step: "server", address, problem: { kind: "invalid" } }
     : { step: "checking", address, urls };
-}
+};
 
-export function onboarding(state: OnboardingState, event: OnboardingEvent): OnboardingState {
-  return match<[OnboardingState, OnboardingEvent], OnboardingState>([state, event])
+export const onboarding = (state: OnboardingState, event: OnboardingEvent): OnboardingState =>
+  match<[OnboardingState, OnboardingEvent], OnboardingState>([state, event])
     .with([{ step: "welcome" }, { type: "begin" }], () => ({ step: "server", address: "" }))
     .with([{ step: "server" }, { type: "edit" }], ([, { text }]) => ({
       step: "server",
@@ -130,10 +157,10 @@ export function onboarding(state: OnboardingState, event: OnboardingEvent): Onbo
     .with([{ step: "server" }, { type: "submitAddress" }], ([s]) => checking(s.address))
     .with([{ step: "server" }, { type: "pickServer" }], ([, e]) => checking(e.address))
     .with([{ step: "checking" }, { type: "serverFound" }], ([s, e]) =>
-      e.address === s.address ? { step: "chooseUser", server: e.info } : s,
+      e.address === s.address ? { step: "chooseUser", server: e.info } : s
     )
     .with([{ step: "checking" }, { type: "serverFailed" }], ([s, e]) =>
-      e.address === s.address ? { step: "server", address: s.address, problem: e.problem } : s,
+      e.address === s.address ? { step: "server", address: s.address, problem: e.problem } : s
     )
     .with([{ step: "chooseUser" }, { type: "pickUser" }], ([s, e]) => ({
       step: e.hasPassword ? "password" : "authenticating",
@@ -154,7 +181,7 @@ export function onboarding(state: OnboardingState, event: OnboardingEvent): Onbo
     .with([{ step: "username" }, { type: "submitUsername" }], ([s]) =>
       s.username.trim() === ""
         ? s
-        : { step: "password", server: s.server, username: s.username.trim(), password: "" },
+        : { step: "password", server: s.server, username: s.username.trim(), password: "" }
     )
     .with([{ step: "password" }, { type: "edit" }], ([s, e]) => ({
       step: "password",
@@ -191,10 +218,9 @@ export function onboarding(state: OnboardingState, event: OnboardingEvent): Onbo
     }))
     .with([P._, { type: "back" }], ([s]) => back(s))
     .otherwise(([s]) => s);
-}
 
-function back(state: OnboardingState): OnboardingState {
-  return match<OnboardingState, OnboardingState>(state)
+const back = (state: OnboardingState): OnboardingState =>
+  match<OnboardingState, OnboardingState>(state)
     .with({ step: P.union("welcome", "done") }, (s) => s)
     .with({ step: "server" }, () => ({ step: "welcome" }))
     .with({ step: "checking" }, (s) => ({ step: "server", address: s.address }))
@@ -210,4 +236,3 @@ function back(state: OnboardingState): OnboardingState {
       password: s.password,
     }))
     .exhaustive();
-}

@@ -4,7 +4,8 @@
 // Run from the repo root:
 //   mise exec -- bun apps/desktop/src/main/player/fixtures/record.ts dv5-eac3=<itemId> ...
 import { writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import path from "node:path";
+
 import {
   AccessToken,
   DeviceId,
@@ -15,10 +16,11 @@ import {
   playbackInfoRequest,
 } from "@harakiri/jellyfin";
 import { scrubPlaybackInfo } from "@harakiri/jellyfin/fixture-scrub";
-import { createClient } from "@harakiri/jellyfin/generated/client";
 import { authenticateUserByName, getPostedPlaybackInfo } from "@harakiri/jellyfin/generated";
+import { createClient } from "@harakiri/jellyfin/generated/client";
 
-const server = process.env["JELLYFIN_DEV_URL"] ?? "http://127.0.0.1:8096";
+const server = process.env.JELLYFIN_DEV_URL ?? "http://127.0.0.1:8096";
+
 const identity = {
   client: "harakiri-dev",
   device: "fixture-recorder",
@@ -27,50 +29,71 @@ const identity = {
 };
 
 const TRANSCODE_FIXTURE = "transcode-bitrate";
+
 const fixtures = process.argv.slice(2).map((arg) => {
   const [name, itemId] = arg.split("=");
-  if (!name || !itemId) throw new Error(`expected name=itemId, got ${arg}`);
+
+  if (name === undefined || name === "" || itemId === undefined || itemId === "") {
+    throw new Error(`expected name=itemId, got ${arg}`);
+  }
+
   return { name, itemId: ItemId.parse(itemId) };
 });
-if (fixtures.length === 0) throw new Error("pass at least one fixture as name=itemId");
+
+if (fixtures.length === 0) {
+  throw new Error("pass at least one fixture as name=itemId");
+}
 
 const anonymous = createClient({ baseUrl: server, auth: () => authorizationHeader(identity) });
+
 const { data: auth } = await authenticateUserByName({
   client: anonymous,
   throwOnError: true,
   headers: { Authorization: authorizationHeader(identity) },
   body: {
-    Username: process.env["JELLYFIN_DEV_USER"] ?? "harakiri",
-    Pw: process.env["JELLYFIN_DEV_PASSWORD"] ?? "harakiri-dev",
+    Username: process.env.JELLYFIN_DEV_USER ?? "harakiri",
+    Pw: process.env.JELLYFIN_DEV_PASSWORD ?? "harakiri-dev",
   },
 });
+
 const token = AccessToken.parse(auth.AccessToken);
 const userId = UserId.parse(auth.User?.Id);
+
 const client = createClient({
   baseUrl: server,
   auth: () => authorizationHeader(identity, token),
 });
+
 const version = ServerVersion.parse("12.4.0");
 
 const record = async (name: string, itemId: ItemId, maxBitrate?: number) => {
   const body = playbackInfoRequest({ userId, server: version, source: { kind: "default" } });
+
   if (maxBitrate !== undefined) {
     body.MaxStreamingBitrate = maxBitrate;
-    if (body.DeviceProfile) body.DeviceProfile.MaxStreamingBitrate = maxBitrate;
+
+    if (body.DeviceProfile) {
+      body.DeviceProfile.MaxStreamingBitrate = maxBitrate;
+    }
   }
+
   const { data } = await getPostedPlaybackInfo({
     client,
     throwOnError: true,
     path: { itemId },
     body,
   });
+
   const json = JSON.stringify(scrubPlaybackInfo({ ...data }, name), null, 2).replaceAll(
-    /ApiKey=[0-9a-f]+/g,
-    "ApiKey=REDACTED",
+    /ApiKey=[0-9a-f]+/gu,
+    "ApiKey=REDACTED"
   );
-  await writeFile(join(import.meta.dirname, `${name}.json`), `${json}\n`);
+
+  await writeFile(path.join(import.meta.dirname, `${name}.json`), `${json}\n`);
   console.log(`${name}: ${data.MediaSources?.[0]?.Name ?? "?"}`);
 };
 
-for (const { name, itemId } of fixtures)
+for (const { name, itemId } of fixtures) {
+  // oxlint-disable-next-line eslint/no-await-in-loop -- one request at a time against the dev server, logged in argument order
   await record(name, itemId, name === TRANSCODE_FIXTURE ? 200_000 : undefined);
+}

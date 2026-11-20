@@ -1,9 +1,10 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, it } from "vitest";
+
 import { buildPlaybackArgs, configArg } from "./args";
 
-describe("buildPlaybackArgs", () => {
-  test("defaults to fullscreen gpu-next on Vulkan and bitstreams the PRD codec list", () => {
-    expect(buildPlaybackArgs()).toEqual([
+describe(buildPlaybackArgs, () => {
+  it("defaults to fullscreen gpu-next on Vulkan and bitstreams the PRD codec list", () => {
+    expect(buildPlaybackArgs()).toStrictEqual([
       "--vo=gpu-next",
       "--gpu-api=vulkan",
       "--target-colorspace-hint=auto",
@@ -15,7 +16,7 @@ describe("buildPlaybackArgs", () => {
     ]);
   });
 
-  test("maps every config field to its mpv option", () => {
+  it("maps every config field to its mpv option", () => {
     expect(
       buildPlaybackArgs({
         colorspaceHint: "no",
@@ -24,8 +25,8 @@ describe("buildPlaybackArgs", () => {
         audioDevice: "pipewire/alsa_output.hdmi-stereo",
         fullscreen: false,
         gamepad: false,
-      }),
-    ).toEqual([
+      })
+    ).toStrictEqual([
       "--vo=gpu-next",
       "--gpu-api=vulkan",
       "--target-colorspace-hint=no",
@@ -38,17 +39,19 @@ describe("buildPlaybackArgs", () => {
     ]);
   });
 
-  test("passthrough off is the explicit `none`, which leaves --audio-spdif out", () => {
+  it("passthrough off is the explicit `none`, which leaves --audio-spdif out", () => {
     expect(buildPlaybackArgs({ audioPassthrough: "none" })).not.toContainEqual(
-      expect.stringMatching(/^--audio-spdif/),
+      expect.stringMatching(/^--audio-spdif/u)
     );
     expect(buildPlaybackArgs({ audioPassthrough: ["ac3"] })).toContain("--audio-spdif=ac3");
   });
 });
 
-test("configArg points mpv at an app-owned dir, or at nothing", () => {
-  expect(configArg({ dir: "/data/u/.config/harakiri/mpv" })).toBe(
-    "--config-dir=/data/u/.config/harakiri/mpv",
-  );
-  expect(configArg("none")).toBe("--no-config");
+describe(configArg, () => {
+  it("configArg points mpv at an app-owned dir, or at nothing", () => {
+    expect(configArg({ dir: "/data/u/.config/harakiri/mpv" })).toBe(
+      "--config-dir=/data/u/.config/harakiri/mpv"
+    );
+    expect(configArg("none")).toBe("--no-config");
+  });
 });

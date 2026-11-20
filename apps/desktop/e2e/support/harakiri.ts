@@ -1,18 +1,20 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
+
 import type { ItemId, SessionData } from "@harakiri/jellyfin";
-import { _electron, test as base, type ElectronApplication, type Page } from "@playwright/test";
-import {
-  type HarakiriBridge,
-  PlayerEvent,
-  PlayerProbe,
-  type PlayRequest,
-} from "../../src/shared/bridge";
-import { type Backend, resolveBackend } from "./backend";
-import { Jellyfin, seedSession, signInAccount, type UserData } from "./jellyfin";
+import { _electron, test as base } from "@playwright/test";
+import type { ElectronApplication, Page } from "@playwright/test";
+import { z } from "zod";
+
+import { PlayerEvent, PlayerProbe } from "../../src/shared/bridge";
+import type { HarakiriBridge, PlayRequest } from "../../src/shared/bridge";
+import { resolveBackend } from "./backend";
+import type { Backend } from "./backend";
+import { Jellyfin, seedSession, signInAccount } from "./jellyfin";
+import type { UserData } from "./jellyfin";
 import { mpvProcesses } from "./mpv";
 
 declare global {
@@ -22,8 +24,8 @@ declare global {
   }
 }
 
-const electronPath: string = createRequire(import.meta.url)("electron");
-const mainEntry = resolve(import.meta.dirname, "../../out/main/index.js");
+const electronPath = z.string().parse(createRequire(import.meta.url)("electron"));
+const mainEntry = path.resolve(import.meta.dirname, "../../out/main/index.js");
 
 export interface Launched {
   readonly app: ElectronApplication;
@@ -57,7 +59,7 @@ interface TestFixtures {
    * screen's Change server revoke the token themselves, but a test that ends signed in, or leaves
    * through Sign in again (which never sends a token the server refused), leaves it behind.
    */
-  readonly revokeAppDevice: void;
+  readonly revokeAppDevice: undefined;
 }
 
 interface WorkerFixtures {
@@ -97,13 +99,15 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
 
   // oxlint-disable-next-line no-empty-pattern -- Playwright reads the fixture's dependencies from this pattern
   userDataDir: async ({}, use) => {
-    const dir = mkdtempSync(join(tmpdir(), "harakiri-e2e-"));
+    const dir = mkdtempSync(path.join(tmpdir(), "harakiri-e2e-"));
     await use(dir);
     rmSync(dir, { recursive: true, force: true });
   },
 
   signIn: async ({ userDataDir, account }, use) => {
-    await use(() => seedSession(userDataDir, account));
+    await use(() => {
+      seedSession(userDataDir, account);
+    });
   },
 
   apps: async ({ userDataDir }, use) => {
@@ -112,7 +116,11 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
     await closeAll(apps);
     // A leak fails the test and is killed, so it cannot leak into the next one.
     const leaked = await waitForNoMpv(userDataDir, 5000);
-    for (const { pid } of leaked) process.kill(pid, "SIGKILL");
+
+    for (const { pid } of leaked) {
+      process.kill(pid, "SIGKILL");
+    }
+
     if (leaked.length > 0) {
       throw new Error(`mpv outlived the app: pids ${leaked.map(({ pid }) => pid).join(", ")}`);
     }
@@ -121,24 +129,43 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
   preserveUserData: async ({ jellyfin, apps }, use) => {
     const saved = new Map<ItemId, UserData>();
     await use(async (itemId) => {
-      if (!saved.has(itemId)) saved.set(itemId, await jellyfin.userData(itemId));
+      if (!saved.has(itemId)) {
+        saved.set(itemId, await jellyfin.userData(itemId));
+      }
     });
     // An app quitting mid-playback reports a stop, which would overwrite a restored resume point.
     await closeAll(apps);
-    for (const [itemId, data] of saved) await jellyfin.setUserData(itemId, data);
+
+    await Promise.all(
+      Array.from(saved, async ([itemId, data]) => {
+        await jellyfin.setUserData(itemId, data);
+      })
+    );
   },
 
   revokeAppDevice: [
     async ({ userDataDir, apps, account, jellyfin }, use) => {
-      await use();
+      await use(undefined);
       await closeAll(apps);
-      const file = join(userDataDir, "device-id");
-      if (!existsSync(file)) return;
-      const deviceId = readFileSync(file, "utf8").trim();
+      const file = path.join(userDataDir, "device-id");
+
+      if (!existsSync(file)) {
+        return;
+      }
+
+      const deviceId = readFileSync(file, "utf-8").trim();
+
       // A seeded profile shares the worker's device, which the worker fixture signs out itself.
-      if (deviceId === account.deviceId) return;
+      if (deviceId === account.deviceId) {
+        return;
+      }
+
       // An app that never signed in left nothing on the server.
-      if ((await jellyfin.deviceIds()).includes(deviceId)) await jellyfin.deleteDevice(deviceId);
+      const known = await jellyfin.deviceIds();
+
+      if (known.includes(deviceId)) {
+        await jellyfin.deleteDevice(deviceId);
+      }
     },
     { auto: true },
   ],
@@ -147,9 +174,11 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
     // Without DISPLAY, Electron cannot fall back to the user's X session if the nested compositor is missing.
     // A terminal that is itself an AppImage exports APPIMAGE, which would switch the updater on.
     const dropped = new Set(["DISPLAY", "APPIMAGE"]);
+
     const inherited = Object.entries(process.env).filter(
-      (entry): entry is [string, string] => !dropped.has(entry[0]) && entry[1] !== undefined,
+      (entry): entry is [string, string] => !dropped.has(entry[0]) && entry[1] !== undefined
     );
+
     await use(async () => {
       const app = await _electron.launch({
         executablePath: electronPath,
@@ -162,23 +191,31 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
           HARAKIRI_MPV_ARGS: mpvArgs,
         },
       });
+
       apps.push(app);
       const page = await app.firstWindow();
       await page.waitForFunction(() => window.harakiri !== undefined);
+
       return { app, page };
     });
   },
 });
 
-const closeAll = (apps: readonly ElectronApplication[]) =>
-  Promise.all(apps.map((app) => app.close()));
+const closeAll = async (apps: readonly ElectronApplication[]) =>
+  await Promise.all(
+    apps.map(async (app) => {
+      await app.close();
+    })
+  );
 
 export { expect } from "@playwright/test";
 
-export const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+export const escapeRegExp = (text: string): string =>
+  text.replaceAll(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 
 /** A card's accessible name: the spoken title, then optionally its catalogue number and "seen". */
-export const cardName = (title: string): RegExp => new RegExp(`^${escapeRegExp(title)}(, |$)`);
+export const cardName = (title: string): RegExp =>
+  new RegExp(`^${escapeRegExp(title)}(?:, |$)`, "u");
 
 /** The focused control as the owner meets it: its accessible name, and whether they can see it. */
 export interface FocusedControl {
@@ -192,21 +229,32 @@ export interface FocusedControl {
   readonly section: string | null;
 }
 
-export function focusedControl(page: Page): Promise<FocusedControl | null> {
-  return page.evaluate(() => {
+export const focusedControl = async (page: Page): Promise<FocusedControl | null> =>
+  await page.evaluate(() => {
     const el = document.activeElement;
-    if (!(el instanceof HTMLElement) || el === document.body) return null;
+
+    if (!(el instanceof HTMLElement) || el === document.body) {
+      return null;
+    }
+
     const label =
       el.getAttribute("aria-label") ??
       (el instanceof HTMLInputElement ? el.labels?.[0]?.textContent : null) ??
       el.textContent;
+
     const rect = el.getBoundingClientRect();
     let opacity = 1;
+
     for (let node: Element | null = el; node !== null; node = node.parentElement) {
       const style = getComputedStyle(node);
-      if (style.visibility === "hidden" || style.display === "none") opacity = 0;
+
+      if (style.visibility === "hidden" || style.display === "none") {
+        opacity = 0;
+      }
+
       opacity *= Number(style.opacity);
     }
+
     return {
       name: (label ?? "").trim(),
       tag: el.tagName.toLowerCase(),
@@ -218,119 +266,167 @@ export function focusedControl(page: Page): Promise<FocusedControl | null> {
         rect.top < window.innerHeight &&
         rect.left < window.innerWidth,
       opacity,
-      route: decodeURIComponent(location.hash.replace(/^#/, "").split("?")[0] ?? ""),
+      route: decodeURIComponent(location.hash.replace(/^#/u, "").split("?")[0] ?? ""),
       section: el.closest("section[aria-label]")?.getAttribute("aria-label") ?? null,
     };
   });
-}
+
+/** The route of the control that `expectFocus` waits for. */
+export const focusRoute = async (
+  page: Page,
+  name?: string | RegExp,
+  timeoutMs?: number
+): Promise<string> => {
+  const focus = await expectFocus(page, name, timeoutMs);
+
+  return focus.route;
+};
 
 /**
  * Waits until focus rests on a visible, labelled control named `name` (any name when omitted) and
  * returns it. Focus on the body, on a control scrolled away, or on one faded out counts as lost.
  */
-export async function expectFocus(
+export const expectFocus = async (
   page: Page,
   name?: string | RegExp,
-  timeoutMs = 5000,
-): Promise<FocusedControl> {
+  timeoutMs = 5000
+): Promise<FocusedControl> => {
   const found = await until(
     `focus rests on a visible control${name === undefined ? "" : ` named ${String(name)}`}`,
-    () => focusedControl(page),
+    async () => await focusedControl(page),
     (control) =>
       control !== null &&
       control.name !== "" &&
       control.inViewport &&
       control.opacity > 0.99 &&
       (name === undefined ||
-        (typeof name === "string" ? control.name === name : name.test(control.name))),
+        (name instanceof RegExp ? name.test(control.name) : control.name === name)),
     timeoutMs,
-    50,
+    50
   );
-  if (found === null) throw new Error("unreachable: until() returned without a focused control");
+
+  if (found === null) {
+    throw new Error("unreachable: until() returned without a focused control");
+  }
+
   return found;
-}
+};
 
 /** Polls `read` until `predicate` holds and returns that value; the error carries the last one. */
-export async function until<T>(
+export const until = async <T>(
   what: string,
-  read: () => Promise<T>,
+  read: () => Promise<T> | T,
   predicate: (value: T) => boolean,
   timeoutMs = 15_000,
-  intervalMs = 200,
-): Promise<T> {
+  intervalMs = 200
+): Promise<T> => {
   const deadline = Date.now() + timeoutMs;
   let last = await read();
+
+  /* oxlint-disable eslint/no-await-in-loop -- polling: each read must follow the previous wait */
   while (!predicate(last)) {
     if (Date.now() > deadline) {
       throw new Error(`${what}: not within ${timeoutMs} ms; last ${JSON.stringify(last)}`);
     }
+
     await sleep(intervalMs);
     last = await read();
   }
+  /* oxlint-enable eslint/no-await-in-loop */
+
   return last;
-}
+};
 
 /** Resolves with the mpvs still alive once none are left or the timeout passes. */
-export async function waitForNoMpv(userDataDir: string, timeoutMs: number) {
-  return until(
+export const waitForNoMpv = async (userDataDir: string, timeoutMs: number) =>
+  await until(
     "mpv exits",
-    async () => mpvProcesses(userDataDir),
+    () => mpvProcesses(userDataDir),
     (alive) => alive.length === 0,
-    timeoutMs,
+    timeoutMs
   ).catch(() => mpvProcesses(userDataDir));
-}
 
-export async function probe(page: Page): Promise<PlayerProbe> {
-  return PlayerProbe.parse(
-    await page.evaluate(() => {
-      if (!window.harakiri.test)
+export const probe = async (page: Page): Promise<PlayerProbe> =>
+  PlayerProbe.parse(
+    await page.evaluate(async () => {
+      if (!window.harakiri.test) {
         throw new Error("window.harakiri.test is missing without HARAKIRI_E2E=1");
-      return window.harakiri.test.probe();
-    }),
+      }
+
+      return await window.harakiri.test.probe();
+    })
   );
-}
+
+/** Whether mpv is running right now, as the probe sees it. */
+export const isRunning = async (page: Page): Promise<boolean> => {
+  const { running } = await probe(page);
+
+  return running;
+};
 
 /** Polls `window.harakiri.test.probe()` until `predicate` holds, and returns that probe. */
-export const probeUntil = (
+export const probeUntil = async (
   page: Page,
   predicate: (probe: PlayerProbe) => boolean,
-  timeoutMs = 15_000,
-): Promise<PlayerProbe> => until("probe matches", () => probe(page), predicate, timeoutMs);
+  timeoutMs = 15_000
+): Promise<PlayerProbe> =>
+  await until("probe matches", async () => await probe(page), predicate, timeoutMs);
 
 /** Calls the bridge's play exactly as the renderer does. */
-export const play = (page: Page, request: PlayRequest): Promise<void> =>
-  page.evaluate((r) => window.harakiri.player.play(r), request);
+export const play = async (page: Page, request: PlayRequest): Promise<void> => {
+  await page.evaluate(async (r) => {
+    await window.harakiri.player.play(r);
+  }, request);
+};
 
-export const stop = (page: Page): Promise<void> =>
-  page.evaluate(() => window.harakiri.player.stop());
+export const stop = async (page: Page): Promise<void> => {
+  await page.evaluate(async () => {
+    await window.harakiri.player.stop();
+  });
+};
 
 /** Starts recording every PlayerEvent the renderer receives through the bridge. */
-export async function recordPlayerEvents(page: Page): Promise<void> {
+export const recordPlayerEvents = async (page: Page): Promise<void> => {
   await page.evaluate(() => {
     const events: unknown[] = [];
     window.harakiriE2eEvents = events;
-    window.harakiri.player.onEvent((event) => events.push(event));
+    window.harakiri.player.onEvent((event) => {
+      events.push(event);
+    });
   });
-}
+};
 
-export async function playerEvents(page: Page): Promise<PlayerEvent[]> {
+export const playerEvents = async (page: Page): Promise<PlayerEvent[]> => {
   const raw = await page.evaluate(() => window.harakiriE2eEvents ?? []);
+
   return raw.map((event) => PlayerEvent.parse(event));
-}
+};
+
+/** Every recorded event's phase, in order. */
+export const playerPhases = async (page: Page): Promise<PlayerEvent["phase"][]> => {
+  const events = await playerEvents(page);
+
+  return events.map((event) => event.phase);
+};
 
 /** Waits for the first recorded event that matches, and returns it. */
-export async function playerEventUntil(
+export const playerEventUntil = async (
   page: Page,
   predicate: (event: PlayerEvent) => boolean,
-  timeoutMs = 15_000,
-): Promise<PlayerEvent> {
+  timeoutMs = 15_000
+): Promise<PlayerEvent> => {
   const events = await until(
     "a matching player event arrives",
-    () => playerEvents(page),
+    async () => await playerEvents(page),
     (seen) => seen.some(predicate),
-    timeoutMs,
+    timeoutMs
   );
+
   const found = events.find(predicate);
-  if (!found) throw new Error("unreachable: until() returned without a match");
+
+  if (!found) {
+    throw new Error("unreachable: until() returned without a match");
+  }
+
   return found;
-}
+};

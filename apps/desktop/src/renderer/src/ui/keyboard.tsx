@@ -1,8 +1,10 @@
 import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-navigation";
-import { useState, type KeyboardEvent } from "react";
+import { useState } from "react";
+import type { KeyboardEvent } from "react";
 import { match } from "ts-pattern";
 
 type Layout = "address" | "text";
+
 type Case = "lower" | "upper" | "symbols";
 
 type Key =
@@ -19,9 +21,10 @@ const letters: Record<Exclude<Case, "symbols">, string[]> = {
   lower: ["1234567890", "qwertyuiop", "asdfghjkl-", "zxcvbnm._@"],
   upper: ["1234567890", "QWERTYUIOP", "ASDFGHJKL-", "ZXCVBNM._@"],
 };
+
 const symbols = ["1234567890", "!#$%&*()+=", "?/:;'\"<>[]", "~^`|\\{},._"];
 
-function grid(layout: Layout, letterCase: Case): Key[][] {
+const grid = (layout: Layout, letterCase: Case): Key[][] => {
   if (layout === "address") {
     return [
       ...["1234567890", "qwertyuiop", "asdfghjkl:", "zxcvbnm.-/"].map(chars),
@@ -34,7 +37,9 @@ function grid(layout: Layout, letterCase: Case): Key[][] {
       ],
     ];
   }
+
   const rows = letterCase === "symbols" ? symbols : letters[letterCase];
+
   return [
     ...rows.map(chars),
     [
@@ -49,10 +54,10 @@ function grid(layout: Layout, letterCase: Case): Key[][] {
       { kind: "submit" },
     ],
   ];
-}
+};
 
-function keyLabel(key: Key, submitLabel: string): string {
-  return match(key)
+const keyLabel = (key: Key, submitLabel: string): string =>
+  match(key)
     .with({ kind: "char" }, (k) => k.char)
     .with({ kind: "insert" }, (k) => k.text)
     .with({ kind: "case" }, (k) => k.label)
@@ -60,14 +65,12 @@ function keyLabel(key: Key, submitLabel: string): string {
     .with({ kind: "delete" }, () => "Delete")
     .with({ kind: "submit" }, () => submitLabel)
     .exhaustive();
-}
 
-function spokenLabel(key: Key, submitLabel: string): string {
-  return match(key)
+const spokenLabel = (key: Key, submitLabel: string): string =>
+  match(key)
     .with({ kind: "char", char: " " }, () => "space")
     .with({ kind: "case", to: "symbols" }, () => "#+= symbols")
     .otherwise(() => keyLabel(key, submitLabel));
-}
 
 interface KeyCapProps {
   readonly focusKey: string;
@@ -79,8 +82,9 @@ interface KeyCapProps {
   readonly onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
 }
 
-function KeyCap({ focusKey, label, spoken, wide, primary, onPress, onKeyDown }: KeyCapProps) {
+const KeyCap = ({ focusKey, label, spoken, wide, primary, onPress, onKeyDown }: KeyCapProps) => {
   const { ref } = useFocusable<object, HTMLButtonElement>({ focusKey });
+
   return (
     <button
       ref={ref}
@@ -88,14 +92,14 @@ function KeyCap({ focusKey, label, spoken, wide, primary, onPress, onKeyDown }: 
       aria-label={spoken}
       onClick={onPress}
       onKeyDown={onKeyDown}
-      className={`focus-mark flex h-[4rem] min-w-0 items-center justify-center focus-visible:bg-paper focus-visible:text-ink ${
-        wide ? "col-span-2 text-body stretch-semicondensed" : "text-heading"
-      } ${primary ? "hairline border-2 bg-ink-raised font-[780] stretch-wide" : "bg-ink-raised font-[620]"}`}
+      className={`focus-mark focus-visible:bg-paper focus-visible:text-ink flex h-[4rem] min-w-0 items-center justify-center ${
+        wide ? "text-body stretch-semicondensed col-span-2" : "text-heading"
+      } ${primary ? "hairline bg-ink-raised stretch-wide border-2 font-[780]" : "bg-ink-raised font-[620]"}`}
     >
       {label}
     </button>
   );
-}
+};
 
 /** The focus key of the keyboard's first letter, for screens that open with the keyboard focused. */
 export const firstKey = (focusKey: string): string => `${focusKey}-1-0`;
@@ -113,15 +117,16 @@ export interface KeyboardProps {
  * A d-pad keyboard, so an owner with only a gamepad can type an address or a password.
  * A physical keyboard types into the field above it instead.
  */
-export function Keyboard({
+export const Keyboard = ({
   layout,
   value,
   onChange,
   onSubmit,
   submitLabel,
   focusKey,
-}: KeyboardProps) {
+}: KeyboardProps) => {
   const [letterCase, setLetterCase] = useState<Case>("lower");
+
   const { ref, focusKey: context } = useFocusable<object, HTMLFieldSetElement>({
     focusKey,
     // Without listed directions norigin holds every edge and the board traps focus. Up must reach
@@ -131,16 +136,29 @@ export function Keyboard({
     focusBoundaryDirections: ["right", "down"],
     saveLastFocusedChild: true,
   });
+
   const rows = grid(layout, letterCase);
 
   const press = (key: Key): void => {
     match(key)
-      .with({ kind: "char" }, (k) => onChange(value + k.char))
-      .with({ kind: "insert" }, (k) => onChange(value + k.text))
-      .with({ kind: "case" }, (k) => setLetterCase(k.to))
-      .with({ kind: "space" }, () => onChange(`${value} `))
-      .with({ kind: "delete" }, () => onChange(value.slice(0, -1)))
-      .with({ kind: "submit" }, () => onSubmit())
+      .with({ kind: "char" }, (k) => {
+        onChange(value + k.char);
+      })
+      .with({ kind: "insert" }, (k) => {
+        onChange(value + k.text);
+      })
+      .with({ kind: "case" }, (k) => {
+        setLetterCase(k.to);
+      })
+      .with({ kind: "space" }, () => {
+        onChange(`${value} `);
+      })
+      .with({ kind: "delete" }, () => {
+        onChange(value.slice(0, -1));
+      })
+      .with({ kind: "submit" }, () => {
+        onSubmit();
+      })
       .exhaustive();
   };
 
@@ -149,10 +167,18 @@ export function Keyboard({
   // input hub on the window, which would read Backspace as Back. Space is left to the hub: there,
   // as everywhere else, it is Select, and presses the focused key.
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>): void => {
-    if (event.ctrlKey || event.metaKey || event.altKey) return;
-    if (event.key === "Backspace") onChange(value.slice(0, -1));
-    else if (event.key.length === 1 && event.key !== " ") onChange(value + event.key);
-    else return;
+    if (event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
+
+    if (event.key === "Backspace") {
+      onChange(value.slice(0, -1));
+    } else if (event.key.length === 1 && event.key !== " ") {
+      onChange(value + event.key);
+    } else {
+      return;
+    }
+
     event.preventDefault();
     event.stopPropagation();
   };
@@ -173,18 +199,20 @@ export function Keyboard({
               spoken={spokenLabel(key, submitLabel)}
               wide={key.kind !== "char"}
               primary={key.kind === "submit"}
-              onPress={() => press(key)}
+              onPress={() => {
+                press(key);
+              }}
               onKeyDown={onKeyDown}
             />
-          )),
+          ))
         )}
       </fieldset>
     </FocusContext.Provider>
   );
-}
+};
 
 /** The text field the keyboard writes into; a physical keyboard types here directly. */
-export function EntryField({
+export const EntryField = ({
   label,
   value,
   masked,
@@ -198,11 +226,12 @@ export function EntryField({
   readonly focusKey: string;
   readonly onChange: (value: string) => void;
   readonly onSubmit: () => void;
-}) {
+}) => {
   const { ref } = useFocusable<object, HTMLInputElement>({ focusKey });
+
   return (
     <label className="flex flex-col gap-2">
-      <span className="text-caption font-[600] tracking-[0.12em] text-paper-dim uppercase stretch-condensed">
+      <span className="text-caption text-paper-dim stretch-condensed font-[600] tracking-[0.12em] uppercase">
         {label}
       </span>
       <input
@@ -212,17 +241,22 @@ export function EntryField({
         spellCheck={false}
         autoComplete="off"
         autoCapitalize="off"
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          onChange(event.target.value);
+        }}
         onKeyDown={(event) => {
-          if (event.key !== "Enter") return;
+          if (event.key !== "Enter") {
+            return;
+          }
+
           // The field owns this Enter: the hub must not also read it as Select, or it presses
           // whatever the next step focuses (its first key) in the same keystroke.
           event.preventDefault();
           event.stopPropagation();
           onSubmit();
         }}
-        className="focus-mark h-[5rem] w-full focus-visible:transform-none border-0 border-b-2 border-paper-faint bg-transparent text-title font-[640] text-paper stretch-semicondensed focus-visible:border-paper focus-visible:bg-ink-raised"
+        className="focus-mark border-paper-faint text-title text-paper stretch-semicondensed focus-visible:border-paper focus-visible:bg-ink-raised h-[5rem] w-full border-0 border-b-2 bg-transparent font-[640] focus-visible:transform-none"
       />
     </label>
   );
-}
+};

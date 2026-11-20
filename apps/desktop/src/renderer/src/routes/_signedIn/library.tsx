@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { noop } from "es-toolkit";
+
 import {
   catalogueQuery,
   continueQuery,
@@ -7,18 +9,19 @@ import {
   recentQuery,
   upNextQuery,
 } from "../../data/queries";
-import { LibraryScreen } from "../../library/LibraryScreen";
+import { LibraryScreen } from "../../library/library-screen";
 
 export const Route = createFileRoute("/_signedIn/library")({
-  loader: ({ context: { queryClient, signedIn } }) => {
+  loader: async ({ context: { queryClient, signedIn } }) => {
     // Start every library request at once; the screen suspends only on its first viewport.
-    void queryClient.prefetchQuery(continueQuery(signedIn));
-    void queryClient.prefetchQuery(upNextQuery(signedIn));
-    void queryClient.prefetchQuery(recentQuery(signedIn));
-    void queryClient.prefetchQuery(programmeQuery(signedIn));
-    return Promise.all([
-      queryClient.ensureQueryData(featuredQuery(signedIn)),
-      queryClient.ensureQueryData(catalogueQuery(signedIn)),
+    void queryClient.query(continueQuery(signedIn)).catch(noop);
+    void queryClient.query(upNextQuery(signedIn)).catch(noop);
+    void queryClient.query(recentQuery(signedIn)).catch(noop);
+    void queryClient.query(programmeQuery(signedIn)).catch(noop);
+
+    return await Promise.all([
+      queryClient.query({ ...featuredQuery(signedIn), staleTime: "static" }),
+      queryClient.query({ ...catalogueQuery(signedIn), staleTime: "static" }),
     ]);
   },
   component: LibraryScreen,

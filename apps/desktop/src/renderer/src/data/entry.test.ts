@@ -1,10 +1,11 @@
-import { expect, test } from "vitest";
 import type { BaseItemDto, VideoRangeType } from "@harakiri/jellyfin/generated";
+import { describe, expect, it } from "vitest";
+
 import { kindOf, programmeNotes, toEntry } from "./entry";
 
 const item = (
   audio: { Codec: string; Profile?: string; Channels: number },
-  range: VideoRangeType,
+  range: VideoRangeType
 ): ReturnType<typeof toEntry> => {
   const raw: BaseItemDto = {
     Id: "0123456789abcdef0123456789abcdef",
@@ -21,31 +22,31 @@ const item = (
       },
     ],
   };
+
   return toEntry(raw);
 };
 
-test("native facts are stated bare; only mapped and decoded carry a state", () => {
-  expect(
-    programmeNotes(item({ Codec: "truehd", Profile: "TrueHD + Atmos", Channels: 8 }, "HDR10")),
-  ).toEqual([
-    { text: "1988" },
-    { text: "125 min" },
-    { text: "4K HDR10" },
-    { text: "TrueHD Atmos 7.1" },
-  ]);
-  expect(programmeNotes(item({ Codec: "flac", Channels: 2 }, "DOVIWithHDR10"))).toEqual([
-    { text: "1988" },
-    { text: "125 min" },
-    { text: "4K Dolby Vision", state: "mapped" },
-    { text: "FLAC 2.0", state: "decoded" },
-  ]);
-});
+describe("entry", () => {
+  it("native facts are stated bare; only mapped and decoded carry a state", () => {
+    expect(
+      programmeNotes(item({ Codec: "truehd", Profile: "TrueHD + Atmos", Channels: 8 }, "HDR10"))
+    ).toStrictEqual([
+      { text: "1988" },
+      { text: "125 min" },
+      { text: "4K HDR10" },
+      { text: "TrueHD Atmos 7.1" },
+    ]);
+    expect(programmeNotes(item({ Codec: "flac", Channels: 2 }, "DOVIWithHDR10"))).toStrictEqual([
+      { text: "1988" },
+      { text: "125 min" },
+      { text: "4K Dolby Vision", state: "mapped" },
+      { text: "FLAC 2.0", state: "decoded" },
+    ]);
+  });
 
-test("a server type the programme does not know is not taken for a film", () => {
-  expect([kindOf("Movie"), kindOf("Episode"), kindOf("BoxSet"), kindOf(undefined)]).toEqual([
-    "Movie",
-    "Episode",
-    "Other",
-    "Other",
-  ]);
+  it("a server type the programme does not know is not taken for a film", () => {
+    expect([kindOf("Movie"), kindOf("Episode"), kindOf("BoxSet"), kindOf(undefined)]).toStrictEqual(
+      ["Movie", "Episode", "Other", "Other"]
+    );
+  });
 });

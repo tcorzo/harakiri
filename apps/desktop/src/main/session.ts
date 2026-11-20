@@ -9,11 +9,13 @@ import {
   rmSync,
   writeSync,
 } from "node:fs";
-import { join } from "node:path";
+import path from "node:path";
+
+import { DeviceId } from "@harakiri/jellyfin";
 import { getLogger } from "@logtape/logtape";
 import { app, safeStorage } from "electron";
-import { DeviceId } from "@harakiri/jellyfin";
 import { z } from "zod";
+
 import { NewSession, Session } from "../shared/bridge";
 import { isE2E } from "./env";
 
@@ -21,11 +23,11 @@ const logger = getLogger(["harakiri", "session"]);
 
 /** The slice of Electron's safeStorage the store needs, so tests can supply their own. */
 export interface TokenCrypto {
-  isEncryptionAvailable(): boolean;
-  encryptString(plain: string): Buffer;
-  decryptString(encrypted: Buffer): string;
+  isEncryptionAvailable: () => boolean;
+  encryptString: (plain: string) => Buffer;
+  decryptString: (encrypted: Buffer) => string;
   /** Linux only. `basic_text` means a hardcoded key: obfuscation, not encryption. */
-  getSelectedStorageBackend(): string;
+  getSelectedStorageBackend: () => string;
 }
 
 export interface SessionStoreOptions {
@@ -36,10 +38,10 @@ export interface SessionStoreOptions {
 }
 
 export interface SessionStore {
-  load(): Session | null;
-  save(session: NewSession): void;
-  clear(): void;
-  deviceId(): DeviceId;
+  load: () => Session | null;
+  save: (session: NewSession) => void;
+  clear: () => void;
+  deviceId: () => DeviceId;
 }
 
 const StoredToken = z.discriminatedUnion("kind", [
@@ -50,74 +52,89 @@ const StoredToken = z.discriminatedUnion("kind", [
 const StoredSession = Session.omit({ accessToken: true, deviceId: true }).extend({
   token: StoredToken,
 });
+
 type StoredSession = z.infer<typeof StoredSession>;
 
-export function createSessionStore(options: SessionStoreOptions): SessionStore {
-  const sessionFile = join(options.dir, "session.json");
-  const deviceIdFile = join(options.dir, "device-id");
+export const createSessionStore = (options: SessionStoreOptions): SessionStore => {
+  const sessionFile = path.join(options.dir, "session.json");
+  const deviceIdFile = path.join(options.dir, "device-id");
   let memorySession: Session | null = null;
   let cachedDeviceId: DeviceId | undefined;
 
   // A crash mid-write must leave the previous file, never a truncated one; the rename also
   // replaces whatever mode an existing file had with the temp file's 0600.
-  function write(file: string, contents: string): void {
+  const write = (file: string, contents: string): void => {
     mkdirSync(options.dir, { recursive: true });
     const temp = `${file}.${randomUUID()}.tmp`;
+
     try {
       const fd = openSync(temp, "wx", 0o600);
+
       try {
         writeSync(fd, contents);
         fsyncSync(fd);
       } finally {
         closeSync(fd);
       }
+
       renameSync(temp, file);
     } catch (error) {
       rmSync(temp, { force: true });
       throw error;
     }
-  }
+  };
 
-  function encryptionUsable(): boolean {
-    return (
-      options.crypto.isEncryptionAvailable() &&
-      options.crypto.getSelectedStorageBackend() !== "basic_text"
-    );
-  }
+  const encryptionUsable = (): boolean =>
+    options.crypto.isEncryptionAvailable() &&
+    options.crypto.getSelectedStorageBackend() !== "basic_text";
 
-  function deviceId(): DeviceId {
-    if (cachedDeviceId !== undefined) return cachedDeviceId;
+  const deviceId = (): DeviceId => {
+    if (cachedDeviceId !== undefined) {
+      return cachedDeviceId;
+    }
+
     try {
-      cachedDeviceId = DeviceId.parse(z.uuid().parse(readFileSync(deviceIdFile, "utf8").trim()));
+      cachedDeviceId = DeviceId.parse(z.uuid().parse(readFileSync(deviceIdFile, "utf-8").trim()));
     } catch {
       cachedDeviceId = DeviceId.parse(randomUUID());
       write(deviceIdFile, cachedDeviceId);
     }
-    return cachedDeviceId;
-  }
 
-  function readToken(token: StoredSession["token"]): string {
-    if (token.kind === "plain") return token.value;
+    return cachedDeviceId;
+  };
+
+  const readToken = (token: StoredSession["token"]): string => {
+    if (token.kind === "plain") {
+      return token.value;
+    }
+
     return options.crypto.decryptString(Buffer.from(token.base64, "base64"));
-  }
+  };
 
   return {
     load() {
-      if (memorySession !== null) return memorySession;
+      if (memorySession !== null) {
+        return memorySession;
+      }
+
       let raw: string;
+
       try {
-        raw = readFileSync(sessionFile, "utf8");
+        raw = readFileSync(sessionFile, "utf-8");
       } catch {
         return null;
       }
+
       try {
         const { token, ...rest } = StoredSession.parse(JSON.parse(raw));
+
         return Session.parse({ ...rest, accessToken: readToken(token), deviceId: deviceId() });
       } catch (error) {
         logger.error("Ignoring unreadable session file {file}: {error}", {
           file: sessionFile,
           error,
         });
+
         return null;
       }
     },
@@ -125,6 +142,7 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
     save(input) {
       const { accessToken, ...rest } = NewSession.parse(input);
       let token: StoredSession["token"];
+
       if (encryptionUsable()) {
         token = {
           kind: "encrypted",
@@ -135,12 +153,14 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
       } else {
         logger.warn(
           "safeStorage has no keyring (backend {backend}); the session is kept in memory and will not survive a restart",
-          { backend: options.crypto.getSelectedStorageBackend() },
+          { backend: options.crypto.getSelectedStorageBackend() }
         );
         memorySession = { ...rest, accessToken, deviceId: deviceId() };
         rmSync(sessionFile, { force: true });
+
         return;
       }
+
       memorySession = null;
       write(sessionFile, JSON.stringify({ ...rest, token } satisfies StoredSession));
     },
@@ -152,20 +172,28 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
 
     deviceId,
   };
-}
+};
 
 let defaultStore: SessionStore | undefined;
 
-function electronStore(): SessionStore {
+const electronStore = (): SessionStore => {
   defaultStore ??= createSessionStore({
     dir: app.getPath("userData"),
     crypto: safeStorage,
     allowPlaintextToken: isE2E,
   });
+
   return defaultStore;
-}
+};
 
 export const loadSession = (): Session | null => electronStore().load();
-export const saveSession = (session: NewSession): void => electronStore().save(session);
-export const clearSession = (): void => electronStore().clear();
+
+export const saveSession = (session: NewSession): void => {
+  electronStore().save(session);
+};
+
+export const clearSession = (): void => {
+  electronStore().clear();
+};
+
 export const deviceId = (): DeviceId => electronStore().deviceId();

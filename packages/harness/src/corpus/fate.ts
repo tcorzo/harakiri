@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import nodePath from "node:path";
+
 import type { FateSample } from "./catalog";
 
 /**
@@ -57,45 +58,70 @@ export type FateState =
   | { readonly kind: "corrupt"; readonly bad: readonly FateSample[] };
 
 /** Checks every pinned sample in `dir`. A file with the wrong hash is never used. */
-export function fateState(dir: string): FateState {
-  const missing = SAMPLE_NAMES.filter((name) => !existsSync(join(dir, name)));
+export const fateState = (dir: string): FateState => {
+  const missing = SAMPLE_NAMES.filter((name) => !existsSync(nodePath.join(dir, name)));
+
   const bad = SAMPLE_NAMES.filter(
     (name) =>
       !missing.includes(name) &&
-      sha256(readFileSync(join(dir, name))) !== FATE_SAMPLES[name].sha256,
+      sha256(readFileSync(nodePath.join(dir, name))) !== FATE_SAMPLES[name].sha256
   );
-  if (bad.length > 0) return { kind: "corrupt", bad };
-  if (missing.length === SAMPLE_NAMES.length) return { kind: "absent" };
-  if (missing.length > 0) return { kind: "partial", missing };
+
+  if (bad.length > 0) {
+    return { kind: "corrupt", bad };
+  }
+
+  if (missing.length === SAMPLE_NAMES.length) {
+    return { kind: "absent" };
+  }
+
+  if (missing.length > 0) {
+    return { kind: "partial", missing };
+  }
+
   return { kind: "complete" };
-}
+};
 
 /**
  * Downloads every sample that is missing or wrong, then verifies it. Throws on the first sample
  * that cannot be fetched or does not match its pin: a failed fetch is never a silent skip.
  */
-export async function fetchFate(
+export const fetchFate = async (
   dir: string,
   mirror: string,
-  log: (line: string) => void,
-): Promise<void> {
+  log: (line: string) => void
+): Promise<void> => {
   mkdirSync(dir, { recursive: true });
-  const base = mirror.replace(/\/+$/, "");
+  const base = mirror.replace(/\/+$/u, "");
   const failures: string[] = [];
+
   for (const name of SAMPLE_NAMES) {
     const { path, sha256: want } = FATE_SAMPLES[name];
-    const file = join(dir, name);
+    const file = nodePath.join(dir, name);
+
     if (existsSync(file) && sha256(readFileSync(file)) === want) {
       log(`${name}: present, sha256 ok`);
       continue;
     }
+
     const url = `${base}/${path}`;
+
     try {
+      // oxlint-disable-next-line eslint/no-await-in-loop -- samples download one at a time so the mirror sees one request and the log keeps its order
       const response = await fetch(url, { signal: AbortSignal.timeout(120_000) });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      // oxlint-disable-next-line eslint/no-await-in-loop -- samples download one at a time so the mirror sees one request and the log keeps its order
       const data = new Uint8Array(await response.arrayBuffer());
       const got = sha256(data);
-      if (got !== want) throw new Error(`sha256 ${got}, pinned ${want}`);
+
+      if (got !== want) {
+        throw new Error(`sha256 ${got}, pinned ${want}`);
+      }
+
       writeFileSync(`${file}.part`, data);
       renameSync(`${file}.part`, file);
       log(`${name}: fetched ${data.length} bytes, sha256 ok`);
@@ -103,9 +129,11 @@ export async function fetchFate(
       failures.push(`${url}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
-  if (failures.length > 0)
+
+  if (failures.length > 0) {
     throw new Error(
       `FATE fetch failed for ${failures.length} of ${SAMPLE_NAMES.length} samples ` +
-        `(set HARAKIRI_FATE_MIRROR to use a mirror):\n  ${failures.join("\n  ")}`,
+        `(set HARAKIRI_FATE_MIRROR to use a mirror):\n  ${failures.join("\n  ")}`
     );
-}
+  }
+};

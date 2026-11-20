@@ -184,7 +184,7 @@ export interface UpdaterLike {
   install(isSilent: boolean, isForceRunAfter: boolean): boolean;
   on(
     event: "update-available" | "update-downloaded",
-    l: (info: { version: string }) => void,
+    l: (info: { version: string }) => void
   ): unknown;
   on(event: "download-progress", l: (p: { percent: number }) => void): unknown;
   on(event: "error", l: (e: Error) => void): unknown;
@@ -203,7 +203,7 @@ export function startUpdates(
     releaseLock(): void;
     checkEveryMs?: number /* 6 h */;
     idlePollMs?: number /* 60 s */;
-  },
+  }
 ): Updates;
 ```
 

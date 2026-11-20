@@ -9,5 +9,7 @@ interface InputModeState {
 /** Read by the input hub on every event, outside React. */
 export const inputMode = createStore<InputModeState>()((set) => ({
   mode: "ui",
-  setMode: (mode) => set({ mode }),
+  setMode: (mode) => {
+    set({ mode });
+  },
 }));

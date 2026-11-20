@@ -1,5 +1,8 @@
-import { resolve } from "node:path";
-import { type TestProjectInlineConfiguration, configDefaults, defineConfig } from "vitest/config";
+import path from "node:path";
+
+import { configDefaults, defineConfig } from "vitest/config";
+import type { TestProjectInlineConfiguration } from "vitest/config";
+
 import desktop from "./apps/desktop/vitest.config";
 import harness from "./packages/harness/vitest.config";
 import jellyfin from "./packages/jellyfin/vitest.config";
@@ -14,13 +17,13 @@ const tier = (
   name: keyof typeof TIERS,
   project: string,
   dir: string,
-  base: TestProjectInlineConfiguration,
+  base: TestProjectInlineConfiguration
 ): TestProjectInlineConfiguration => ({
   ...base,
   // Spread instead of inheriting: `extends` concatenates arrays, so the package's
   // hermetic `exclude` would exclude the tier.
   extends: false,
-  root: resolve(import.meta.dirname, dir),
+  root: path.resolve(import.meta.dirname, dir),
   test: {
     ...base.test,
     name: `${name}:${project}`,

@@ -1,28 +1,27 @@
 import type { ItemId, ServerUrl } from "@harakiri/jellyfin";
-import {
-  FocusContext,
-  useFocusable,
-  type FocusableComponentLayout,
-} from "@noriginmedia/norigin-spatial-navigation";
+import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-navigation";
+import type { FocusableComponentLayout } from "@noriginmedia/norigin-spatial-navigation";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, useTransition } from "react";
-import { episodeCode, programmeNotes, type Entry } from "../data/entry";
+import { useEffect, useEffectEvent, useState, useTransition } from "react";
+
+import { episodeCode, programmeNotes } from "../data/entry";
+import type { Entry } from "../data/entry";
 import { episodesQuery, seasonsQuery } from "../data/queries";
 import { useSignedIn } from "../data/session";
-import { Backdrop, backdropUrl, InkField, Margin, TitleMark } from "../library/Stage";
+import { Backdrop, backdropUrl, InkField, Margin, TitleMark } from "../library/stage";
 import { PlayAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
 import { ProgrammeNotes, SeenMark } from "../ui/marks";
-import { seriesPlace } from "./seriesPlace";
+import { seriesPlace } from "./series-place";
 
 const episodeKey = (id: ItemId): string => `episode-${id}`;
 
-function scrollIntoView({ node }: FocusableComponentLayout): void {
+const scrollIntoView = ({ node }: FocusableComponentLayout): void => {
   node.scrollIntoView({ block: "nearest" });
-}
+};
 
-function SeasonTab({
+const SeasonTab = ({
   season,
   selected,
   index,
@@ -32,11 +31,12 @@ function SeasonTab({
   readonly selected: boolean;
   readonly index: number;
   readonly onPick: () => void;
-}) {
+}) => {
   const { ref } = useFocusable<object, HTMLButtonElement>({
     focusKey: `season-${index}`,
     onFocus: onPick,
   });
+
   return (
     <button
       ref={ref}
@@ -44,16 +44,16 @@ function SeasonTab({
       aria-pressed={selected}
       aria-label={season.title}
       onClick={onPick}
-      className={`focus-mark shrink-0 border-b-4 px-4 py-2 text-body font-[700] stretch-semicondensed focus-visible:bg-paper focus-visible:text-ink ${
-        selected ? "border-band text-paper" : "border-transparent text-paper-dim"
+      className={`focus-mark text-body stretch-semicondensed focus-visible:bg-paper focus-visible:text-ink shrink-0 border-b-4 px-4 py-2 font-[700] ${
+        selected ? "border-band text-paper" : "text-paper-dim border-transparent"
       }`}
     >
       {season.title}
     </button>
   );
-}
+};
 
-function EpisodeLine({
+const EpisodeLine = ({
   episode,
   onFocus,
   onPress,
@@ -61,7 +61,7 @@ function EpisodeLine({
   readonly episode: Entry;
   readonly onFocus: () => void;
   readonly onPress: () => void;
-}) {
+}) => {
   const { ref, focused } = useFocusable<object, HTMLButtonElement>({
     focusKey: episodeKey(episode.id),
     onFocus: (layout) => {
@@ -69,56 +69,61 @@ function EpisodeLine({
       onFocus();
     },
   });
+
   const number = episode.series?.episode;
+
   return (
     <button
       ref={ref}
       type="button"
       aria-label={`${episodeCode(episode) ?? ""} ${episode.title}${episode.played ? ", seen" : ""}`}
       onClick={onPress}
-      className="group grid w-full grid-cols-[5rem_minmax(0,1fr)_auto] items-baseline gap-x-6 border-b-2 hairline px-4 py-4 text-left [content-visibility:auto] [contain-intrinsic-size:auto_5rem] focus-visible:bg-paper focus-visible:text-ink"
+      className="group hairline focus-visible:bg-paper focus-visible:text-ink grid w-full grid-cols-[5rem_minmax(0,1fr)_auto] items-baseline gap-x-6 border-b-2 px-4 py-4 text-left [contain-intrinsic-size:auto_5rem] [content-visibility:auto]"
     >
-      <span className="text-heading font-[300] stretch-condensed">
-        {number == null ? "—" : String(number).padStart(2, "0")}
+      <span className="text-heading stretch-condensed font-[300]">
+        {number === undefined || number === null ? "—" : String(number).padStart(2, "0")}
       </span>
       <span className="flex min-w-0 flex-col gap-1">
-        <span className="truncate text-body font-[680] stretch-semicondensed">{episode.title}</span>
+        <span className="text-body stretch-semicondensed truncate font-[680]">{episode.title}</span>
         {focused && episode.overview !== null ? (
-          <span className="line-clamp-2 text-caption text-paper-faint group-focus-visible:text-ink">
+          <span className="text-caption text-paper-faint group-focus-visible:text-ink line-clamp-2">
             {episode.overview}
           </span>
         ) : null}
         {episode.progress === null ? null : (
-          <span aria-hidden="true" className="mt-1 block h-[0.25rem] w-full bg-ink-line">
+          <span aria-hidden="true" className="bg-ink-line mt-1 block h-[0.25rem] w-full">
             <span
-              className="block h-full origin-left bg-paper group-focus-visible:bg-ink"
+              className="bg-paper group-focus-visible:bg-ink block h-full origin-left"
               style={{ transform: `scaleX(${episode.progress})` }}
             />
           </span>
         )}
       </span>
-      <span className="flex items-center gap-3 text-notes text-paper-dim stretch-condensed group-focus-visible:text-ink">
+      <span className="text-notes text-paper-dim stretch-condensed group-focus-visible:text-ink flex items-center gap-3">
         {episode.played ? <SeenMark /> : null}
         {episode.minutes === null ? null : `${episode.minutes} min`}
       </span>
     </button>
   );
-}
+};
 
-function firstUnwatched(seasons: readonly Entry[]): number {
+const firstUnwatched = (seasons: readonly Entry[]): number => {
   const found = seasons.findIndex((season) => (season.unplayedCount ?? 0) > 0);
+
   return found === -1 ? 0 : found;
-}
+};
 
 /** The season a series page opens on: the one the owner last had, else the first with unwatched episodes. */
-export function initialSeason(seriesId: ItemId, seasons: readonly Entry[]): number {
+export const initialSeason = (seriesId: ItemId, seasons: readonly Entry[]): number => {
   const remembered = seriesPlace.get(seriesId);
+
   const given =
     remembered === undefined ? -1 : seasons.findIndex((season) => season.id === remembered.season);
-  return given === -1 ? firstUnwatched(seasons) : given;
-}
 
-export function SeriesPage({
+  return given === -1 ? firstUnwatched(seasons) : given;
+};
+
+export const SeriesPage = ({
   series,
   number,
   server,
@@ -126,20 +131,23 @@ export function SeriesPage({
   readonly series: Entry;
   readonly number: number | null;
   readonly server: ServerUrl;
-}) {
+}) => {
   const ctx = useSignedIn();
   const navigate = useNavigate();
   const { data: seasons } = useSuspenseQuery(seasonsQuery(ctx, series.id));
   const [picked, setPicked] = useState(() => initialSeason(series.id, seasons));
   const [, startTransition] = useTransition();
   const season = seasons[picked] ?? seasons[0];
+
   // No placeholder: while another season loads, its Play must not start the previous season's episode.
   const episodes = useQuery({
     ...episodesQuery(ctx, series.id, season?.id ?? series.id),
     enabled: season !== undefined,
   });
+
   const list = episodes.data ?? [];
   const next = list.find((episode) => !episode.played) ?? list[0];
+
   const { ref, focusKey } = useFocusable<object, HTMLElement>({
     focusKey: "series-page",
     trackChildren: true,
@@ -147,24 +155,41 @@ export function SeriesPage({
   });
 
   // The loader brought the opening season's episodes, so Play (or the remembered episode) is mounted.
-  useEffect(() => {
+  const focusOnArrival = useEffectEvent(() => {
     const episode = seriesPlace.get(series.id)?.episode;
-    focusFirst(...(episode == null ? [] : [episodeKey(episode)]), "title-play", `season-${picked}`);
-    // Only on arrival; later season changes keep focus on the season tabs.
-    // oxlint-disable-next-line react/exhaustive-deps
+    focusFirst(
+      ...(episode === undefined || episode === null ? [] : [episodeKey(episode)]),
+      "title-play",
+      `season-${picked}`
+    );
+  });
+
+  // Only on arrival; later season changes keep focus on the season tabs.
+  useEffect(() => {
+    focusOnArrival();
   }, []);
 
   const pick = (index: number): void => {
     const chosen = seasons[index];
-    if (chosen !== undefined) seriesPlace.set(series.id, { season: chosen.id, episode: null });
-    startTransition(() => setPicked(index));
+
+    if (chosen !== undefined) {
+      seriesPlace.set(series.id, { season: chosen.id, episode: null });
+    }
+
+    startTransition(() => {
+      setPicked(index);
+    });
   };
+
   const rememberEpisode = (episode: Entry): void => {
-    if (season !== undefined)
+    if (season !== undefined) {
       seriesPlace.set(series.id, { season: season.id, episode: episode.id });
+    }
   };
-  const open = (episode: Entry): void =>
+
+  const open = (episode: Entry): void => {
     void navigate({ to: "/title/$id", params: { id: episode.id } });
+  };
 
   return (
     <FocusContext.Provider value={focusKey}>
@@ -175,12 +200,12 @@ export function SeriesPage({
       >
         <Backdrop url={series.backdrop === null ? null : backdropUrl(server, series.backdrop)} />
         <InkField deep />
-        <div className="absolute inset-x-safe-x top-[calc(var(--spacing-safe-y)+5rem)] bottom-safe-y flex gap-10">
+        <div className="inset-x-safe-x bottom-safe-y absolute top-[calc(var(--spacing-safe-y)+5rem)] flex gap-10">
           <Margin number={number} seen={series.played} section="Series" />
           <div className="flex w-[44rem] shrink-0 flex-col justify-end gap-8">
             <TitleMark entry={series} server={server} compact={false} />
             <ProgrammeNotes facts={programmeNotes(series)} />
-            <p className="m-0 line-clamp-6 max-w-[62ch] text-body text-paper-dim">
+            <p className="text-body text-paper-dim m-0 line-clamp-6 max-w-[62ch]">
               {series.overview ?? "No synopsis on the server."}
             </p>
             <div className="flex">
@@ -190,8 +215,10 @@ export function SeriesPage({
                   label={`${next.progress === null ? "Play" : "Resume"} ${episodeCode(next) ?? ""} ${next.title}`}
                   onPress={() => {
                     // Back from the player lands on Play, which by then offers what comes next.
-                    if (season !== undefined)
+                    if (season !== undefined) {
                       seriesPlace.set(series.id, { season: season.id, episode: null });
+                    }
+
                     void navigate({
                       to: "/screening/$id",
                       params: { id: next.id },
@@ -215,7 +242,9 @@ export function SeriesPage({
                   season={s}
                   index={i}
                   selected={i === picked}
-                  onPick={() => pick(i)}
+                  onPick={() => {
+                    pick(i);
+                  }}
                 />
               ))}
             </fieldset>
@@ -225,8 +254,12 @@ export function SeriesPage({
                   <EpisodeLine
                     key={episode.id}
                     episode={episode}
-                    onFocus={() => rememberEpisode(episode)}
-                    onPress={() => open(episode)}
+                    onFocus={() => {
+                      rememberEpisode(episode);
+                    }}
+                    onPress={() => {
+                      open(episode);
+                    }}
                   />
                 ))}
               </div>
@@ -236,4 +269,4 @@ export function SeriesPage({
       </main>
     </FocusContext.Provider>
   );
-}
+};

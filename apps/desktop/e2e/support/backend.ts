@@ -1,4 +1,5 @@
-import { resolve } from "node:path";
+import path from "node:path";
+
 import { ServerUrl } from "@harakiri/jellyfin";
 
 /**
@@ -9,11 +10,12 @@ import { ServerUrl } from "@harakiri/jellyfin";
  * HARAKIRI_E2E_PASSWORD (falling back to JELLYFIN_DEV_USER / _PASSWORD).
  */
 
-export const REPO = resolve(import.meta.dirname, "../../../..");
-export const CORPUS_DIR = process.env["HARAKIRI_CORPUS_DIR"] ?? resolve(REPO, ".cache/corpus");
-export const REAL_SERVER = process.env["HARAKIRI_E2E_SERVER"];
+export const REPO = path.resolve(import.meta.dirname, "../../../..");
+export const CORPUS_DIR = process.env.HARAKIRI_CORPUS_DIR ?? path.resolve(REPO, ".cache/corpus");
+export const REAL_SERVER = process.env.HARAKIRI_E2E_SERVER;
 
 const E2E_PORT = 8296;
+
 /**
  * The app probes UDP 7359 at HARAKIRI_DISCOVERY_ADDRESS. A loopback address of the e2e server's
  * own keeps the probe from reaching a dev container on 127.0.0.1:7359, and 127.0.0.2 stays the
@@ -26,7 +28,7 @@ export const E2E_CONTAINER_ENV = {
   JELLYFIN_DEV_NAME: "harakiri-jellyfin-e2e",
   JELLYFIN_DEV_PORT: String(E2E_PORT),
   JELLYFIN_DEV_DISCOVERY_ADDRESS: E2E_DISCOVERY_ADDRESS,
-  JELLYFIN_DEV_STATE: resolve(REPO, ".cache/jellyfin-e2e"),
+  JELLYFIN_DEV_STATE: path.resolve(REPO, ".cache/jellyfin-e2e"),
   JELLYFIN_DEV_MEMORY: "2g",
   JELLYFIN_DEV_LIBRARY: "corpus",
   JELLYFIN_DEV_URL: `http://127.0.0.1:${E2E_PORT}`,
@@ -50,9 +52,10 @@ export interface Backend {
 const env = (...names: string[]) =>
   names.map((name) => process.env[name]).find((value) => value !== undefined && value !== "");
 
-export function resolveBackend(): Backend {
+export const resolveBackend = (): Backend => {
   if (REAL_SERVER !== undefined && REAL_SERVER !== "") {
     const server = ServerUrl.parse(REAL_SERVER);
+
     return {
       kind: "real",
       server,
@@ -63,7 +66,9 @@ export function resolveBackend(): Backend {
       discoveryAddress: env("HARAKIRI_E2E_DISCOVERY_ADDRESS") ?? "127.0.0.1",
     };
   }
+
   const server = ServerUrl.parse(E2E_CONTAINER_ENV.JELLYFIN_DEV_URL);
+
   return {
     kind: "corpus",
     server,
@@ -72,4 +77,4 @@ export function resolveBackend(): Backend {
     password: E2E_CONTAINER_ENV.JELLYFIN_DEV_PASSWORD,
     discoveryAddress: E2E_DISCOVERY_ADDRESS,
   };
-}
+};

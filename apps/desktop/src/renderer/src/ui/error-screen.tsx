@@ -1,16 +1,19 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter, type ErrorComponentProps } from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
+import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { match } from "ts-pattern";
-import { classifyFailure, type Failure } from "../data/errors";
+
+import { classifyFailure } from "../data/errors";
+import type { Failure } from "../data/errors";
 import { forgetSession } from "../data/forget";
 import { sessionQuery } from "../data/session";
 import { QuietAction } from "./actions";
 import { focusFirst } from "./focus";
 import { Notice } from "./marks";
 
-function wording(failure: Failure): { readonly title: string; readonly detail: string } {
-  return match(failure)
+const wording = (failure: Failure): { readonly title: string; readonly detail: string } =>
+  match(failure)
     .with({ kind: "signedOut" }, () => ({
       title: "Signed out by the server",
       detail:
@@ -36,10 +39,9 @@ function wording(failure: Failure): { readonly title: string; readonly detail: s
         "harakiri hit a problem it did not expect. Try again; if it happens again, the message below says what went wrong.",
     }))
     .exhaustive();
-}
 
 /** A screen whose data could not load: says what happened and offers the way on that fits it. */
-export function ErrorScreen({ error, reset }: ErrorComponentProps) {
+export const ErrorScreen = ({ error, reset }: ErrorComponentProps) => {
   const router = useRouter();
   const queryClient = useQueryClient();
   const failure = classifyFailure(error);
@@ -54,6 +56,7 @@ export function ErrorScreen({ error, reset }: ErrorComponentProps) {
     reset();
     void router.invalidate();
   };
+
   // Signing in again keeps the server, so the owner lands on its user list; changing server does not.
   const leave = async (keepServer: boolean): Promise<void> => {
     const server = queryClient.getQueryData(sessionQuery.queryKey)?.serverUrl;
@@ -67,8 +70,8 @@ export function ErrorScreen({ error, reset }: ErrorComponentProps) {
   };
 
   return (
-    <main className="flex h-screen flex-col justify-end gap-8 bg-ink px-safe-x py-safe-y">
-      <h1 className="m-0 max-w-[24ch] text-marquee font-[820] text-balance stretch-extra-wide">
+    <main className="bg-ink px-safe-x py-safe-y flex h-screen flex-col justify-end gap-8">
+      <h1 className="text-marquee stretch-extra-wide m-0 max-w-[24ch] font-[820] text-balance">
         {title}
       </h1>
       <Notice className="max-w-[62ch]">{detail}</Notice>
@@ -80,13 +83,20 @@ export function ErrorScreen({ error, reset }: ErrorComponentProps) {
           <QuietAction
             focusKey="error-first"
             label="Sign in again"
-            onPress={() => void leave(true)}
+            onPress={() => {
+              void leave(true);
+            }}
           />
         ) : (
           <QuietAction focusKey="error-first" label="Try again" onPress={retry} />
         )}
-        <QuietAction label="Change server" onPress={() => void leave(false)} />
+        <QuietAction
+          label="Change server"
+          onPress={() => {
+            void leave(false);
+          }}
+        />
       </div>
     </main>
   );
-}
+};

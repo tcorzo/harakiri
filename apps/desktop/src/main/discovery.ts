@@ -1,8 +1,10 @@
 import { createSocket } from "node:dgram";
+
 import { ServerUrl } from "@harakiri/jellyfin";
 import { getLogger } from "@logtape/logtape";
 import { z } from "zod";
-import { DiscoveredServer } from "../shared/bridge";
+
+import type { DiscoveredServer } from "../shared/bridge";
 
 const logger = getLogger(["harakiri", "discovery"]);
 
@@ -21,38 +23,54 @@ export interface DiscoveryOptions {
 }
 
 /** Broadcasts Jellyfin's discovery probe and returns every distinct server that answers in time. */
-export function discoverServers(options: DiscoveryOptions = {}): Promise<DiscoveredServer[]> {
+export const discoverServers = async (
+  options: DiscoveryOptions = {}
+): Promise<DiscoveredServer[]> => {
   const { address = "255.255.255.255", port = 7359, timeoutMs = 1500 } = options;
   const servers = new Map<string, DiscoveredServer>();
   const socket = createSocket("udp4");
 
-  return new Promise((resolve) => {
+  // oxlint-disable-next-line promise/avoid-new -- wraps dgram's event API, which has no promise form
+  return await new Promise((resolve) => {
     let done = false;
+
     const finish = (): void => {
-      if (done) return;
+      if (done) {
+        return;
+      }
+
       done = true;
       clearTimeout(timer);
       socket.close();
       resolve([...servers.values()]);
     };
+
     const timer = setTimeout(finish, timeoutMs);
 
     socket.on("message", (message) => {
       let json: unknown;
+
       try {
-        json = JSON.parse(message.toString("utf8"));
+        json = JSON.parse(message.toString("utf-8"));
       } catch {
         logger.debug("Ignoring a discovery reply that is not JSON");
+
         return;
       }
+
       const parsed = DiscoveryReply.safeParse(json);
+
       if (!parsed.success) {
         logger.debug("Ignoring a malformed discovery reply: {issues}", {
           issues: parsed.error.issues,
         });
+
         return;
       }
-      if (!servers.has(parsed.data.id)) servers.set(parsed.data.id, parsed.data);
+
+      if (!servers.has(parsed.data.id)) {
+        servers.set(parsed.data.id, parsed.data);
+      }
     });
     socket.on("error", (error) => {
       logger.warn("Server discovery failed: {error}", { error });
@@ -63,4 +81,4 @@ export function discoverServers(options: DiscoveryOptions = {}): Promise<Discove
       socket.send("Who is JellyfinServer?", port, address);
     });
   });
-}
+};

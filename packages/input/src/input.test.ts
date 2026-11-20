@@ -1,46 +1,39 @@
-import { describe, expect, test } from "vitest";
-import {
-  idlePad,
-  isEditing,
-  keyToAction,
-  route,
-  seedHeld,
-  stepPad,
-  type PadSnapshot,
-  type PadState,
-} from "./index";
+import { describe, expect, it } from "vitest";
+
+import { idlePad, isEditing, keyToAction, route, seedHeld, stepPad } from "./index";
+import type { PadSnapshot, PadState } from "./index";
 
 const timing = { delayMs: 400, intervalMs: 100 };
 
-function pad(pressed: readonly number[], axes: readonly number[] = [0, 0, 0, 0]): PadSnapshot {
-  return {
-    buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: pressed.includes(i) })),
-    axes,
-  };
-}
+const pad = (pressed: readonly number[], axes: readonly number[] = [0, 0, 0, 0]): PadSnapshot => ({
+  buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: pressed.includes(i) })),
+  axes,
+});
 
 /** A frame polls the pad; a `switch` frame is an input mode change, as the hub handles it. */
 type Frame = readonly [number, PadSnapshot] | readonly ["switch", number, PadSnapshot];
 
-function run(frames: readonly Frame[]): string[][] {
+const run = (frames: readonly Frame[]): string[][] => {
   let state: PadState = idlePad;
+
   return frames.map((frame) => {
     if (frame[0] === "switch") {
       state = seedHeld(frame[2], frame[1]);
+
       return ["switch"];
     }
+
     const step = stepPad(state, frame[1], frame[0], timing);
-    state = step.state;
+    ({ state } = step);
+
     return [...step.actions];
   });
-}
+};
 
-function stickX(x: number): PadSnapshot {
-  return pad([], [x, 0, 0, 0]);
-}
+const stickX = (x: number): PadSnapshot => pad([], [x, 0, 0, 0]);
 
-describe("keyToAction", () => {
-  test.each([
+describe(keyToAction, () => {
+  it.each([
     ["ArrowUp", "up"],
     ["ArrowRight", "right"],
     ["Enter", "select"],
@@ -51,7 +44,7 @@ describe("keyToAction", () => {
     expect(keyToAction(key)).toBe(action);
   });
 
-  test("a held key repeats only directions; Select, Back, Menu and Play/Pause act once", () => {
+  it("a held key repeats only directions; Select, Back, Menu and Play/Pause act once", () => {
     const keys = [
       "ArrowDown",
       "ArrowLeft",
@@ -62,7 +55,8 @@ describe("keyToAction", () => {
       "ContextMenu",
       "MediaPlayPause",
     ];
-    expect(keys.map((key) => keyToAction(key, { repeat: true }))).toEqual([
+
+    expect(keys.map((key) => keyToAction(key, { repeat: true }))).toStrictEqual([
       "down",
       "left",
       undefined,
@@ -74,20 +68,20 @@ describe("keyToAction", () => {
     ]);
   });
 
-  test("unmapped keys and prototype names yield no action", () => {
-    expect([keyToAction("a"), keyToAction("toString")]).toEqual([undefined, undefined]);
+  it("unmapped keys and prototype names yield no action", () => {
+    expect([keyToAction("a"), keyToAction("toString")]).toStrictEqual([undefined, undefined]);
   });
 
-  test("while editing, keys that type or move the caret belong to the field", () => {
+  it("while editing, keys that type or move the caret belong to the field", () => {
     const keys = [" ", "Backspace", "ArrowLeft", "ArrowRight", "a"];
-    expect(keys.map((key) => keyToAction(key, { editing: true }))).toEqual([
+    expect(keys.map((key) => keyToAction(key, { editing: true }))).toStrictEqual([
       undefined,
       undefined,
       undefined,
       undefined,
       undefined,
     ]);
-    expect(keys.map((key) => keyToAction(key))).toEqual([
+    expect(keys.map((key) => keyToAction(key))).toStrictEqual([
       "select",
       "back",
       "left",
@@ -96,9 +90,9 @@ describe("keyToAction", () => {
     ]);
   });
 
-  test("while editing, keys that cannot type still act", () => {
+  it("while editing, keys that cannot type still act", () => {
     const keys = ["ArrowUp", "ArrowDown", "Enter", "Escape", "GoBack", "MediaPlayPause"];
-    expect(keys.map((key) => keyToAction(key, { editing: true }))).toEqual([
+    expect(keys.map((key) => keyToAction(key, { editing: true }))).toStrictEqual([
       "up",
       "down",
       "select",
@@ -108,13 +102,13 @@ describe("keyToAction", () => {
     ]);
   });
 
-  test("editing: false behaves like no options", () => {
+  it("editing: false behaves like no options", () => {
     expect(keyToAction(" ", { editing: false })).toBe("select");
   });
 });
 
-describe("isEditing", () => {
-  test.each([
+describe(isEditing, () => {
+  it.each([
     [{ tagName: "INPUT", type: "text" }, true],
     [{ tagName: "INPUT", type: "password" }, true],
     [{ tagName: "INPUT" }, true],
@@ -129,33 +123,33 @@ describe("isEditing", () => {
   });
 });
 
-describe("stepPad", () => {
-  test("fires once on the press edge, not while held, again after release", () => {
+describe(stepPad, () => {
+  it("fires once on the press edge, not while held, again after release", () => {
     expect(
       run([
         [0, pad([0])],
         [16, pad([0])],
         [32, pad([])],
         [48, pad([0])],
-      ]),
-    ).toEqual([["select"], [], [], ["select"]]);
+      ])
+    ).toStrictEqual([["select"], [], [], ["select"]]);
   });
 
-  test("maps the standard d-pad, face buttons and start", () => {
-    expect(run([[0, pad([12, 1, 9])]])).toEqual([["up", "back", "menu"]]);
+  it("maps the standard d-pad, face buttons and start", () => {
+    expect(run([[0, pad([12, 1, 9])]])).toStrictEqual([["up", "back", "menu"]]);
   });
 
-  test("left stick past the threshold acts as a direction, inside it does not", () => {
+  it("left stick past the threshold acts as a direction, inside it does not", () => {
     expect(
       run([
         [0, pad([], [0.4, 0, 0, 0])],
         [16, pad([], [0.9, 0, 0, 0])],
         [32, pad([], [0, -0.9, 0, 0])],
-      ]),
-    ).toEqual([[], ["right"], ["up"]]);
+      ])
+    ).toStrictEqual([[], ["right"], ["up"]]);
   });
 
-  test("stick enters at 0.5 and leaves only below 0.35", () => {
+  it("stick enters at 0.5 and leaves only below 0.35", () => {
     expect(
       run([
         [0, stickX(0.49)],
@@ -164,11 +158,11 @@ describe("stepPad", () => {
         [48, stickX(0.34)],
         [64, stickX(0.49)],
         [80, stickX(0.5)],
-      ]),
-    ).toEqual([[], ["right"], [], [], [], ["right"]]);
+      ])
+    ).toStrictEqual([[], ["right"], [], [], [], ["right"]]);
   });
 
-  test("a stick hovering between 0.45 and 0.55 makes one press edge", () => {
+  it("a stick hovering between 0.45 and 0.55 makes one press edge", () => {
     expect(
       run([
         [0, stickX(0.55)],
@@ -177,15 +171,15 @@ describe("stepPad", () => {
         [48, stickX(0.45)],
         [64, stickX(0.55)],
         [80, stickX(0.45)],
-      ]),
-    ).toEqual([["right"], [], [], [], [], []]);
+      ])
+    ).toStrictEqual([["right"], [], [], [], [], []]);
   });
 
-  test("d-pad and stick in the same direction fire one action", () => {
-    expect(run([[0, pad([15], [0.9, 0, 0, 0])]])).toEqual([["right"]]);
+  it("d-pad and stick in the same direction fire one action", () => {
+    expect(run([[0, pad([15], [0.9, 0, 0, 0])]])).toStrictEqual([["right"]]);
   });
 
-  test("a held direction repeats after the delay, then every interval", () => {
+  it("a held direction repeats after the delay, then every interval", () => {
     expect(
       run([
         [0, pad([15])],
@@ -194,22 +188,22 @@ describe("stepPad", () => {
         [450, pad([15])],
         [500, pad([15])],
         [600, pad([15])],
-      ]),
-    ).toEqual([["right"], [], ["right"], [], ["right"], ["right"]]);
+      ])
+    ).toStrictEqual([["right"], [], ["right"], [], ["right"], ["right"]]);
   });
 
-  test("a held select never repeats", () => {
+  it("a held select never repeats", () => {
     expect(
       run([
         [0, pad([0])],
         [1000, pad([0])],
-      ]),
-    ).toEqual([["select"], []]);
+      ])
+    ).toStrictEqual([["select"], []]);
   });
 });
 
 describe("seedHeld on an input mode switch", () => {
-  test("B held across the switch fires nothing; release then press fires one back", () => {
+  it("B held across the switch fires nothing; release then press fires one back", () => {
     expect(
       run([
         ["switch", 0, pad([1])],
@@ -218,11 +212,11 @@ describe("seedHeld on an input mode switch", () => {
         [1016, pad([])],
         [1032, pad([1])],
         [1048, pad([1])],
-      ]),
-    ).toEqual([["switch"], [], [], [], ["back"], []]);
+      ])
+    ).toStrictEqual([["switch"], [], [], [], ["back"], []]);
   });
 
-  test("a direction held across the switch never repeats until released", () => {
+  it("a direction held across the switch never repeats until released", () => {
     expect(
       run([
         ["switch", 0, pad([15])],
@@ -230,11 +224,11 @@ describe("seedHeld on an input mode switch", () => {
         [600, pad([15])],
         [616, pad([])],
         [632, pad([15])],
-      ]),
-    ).toEqual([["switch"], [], [], [], ["right"]]);
+      ])
+    ).toStrictEqual([["switch"], [], [], [], ["right"]]);
   });
 
-  test("a stick held across the switch stays silent until it drops below 0.35", () => {
+  it("a stick held across the switch stays silent until it drops below 0.35", () => {
     expect(
       run([
         ["switch", 0, stickX(0.9)],
@@ -242,32 +236,32 @@ describe("seedHeld on an input mode switch", () => {
         [32, stickX(0.9)],
         [48, stickX(0.3)],
         [64, stickX(0.9)],
-      ]),
-    ).toEqual([["switch"], [], [], [], ["right"]]);
+      ])
+    ).toStrictEqual([["switch"], [], [], [], ["right"]]);
   });
 
-  test("buttons pressed only after the switch fire normally", () => {
+  it("buttons pressed only after the switch fire normally", () => {
     expect(
       run([
         ["switch", 0, pad([1])],
         [16, pad([1, 0])],
-      ]),
-    ).toEqual([["switch"], ["select"]]);
+      ])
+    ).toStrictEqual([["switch"], ["select"]]);
   });
 });
 
-describe("route", () => {
-  test("ui mode passes both sources", () => {
-    expect([route("ui", "gamepad", "left"), route("ui", "keyboard", "left")]).toEqual([
+describe(route, () => {
+  it("ui mode passes both sources", () => {
+    expect([route("ui", "gamepad", "left"), route("ui", "keyboard", "left")]).toStrictEqual([
       "left",
       "left",
     ]);
   });
 
-  test("player mode drops gamepad actions and keeps keyboard ones", () => {
-    expect([route("player", "gamepad", "select"), route("player", "keyboard", "select")]).toEqual([
-      undefined,
-      "select",
-    ]);
+  it("player mode drops gamepad actions and keeps keyboard ones", () => {
+    expect([
+      route("player", "gamepad", "select"),
+      route("player", "keyboard", "select"),
+    ]).toStrictEqual([undefined, "select"]);
   });
 });

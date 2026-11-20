@@ -1,26 +1,30 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import path from "node:path";
+
 import {
   authenticate,
   authorizationHeader,
-  type ClientIdentity,
   DeviceId,
   ItemId,
   MediaSourceId,
-  type ServerUrl,
-  type SessionData,
 } from "@harakiri/jellyfin";
+import type { ClientIdentity, ServerUrl, SessionData } from "@harakiri/jellyfin";
 import { z } from "zod";
-import { CATALOG, type Entry, entryPath } from "../../../../packages/harness/src/corpus/catalog";
+
+import { CATALOG, entryPath } from "../../../../packages/harness/src/corpus/catalog";
+import type { Entry } from "../../../../packages/harness/src/corpus/catalog";
 import { clientIdentity } from "../../src/shared/identity";
-import { type Backend, CORPUS_DIR } from "./backend";
+import { CORPUS_DIR } from "./backend";
+import type { Backend } from "./backend";
 
 export const TICKS_PER_SECOND = 10_000_000;
 
 const { version } = z
   .object({ version: z.string() })
-  .parse(JSON.parse(readFileSync(resolve(import.meta.dirname, "../../package.json"), "utf8")));
+  .parse(
+    JSON.parse(readFileSync(path.resolve(import.meta.dirname, "../../package.json"), "utf-8"))
+  );
 
 /**
  * The identity the app itself sends, version included (the bundles get it at build time, so
@@ -36,46 +40,57 @@ const appIdentity = (deviceId: DeviceId): ClientIdentity => ({
  * Signs in once per run with a fresh UUID device id (main rejects a device-id file that is not a
  * UUID, and Jellyfin keeps one token per device id).
  */
-export async function signInAccount(backend: Backend): Promise<SessionData> {
+export const signInAccount = async (backend: Backend): Promise<SessionData> => {
   const result = await authenticate(
     backend.server,
     backend.user,
     backend.password,
-    appIdentity(DeviceId.parse(randomUUID())),
+    appIdentity(DeviceId.parse(randomUUID()))
   );
+
   if (result.kind !== "signed-in") {
     throw new Error(
-      `Signing in to the Jellyfin at ${backend.server} failed: ${JSON.stringify(result)}`,
+      `Signing in to the Jellyfin at ${backend.server} failed: ${JSON.stringify(result)}`
     );
   }
+
   return result.session;
-}
+};
 
 /**
  * Writes the files main's session store reads (apps/desktop/src/main/session.ts): `session.json`
  * with the token as a `plain` tagged value, which only HARAKIRI_E2E=1 accepts, and `device-id`.
  * session.spec.ts proves the app reads this format back.
  */
-export function seedSession(userDataDir: string, session: SessionData): void {
+export const seedSession = (userDataDir: string, session: SessionData): void => {
   const { accessToken, deviceId, ...rest } = session;
   writeFileSync(
-    join(userDataDir, "session.json"),
+    path.join(userDataDir, "session.json"),
     JSON.stringify({ ...rest, token: { kind: "plain", value: accessToken } }),
-    { mode: 0o600 },
+    { mode: 0o600 }
   );
-  writeFileSync(join(userDataDir, "device-id"), deviceId, { mode: 0o600 });
-}
+  writeFileSync(path.join(userDataDir, "device-id"), deviceId, { mode: 0o600 });
+};
+
+/** How onboarding lists a discovered server: its name, then its address. */
+export const serverEntryName = async (backend: Backend): Promise<string> => {
+  const { name } = await publicInfo(backend.server);
+
+  return `${name}, ${backend.server}`;
+};
 
 /** What the server says about itself before sign-in: the name and version onboarding shows. */
-export async function publicInfo(
-  server: ServerUrl,
-): Promise<{ name: string; version: string; id: string }> {
+export const publicInfo = async (
+  server: ServerUrl
+): Promise<{ name: string; version: string; id: string }> => {
   const response = await fetch(new URL("System/Info/Public", server));
+
   const info = z
     .object({ ServerName: z.string(), Version: z.string(), Id: z.string() })
     .parse(await response.json());
+
   return { name: info.ServerName, version: info.Version, id: info.Id };
-}
+};
 
 const Stream = z.object({
   Type: z.string(),
@@ -85,6 +100,7 @@ const Stream = z.object({
   VideoRangeType: z.string().nullish(),
   DvProfile: z.number().nullish(),
 });
+
 type Stream = z.infer<typeof Stream>;
 
 const Item = z.object({
@@ -105,6 +121,7 @@ const UserData = z.object({
   PlayCount: z.number().int().nullish(),
   LastPlayedDate: z.string().nullish(),
 });
+
 export type UserData = z.infer<typeof UserData>;
 
 const ServerSession = z.object({
@@ -118,6 +135,7 @@ const ServerSession = z.object({
     })
     .nullish(),
 });
+
 export type ServerSession = z.infer<typeof ServerSession>;
 
 /** An item as the library screens show it: the fields their labels and progress are built from. */
@@ -133,6 +151,7 @@ const ShownItem = z.object({
     .object({ PlaybackPositionTicks: z.number(), PlayedPercentage: z.number().nullish() })
     .nullish(),
 });
+
 export type ShownItem = z.infer<typeof ShownItem>;
 
 const TICKS_PER_MINUTE = 60 * TICKS_PER_SECOND;
@@ -140,19 +159,25 @@ const TICKS_PER_MINUTE = 60 * TICKS_PER_SECOND;
 const pad2 = (n: number | null | undefined) => String(n ?? 0).padStart(2, "0");
 
 /** How a card or title names an item before its catalogue number: "Series, S01 E02, Episode" or the title. */
-export function spokenTitle(item: ShownItem): string {
-  return item.Type === "Episode" && item.SeriesName != null
+export const spokenTitle = (item: ShownItem): string =>
+  item.Type === "Episode" && item.SeriesName !== undefined && item.SeriesName !== null
     ? `${item.SeriesName}, S${pad2(item.ParentIndexNumber)} E${pad2(item.IndexNumber)}, ${item.Name}`
     : item.Name;
-}
 
 /** "N min left" exactly as the renderer computes it (apps/desktop/src/renderer/src/data/entry.ts). */
-export function minutesLeft(item: ShownItem): number | null {
+export const minutesLeft = (item: ShownItem): number | null => {
   const percent = item.UserData?.PlayedPercentage ?? null;
-  if (percent === null || percent <= 0 || percent >= 100 || item.RunTimeTicks == null) return null;
-  const minutes = Math.round(item.RunTimeTicks / TICKS_PER_MINUTE);
+
+  const runTimeTicks = item.RunTimeTicks ?? null;
+
+  if (percent === null || percent <= 0 || percent >= 100 || runTimeTicks === null) {
+    return null;
+  }
+
+  const minutes = Math.round(runTimeTicks / TICKS_PER_MINUTE);
+
   return Math.max(1, Math.round(minutes * (1 - percent / 100)));
-}
+};
 
 export type ItemType = "Movie" | "Episode";
 
@@ -222,30 +247,61 @@ export const ITEMS = {
 
 const isAtmos = (stream: Stream) => (stream.Profile ?? "").includes("Atmos");
 
-function matchItem(item: z.infer<typeof Item>, criteria: ItemCriteria): PickedItem | undefined {
-  if (!criteria.types.some((type) => type === item.Type)) return undefined;
+const videoMatches = (video: Stream, wanted: ItemCriteria["video"]): boolean => {
+  if (wanted?.codec !== undefined && video.Codec !== wanted.codec) {
+    return false;
+  }
+
+  if (wanted?.ranges && !wanted.ranges.includes(video.VideoRangeType ?? "")) {
+    return false;
+  }
+
+  return wanted?.dvProfile === undefined || video.DvProfile === wanted.dvProfile;
+};
+
+const matchItem = (item: z.infer<typeof Item>, criteria: ItemCriteria): PickedItem | undefined => {
+  if (!criteria.types.some((type) => type === item.Type)) {
+    return undefined;
+  }
+
   const runTimeTicks = item.RunTimeTicks ?? 0;
   const minutes = runTimeTicks / TICKS_PER_SECOND / 60;
-  if (criteria.minutes && (minutes < criteria.minutes[0] || minutes > criteria.minutes[1]))
+
+  if (criteria.minutes && (minutes < criteria.minutes[0] || minutes > criteria.minutes[1])) {
     return undefined;
+  }
+
   const [source] = item.MediaSources;
-  if (!source) return undefined;
+
+  if (!source) {
+    return undefined;
+  }
+
   const video = source.MediaStreams.find((stream) => stream.Type === "Video");
-  if (!video) return undefined;
-  const wanted = criteria.video;
-  if (wanted?.codec !== undefined && video.Codec !== wanted.codec) return undefined;
-  if (wanted?.ranges && !wanted.ranges.includes(video.VideoRangeType ?? "")) return undefined;
-  if (wanted?.dvProfile !== undefined && video.DvProfile !== wanted.dvProfile) return undefined;
+
+  if (!video) {
+    return undefined;
+  }
+
+  if (!videoMatches(video, criteria.video)) {
+    return undefined;
+  }
+
   const audioWanted = criteria.audio;
+
   const audio = audioWanted
     ? source.MediaStreams.find(
         (stream) =>
           stream.Type === "Audio" &&
           stream.Codec === audioWanted.codec &&
-          (audioWanted.atmos === undefined || isAtmos(stream) === audioWanted.atmos),
+          (audioWanted.atmos === undefined || isAtmos(stream) === audioWanted.atmos)
       )
     : undefined;
-  if (audioWanted && !audio) return undefined;
+
+  if (audioWanted && !audio) {
+    return undefined;
+  }
+
   return {
     id: ItemId.parse(item.Id),
     name: item.Name,
@@ -254,38 +310,49 @@ function matchItem(item: z.infer<typeof Item>, criteria: ItemCriteria): PickedIt
     video,
     audio,
   };
-}
+};
 
 /** Where jellyfin.sh mounts a corpus file in the container: shows/ is mounted as /media/series. */
-const containerPath = (entry: Entry) => `/media/${entryPath(entry).replace(/^shows\//, "series/")}`;
+const containerPath = (entry: Entry) =>
+  `/media/${entryPath(entry).replace(/^shows\//u, "series/")}`;
 
-function pickFromCorpus(
+const pickFromCorpus = (
   items: readonly z.infer<typeof Item>[],
   criteria: ItemCriteria,
-  count: number,
-): PickedItem[] {
+  count: number
+): PickedItem[] => {
   const wanted = criteria.corpus.slice(0, count);
+
   if (wanted.length < count) {
     throw new Error(`The corpus names ${wanted.length} of the ${count} wanted: ${criteria.label}`);
   }
+
   return wanted.map((entryId) => {
     const entry = CATALOG.find((candidate) => candidate.id === entryId);
-    if (entry === undefined) throw new Error(`The catalog has no "${entryId}"`);
+
+    if (entry === undefined) {
+      throw new Error(`The catalog has no "${entryId}"`);
+    }
+
     const item = items.find((candidate) => candidate.Path === containerPath(entry));
+
     if (item === undefined) {
       throw new Error(
         entry.tier === "fate"
           ? `${criteria.label}: "${entryId}" is a FATE-tier corpus entry and ${CORPUS_DIR} was built without the FATE samples. Run mise run media:fetch-fate, then mise run media:gen (mise run e2e does both).`
-          : `${criteria.label}: the server has no "${entryId}" from ${CORPUS_DIR}. Run mise run media:gen.`,
+          : `${criteria.label}: the server has no "${entryId}" from ${CORPUS_DIR}. Run mise run media:gen.`
       );
     }
+
     const picked = matchItem(item, criteria);
+
     if (picked === undefined) {
       throw new Error(`The corpus entry "${entryId}" is no longer ${criteria.label}`);
     }
+
     return picked;
   });
-}
+};
 
 /** A typed view of the server state the e2e asserts on, as the signed-in test user. */
 export class Jellyfin {
@@ -299,23 +366,31 @@ export class Jellyfin {
     this.#auth = authorizationHeader(appIdentity(session.deviceId), session.accessToken);
   }
 
-  async #request(path: string, init: RequestInit = {}): Promise<unknown> {
-    const response = await fetch(new URL(path, this.#backend.server), {
+  async #fetch(route: string, init: RequestInit = {}): Promise<Response> {
+    const response = await fetch(new URL(route, this.#backend.server), {
       ...init,
       headers: { Authorization: this.#auth, "Content-Type": "application/json" },
     });
-    if (!response.ok) throw new Error(`${init.method ?? "GET"} ${path}: HTTP ${response.status}`);
-    return response.status === 204 ? undefined : response.json();
+
+    if (!response.ok) {
+      throw new Error(`${init.method ?? "GET"} ${route}: HTTP ${response.status}`);
+    }
+
+    return response;
+  }
+
+  async #get<Schema extends z.ZodType>(schema: Schema, route: string): Promise<z.infer<Schema>> {
+    const response = await this.#fetch(route);
+
+    return schema.parse(await response.json());
   }
 
   async userData(itemId: ItemId): Promise<UserData> {
-    return UserData.parse(
-      await this.#request(`UserItems/${itemId}/UserData?userId=${this.session.userId}`),
-    );
+    return await this.#get(UserData, `UserItems/${itemId}/UserData?userId=${this.session.userId}`);
   }
 
   async setUserData(itemId: ItemId, data: UserData): Promise<void> {
-    await this.#request(`UserItems/${itemId}/UserData?userId=${this.session.userId}`, {
+    await this.#fetch(`UserItems/${itemId}/UserData?userId=${this.session.userId}`, {
       method: "POST",
       body: JSON.stringify(data),
     });
@@ -333,14 +408,18 @@ export class Jellyfin {
 
   /** The server's sessions for this run's device id: the app's playback reports land here. */
   async sessions(): Promise<ServerSession[]> {
-    const all = z
-      .array(ServerSession)
-      .parse(await this.#request(`Sessions?deviceId=${this.session.deviceId}`));
+    const all = await this.#get(
+      z.array(ServerSession),
+      `Sessions?deviceId=${this.session.deviceId}`
+    );
+
     return all.filter((session) => session.DeviceId === this.session.deviceId);
   }
 
   async nowPlaying(): Promise<ServerSession | undefined> {
-    return (await this.sessions()).find((session) => session.NowPlayingItem);
+    const sessions = await this.sessions();
+
+    return sessions.find((session) => session.NowPlayingItem);
   }
 
   /**
@@ -355,27 +434,39 @@ export class Jellyfin {
       IncludeItemTypes: criteria.types.join(","),
       Fields: "MediaSources,Path",
     });
-    const { Items } = z
-      .object({ Items: z.array(Item) })
-      .parse(await this.#request(`Items?${query.toString()}`));
-    if (this.#backend.kind === "corpus") return pickFromCorpus(Items, criteria, count);
+
+    const { Items } = await this.#get(
+      z.object({ Items: z.array(Item) }),
+      `Items?${query.toString()}`
+    );
+
+    if (this.#backend.kind === "corpus") {
+      return pickFromCorpus(Items, criteria, count);
+    }
+
     const picked = Items.flatMap((item) => matchItem(item, criteria) ?? [])
       .toSorted((a, b) => a.runTimeTicks - b.runTimeTicks || a.id.localeCompare(b.id))
       .slice(0, count);
+
     if (picked.length < count) {
       throw new Error(`The library has ${picked.length} of the ${count} wanted: ${criteria.label}`);
     }
+
     return picked;
   }
 
   async pickItem(criteria: ItemCriteria): Promise<PickedItem> {
     const [item] = await this.pickItems(criteria, 1);
-    if (!item) throw new Error(`The library has no ${criteria.label}`);
+
+    if (!item) {
+      throw new Error(`The library has no ${criteria.label}`);
+    }
+
     return item;
   }
 
   async item(itemId: ItemId): Promise<ShownItem> {
-    return ShownItem.parse(await this.#request(`Items/${itemId}?userId=${this.session.userId}`));
+    return await this.#get(ShownItem, `Items/${itemId}?userId=${this.session.userId}`);
   }
 
   /** Recently Added as the library requests it: films and series, newest first. */
@@ -385,48 +476,53 @@ export class Jellyfin {
       includeItemTypes: "Movie,Series",
       limit: "16",
     });
-    return z.array(ShownItem).parse(await this.#request(`Items/Latest?${query.toString()}`));
+
+    return await this.#get(z.array(ShownItem), `Items/Latest?${query.toString()}`);
   }
 
   /** Continue Watching as the server orders it, most recently played first. */
   async resumeIds(): Promise<string[]> {
-    const { Items } = z
-      .object({ Items: z.array(z.object({ Id: z.string() })) })
-      .parse(
-        await this.#request(
-          `UserItems/Resume?userId=${this.session.userId}&mediaTypes=Video&limit=16`,
-        ),
-      );
+    const { Items } = await this.#get(
+      z.object({ Items: z.array(z.object({ Id: z.string() })) }),
+      `UserItems/Resume?userId=${this.session.userId}&mediaTypes=Video&limit=16`
+    );
+
     return Items.map((item) => item.Id);
   }
 
   /** Approves a Quick Connect code as this user, as a phone signed in to the server would. */
   async authorizeQuickConnect(code: string): Promise<void> {
     const query = new URLSearchParams({ code, userId: this.session.userId });
+
     const response = await fetch(
       new URL(`QuickConnect/Authorize?${query.toString()}`, this.#backend.server),
       {
         method: "POST",
         headers: { Authorization: this.#auth },
-      },
+      }
     );
-    if (!response.ok) throw new Error(`QuickConnect/Authorize: HTTP ${response.status}`);
+
+    if (!response.ok) {
+      throw new Error(`QuickConnect/Authorize: HTTP ${response.status}`);
+    }
   }
 
   /** Forgets a device and revokes its token (admin only): how a test cleans up an app that signed in itself. */
   async deleteDevice(deviceId: string): Promise<void> {
-    await this.#request(`Devices?id=${encodeURIComponent(deviceId)}`, { method: "DELETE" });
+    await this.#fetch(`Devices?id=${encodeURIComponent(deviceId)}`, { method: "DELETE" });
   }
 
   /** Every device id the server holds a token for. */
   async deviceIds(): Promise<string[]> {
-    const { Items } = z
-      .object({ Items: z.array(z.object({ Id: z.string() })) })
-      .parse(await this.#request("Devices"));
+    const { Items } = await this.#get(
+      z.object({ Items: z.array(z.object({ Id: z.string() })) }),
+      "Devices"
+    );
+
     return Items.map((device) => device.Id);
   }
 
   async signOut(): Promise<void> {
-    await this.#request("Sessions/Logout", { method: "POST" });
+    await this.#fetch("Sessions/Logout", { method: "POST" });
   }
 }

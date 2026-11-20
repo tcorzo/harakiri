@@ -1,5 +1,9 @@
+import { setTimeout as sleep } from "node:timers/promises";
+
 import { z } from "zod";
-import { CATALOG, entryPath, type Entry } from "./catalog";
+
+import { CATALOG, entryPath } from "./catalog";
+import type { Entry } from "./catalog";
 import { readManifest } from "./generate";
 
 /**
@@ -21,6 +25,7 @@ const Stream = z.object({
   DvProfile: z.number().nullish(),
   IsExternal: z.boolean().nullish(),
 });
+
 const Item = z.object({
   Id: z.string(),
   Name: z.string(),
@@ -29,7 +34,9 @@ const Item = z.object({
   RunTimeTicks: z.number().nullish(),
   MediaSources: z.array(z.object({ MediaStreams: z.array(Stream).nullish() })).nullish(),
 });
+
 type Item = z.infer<typeof Item>;
+
 const Items = z.object({ Items: z.array(Item) });
 const Auth = z.object({ AccessToken: z.string(), User: z.object({ Id: z.string() }) });
 
@@ -45,11 +52,11 @@ const show = (v: string | number | null | undefined) =>
   v === null || v === undefined ? "null" : String(v);
 
 /** Compares one entry with the server's item; every field becomes a row. */
-export function compare(entry: Entry, item: Item | undefined): Row[] {
+export const compare = (entry: Entry, item: Item | undefined): Row[] => {
   const row = (
     field: string,
     declared: string | number | null | undefined,
-    observed: string | number | null | undefined,
+    observed: string | number | null | undefined
   ): Row => ({
     id: entry.id,
     field,
@@ -57,15 +64,21 @@ export function compare(entry: Entry, item: Item | undefined): Row[] {
     observed: show(observed),
     ok: show(declared) === show(observed),
   });
-  if (!item) return [row("item", entryPath(entry), "not found on the server")];
+
+  if (!item) {
+    return [row("item", entryPath(entry), "not found on the server")];
+  }
+
   const streams = (item.MediaSources?.[0]?.MediaStreams ?? []).toSorted(
-    (a, b) => a.Index - b.Index,
+    (a, b) => a.Index - b.Index
   );
+
   const video = streams.find((s) => s.Type === "Video");
   const audio = streams.filter((s) => s.Type === "Audio");
   const subs = streams.filter((s) => s.Type === "Subtitle");
   const want = entry.expect;
   const seconds = (item.RunTimeTicks ?? 0) / 1e7;
+
   const rows = [
     row("type", entry.kind === "movie" ? "Movie" : "Episode", item.Type),
     row("video.Codec", want.video.codec, video?.Codec),
@@ -77,9 +90,18 @@ export function compare(entry: Entry, item: Item | undefined): Row[] {
       row(`audio[${i}].Profile`, a.profile, audio[i]?.Profile),
       row(`audio[${i}].Channels`, a.channels, audio[i]?.Channels),
     ]),
-    row("subtitles.embedded", want.subtitles.embedded, subs.filter((s) => !s.IsExternal).length),
-    row("subtitles.external", want.subtitles.external, subs.filter((s) => s.IsExternal).length),
+    row(
+      "subtitles.embedded",
+      want.subtitles.embedded,
+      subs.filter((s) => s.IsExternal !== true).length
+    ),
+    row(
+      "subtitles.external",
+      want.subtitles.external,
+      subs.filter((s) => s.IsExternal === true).length
+    ),
   ];
+
   // Runtime within a second: the long items must land in the 6-20 min window the tests use.
   rows.push({
     id: entry.id,
@@ -88,8 +110,16 @@ export function compare(entry: Entry, item: Item | undefined): Row[] {
     observed: seconds.toFixed(3),
     ok: Math.abs(seconds - entry.seconds) <= 1,
   });
+
   return rows;
-}
+};
+
+// Match on the path below the library root: the corpus `movies` and `shows` dirs are mounted
+// somewhere in the container, but everything under them is the corpus's own layout.
+const tail = (entry: Entry) => `/${entryPath(entry).split("/").slice(1).join("/")}`;
+
+const probed = (item: Item | undefined) =>
+  (item?.MediaSources?.[0]?.MediaStreams ?? []).some((s) => s.Type === "Video");
 
 export interface ClassifyOptions {
   readonly corpus: string;
@@ -99,19 +129,26 @@ export interface ClassifyOptions {
   readonly log: (line: string) => void;
 }
 
-export async function classifyCorpus(options: ClassifyOptions): Promise<number> {
-  const env = process.env;
+export const classifyCorpus = async (options: ClassifyOptions): Promise<number> => {
+  const { env } = process;
+
   const base =
-    options.server ??
-    env["JELLYFIN_DEV_URL"] ??
-    `http://127.0.0.1:${env["JELLYFIN_DEV_PORT"] ?? "8096"}`;
-  const user = env["JELLYFIN_DEV_USER"] ?? "harakiri";
-  const password = env["JELLYFIN_DEV_PASSWORD"] ?? "harakiri-dev";
+    options.server ?? env.JELLYFIN_DEV_URL ?? `http://127.0.0.1:${env.JELLYFIN_DEV_PORT ?? "8096"}`;
+
+  const user = env.JELLYFIN_DEV_USER ?? "harakiri";
+  const password = env.JELLYFIN_DEV_PASSWORD ?? "harakiri-dev";
   const client = `MediaBrowser Client="harakiri-dev", Device="corpus-classify", DeviceId="harakiri-dev-corpus-classify", Version="0"`;
 
-  async function call(path: string, init: RequestInit & { token?: string } = {}): Promise<unknown> {
-    const auth = init.token ? `${client}, Token="${init.token}"` : client;
+  const call = async <T>(
+    path: string,
+    schema: z.ZodType<T>,
+    init: RequestInit & { token?: string } = {}
+  ): Promise<T> => {
+    const auth =
+      init.token === undefined || init.token === "" ? client : `${client}, Token="${init.token}"`;
+
     let response: Response;
+
     try {
       response = await fetch(new URL(path, base), {
         ...init,
@@ -122,28 +159,33 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
       throw new Error(
         `Jellyfin is unreachable at ${base} (${error instanceof Error ? error.message : String(error)}). ` +
           `Start it with: mise run jellyfin:up`,
-        { cause: error },
+        { cause: error }
       );
     }
-    if (!response.ok) throw new Error(`${init.method ?? "GET"} ${path}: HTTP ${response.status}`);
-    return response.json();
-  }
+
+    if (!response.ok) {
+      throw new Error(`${init.method ?? "GET"} ${path}: HTTP ${response.status}`);
+    }
+
+    return schema.parse(await response.json());
+  };
 
   const manifest = readManifest(options.corpus);
   const built = new Set(manifest.entries.map((e) => e.id));
   const entries = CATALOG.filter((entry) => built.has(entry.id));
   options.log(
-    `corpus ${options.corpus}: ${entries.length} entries` +
-      (manifest.fate ? " (FATE tier included)" : " (FATE tier NOT built)"),
+    `corpus ${options.corpus}: ${entries.length} entries${
+      manifest.fate ? " (FATE tier included)" : " (FATE tier NOT built)"
+    }`
   );
 
-  await call("System/Info/Public");
-  const auth = Auth.parse(
-    await call("Users/AuthenticateByName", {
-      method: "POST",
-      body: JSON.stringify({ Username: user, Pw: password }),
-    }),
-  );
+  await call("System/Info/Public", z.unknown());
+
+  const auth = await call("Users/AuthenticateByName", Auth, {
+    method: "POST",
+    body: JSON.stringify({ Username: user, Pw: password }),
+  });
+
   const query = new URLSearchParams({
     userId: auth.User.Id,
     Recursive: "true",
@@ -153,43 +195,52 @@ export async function classifyCorpus(options: ClassifyOptions): Promise<number> 
     EnableUserData: "false",
   });
 
-  // Match on the path below the library root: the corpus `movies` and `shows` dirs are mounted
-  // somewhere in the container, but everything under them is the corpus's own layout.
-  const tail = (entry: Entry) => `/${entryPath(entry).split("/").slice(1).join("/")}`;
   const lookup = (items: readonly Item[]) =>
-    new Map(entries.map((entry) => [entry.id, items.find((i) => i.Path?.endsWith(tail(entry)))]));
-  const probed = (item: Item | undefined) =>
-    (item?.MediaSources?.[0]?.MediaStreams ?? []).some((s) => s.Type === "Video");
+    new Map(
+      entries.map((entry) => [entry.id, items.find((i) => i.Path?.endsWith(tail(entry)) === true)])
+    );
 
   const t0 = performance.now();
   let found = lookup([]);
+
   for (;;) {
-    found = lookup(
-      Items.parse(await call(`Items?${query.toString()}`, { token: auth.AccessToken })).Items,
-    );
-    const ready = entries.filter((entry) => probed(found.get(entry.id))).length;
+    // oxlint-disable-next-line eslint/no-await-in-loop -- polling: each scan check must finish before the next
+    const listing = await call(`Items?${query.toString()}`, Items, { token: auth.AccessToken });
+    const current = lookup(listing.Items);
+    found = current;
+    const ready = entries.filter((entry) => probed(current.get(entry.id))).length;
     const elapsed = (performance.now() - t0) / 1000;
+
     if (ready === entries.length || elapsed >= options.waitSeconds) {
       options.log(
-        `${ready}/${entries.length} entries probed by the server after ${elapsed.toFixed(1)}s`,
+        `${ready}/${entries.length} entries probed by the server after ${elapsed.toFixed(1)}s`
       );
       break;
     }
-    await new Promise((r) => setTimeout(r, 2000));
+
+    // oxlint-disable-next-line eslint/no-await-in-loop -- polling: wait between scan checks
+    await sleep(2000);
   }
-  await call("Sessions/Logout", { method: "POST", token: auth.AccessToken }).catch(() => undefined);
+
+  await call("Sessions/Logout", z.unknown(), { method: "POST", token: auth.AccessToken }).catch(
+    () => null
+  );
 
   const rows = entries.flatMap((entry) => compare(entry, found.get(entry.id)));
   const bad = rows.filter((r) => !r.ok);
   options.log("\n| entry | field | declared | Jellyfin | ok |\n| --- | --- | --- | --- | --- |");
-  for (const r of rows)
+
+  for (const r of rows) {
     options.log(
-      `| ${r.id} | ${r.field} | ${r.declared} | ${r.observed} | ${r.ok ? "yes" : "**NO**"} |`,
+      `| ${r.id} | ${r.field} | ${r.declared} | ${r.observed} | ${r.ok ? "yes" : "**NO**"} |`
     );
+  }
+
   options.log(
     bad.length === 0
       ? `\nPASS: ${rows.length} checks on ${entries.length} entries match the catalog`
-      : `\nFAIL: ${bad.length} of ${rows.length} checks differ:\n${bad.map((r) => `  ${r.id} ${r.field}: declared ${r.declared}, Jellyfin ${r.observed}`).join("\n")}`,
+      : `\nFAIL: ${bad.length} of ${rows.length} checks differ:\n${bad.map((r) => `  ${r.id} ${r.field}: declared ${r.declared}, Jellyfin ${r.observed}`).join("\n")}`
   );
+
   return bad.length === 0 ? 0 : 1;
-}
+};

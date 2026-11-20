@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+
 import type { Dpad } from "./keyboard";
 
 /** W3C "standard" mapping indices, as packages/input reads them. */
@@ -13,6 +14,7 @@ export const BUTTON = {
   left: 14,
   right: 15,
 } as const;
+
 export type Button = keyof typeof BUTTON;
 
 interface FakePad {
@@ -35,7 +37,7 @@ declare global {
  * Plugs a standard-mapping pad into the renderer. The input hub calls `navigator.getGamepads()` on
  * every animation frame, so replacing it at runtime is all a real pad would change.
  */
-export async function plugPad(page: Page): Promise<void> {
+export const plugPad = async (page: Page): Promise<void> => {
   await page.evaluate(() => {
     const pad: FakePad = {
       id: "harakiri e2e pad (STANDARD GAMEPAD)",
@@ -46,52 +48,77 @@ export async function plugPad(page: Page): Promise<void> {
       axes: [0, 0, 0, 0],
       buttons: Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 })),
     };
+
     window.harakiriE2ePad = pad;
     Object.defineProperty(navigator, "getGamepads", {
       configurable: true,
       value: () => [pad, null, null, null],
     });
   });
-}
+};
+
+/** Waits two frames, so the poller has sampled the new state before anything else changes. */
+const settle = async (page: Page): Promise<void> => {
+  await page.evaluate(async () => {
+    // oxlint-disable-next-line promise/avoid-new -- requestAnimationFrame has no promise form
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          resolve();
+        });
+      });
+    });
+  });
+};
 
 /** Sets a button and waits two frames, so the poller has sampled the new state before anything else changes. */
-export async function setButton(page: Page, button: Button, pressed: boolean): Promise<void> {
+export const setButton = async (page: Page, button: Button, pressed: boolean): Promise<void> => {
   await page.evaluate(
-    async ([index, down]) => {
+    ([index, down]) => {
       const pad = window.harakiriE2ePad;
-      if (pad === undefined) throw new Error("plugPad() first");
+
+      if (pad === undefined) {
+        throw new Error("plugPad() first");
+      }
+
       pad.buttons[index] = { pressed: down, touched: down, value: down ? 1 : 0 };
       pad.timestamp += 1;
-      await new Promise(requestAnimationFrame);
-      await new Promise(requestAnimationFrame);
     },
-    [BUTTON[button], pressed] as const,
+    [BUTTON[button], pressed] as const
   );
-}
+  await settle(page);
+};
 
 /** Pushes a stick axis (0 left-right, 1 up-down) to `value` and waits two frames. */
-export async function setAxis(page: Page, axis: 0 | 1, value: number): Promise<void> {
+export const setAxis = async (page: Page, axis: 0 | 1, value: number): Promise<void> => {
   await page.evaluate(
-    async ([index, to]) => {
+    ([index, to]) => {
       const pad = window.harakiriE2ePad;
-      if (pad === undefined) throw new Error("plugPad() first");
+
+      if (pad === undefined) {
+        throw new Error("plugPad() first");
+      }
+
       pad.axes[index] = to;
       pad.timestamp += 1;
-      await new Promise(requestAnimationFrame);
-      await new Promise(requestAnimationFrame);
     },
-    [axis, value] as const,
+    [axis, value] as const
   );
-}
+  await settle(page);
+};
 
 /** One press and release. */
-export async function tap(page: Page, button: Button): Promise<void> {
+export const tap = async (page: Page, button: Button): Promise<void> => {
   await setButton(page, button, true);
   await setButton(page, button, false);
-}
+};
 
 /** The pad's d-pad and A, for helpers written against any d-pad. */
 export const padDpad = (page: Page): Dpad => ({
-  move: (direction) => tap(page, direction),
-  select: () => tap(page, "a"),
+  move: async (direction) => {
+    await tap(page, direction);
+  },
+  select: async () => {
+    await tap(page, "a");
+  },
 });

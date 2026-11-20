@@ -49,7 +49,7 @@ export type SoundFormat =
  * Native: a bitstream the receiver decodes, or PCM that passes as it is.
  * Decoded: mpv decodes a format that cannot be bitstreamed to PCM.
  */
-export type SoundClass = {
+export interface SoundClass {
   readonly format: SoundFormat;
   /** The server's codec name, the label when the format is "Other". */
   readonly codec: string;
@@ -57,23 +57,24 @@ export type SoundClass = {
   readonly channels: string | null;
   readonly delivery: "native" | "decoded";
   readonly streamIndex: number;
-};
+}
 
 /** How a leg of the signal path reaches the TV or receiver (PRD signal-path vocabulary). */
 export const signalStates = ["native", "mapped", "decoded"] as const;
+
 export type SignalState = (typeof signalStates)[number];
 
 /** One leg of the signal path with how it reaches the TV or receiver. */
-export type SignalFact = {
+export interface SignalFact {
   readonly text: string;
   readonly state: SignalState;
-};
+}
 
 /** The facts as one line, e.g. "Dolby Vision mapped to HDR10 · TrueHD Atmos bitstream". */
 export const joinFacts = (facts: readonly SignalFact[]): string =>
   facts.map((fact) => fact.text).join(" · ");
 
-export type Fidelity = {
+export interface Fidelity {
   readonly picture: PictureClass;
   readonly sound: SoundClass | null;
   /** The signal path as facts: the picture leg, then the sound leg when there is sound. */
@@ -82,9 +83,12 @@ export type Fidelity = {
   readonly notes: string;
   /** The screening-handoff slug, e.g. "Dolby Vision mapped to HDR10 · TrueHD Atmos bitstream". */
   readonly signalPath: string;
-};
+}
 
-type SoundTraits = { readonly rank: number; readonly delivery: SoundClass["delivery"] };
+interface SoundTraits {
+  readonly rank: number;
+  readonly delivery: SoundClass["delivery"];
+}
 
 // rank breaks ties between tracks with the same spatial format and channel count.
 const SOUND: Record<SoundFormat, SoundTraits> = {
@@ -104,27 +108,44 @@ const SOUND: Record<SoundFormat, SoundTraits> = {
   Other: { rank: 13, delivery: "decoded" },
 };
 
-const CHANNELS_BY_COUNT: Record<number, string> = {
-  1: "1.0",
-  2: "2.0",
-  3: "2.1",
-  4: "4.0",
-  5: "5.0",
-  6: "5.1",
-  7: "6.1",
-  8: "7.1",
-};
+const CHANNELS_BY_COUNT = new Map<number, string>([
+  [1, "1.0"],
+  [2, "2.0"],
+  [3, "2.1"],
+  [4, "4.0"],
+  [5, "5.0"],
+  [6, "5.1"],
+  [7, "6.1"],
+  [8, "7.1"],
+]);
 
-const NAMED_LAYOUTS: Record<string, string> = { mono: "1.0", stereo: "2.0", quad: "4.0" };
+const NAMED_LAYOUTS = new Map<string, string>([
+  ["mono", "1.0"],
+  ["stereo", "2.0"],
+  ["quad", "4.0"],
+]);
 
 const resolutionOf = (stream: MediaStream): Resolution | null => {
   const width = stream.Width ?? 0;
   const height = stream.Height ?? 0;
-  if (width === 0 && height === 0) return null;
+
+  if (width === 0 && height === 0) {
+    return null;
+  }
+
   // Width first: scope films are letterboxed (3840x1600 is still 4K).
-  if (width >= 3200 || height >= 1800) return "4K";
-  if (width >= 1800 || height >= 1000) return "1080p";
-  if (width >= 1200 || height >= 700) return "720p";
+  if (width >= 3200 || height >= 1800) {
+    return "4K";
+  }
+
+  if (width >= 1800 || height >= 1000) {
+    return "1080p";
+  }
+
+  if (width >= 1200 || height >= 700) {
+    return "720p";
+  }
+
   return "SD";
 };
 
@@ -132,7 +153,7 @@ const dolbyVision = (
   stream: MediaStream,
   resolution: Resolution | null,
   compatibility: DolbyVisionCompatibility,
-  options: { hdr10Plus?: boolean; enhancementLayer?: boolean } = {},
+  options: { hdr10Plus?: boolean; enhancementLayer?: boolean } = {}
 ): PictureClass => ({
   range: "Dolby Vision",
   resolution,
@@ -147,41 +168,74 @@ const dolbyVision = (
 // record (a stale DV header on an SDR stream) falls back to the plain range.
 const pictureOf = (stream: MediaStream): PictureClass => {
   const resolution = resolutionOf(stream);
+
   const plain = (): PictureClass => {
-    if (stream.VideoRange !== "HDR") return { range: "SDR", resolution, delivery: "native" };
-    if (stream.ColorTransfer === "arib-std-b67")
+    if (stream.VideoRange !== "HDR") {
+      return { range: "SDR", resolution, delivery: "native" };
+    }
+
+    if (stream.ColorTransfer === "arib-std-b67") {
       return { range: "HLG", resolution, delivery: "mapped" };
+    }
+
     return { range: "HDR10", resolution, delivery: "native" };
   };
+
   const rangeType = stream.VideoRangeType ?? "Unknown";
+
   switch (rangeType) {
-    case "SDR":
+    case "SDR": {
       return { range: "SDR", resolution, delivery: "native" };
-    case "HDR10":
+    }
+
+    case "HDR10": {
       return { range: "HDR10", resolution, delivery: "native" };
-    case "HDR10Plus":
+    }
+
+    case "HDR10Plus": {
       return { range: "HDR10+", resolution, delivery: "native" };
-    case "HLG":
+    }
+
+    case "HLG": {
       return { range: "HLG", resolution, delivery: "mapped" };
-    case "DOVI":
+    }
+
+    case "DOVI": {
       return dolbyVision(stream, resolution, "none");
-    case "DOVIWithHDR10":
+    }
+
+    case "DOVIWithHDR10": {
       return dolbyVision(stream, resolution, "HDR10");
-    case "DOVIWithHDR10Plus":
+    }
+
+    case "DOVIWithHDR10Plus": {
       return dolbyVision(stream, resolution, "HDR10", { hdr10Plus: true });
-    case "DOVIWithSDR":
+    }
+
+    case "DOVIWithSDR": {
       return dolbyVision(stream, resolution, "SDR");
-    case "DOVIWithHLG":
+    }
+
+    case "DOVIWithHLG": {
       return dolbyVision(stream, resolution, "HLG");
-    case "DOVIWithEL":
+    }
+
+    case "DOVIWithEL": {
       return dolbyVision(stream, resolution, "HDR10", { enhancementLayer: true });
-    case "DOVIWithELHDR10Plus":
+    }
+
+    case "DOVIWithELHDR10Plus": {
       return dolbyVision(stream, resolution, "HDR10", { hdr10Plus: true, enhancementLayer: true });
+    }
+
     case "DOVIInvalid":
-    case "Unknown":
+    case "Unknown": {
       return plain();
+    }
+
     default: {
       const unhandled: never = rangeType;
+
       return unhandled;
     }
   }
@@ -191,32 +245,73 @@ const soundFormatOf = (stream: MediaStream): SoundFormat => {
   const codec = (stream.Codec ?? "").toLowerCase();
   const profile = stream.Profile ?? "";
   const atmos = stream.AudioSpatialFormat === "DolbyAtmos" || profile.includes("Atmos");
-  if (codec === "truehd") return atmos ? "TrueHD Atmos" : "TrueHD";
-  if (codec === "eac3") return atmos ? "E-AC3 Atmos" : "E-AC3";
-  if (codec === "ac3") return "AC3";
+
+  if (codec === "truehd") {
+    return atmos ? "TrueHD Atmos" : "TrueHD";
+  }
+
+  if (codec === "eac3") {
+    return atmos ? "E-AC3 Atmos" : "E-AC3";
+  }
+
+  if (codec === "ac3") {
+    return "AC3";
+  }
+
   if (codec === "dts") {
-    if (stream.AudioSpatialFormat === "DTSX" || profile.includes("DTS:X")) return "DTS:X";
-    if (profile.includes("MA")) return "DTS-HD MA";
-    if (profile.includes("HRA")) return "DTS-HD HRA";
+    if (stream.AudioSpatialFormat === "DTSX" || profile.includes("DTS:X")) {
+      return "DTS:X";
+    }
+
+    if (profile.includes("MA")) {
+      return "DTS-HD MA";
+    }
+
+    if (profile.includes("HRA")) {
+      return "DTS-HD HRA";
+    }
+
     return "DTS";
   }
-  if (codec.startsWith("pcm")) return "PCM";
-  if (codec === "flac") return "FLAC";
-  if (codec === "opus") return "Opus";
-  if (codec === "aac") return "AAC";
+
+  if (codec.startsWith("pcm")) {
+    return "PCM";
+  }
+
+  if (codec === "flac") {
+    return "FLAC";
+  }
+
+  if (codec === "opus") {
+    return "Opus";
+  }
+
+  if (codec === "aac") {
+    return "AAC";
+  }
+
   return "Other";
 };
 
 const channelsOf = (stream: MediaStream): string | null => {
-  const layout = (stream.ChannelLayout ?? "").replace(/\(.*\)$/, "");
-  if (/^\d+\.\d(\.\d)?$/.test(layout)) return layout;
-  const named = NAMED_LAYOUTS[layout];
-  if (named !== undefined) return named;
-  return CHANNELS_BY_COUNT[stream.Channels ?? 0] ?? null;
+  const layout = (stream.ChannelLayout ?? "").replace(/\(.*\)$/u, "");
+
+  if (/^\d+\.\d(?:\.\d)?$/u.test(layout)) {
+    return layout;
+  }
+
+  const named = NAMED_LAYOUTS.get(layout);
+
+  if (named !== undefined) {
+    return named;
+  }
+
+  return CHANNELS_BY_COUNT.get(stream.Channels ?? 0) ?? null;
 };
 
 const soundOf = (stream: MediaStream): SoundClass => {
   const format = soundFormatOf(stream);
+
   return {
     format,
     codec: stream.Codec ?? "",
@@ -248,15 +343,26 @@ const soundLabel = (sound: SoundClass): string =>
   sound.format === "Other" ? sound.codec.toUpperCase() : sound.format;
 
 const pictureSignal = (picture: PictureClass): string => {
-  if (picture.delivery === "native") return picture.range;
-  if (picture.range === "Dolby Vision" && picture.playback === "base-layer-only")
+  if (picture.delivery === "native") {
+    return picture.range;
+  }
+
+  if (picture.range === "Dolby Vision" && picture.playback === "base-layer-only") {
     return "Dolby Vision base layer mapped to HDR10";
+  }
+
   return `${picture.range} mapped to HDR10`;
 };
 
 const soundSignal = (sound: SoundClass): string => {
-  if (sound.delivery === "decoded") return `${soundLabel(sound)} decoded to PCM`;
-  if (sound.format === "PCM") return "PCM";
+  if (sound.delivery === "decoded") {
+    return `${soundLabel(sound)} decoded to PCM`;
+  }
+
+  if (sound.format === "PCM") {
+    return "PCM";
+  }
+
   return `${soundLabel(sound)} bitstream`;
 };
 
@@ -270,21 +376,31 @@ const join = (...parts: (string | null)[]): string =>
  */
 export const classifyFidelity = (
   source: MediaSourceInfo | undefined,
-  options: { readonly audioStreamIndex?: number } = {},
+  options: { readonly audioStreamIndex?: number } = {}
 ): Fidelity | null => {
   const streams = source?.MediaStreams ?? [];
   const video = streams.find((stream) => stream.Type === "Video");
-  if (video === undefined) return null;
+
+  if (video === undefined) {
+    return null;
+  }
+
   const picture = pictureOf(video);
   const tracks = streams.filter((stream) => stream.Type === "Audio").map(soundOf);
+
   const chosen =
     options.audioStreamIndex === undefined
       ? tracks.toSorted(compareSound)[0]
       : tracks.find((track) => track.streamIndex === options.audioStreamIndex);
+
   const sound = chosen ?? null;
   const pictureNote = join(picture.resolution, pictureLabel(picture));
   const signal: SignalFact[] = [{ text: pictureSignal(picture), state: picture.delivery }];
-  if (sound !== null) signal.push({ text: soundSignal(sound), state: sound.delivery });
+
+  if (sound !== null) {
+    signal.push({ text: soundSignal(sound), state: sound.delivery });
+  }
+
   return {
     picture,
     sound,

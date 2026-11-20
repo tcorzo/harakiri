@@ -39,6 +39,10 @@ run = "bun x oxlint --type-aware"
 description = "Format with oxfmt"
 run = "bun x oxfmt"
 
+[tasks."fmt:check"]
+description = "Fail when any file is not formatted"
+run = "bun x oxfmt --check"
+
 [tasks.typecheck]
 description = "Typecheck every workspace"
 run = "scripts/bounded.sh typecheck 2G -- bun x tsc -b"
@@ -141,7 +145,7 @@ hk util check-conventional-commit "$msg" || {
 
 [tasks.check]
 description = "Everything CI gates on"
-depends = ["lint", "lint:skips", "lint:private", "typecheck", "test"]
+depends = ["lint", "fmt:check", "lint:skips", "lint:private", "typecheck", "test"]
 
 [tasks."package:check"]
 description = "Check apps/desktop/dist: latest-linux.yml matches the AppImage and the version, the feed is public GitHub, runtime deps are packed"

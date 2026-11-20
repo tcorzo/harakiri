@@ -1,7 +1,9 @@
 import { reportSessionEnded } from "@harakiri/jellyfin/generated";
 import type { QueryClient } from "@tanstack/react-query";
+import { noop } from "es-toolkit";
+
 import { useLit } from "../library/lit";
-import { seriesPlace } from "../title/seriesPlace";
+import { seriesPlace } from "../title/series-place";
 import { sessionQuery, signedIn } from "./session";
 
 /**
@@ -13,20 +15,22 @@ import { sessionQuery, signedIn } from "./session";
  * not keep the owner signed in, so that is best effort. A token the server already refused (401)
  * is not sent again.
  */
-export async function forgetSession(
+export const forgetSession = async (
   queryClient: QueryClient,
-  { revoke }: { readonly revoke: boolean },
-): Promise<void> {
+  { revoke }: { readonly revoke: boolean }
+): Promise<void> => {
   const session = queryClient.getQueryData(sessionQuery.queryKey);
+
   if (session && revoke) {
     await reportSessionEnded({
       client: signedIn(session).client,
       signal: AbortSignal.timeout(3000),
-    }).catch(() => {});
+    }).catch(noop);
   }
+
   await window.harakiri.session.clear();
   useLit.getState().forget();
   seriesPlace.clear();
   queryClient.clear();
   queryClient.setQueryData(sessionQuery.queryKey, null);
-}
+};

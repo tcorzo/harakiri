@@ -152,22 +152,22 @@ const SHORT = 3;
 
 const eng = (recipe: AudioRecipe, title?: string): AudioTrack =>
   title === undefined ? { recipe, language: "eng" } : { recipe, language: "eng", title };
+
 const noSubs = { embeddedSubtitles: [], sidecarSubtitles: [] } as const;
 const subsCount = { embedded: 0, external: 0 } as const;
 
 const aac20: ExpectedAudio = { codec: "aac", profile: "LC", channels: 2 };
 const eac351: ExpectedAudio = { codec: "eac3", profile: null, channels: 6 };
 const sdr = (codec: string) => ({ codec, range: "SDR", dvProfile: null }) as const;
+
 const hevc = (range: VideoRangeType, dvProfile: number | null = null) =>
   ({ codec: "hevc", range, dvProfile }) as const;
 
-function movie(
+const movie = (
   id: string,
   meta: Metadata,
-  rest: Omit<MovieEntry, "id" | "kind" | "meta" | "tier"> & { readonly tier?: "base" | "fate" },
-): MovieEntry {
-  return { id, kind: "movie", meta, tier: rest.tier ?? "base", ...rest };
-}
+  rest: Omit<MovieEntry, "id" | "kind" | "meta" | "tier"> & { readonly tier?: "base" | "fate" }
+): MovieEntry => ({ id, kind: "movie", meta, tier: rest.tier ?? "base", ...rest });
 
 export const CATALOG: readonly Entry[] = [
   // --- SDR, long: the resume, screening and passthrough items ---
@@ -186,7 +186,7 @@ export const CATALOG: readonly Entry[] = [
       audio: [eng("aac-2.0")],
       ...noSubs,
       expect: { video: sdr("h264"), audio: [aac20], subtitles: subsCount },
-    },
+    }
   ),
   movie(
     "sdr-h264-eac3-long",
@@ -203,7 +203,7 @@ export const CATALOG: readonly Entry[] = [
       audio: [eng("eac3-5.1")],
       ...noSubs,
       expect: { video: sdr("h264"), audio: [eac351], subtitles: subsCount },
-    },
+    }
   ),
   // --- SDR codec matrix ---
   movie(
@@ -225,7 +225,7 @@ export const CATALOG: readonly Entry[] = [
         audio: [{ codec: "ac3", profile: null, channels: 6 }],
         subtitles: subsCount,
       },
-    },
+    }
   ),
   movie(
     "sdr-hevc-dts",
@@ -246,7 +246,7 @@ export const CATALOG: readonly Entry[] = [
         audio: [{ codec: "dts", profile: "DTS", channels: 6 }],
         subtitles: subsCount,
       },
-    },
+    }
   ),
   movie(
     "sdr-h264-truehd",
@@ -267,7 +267,7 @@ export const CATALOG: readonly Entry[] = [
         audio: [{ codec: "truehd", profile: null, channels: 6 }],
         subtitles: subsCount,
       },
-    },
+    }
   ),
   movie(
     "sdr-h264-flac",
@@ -288,7 +288,7 @@ export const CATALOG: readonly Entry[] = [
         audio: [{ codec: "flac", profile: null, channels: 6 }],
         subtitles: subsCount,
       },
-    },
+    }
   ),
   movie(
     "sdr-h264-lpcm-mkv",
@@ -309,7 +309,7 @@ export const CATALOG: readonly Entry[] = [
         audio: [{ codec: "pcm_s16le", profile: null, channels: 6 }],
         subtitles: subsCount,
       },
-    },
+    }
   ),
   movie(
     "sdr-h264-lpcm-m2ts",
@@ -330,7 +330,7 @@ export const CATALOG: readonly Entry[] = [
         audio: [{ codec: "pcm_bluray", profile: null, channels: 6 }],
         subtitles: subsCount,
       },
-    },
+    }
   ),
   // Three LPCM 5.1 tracks make about 14 Mbps from PCM alone, so the bitrate is exact and stays
   // above the 8 Mbps Jellyfin assumes when a profile sends no MaxStreamingBitrate.
@@ -361,7 +361,7 @@ export const CATALOG: readonly Entry[] = [
         })),
         subtitles: subsCount,
       },
-    },
+    }
   ),
   movie(
     "sdr-av1-opus",
@@ -382,7 +382,7 @@ export const CATALOG: readonly Entry[] = [
         audio: [{ codec: "opus", profile: null, channels: 2 }],
         subtitles: subsCount,
       },
-    },
+    }
   ),
   movie(
     "sdr-h264-aac-mpegts",
@@ -399,7 +399,7 @@ export const CATALOG: readonly Entry[] = [
       audio: [eng("aac-2.0")],
       ...noSubs,
       expect: { video: sdr("h264"), audio: [aac20], subtitles: subsCount },
-    },
+    }
   ),
   movie(
     "sdr-h264-tracks",
@@ -432,7 +432,7 @@ export const CATALOG: readonly Entry[] = [
         audio: [aac20, { codec: "ac3", profile: null, channels: 6 }],
         subtitles: { embedded: 3, external: 3 },
       },
-    },
+    }
   ),
   // --- HDR ---
   movie(
@@ -450,7 +450,7 @@ export const CATALOG: readonly Entry[] = [
       audio: [eng("eac3-5.1")],
       ...noSubs,
       expect: { video: hevc("HDR10"), audio: [eac351], subtitles: subsCount },
-    },
+    }
   ),
   movie(
     "hdr10-hevc-mp4",
@@ -467,7 +467,7 @@ export const CATALOG: readonly Entry[] = [
       audio: [eng("eac3-5.1")],
       ...noSubs,
       expect: { video: hevc("HDR10"), audio: [eac351], subtitles: subsCount },
-    },
+    }
   ),
   movie(
     "hlg-hevc",
@@ -484,7 +484,7 @@ export const CATALOG: readonly Entry[] = [
       audio: [eng("eac3-5.1")],
       ...noSubs,
       expect: { video: hevc("HLG"), audio: [eac351], subtitles: subsCount },
-    },
+    }
   ),
   movie(
     "hdr10plus-hevc",
@@ -501,7 +501,7 @@ export const CATALOG: readonly Entry[] = [
       audio: [eng("eac3-5.1")],
       ...noSubs,
       expect: { video: hevc("HDR10Plus"), audio: [eac351], subtitles: subsCount },
-    },
+    }
   ),
   movie(
     "dv-p8.1-hevc-mp4",
@@ -518,7 +518,7 @@ export const CATALOG: readonly Entry[] = [
       audio: [eng("eac3-5.1")],
       ...noSubs,
       expect: { video: hevc("DOVIWithHDR10", 8), audio: [eac351], subtitles: subsCount },
-    },
+    }
   ),
   movie(
     "dv-p8.4-hevc",
@@ -535,7 +535,7 @@ export const CATALOG: readonly Entry[] = [
       audio: [eng("eac3-5.1")],
       ...noSubs,
       expect: { video: hevc("DOVIWithHLG", 8), audio: [eac351], subtitles: subsCount },
-    },
+    }
   ),
   movie(
     "dv-p8.1-hdr10plus-hevc",
@@ -552,7 +552,7 @@ export const CATALOG: readonly Entry[] = [
       audio: [eng("eac3-5.1")],
       ...noSubs,
       expect: { video: hevc("DOVIWithHDR10Plus", 8), audio: [eac351], subtitles: subsCount },
-    },
+    }
   ),
   // --- Episodes ---
   {
@@ -656,7 +656,7 @@ export const CATALOG: readonly Entry[] = [
         audio: [{ codec: "truehd", profile: "Dolby TrueHD + Dolby Atmos", channels: 8 }],
         subtitles: subsCount,
       },
-    },
+    }
   ),
   movie(
     "fate-eac3-joc",
@@ -678,7 +678,7 @@ export const CATALOG: readonly Entry[] = [
         audio: [{ codec: "eac3", profile: "Dolby Digital Plus + Dolby Atmos", channels: 8 }],
         subtitles: subsCount,
       },
-    },
+    }
   ),
   movie(
     "fate-dtshd-ma",
@@ -700,7 +700,7 @@ export const CATALOG: readonly Entry[] = [
         audio: [{ codec: "dts", profile: "DTS-HD MA", channels: 8 }],
         subtitles: subsCount,
       },
-    },
+    }
   ),
   movie(
     "fate-dtsx",
@@ -722,7 +722,7 @@ export const CATALOG: readonly Entry[] = [
         audio: [{ codec: "dts", profile: "DTS-HD MA + DTS:X", channels: 8 }],
         subtitles: subsCount,
       },
-    },
+    }
   ),
   movie(
     "fate-vc1",
@@ -740,7 +740,7 @@ export const CATALOG: readonly Entry[] = [
       audio: [],
       ...noSubs,
       expect: { video: sdr("vc1"), audio: [], subtitles: subsCount },
-    },
+    }
   ),
   movie(
     "fate-dv-p7-fel",
@@ -758,27 +758,36 @@ export const CATALOG: readonly Entry[] = [
       audio: [],
       ...noSubs,
       expect: { video: hevc("DOVIWithEL", 7), audio: [], subtitles: subsCount },
-    },
+    }
   ),
 ];
 
+interface EntryLocation {
+  dir: string;
+  stem: string;
+}
+
 /** The folder under the corpus root, and the file name without extension. */
-export function entryLocation(entry: Entry): { dir: string; stem: string } {
+export const entryLocation = (entry: Entry): EntryLocation => {
   if (entry.kind === "movie") {
     const stem = `${entry.meta.title} (${entry.meta.year})`;
+
     return { dir: `movies/${stem}`, stem };
   }
+
   const season = String(entry.season).padStart(2, "0");
   const episode = String(entry.episode).padStart(2, "0");
+
   return {
     dir: `shows/${entry.series}/Season ${season}`,
     stem: `${entry.series} - S${season}E${episode}`,
   };
-}
+};
 
-export function entryPath(entry: Entry): string {
+export const entryPath = (entry: Entry): string => {
   const { dir, stem } = entryLocation(entry);
+
   return `${dir}/${stem}.${entry.container}`;
-}
+};
 
 export const SIDECAR_LANGUAGE = { eng: "en", jpn: "ja", fre: "fr" } as const;

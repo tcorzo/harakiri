@@ -1,10 +1,14 @@
 import { setTimeout as sleep } from "node:timers/promises";
+
 import { joinFacts } from "@harakiri/jellyfin";
+
 import {
   expect,
+  isRunning,
   play,
   playerEvents,
   playerEventUntil,
+  playerPhases,
   probe,
   probeUntil,
   recordPlayerEvents,
@@ -12,7 +16,8 @@ import {
   test,
   until,
 } from "./support/harakiri";
-import { ITEMS, TICKS_PER_SECOND, type PickedItem } from "./support/jellyfin";
+import { ITEMS, TICKS_PER_SECOND } from "./support/jellyfin";
+import type { PickedItem } from "./support/jellyfin";
 import { mpvProcesses, pressKey } from "./support/mpv";
 
 // mpv decodes for real but shows and plays nothing: fast and deterministic. The default for the fixture.
@@ -26,7 +31,9 @@ const request = (item: PickedItem, startSeconds: number) => ({
   startPositionTicks: ticks(startSeconds),
 });
 
-test.beforeEach(({ signIn }) => signIn());
+test.beforeEach(({ signIn }) => {
+  signIn();
+});
 
 test("plays from a start position over a direct Jellyfin stream and reports it", async ({
   launch,
@@ -46,8 +53,8 @@ test("plays from a start position over a direct Jellyfin stream and reports it",
   expect(first.path).toBe(
     new URL(
       `Videos/${item.id}/stream?static=true&MediaSourceId=${item.mediaSourceId}`,
-      backend.server,
-    ).href,
+      backend.server
+    ).href
   );
   expect(first.path).not.toContain(account.accessToken);
   expect(first.pause).toBe(false);
@@ -57,16 +64,17 @@ test("plays from a start position over a direct Jellyfin stream and reports it",
   const playing = await playerEventUntil(page, (event) => event.phase === "playing");
   expect(playing.itemId).toBe(item.id);
   expect(playing.positionTicks).toBeGreaterThanOrEqual(ticks(120));
-  expect(joinFacts(playing.facts)).toMatch(/\S/);
+  expect(joinFacts(playing.facts)).toMatch(/\S/u);
   expect(playing.transcodeReasons).toEqual([]);
-  const phases = (await playerEvents(page)).map((event) => event.phase);
+  const phases = await playerPhases(page);
   expect(phases.indexOf("starting")).toBeLessThan(phases.indexOf("playing"));
 
   const server = await until(
     "Jellyfin sees the item playing for this device",
-    () => jellyfin.nowPlaying(),
-    (session) => session?.NowPlayingItem?.Id === item.id,
+    async () => await jellyfin.nowPlaying(),
+    (session) => session?.NowPlayingItem?.Id === item.id
   );
+
   expect(server?.PlayState?.PlayMethod).toBe("DirectPlay");
 });
 
@@ -89,12 +97,13 @@ test("mpv's own key bindings pause, seek, resume and stop through the app", asyn
   await playerEventUntil(page, (event) => event.phase === "paused");
   await until(
     "Jellyfin sees the pause",
-    () => jellyfin.nowPlaying(),
-    (session) => session?.PlayState?.IsPaused === true,
+    async () => await jellyfin.nowPlaying(),
+    (session) => session?.PlayState?.IsPaused === true
   );
   const frozenAt = paused.timePos ?? 0;
   await sleep(1000);
-  expect((await probe(page)).timePos).toBeCloseTo(frozenAt, 1);
+  const atFreeze = await probe(page);
+  expect(atFreeze.timePos).toBeCloseTo(frozenAt, 1);
 
   await pressKey(userDataDir, "RIGHT");
   const seeked = await probeUntil(page, (p) => (p.timePos ?? 0) >= frozenAt + 25);
@@ -106,16 +115,16 @@ test("mpv's own key bindings pause, seek, resume and stop through the app", asyn
   await probeUntil(page, (p) => (p.timePos ?? 0) >= (resumed.timePos ?? 0) + 1.5);
   await until(
     "a playing event after the pause",
-    () => playerEvents(page),
+    async () => await playerEvents(page),
     (events) =>
       events.findLastIndex((e) => e.phase === "playing") >
-      events.findIndex((e) => e.phase === "paused"),
+      events.findIndex((e) => e.phase === "paused")
   );
 
   await pressKey(userDataDir, "ESC");
   const stopped = await playerEventUntil(page, (event) => event.phase === "stopped");
   expect(stopped.itemId).toBe(item.id);
-  expect((await probe(page)).running).toBe(false);
+  expect(await isRunning(page)).toBe(false);
   expect(mpvProcesses(userDataDir)).toEqual([]);
 });
 
@@ -135,23 +144,25 @@ test("stopping saves the resume position on the server", async ({
   await stop(page);
 
   const stopped = await playerEventUntil(page, (event) => event.phase === "stopped");
-  expect((await probe(page)).running).toBe(false);
+  expect(await isRunning(page)).toBe(false);
   expect(stopped.positionTicks).toBeGreaterThanOrEqual(ticks(203));
+
   const saved = await until(
     "Jellyfin stores the resume point",
-    () => jellyfin.userData(item.id),
+    async () => await jellyfin.userData(item.id),
     (data) => data.PlaybackPositionTicks > 0,
-    5000,
+    5000
   );
+
   expect(Math.abs(saved.PlaybackPositionTicks - stopped.positionTicks)).toBeLessThanOrEqual(
-    ticks(3),
+    ticks(3)
   );
   expect(saved.Played).toBe(false);
   await until(
     "Jellyfin clears now playing",
-    () => jellyfin.nowPlaying(),
+    async () => await jellyfin.nowPlaying(),
     (s) => s === undefined,
-    5000,
+    5000
   );
 });
 
@@ -162,7 +173,11 @@ test("a second play replaces the first: one mpv, and the first reports stopped",
   preserveUserData,
 }) => {
   const [first, second] = await jellyfin.pickItems(ITEMS.sdrH264Short, 2);
-  if (!first || !second) throw new Error("pickItems returned fewer items than asked");
+
+  if (!first || !second) {
+    throw new Error("pickItems returned fewer items than asked");
+  }
+
   await preserveUserData(first.id);
   await preserveUserData(second.id);
   const { page } = await launch();
@@ -170,17 +185,20 @@ test("a second play replaces the first: one mpv, and the first reports stopped",
 
   // Fired together, as a double press would: main must serialize them.
   await page.evaluate(
-    ([a, b]) => Promise.all([window.harakiri.player.play(a), window.harakiri.player.play(b)]),
-    [request(first, 60), request(second, 60)] as const,
+    async ([a, b]) =>
+      await Promise.all([window.harakiri.player.play(a), window.harakiri.player.play(b)]),
+    [request(first, 60), request(second, 60)] as const
   );
 
   const now = await probeUntil(page, (p) => p.running && (p.timePos ?? 0) >= 61);
   expect(now.path).toContain(`/Videos/${second.id}/stream`);
   expect(mpvProcesses(userDataDir)).toHaveLength(1);
+
   const stoppedFirst = await playerEventUntil(
     page,
-    (event) => event.phase === "stopped" && event.itemId === first.id,
+    (event) => event.phase === "stopped" && event.itemId === first.id
   );
+
   expect(stoppedFirst.positionTicks).toBeGreaterThanOrEqual(ticks(60));
   const events = await playerEvents(page);
   expect(events.some((e) => e.itemId === second.id && e.phase === "stopped")).toBe(false);
@@ -204,9 +222,9 @@ test("quitting the app mid-playback stops mpv and reports the stop", async ({
   expect(mpvProcesses(userDataDir)).toEqual([]);
   await until(
     "Jellyfin clears now playing",
-    () => jellyfin.nowPlaying(),
+    async () => await jellyfin.nowPlaying(),
     (s) => s === undefined,
-    5000,
+    5000
   );
   const saved = await jellyfin.userData(item.id);
   expect(saved.PlaybackPositionTicks).toBeGreaterThanOrEqual(ticks(152));

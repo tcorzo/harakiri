@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import type { DeviceProfile, PlaybackInfoDto, SubtitleProfile } from "./generated/types.gen";
 import type { MediaSourceId, UserId } from "./ids";
 
@@ -8,16 +9,17 @@ export const MAX_STREAMING_BITRATE = 1_000_000_000;
 
 export const ServerVersion = z
   .string()
-  .regex(/^\d+\.\d+\.\d+/)
+  .regex(/^\d+\.\d+\.\d+/u)
   .transform((raw) => ({ major: Number(raw.split(".")[0]) }));
+
 export type ServerVersion = z.output<typeof ServerVersion>;
 
-type SubtitleRule = {
+interface SubtitleRule {
   readonly format: string;
   readonly method: "Embed" | "External";
   readonly container?: string;
   readonly minServerMajor?: number;
-};
+}
 
 const TEXT_FORMATS = [
   "srt",
@@ -33,6 +35,7 @@ const TEXT_FORMATS = [
   "sub",
   "microdvd",
 ];
+
 const IMAGE_FORMATS = ["pgssub", "pgs", "dvdsub", "vobsub", "dvbsub"];
 
 // The server matches Format with string equality, so there is no wildcard.
@@ -46,12 +49,17 @@ const SUBTITLE_RULES: readonly SubtitleRule[] = [
 ];
 
 const subtitleProfiles = (server: ServerVersion): SubtitleProfile[] =>
-  SUBTITLE_RULES.filter((rule) => server.major >= (rule.minServerMajor ?? 0)).map(
-    ({ format, method, container }) =>
+  SUBTITLE_RULES.flatMap(({ format, method, container, minServerMajor }) => {
+    if (server.major < (minServerMajor ?? 0)) {
+      return [];
+    }
+
+    return [
       container === undefined
         ? { Format: format, Method: method }
         : { Format: format, Method: method, Container: container },
-  );
+    ];
+  });
 
 export const deviceProfile = (server: ServerVersion): DeviceProfile => ({
   Name: "Harakiri",
@@ -81,7 +89,7 @@ export const deviceProfile = (server: ServerVersion): DeviceProfile => ({
 
 export const profileAllowsAllRanges = (profile: DeviceProfile): boolean =>
   (profile.CodecProfiles ?? []).every((codec) =>
-    (codec.Conditions ?? []).every((condition) => condition.Property !== "VideoRangeType"),
+    (codec.Conditions ?? []).every((condition) => condition.Property !== "VideoRangeType")
   );
 
 export type PlaybackSource =
@@ -93,34 +101,45 @@ export type PlaybackSource =
       readonly audioStreamIndex?: number;
     };
 
-export type PlaybackInfoRequestInput = {
+export interface PlaybackInfoRequestInput {
   readonly userId: UserId;
   readonly server: ServerVersion;
   readonly source: PlaybackSource;
   readonly startTimeTicks?: number;
-};
+}
 
 export const playbackInfoRequest = ({
   userId,
   server,
   source,
   startTimeTicks,
-}: PlaybackInfoRequestInput): PlaybackInfoDto => ({
-  UserId: userId,
-  DeviceProfile: deviceProfile(server),
-  // The request value overrides the profile's, so it must be sent here too.
-  MaxStreamingBitrate: MAX_STREAMING_BITRATE,
-  EnableDirectPlay: true,
-  EnableDirectStream: true,
-  EnableTranscoding: true,
-  AllowVideoStreamCopy: true,
-  AllowAudioStreamCopy: true,
-  AutoOpenLiveStream: true,
-  // mpv selects subtitles itself; a server-side pick can force a burn-in.
-  SubtitleStreamIndex: -1,
-  ...(startTimeTicks === undefined ? {} : { StartTimeTicks: startTimeTicks }),
-  ...(source.kind === "chosen" ? { MediaSourceId: source.mediaSourceId } : {}),
-  ...(source.kind === "chosen" && source.audioStreamIndex !== undefined
-    ? { AudioStreamIndex: source.audioStreamIndex }
-    : {}),
-});
+}: PlaybackInfoRequestInput): PlaybackInfoDto => {
+  const request: PlaybackInfoDto = {
+    UserId: userId,
+    DeviceProfile: deviceProfile(server),
+    // The request value overrides the profile's, so it must be sent here too.
+    MaxStreamingBitrate: MAX_STREAMING_BITRATE,
+    EnableDirectPlay: true,
+    EnableDirectStream: true,
+    EnableTranscoding: true,
+    AllowVideoStreamCopy: true,
+    AllowAudioStreamCopy: true,
+    AutoOpenLiveStream: true,
+    // mpv selects subtitles itself; a server-side pick can force a burn-in.
+    SubtitleStreamIndex: -1,
+  };
+
+  if (startTimeTicks !== undefined) {
+    request.StartTimeTicks = startTimeTicks;
+  }
+
+  if (source.kind === "chosen") {
+    request.MediaSourceId = source.mediaSourceId;
+
+    if (source.audioStreamIndex !== undefined) {
+      request.AudioStreamIndex = source.audioStreamIndex;
+    }
+  }
+
+  return request;
+};

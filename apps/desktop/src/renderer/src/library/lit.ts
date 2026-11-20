@@ -1,4 +1,5 @@
 import { create } from "zustand";
+
 import type { Entry } from "../data/entry";
 
 /** A programme section that can own focus: tonight's screening or one row, named by a stable id. */
@@ -50,21 +51,31 @@ export const useLit = create<LitState>()((set) => ({
   heroId: null,
   movedAt: 0,
   travelling: false,
-  enter: (section) =>
+  enter: (section) => {
     set((state) => {
-      if (state.section.id === section.id) return state;
+      if (state.section.id === section.id) {
+        return state;
+      }
+
       const now = Date.now();
+
       return { section, movedAt: now, travelling: now - state.movedAt < travelMs };
-    }),
-  light: (entry, section) =>
+    });
+  },
+  light: (entry, section) => {
     set((state) =>
       state.section.id === section.id
         ? { entry, travelling: false }
-        : { entry, section, movedAt: Date.now(), travelling: false },
-    ),
-  remember: (place) => set({ place }),
-  setHeroId: (heroId) => set({ heroId }),
-  forget: () =>
+        : { entry, section, movedAt: Date.now(), travelling: false }
+    );
+  },
+  remember: (place) => {
+    set({ place });
+  },
+  setHeroId: (heroId) => {
+    set({ heroId });
+  },
+  forget: () => {
     set({
       entry: null,
       section: tonight,
@@ -72,7 +83,8 @@ export const useLit = create<LitState>()((set) => ({
       heroId: null,
       movedAt: 0,
       travelling: false,
-    }),
+    });
+  },
 }));
 
 export const cardKey = (section: string, entry: string): string => `card|${section}|${entry}`;
@@ -82,14 +94,24 @@ export const rowKey = (section: string): string => `row|${section}`;
  * Where focus lands when the library opens: the remembered card, then its row (norigin picks the
  * nearest card), then the hero, then the first row. Each is tried only if it is mounted.
  */
-export function restoreKeys(
+export const restoreKeys = (
   place: Place | null,
   hero: boolean,
-  firstSection: string | undefined,
-): string[] {
+  firstSection: string | undefined
+): string[] => {
   const keys: string[] = [];
-  if (place !== null) keys.push(cardKey(place.section, place.entry), rowKey(place.section));
-  if (hero) keys.push("hero-play");
-  if (firstSection !== undefined) keys.push(rowKey(firstSection));
+
+  if (place !== null) {
+    keys.push(cardKey(place.section, place.entry), rowKey(place.section));
+  }
+
+  if (hero) {
+    keys.push("hero-play");
+  }
+
+  if (firstSection !== undefined) {
+    keys.push(rowKey(firstSection));
+  }
+
   return keys;
-}
+};

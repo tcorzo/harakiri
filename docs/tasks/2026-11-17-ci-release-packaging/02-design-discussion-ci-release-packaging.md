@@ -330,7 +330,7 @@ interface QuittingApp {
 export function holdQuitUntilStopped(
   app: QuittingApp,
   stop: () => Promise<void>,
-  capMs = STOP_CAP_MS,
+  capMs = STOP_CAP_MS
 ): void;
 ```
 
@@ -345,19 +345,19 @@ export interface UpdaterLike {
   quitAndInstall(isSilent?: boolean, isForceRunAfter?: boolean): void;
   on(
     event: "update-available" | "download-progress" | "update-downloaded" | "error",
-    l: (arg: never) => void,
+    l: (arg: never) => void
   ): unknown;
 }
 export function startUpdates(
   updater: UpdaterLike,
-  deps: { isPlaying(): boolean; appImage: string | undefined },
+  deps: { isPlaying(): boolean; appImage: string | undefined }
 ): Updates;
 
 // lifecycle.ts
 export function holdQuitUntilStopped(
   app: QuittingApp,
   stop: () => Promise<void>,
-  options?: { capMs?: number; afterStop?: () => void },
+  options?: { capMs?: number; afterStop?: () => void }
 ): void;
 ```
 

@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { type Client, createClient } from "./generated/client";
+
+import { createClient } from "./generated/client";
+import type { Client } from "./generated/client";
 import {
   authenticateUserByName,
   authenticateWithQuickConnect as quickConnectAuthenticate,
@@ -8,11 +10,13 @@ import {
   getQuickConnectState,
   initiateQuickConnect as quickConnectInitiate,
 } from "./generated/sdk.gen";
-import { AccessToken, DeviceId, ServerUrl, UserId } from "./ids";
-import { type ClientIdentity, authorizationHeader } from "./stream-url";
+import type { DeviceId, ServerUrl } from "./ids";
+import { AccessToken, UserId } from "./ids";
+import { authorizationHeader } from "./stream-url";
+import type { ClientIdentity } from "./stream-url";
 
 /** Everything the desktop app's Session needs, with ids branded. */
-export type SessionData = {
+export interface SessionData {
   readonly serverUrl: ServerUrl;
   readonly serverId: string;
   readonly serverName: string;
@@ -21,7 +25,7 @@ export type SessionData = {
   readonly userName: string;
   readonly accessToken: AccessToken;
   readonly deviceId: DeviceId;
-};
+}
 
 export type SignInResult =
   | { readonly kind: "signed-in"; readonly session: SessionData }
@@ -30,11 +34,11 @@ export type SignInResult =
   | { readonly kind: "rejected"; readonly status: number }
   | { readonly kind: "unreachable"; readonly message: string };
 
-export type QuickConnectCode = {
+export interface QuickConnectCode {
   /** Shown to the owner, who approves it from another signed-in device. */
   readonly code: string;
   readonly secret: string;
-};
+}
 
 /**
  * A generated-SDK client that sends the MediaBrowser Authorization header on
@@ -44,10 +48,10 @@ export type QuickConnectCode = {
 export const createJellyfinClient = (
   server: ServerUrl,
   identity: ClientIdentity,
-  token?: AccessToken,
+  token?: AccessToken
 ): Client =>
   createClient({
-    baseUrl: server.replace(/\/$/, ""),
+    baseUrl: server.replace(/\/$/u, ""),
     headers: { Authorization: authorizationHeader(identity, token) },
   });
 
@@ -63,36 +67,60 @@ const ServerInfo = z.object({
   Version: z.string().min(1),
 });
 
-type Answer = { readonly data?: unknown; readonly error?: unknown; readonly response?: Response };
+interface Answer {
+  readonly data?: unknown;
+  readonly error?: unknown;
+  readonly response?: Response;
+}
 
-const describe = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
+const FailureMessage = z
+  .unknown()
+  .transform((failure) => (failure instanceof Error ? failure.message : String(failure)));
 
 const toSession = async (
   server: ServerUrl,
   identity: ClientIdentity,
   client: Client,
-  signIn: Promise<Answer>,
+  signIn: Promise<Answer>
 ): Promise<SignInResult> => {
   let answers: [Answer, Answer];
+
   try {
     answers = await Promise.all([signIn, getPublicSystemInfo({ client })]);
   } catch (error) {
-    return { kind: "unreachable", message: describe(error) };
+    return { kind: "unreachable", message: FailureMessage.parse(error) };
   }
+
   const [auth, info] = answers;
+
   // Without throwOnError the generated client reports a network failure as a missing response.
   for (const answer of answers) {
-    if (answer.response === undefined)
-      return { kind: "unreachable", message: describe(answer.error) };
+    if (answer.response === undefined) {
+      return { kind: "unreachable", message: FailureMessage.parse(answer.error) };
+    }
   }
+
   const authStatus = auth.response?.status ?? 0;
-  if (authStatus === 401) return { kind: "wrong-credentials" };
-  if (auth.response?.ok !== true) return { kind: "rejected", status: authStatus };
-  if (info.response?.ok !== true) return { kind: "rejected", status: info.response?.status ?? 0 };
+
+  if (authStatus === 401) {
+    return { kind: "wrong-credentials" };
+  }
+
+  if (auth.response?.ok !== true) {
+    return { kind: "rejected", status: authStatus };
+  }
+
+  if (info.response?.ok !== true) {
+    return { kind: "rejected", status: info.response?.status ?? 0 };
+  }
+
   const signedIn = SignedIn.safeParse(auth.data);
   const serverInfo = ServerInfo.safeParse(info.data);
-  if (!signedIn.success || !serverInfo.success) return { kind: "rejected", status: authStatus };
+
+  if (!signedIn.success || !serverInfo.success) {
+    return { kind: "rejected", status: authStatus };
+  }
+
   return {
     kind: "signed-in",
     session: {
@@ -108,36 +136,39 @@ const toSession = async (
   };
 };
 
-export const authenticate = (
+export const authenticate = async (
   server: ServerUrl,
   username: string,
   password: string,
-  identity: ClientIdentity,
+  identity: ClientIdentity
 ): Promise<SignInResult> => {
   const client = createJellyfinClient(server, identity);
-  return toSession(
+
+  return await toSession(
     server,
     identity,
     client,
-    authenticateUserByName({ client, body: { Username: username, Pw: password } }),
+    authenticateUserByName({ client, body: { Username: username, Pw: password } })
   );
 };
 
 export const quickConnectEnabled = async (
   server: ServerUrl,
-  identity: ClientIdentity,
+  identity: ClientIdentity
 ): Promise<boolean> => {
   const client = createJellyfinClient(server, identity);
   const { data } = await getQuickConnectEnabled({ client, throwOnError: true });
+
   return data;
 };
 
 export const initiateQuickConnect = async (
   server: ServerUrl,
-  identity: ClientIdentity,
+  identity: ClientIdentity
 ): Promise<QuickConnectCode> => {
   const client = createJellyfinClient(server, identity);
   const { data } = await quickConnectInitiate({ client, throwOnError: true });
+
   return z.object({ code: z.string(), secret: z.string() }).parse({
     code: data.Code,
     secret: data.Secret,
@@ -148,23 +179,25 @@ export const initiateQuickConnect = async (
 export const pollQuickConnect = async (
   server: ServerUrl,
   identity: ClientIdentity,
-  secret: string,
+  secret: string
 ): Promise<boolean> => {
   const client = createJellyfinClient(server, identity);
   const { data } = await getQuickConnectState({ client, throwOnError: true, query: { secret } });
+
   return data.Authenticated === true;
 };
 
-export const authenticateWithQuickConnect = (
+export const authenticateWithQuickConnect = async (
   server: ServerUrl,
   identity: ClientIdentity,
-  secret: string,
+  secret: string
 ): Promise<SignInResult> => {
   const client = createJellyfinClient(server, identity);
-  return toSession(
+
+  return await toSession(
     server,
     identity,
     client,
-    quickConnectAuthenticate({ client, body: { Secret: secret } }),
+    quickConnectAuthenticate({ client, body: { Secret: secret } })
   );
 };

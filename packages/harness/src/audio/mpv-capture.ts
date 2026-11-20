@@ -1,4 +1,6 @@
-import { type AudioPassthrough, buildPlaybackArgs, configArg } from "@harakiri/mpv";
+import { buildPlaybackArgs, configArg } from "@harakiri/mpv";
+import type { AudioPassthrough } from "@harakiri/mpv";
+
 import { runToolOrThrow } from "../process";
 
 export interface AudioOut {
@@ -13,11 +15,11 @@ export interface AudioOut {
  * ao_pcm writes what would have gone to the audio device into `wavOut`. Returns the output
  * parameters from mpv's `AO:` line, which say whether it chose passthrough at all.
  */
-export function captureWithMpv(
+export const captureWithMpv = (
   input: string,
   wavOut: string,
-  audioPassthrough?: AudioPassthrough,
-): AudioOut {
+  audioPassthrough?: AudioPassthrough
+): AudioOut => {
   const { stdout, stderr } = runToolOrThrow("mpv", [
     configArg("none"),
     ...buildPlaybackArgs(audioPassthrough === undefined ? {} : { audioPassthrough }),
@@ -26,12 +28,18 @@ export function captureWithMpv(
     "--vo=null",
     input,
   ]);
-  return parseAudioOutLine(`${stdout}\n${stderr}`);
-}
 
-export function parseAudioOutLine(log: string): AudioOut {
-  const found = /^AO: \[\w+\] (\d+)Hz \S+ (\d+)ch (\S+)$/m.exec(log);
-  if (found === null) throw new Error(`mpv printed no AO line:\n${log}`);
-  const [, rate = "", channels = "", format = ""] = found;
+  return parseAudioOutLine(`${stdout}\n${stderr}`);
+};
+
+export const parseAudioOutLine = (log: string): AudioOut => {
+  const found = /^AO: \[\w+\] (?<rate>\d+)Hz \S+ (?<channels>\d+)ch (?<format>\S+)$/mu.exec(log);
+
+  if (found === null) {
+    throw new Error(`mpv printed no AO line:\n${log}`);
+  }
+
+  const { rate = "", channels = "", format = "" } = found.groups ?? {};
+
   return { sampleRate: Number(rate), channels: Number(channels), format };
-}
+};

@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+
 import type { MediaSourceInfo, PlaybackInfoResponse } from "@harakiri/jellyfin/generated";
 import { zMediaSourceInfo, zPlaybackInfoResponse } from "@harakiri/jellyfin/generated/zod";
 import { z } from "zod";
@@ -16,7 +17,7 @@ const Fixture = zPlaybackInfoResponse.extend({
           TranscodingUrl: true,
           SupportsDirectPlay: true,
         })
-        .extend({ RunTimeTicks: z.number().nullish() }),
+        .extend({ RunTimeTicks: z.number().nullish() })
     )
     .optional(),
 });
@@ -36,10 +37,14 @@ export type FixtureName =
 
 /** A PlaybackInfo response recorded from the dev Jellyfin by `record.ts`. */
 export const playbackInfo = (name: FixtureName): PlaybackInfoResponse =>
-  Fixture.parse(JSON.parse(readFileSync(new URL(`./${name}.json`, import.meta.url), "utf8")));
+  Fixture.parse(JSON.parse(readFileSync(new URL(`${name}.json`, import.meta.url), "utf-8")));
 
 export const mediaSource = (name: FixtureName): MediaSourceInfo => {
   const first = playbackInfo(name).MediaSources?.[0];
-  if (!first) throw new Error(`fixture ${name} has no media source`);
+
+  if (!first) {
+    throw new Error(`fixture ${name} has no media source`);
+  }
+
   return first;
 };

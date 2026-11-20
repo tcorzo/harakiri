@@ -1,6 +1,8 @@
 import { queryOptions } from "@tanstack/react-query";
+
 import { classifyFidelity } from "./fidelity";
-import { type Client, createClient } from "./generated/client";
+import { createClient } from "./generated/client";
+import type { Client } from "./generated/client";
 import {
   getEpisodes,
   getItem,
@@ -16,19 +18,23 @@ import type { BaseItemDto, ImageType, PublicSystemInfo, UserDto } from "./genera
 import type { ItemId, ServerUrl, UserId } from "./ids";
 
 /** A signed-in client (see createJellyfinClient) and the user it acts for. */
-export type LibraryContext = {
+export interface LibraryContext {
   readonly client: Client;
   readonly userId: UserId;
-};
+}
 
-export type ProgrammeSection = {
+export interface ProgrammeSection {
   readonly id: string;
   readonly title: string;
   readonly items: readonly BaseItemDto[];
-};
+}
 
 const HERO_POOL = 12;
 const HERO_FILMS = 5;
+
+const isHdr = (item: BaseItemDto): boolean =>
+  (classifyFidelity(item.MediaSources?.[0])?.picture.range ?? "SDR") !== "SDR";
+
 const ROW_LIMIT = 16;
 const SECTION_COUNT = 6;
 const SECTION_ITEMS = 20;
@@ -65,9 +71,9 @@ export const heroQuery = (ctx: LibraryContext) =>
           limit: HERO_POOL,
         },
       });
+
       const films = data.Items ?? [];
-      const isHdr = (item: BaseItemDto) =>
-        (classifyFidelity(item.MediaSources?.[0])?.picture.range ?? "SDR") !== "SDR";
+
       return [...films.filter(isHdr), ...films.filter((item) => !isHdr(item))].slice(0, HERO_FILMS);
     },
   });
@@ -88,6 +94,7 @@ export const resumeQuery = (ctx: LibraryContext) =>
           limit: ROW_LIMIT,
         },
       });
+
       return data.Items ?? [];
     },
   });
@@ -107,6 +114,7 @@ export const nextUpQuery = (ctx: LibraryContext) =>
           limit: ROW_LIMIT,
         },
       });
+
       return data.Items ?? [];
     },
   });
@@ -129,6 +137,7 @@ export const latestQuery = (ctx: LibraryContext) =>
           limit: ROW_LIMIT,
         },
       });
+
       return data;
     },
   });
@@ -154,12 +163,15 @@ export const sectionsQuery = (ctx: LibraryContext) =>
           sortBy: ["Random"],
         },
       });
+
       const byGenre = new Map<string, BaseItemDto[]>();
+
       for (const item of data.Items ?? []) {
         for (const genre of item.Genres ?? []) {
           byGenre.set(genre, [...(byGenre.get(genre) ?? []), item]);
         }
       }
+
       return [...byGenre]
         .toSorted(([a, left], [b, right]) => right.length - left.length || a.localeCompare(b))
         .slice(0, SECTION_COUNT)
@@ -183,6 +195,7 @@ export const itemQuery = (ctx: LibraryContext, itemId: ItemId) =>
         path: { itemId },
         query: { userId: ctx.userId },
       });
+
       return data;
     },
   });
@@ -198,6 +211,7 @@ export const seasonsQuery = (ctx: LibraryContext, seriesId: ItemId) =>
         path: { seriesId },
         query: { userId: ctx.userId, enableImageTypes: POSTER, imageTypeLimit: 1 },
       });
+
       return data.Items ?? [];
     },
   });
@@ -219,12 +233,13 @@ export const episodesQuery = (ctx: LibraryContext, seriesId: ItemId, seasonId: I
           imageTypeLimit: 1,
         },
       });
+
       return data.Items ?? [];
     },
   });
 
 const anonymousClient = (server: ServerUrl): Client =>
-  createClient({ baseUrl: server.replace(/\/$/, "") });
+  createClient({ baseUrl: server.replace(/\/$/u, "") });
 
 export const publicUsersQuery = (server: ServerUrl) =>
   queryOptions({
@@ -235,6 +250,7 @@ export const publicUsersQuery = (server: ServerUrl) =>
         signal,
         throwOnError: true,
       });
+
       return data;
     },
   });
@@ -251,6 +267,7 @@ export const serverInfoQuery = (server: ServerUrl) =>
         throwOnError: true,
         retry: 0,
       });
+
       return data;
     },
   });

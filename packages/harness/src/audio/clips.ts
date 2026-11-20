@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { join } from "node:path";
+import path from "node:path";
+
 import { runToolOrThrow } from "../process";
 
 export type ClipCodec = "ac3" | "eac3" | "dts" | "truehd";
@@ -29,18 +30,19 @@ export interface Clip {
   readonly reference: string;
 }
 
-export function synthesizeClip(dir: string, codec: ClipCodec): Clip {
+export const synthesizeClip = (dir: string, codec: ClipCodec): Clip => {
   const { encode, rawFormat } = CLIP_CODECS[codec];
-  const mkv = join(dir, `${codec}.mkv`);
-  const reference = join(dir, `${codec}.${rawFormat}`);
+  const mkv = path.join(dir, `${codec}.mkv`);
+  const reference = path.join(dir, `${codec}.${rawFormat}`);
   ffmpeg([...SINE_5_1, ...encode, mkv]);
   ffmpeg(["-i", mkv, "-map", "0:a:0", "-c", "copy", "-f", rawFormat, reference]);
+
   return { codec, mkv, reference };
-}
+};
 
 /** A plain 16-bit PCM sine WAV: audio that carries no IEC 61937 bursts. */
-export function synthesizePcmWav(dir: string): string {
-  const wav = join(dir, "pcm-sine.wav");
+export const synthesizePcmWav = (dir: string): string => {
+  const wav = path.join(dir, "pcm-sine.wav");
   ffmpeg([
     "-f",
     "lavfi",
@@ -52,30 +54,30 @@ export function synthesizePcmWav(dir: string): string {
     "pcm_s16le",
     wav,
   ]);
+
   return wav;
-}
+};
 
 /**
  * Packs a track with FFmpeg's spdif muxer, the same libavformat code mpv's ad_spdif calls.
  * `dtshdRate` selects DTS type IV output (mpv uses 768000 for DTS-HD MA).
  */
-export function muxSpdif(
+export const muxSpdif = (
   input: string,
   output: string,
-  options: { dtshdRate?: number } = {},
-): void {
+  options: { dtshdRate?: number } = {}
+): void => {
   const dtshd = options.dtshdRate === undefined ? [] : ["-dtshd_rate", String(options.dtshdRate)];
   ffmpeg(["-i", input, "-map", "0:a:0", "-c", "copy", "-f", "spdif", ...dtshd, output]);
-}
+};
 
-export function remuxToMatroska(input: string, output: string): void {
+export const remuxToMatroska = (input: string, output: string): void => {
   ffmpeg(["-i", input, "-map", "0:a:0", "-c", "copy", output]);
-}
+};
 
-export function sha256(bytes: Uint8Array): string {
-  return createHash("sha256").update(bytes).digest("hex");
-}
+export const sha256 = (bytes: Uint8Array): string =>
+  createHash("sha256").update(bytes).digest("hex");
 
-function ffmpeg(args: readonly string[]): void {
+const ffmpeg = (args: readonly string[]): void => {
   runToolOrThrow("ffmpeg", ["-v", "error", "-nostdin", "-y", ...args]);
-}
+};

@@ -37,6 +37,7 @@ export type AudioOutput =
 
 /** mpv's renderers, best first. Only Vulkan can hand HDR to the compositor. */
 export const renderers = ["vulkan", "opengl", "opengl-legacy"] as const;
+
 export type Renderer = (typeof renderers)[number];
 
 /** PRD signal-path vocabulary: native passes as it is, mapped is converted, decoded became PCM. */

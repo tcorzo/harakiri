@@ -1,5 +1,7 @@
-import { describeFailure, runTool, type ToolRun } from "./process";
-import { compareVersions, formatVersion, parseVersion, type Version } from "./version";
+import { describeFailure, runTool } from "./process";
+import type { ToolRun } from "./process";
+import { compareVersions, formatVersion, parseVersion } from "./version";
+import type { Version } from "./version";
 
 export type Verdict =
   | { readonly status: "ok"; readonly detail: string }
@@ -14,56 +16,67 @@ export interface Check {
   readonly judge: (run: ToolRun) => Verdict;
 }
 
-function output(run: ToolRun): string | null {
-  return run.kind === "exited" && run.code === 0 ? `${run.stdout}\n${run.stderr}` : null;
-}
+const output = (run: ToolRun): string | null =>
+  run.kind === "exited" && run.code === 0 ? `${run.stdout}\n${run.stderr}` : null;
 
-function notRunnable(run: ToolRun): Verdict {
-  return run.kind === "not-found"
+const notRunnable = (run: ToolRun): Verdict =>
+  run.kind === "not-found"
     ? { status: "missing", detail: `${run.command} is not on PATH` }
     : { status: "missing", detail: describeFailure(run) };
-}
 
-export function versionAtLeast(prefix: RegExp, min: Version | null): Check["judge"] {
-  return (run) => {
+export const versionAtLeast =
+  (prefix: RegExp, min: Version | null): Check["judge"] =>
+  (run) => {
     const text = output(run);
-    if (text === null) return notRunnable(run);
+
+    if (text === null) {
+      return notRunnable(run);
+    }
+
     const found = parseVersion(text, prefix);
-    if (found === null)
+
+    if (found === null) {
       return { status: "missing", detail: `no version matching ${prefix.source}` };
+    }
+
     if (min !== null && compareVersions(found, min) < 0) {
       return { status: "outdated", detail: `${formatVersion(found)} < ${formatVersion(min)}` };
     }
+
     return { status: "ok", detail: formatVersion(found) };
   };
-}
 
 /** Every name must appear as a row of an `ffmpeg -filters/-encoders/-bsfs` listing. */
-export function listsAll(names: readonly string[], row: (name: string) => RegExp): Check["judge"] {
-  return (run) => {
+export const listsAll =
+  (names: readonly string[], row: (name: string) => RegExp): Check["judge"] =>
+  (run) => {
     const text = output(run);
-    if (text === null) return notRunnable(run);
+
+    if (text === null) {
+      return notRunnable(run);
+    }
+
     const absent = names.filter((name) => !row(name).test(text));
+
     return absent.length === 0
       ? { status: "ok", detail: names.join(", ") }
       : { status: "missing", detail: `missing ${absent.join(", ")}` };
   };
-}
 
-const ffmpegRow = (name: string) => new RegExp(`^\\s*\\S+\\s+${name}\\s`, "m");
+const ffmpegRow = (name: string) => new RegExp(`^\\s*\\S+\\s+${name}\\s`, "mu");
 
 export const CHECKS: readonly Check[] = [
   {
     label: "mpv",
     required: true,
     probe: ["mpv", "--version"],
-    judge: versionAtLeast(/^mpv v?/m, [0, 41, 0]),
+    judge: versionAtLeast(/^mpv v?/mu, [0, 41, 0]),
   },
   {
     label: "libplacebo (linked into mpv)",
     required: true,
     probe: ["mpv", "--version"],
-    judge: versionAtLeast(/^libplacebo version: v?/m, null),
+    judge: versionAtLeast(/^libplacebo version: v?/mu, null),
   },
   {
     label: "ffmpeg filter libplacebo",
@@ -76,7 +89,7 @@ export const CHECKS: readonly Check[] = [
     label: "ffmpeg bitstream filter dovi_rpu",
     required: true,
     probe: ["ffmpeg", "-hide_banner", "-bsfs"],
-    judge: listsAll(["dovi_rpu"], (name) => new RegExp(`^${name}$`, "m")),
+    judge: listsAll(["dovi_rpu"], (name) => new RegExp(`^${name}$`, "mu")),
   },
   {
     label: "ffmpeg encoders",
@@ -88,31 +101,31 @@ export const CHECKS: readonly Check[] = [
     label: "kwin_wayland",
     required: true,
     probe: ["kwin_wayland", "--version"],
-    judge: versionAtLeast(/kwin /, null),
+    judge: versionAtLeast(/kwin /u, null),
   },
   {
     label: "weston",
     required: true,
     probe: ["weston", "--version"],
-    judge: versionAtLeast(/weston /, [15, 0, 0]),
+    judge: versionAtLeast(/weston /u, [15, 0, 0]),
   },
   {
     label: "podman",
     required: false,
     probe: ["podman", "--version"],
-    judge: versionAtLeast(/podman version /, null),
+    judge: versionAtLeast(/podman version /u, null),
   },
   {
     label: "dovi_tool",
     required: true,
     probe: ["dovi_tool", "--version"],
-    judge: versionAtLeast(/dovi_tool /, null),
+    judge: versionAtLeast(/dovi_tool /u, null),
   },
   {
     label: "hdr10plus_tool",
     required: true,
     probe: ["hdr10plus_tool", "--version"],
-    judge: versionAtLeast(/hdr10plus_tool /, null),
+    judge: versionAtLeast(/hdr10plus_tool /u, null),
   },
 ];
 
@@ -121,13 +134,12 @@ export interface CheckResult {
   readonly verdict: Verdict;
 }
 
-export function runChecks(checks: readonly Check[]): CheckResult[] {
-  return checks.map((check) => {
+export const runChecks = (checks: readonly Check[]): CheckResult[] =>
+  checks.map((check) => {
     const [command, ...args] = check.probe;
+
     return { check, verdict: check.judge(runTool(command, args)) };
   });
-}
 
-export function requiredFailures(results: readonly CheckResult[]): CheckResult[] {
-  return results.filter((r) => r.check.required && r.verdict.status !== "ok");
-}
+export const requiredFailures = (results: readonly CheckResult[]): CheckResult[] =>
+  results.filter((r) => r.check.required && r.verdict.status !== "ok");

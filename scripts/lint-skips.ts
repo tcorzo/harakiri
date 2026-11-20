@@ -14,11 +14,12 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 
-const TEST_FILE = /\.(test|spec)\.tsx?$/;
-const SKIP = /\b(?:skipIf|runIf)\(|\.skip\(|\b(?:test|describe|it)\.skip\b|\.todo\(/;
-const ALLOW = /\/\/\s*allow-skip:/;
+const TEST_FILE = /\.(?:test|spec)\.tsx?$/u;
+const SKIP = /\b(?:skipIf|runIf)\(|\.skip\(|\b(?:test|describe|it)\.skip\b|\.todo\(/u;
+const ALLOW = /\/\/\s*allow-skip:/u;
+
 const ALLOW_FULL =
-  /\/\/\s*allow-skip:\s*(?<reason>\S.*?)\s*\(expires (?<date>\d{4}-\d{2}-\d{2}), approved-by (?<name>\S[^)]*)\)/;
+  /\/\/\s*allow-skip:\s*(?<reason>\S.*?)\s*\(expires (?<date>\d{4}-\d{2}-\d{2}), approved-by (?<name>\S[^)]*)\)/u;
 
 const RULE =
   "tests must not skip: a skipped test proves nothing while the run stays green. " +
@@ -43,8 +44,8 @@ const tracked = (): string[] =>
       "*.spec.tsx",
     ],
     {
-      encoding: "utf8",
-    },
+      encoding: "utf-8",
+    }
   )
     .split("\0")
     // A file deleted or renamed in the working tree stays listed until it is staged.
@@ -52,6 +53,7 @@ const tracked = (): string[] =>
 
 const isRealDate = (date: string) => {
   const parsed = new Date(`${date}T00:00:00Z`);
+
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(date);
 };
 
@@ -61,30 +63,51 @@ const files = (args.length > 0 ? args : tracked()).filter((file) => TEST_FILE.te
 
 /** Why this line breaks the rule, or undefined when it does not skip or holds a live exception. */
 const judge = (line: string): string | undefined => {
-  if (!SKIP.test(line)) return undefined;
-  if (!ALLOW.test(line)) return "skips without an allow-skip exception";
+  if (!SKIP.test(line)) {
+    return undefined;
+  }
+
+  if (!ALLOW.test(line)) {
+    return "skips without an allow-skip exception";
+  }
+
   const allow = ALLOW_FULL.exec(line)?.groups;
-  const date = allow?.["date"];
-  if (date === undefined || !isRealDate(date))
+  const date = allow?.date;
+
+  if (date === undefined || !isRealDate(date)) {
     return "malformed exception; write // allow-skip: <reason> (expires YYYY-MM-DD, approved-by <name>)";
-  if (date < today)
-    return `exception expired on ${date} (approved by ${allow?.["name"]}); fix the test or renew the approval`;
+  }
+
+  if (date < today) {
+    return `exception expired on ${date} (approved by ${allow?.name}); fix the test or renew the approval`;
+  }
+
   return undefined;
 };
 
 const problems: string[] = [];
+
 for (const file of files) {
-  const lines = readFileSync(file, "utf8").split("\n");
+  const lines = readFileSync(file, "utf-8").split("\n");
+
   for (const [index, line] of lines.entries()) {
     const why = judge(line);
-    if (why) problems.push(`${file}:${index + 1}: ${line.trim()}\n  ${why}`);
+
+    if (why !== undefined) {
+      problems.push(`${file}:${index + 1}: ${line.trim()}\n  ${why}`);
+    }
   }
 }
 
 if (problems.length > 0) {
   console.error(`lint-skips: ${problems.length} skipping test line(s)\n`);
-  for (const problem of problems) console.error(`${problem}\n`);
+
+  for (const problem of problems) {
+    console.error(`${problem}\n`);
+  }
+
   console.error(`Rule: ${RULE}`);
   process.exit(1);
 }
+
 console.log(`lint-skips: ${files.length} test file(s), none skip`);

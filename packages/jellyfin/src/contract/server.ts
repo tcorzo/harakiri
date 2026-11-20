@@ -6,30 +6,32 @@ import type {
   PlaybackInfoDto,
   PlaybackInfoResponse,
 } from "../generated/types.gen";
-import { DeviceId, ItemId, ServerUrl, type UserId } from "../ids";
+import { DeviceId, ItemId, ServerUrl } from "../ids";
+import type { UserId } from "../ids";
 import { authenticate, createJellyfinClient } from "../session";
 
-export const SERVER = ServerUrl.parse(process.env["JELLYFIN_DEV_URL"] ?? "http://127.0.0.1:8096");
-const USER = process.env["JELLYFIN_DEV_USER"] ?? "harakiri";
-const PASSWORD = process.env["JELLYFIN_DEV_PASSWORD"] ?? "harakiri-dev";
+export const SERVER = ServerUrl.parse(process.env.JELLYFIN_DEV_URL ?? "http://127.0.0.1:8096");
+const USER = process.env.JELLYFIN_DEV_USER ?? "harakiri";
+const PASSWORD = process.env.JELLYFIN_DEV_PASSWORD ?? "harakiri-dev";
 
 export const serverUnreachable = async (): Promise<string | undefined> => {
   try {
     const response = await fetch(new URL("System/Info/Public", SERVER), {
       signal: AbortSignal.timeout(2000),
     });
+
     return response.ok ? undefined : `${SERVER} answered ${response.status}`;
   } catch (error) {
     return `${SERVER} is unreachable (${error instanceof Error ? error.message : String(error)})`;
   }
 };
 
-export type ContractSession = {
+export interface ContractSession {
   readonly client: Client;
   readonly userId: UserId;
   readonly serverVersion: string;
   readonly end: () => Promise<void>;
-};
+}
 
 // Jellyfin keeps one session per DeviceId; a shared id would revoke other agents' tokens.
 export const signIn = async (): Promise<ContractSession> => {
@@ -39,10 +41,16 @@ export const signIn = async (): Promise<ContractSession> => {
     deviceId: DeviceId.parse(`harakiri-contract-${crypto.randomUUID().slice(0, 8)}`),
     version: "0",
   };
+
   const result = await authenticate(SERVER, USER, PASSWORD, identity);
-  if (result.kind !== "signed-in") throw new Error(`dev sign-in failed: ${JSON.stringify(result)}`);
+
+  if (result.kind !== "signed-in") {
+    throw new Error(`dev sign-in failed: ${JSON.stringify(result)}`);
+  }
+
   const client = createJellyfinClient(SERVER, identity, result.session.accessToken);
   client.setConfig({ timeout: 30_000, retry: 0 });
+
   return {
     client,
     userId: result.session.userId,
@@ -53,14 +61,19 @@ export const signIn = async (): Promise<ContractSession> => {
   };
 };
 
-export type LibraryItem = {
+export interface LibraryItem {
   readonly id: ItemId;
   readonly name: string;
   readonly type: "Movie" | "Episode";
   /** The file's path as the server sees it. */
   readonly path: string;
   readonly sources: readonly MediaSourceInfo[];
-};
+}
+
+const pad = (n: number | null | undefined) => String(n ?? 0).padStart(2, "0");
+
+const hasText = (value: string | null | undefined): value is string =>
+  value !== undefined && value !== null && value !== "";
 
 const label = (item: {
   Name?: string | null;
@@ -69,8 +82,10 @@ const label = (item: {
   ParentIndexNumber?: number | null;
   IndexNumber?: number | null;
 }): string => {
-  if (item.Type !== "Episode") return item.Name ?? "?";
-  const pad = (n: number | null | undefined) => String(n ?? 0).padStart(2, "0");
+  if (item.Type !== "Episode") {
+    return item.Name ?? "?";
+  }
+
   return `${item.SeriesName} S${pad(item.ParentIndexNumber)}E${pad(item.IndexNumber)}`;
 };
 
@@ -82,7 +97,10 @@ export const libraryItems = async ({
   userId,
 }: Pick<ContractSession, "client" | "userId">): Promise<LibraryItem[]> => {
   const items: LibraryItem[] = [];
+
   for (let start = 0; ; start += PAGE) {
+    // Paging is sequential: the next page starts only once this one says whether there is more.
+    // oxlint-disable-next-line eslint/no-await-in-loop -- each page decides whether another follows
     const { data } = await getItems({
       client,
       throwOnError: true,
@@ -96,9 +114,14 @@ export const libraryItems = async ({
         limit: PAGE,
       },
     });
+
     for (const item of data.Items ?? []) {
       const sources = item.MediaSources ?? [];
-      if (sources.length === 0 || !item.Path) continue;
+
+      if (sources.length === 0 || !hasText(item.Path)) {
+        continue;
+      }
+
       items.push({
         id: ItemId.parse(item.Id),
         name: label(item),
@@ -107,16 +130,27 @@ export const libraryItems = async ({
         sources,
       });
     }
-    if (start + PAGE >= (data.TotalRecordCount ?? 0)) return items;
+
+    if (start + PAGE >= (data.TotalRecordCount ?? 0)) {
+      return items;
+    }
   }
 };
 
 export const playbackInfo = async (
   { client }: ContractSession,
   itemId: ItemId,
-  body: PlaybackInfoDto,
-): Promise<PlaybackInfoResponse> =>
-  (await getPostedPlaybackInfo({ client, throwOnError: true, path: { itemId }, body })).data;
+  body: PlaybackInfoDto
+): Promise<PlaybackInfoResponse> => {
+  const { data } = await getPostedPlaybackInfo({
+    client,
+    throwOnError: true,
+    path: { itemId },
+    body,
+  });
+
+  return data;
+};
 
 export type Decision =
   | { readonly kind: "direct-play"; readonly source: MediaSourceInfo }
@@ -126,14 +160,22 @@ export type Decision =
 /** The first source is what harakiri plays when it sends no MediaSourceId. */
 export const decide = (response: PlaybackInfoResponse): Decision => {
   const sources = response.MediaSources ?? [];
-  const transcoding = sources.find((source) => source.TranscodingUrl);
-  if (transcoding?.TranscodingUrl) {
-    const url = transcoding.TranscodingUrl;
+  const transcoding = sources.find((source) => hasText(source.TranscodingUrl));
+
+  const url = transcoding?.TranscodingUrl;
+
+  if (hasText(url)) {
     const reasons = new URL(url, SERVER).searchParams.get("TranscodeReasons");
-    return { kind: "transcode", reasons: reasons ? reasons.split(",") : [], url };
+
+    return { kind: "transcode", reasons: hasText(reasons) ? reasons.split(",") : [], url };
   }
-  const chosen = sources[0];
-  if (chosen?.SupportsDirectPlay === true) return { kind: "direct-play", source: chosen };
+
+  const [chosen] = sources;
+
+  if (chosen?.SupportsDirectPlay === true) {
+    return { kind: "direct-play", source: chosen };
+  }
+
   return {
     kind: "refused",
     detail:
@@ -143,23 +185,35 @@ export const decide = (response: PlaybackInfoResponse): Decision => {
 };
 
 export const describeDecision = (decision: Decision): string => {
-  if (decision.kind === "direct-play") return "direct play";
-  if (decision.kind === "transcode")
+  if (decision.kind === "direct-play") {
+    return "direct play";
+  }
+
+  if (decision.kind === "transcode") {
     return `transcode (${decision.reasons.join(",") || "no TranscodeReasons"})`;
+  }
+
   return `refused (${decision.detail})`;
 };
 
 export const mapLimit = async <T, R>(
   inputs: readonly T[],
   limit: number,
-  run: (input: T) => Promise<R>,
+  run: (input: T) => Promise<R>
 ): Promise<R[]> => {
   const results: R[] = Array.from({ length: inputs.length });
   // One iterator shared by every worker hands each input to exactly one of them.
   const queue = inputs.entries();
+
   const worker = async () => {
-    for (const [index, input] of queue) results[index] = await run(input);
+    for (const [index, input] of queue) {
+      // Each worker runs its inputs one after another; the pool bounds the concurrency.
+      // oxlint-disable-next-line eslint/no-await-in-loop -- bounded-concurrency worker loop
+      results[index] = await run(input);
+    }
   };
+
   await Promise.all(Array.from({ length: Math.min(limit, inputs.length) }, worker));
+
   return results;
 };

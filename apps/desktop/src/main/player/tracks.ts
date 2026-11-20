@@ -36,41 +36,51 @@ const numbered = (streams: readonly MediaStream[], firstId: number): Track[] =>
  * A transcode is a fresh HLS stream carrying only the audio the server chose; the server then
  * delivers every subtitle as a sidecar, embedded ones included.
  */
-export function trackTable(
+export const trackTable = (
   source: MediaSourceInfo,
   method: PlayMethod,
   serverUrl: string,
-  transcodedAudioIndex?: number,
-): TrackTable {
+  transcodedAudioIndex?: number
+): TrackTable => {
   const streams = (source.MediaStreams ?? []).toSorted(byIndex);
-  const embeddedAudio = streams.filter((s) => s.Type === "Audio" && !s.IsExternal);
+  const embeddedAudio = streams.filter((s) => s.Type === "Audio" && s.IsExternal !== true);
   const subs = streams.filter((s) => s.Type === "Subtitle");
+
   const embeddedSubs = subs.filter(
-    (s) => (s.DeliveryMethod ?? (s.IsExternal ? "External" : "Embed")) === "Embed",
+    (s) => (s.DeliveryMethod ?? (s.IsExternal === true ? "External" : "Embed")) === "Embed"
   );
+
   const sidecars = subs.filter(
-    (s) => s.DeliveryMethod === "External" && typeof s.DeliveryUrl === "string",
+    (s) => s.DeliveryMethod === "External" && s.DeliveryUrl !== undefined && s.DeliveryUrl !== null
   );
+
   const audio =
     method === "DirectPlay"
       ? embeddedAudio
       : embeddedAudio.filter((s) => s.Index === transcodedAudioIndex).slice(0, 1);
+
   return {
     audio: numbered(audio, 1),
     subtitles: [...numbered(embeddedSubs, 1), ...numbered(sidecars, embeddedSubs.length + 1)],
     subtitleFiles: sidecars.map((s) => new URL(s.DeliveryUrl ?? "", serverUrl).toString()),
   };
-}
+};
 
 /**
  * The mpv track id for a Jellyfin stream index. `false` turns the track off (Jellyfin's -1);
  * `undefined` leaves the choice to mpv.
  */
-export function mpvTrack(
+export const mpvTrack = (
   tracks: readonly Track[],
-  index: number | null | undefined,
-): number | false | undefined {
-  if (index === null || index === undefined) return undefined;
-  if (index < 0) return false;
+  index: number | null | undefined
+): number | false | undefined => {
+  if (index === null || index === undefined) {
+    return undefined;
+  }
+
+  if (index < 0) {
+    return false;
+  }
+
   return tracks.find((track) => track.index === index)?.mpvId;
-}
+};
