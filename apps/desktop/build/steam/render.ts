@@ -48,13 +48,17 @@ const wordmark = (width: number) => ["-width", String(width), "-i", wordmarkSvg]
 /** The ffmpeg arguments (without the output path) that draw one image. */
 const argsFor = (spec: ArtworkSpec): string[] => {
   switch (spec.file) {
+    // Layout verdict (impeccable critique against PRODUCT.md: restraint, gravity, the library is the
+    // hero): one crane, one wordmark, no ornament on the house-black ground. The visible groups are
+    // balanced optically, not by box: portrait group centre sits just below the middle, wide group
+    // has equal ~130px margins (the icon svg carries its own padding).
     case "portrait.png":
       return [
         ...canvas(spec),
         ...icon(360),
         ...wordmark(480),
         "-filter_complex",
-        "[0][1]overlay=(W-w)/2:250[a];[a][2]overlay=(W-w)/2:660,format=rgb24",
+        "[0][1]overlay=(W-w)/2:220[a];[a][2]overlay=(W-w)/2:630,format=rgb24",
       ];
     case "wide.png":
       return [
@@ -62,7 +66,7 @@ const argsFor = (spec: ArtworkSpec): string[] => {
         ...icon(240),
         ...wordmark(440),
         "-filter_complex",
-        "[0][1]overlay=110:(H-h)/2[a];[a][2]overlay=400:(H-h)/2,format=rgb24",
+        "[0][1]overlay=60:(H-h)/2[a];[a][2]overlay=350:(H-h)/2,format=rgb24",
       ];
     case "hero.png":
       // Valve: no text on the hero; Steam layers the logo over it. The crane fills about 64% of the
