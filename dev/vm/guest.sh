@@ -72,7 +72,7 @@ start() {
 
 up() {
   fetch
-  local want
+  local want started=0
   want="$(recipe)"
   if [ "$(cat "$STATE/provisioned" 2>/dev/null)" != "$want" ]; then
     echo "guest.sh: recipe changed; recreating the guest"
@@ -87,16 +87,22 @@ up() {
       die "provisioning failed; the guest is stopped, and the next up recreates it"
     fi
     echo "$want" >"$STATE/provisioned"
+    started=1
   elif ! running; then
     start
+    started=1
   fi
-  # The guest is provisioned and running here, on both paths. Root steps that must follow every
-  # start (the boot step, guest daemons) go here.
+  if [ "$started" = 1 ]; then
+    # Once per boot: this call started the guest, fresh or already provisioned, and it is
+    # provisioned now. Root steps that every boot needs (the boot step, guest daemons) go here.
+    :
+  fi
 }
 
+# Without smolvm, or when its stop fails, stopping this checkout's scope stops the VM.
 down() {
-  [ -x "$SMOLVM" ] || return 0
-  sv machine stop --name "$NAME" || systemctl --user stop "harakiri-$SCOPE-*.scope"
+  [ -x "$SMOLVM" ] && sv machine stop --name "$NAME" && return
+  systemctl --user stop "harakiri-$SCOPE-*.scope"
 }
 
 # A host directory that a guest command reads by path must be inside the mounted repo. Prints the
