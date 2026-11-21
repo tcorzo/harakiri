@@ -159,6 +159,15 @@ hk util check-conventional-commit "$msg" || {
 description = "Everything CI gates on"
 depends = ["lint", "fmt:check", "lint:skips", "lint:private", "lint:host", "typecheck", "test"]
 
+# The dev/vm microVM guest. guest.sh is its only entry point.
+[tasks."vm:up"]
+description = "Start the dev/vm microVM guest (KVM; the first run downloads smolvm 1.35.5 and provisions Fedora 44 into .cache/vm)"
+run = "dev/vm/guest.sh up"
+
+[tasks."vm:down"]
+description = "Stop the dev/vm guest, keeping its provisioned disk in .cache/vm"
+run = "dev/vm/guest.sh down"
+
 [tasks."package:check"]
 description = "Check apps/desktop/dist: latest-linux.yml matches the AppImage and the version, the feed is public GitHub, runtime deps are packed"
 run = "bun scripts/check-release.ts"
