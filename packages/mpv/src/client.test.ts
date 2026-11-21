@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -21,6 +21,7 @@ import type { MpvConfig } from "./args";
 import {
   MpvClosedError,
   MpvCommandError,
+  MpvStartError,
   MpvTimeoutError,
   redactSecrets,
   spawnMpv,
@@ -384,5 +385,81 @@ describe("mpv IPC client", () => {
         'Authorization: MediaBrowser Client="x", Token="REDACTED"'
       );
     });
+  });
+});
+
+describe("when mpv does not start", () => {
+  let dir: string;
+
+  beforeAll(async () => {
+    dir = await mkdtemp(path.join(tmpdir(), "harakiri-mpv-standin-"));
+  });
+
+  afterAll(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  let counter = 0;
+
+  /** A stand-in `mpv` that runs a shell script. */
+  const standIn = async (script: string): Promise<string> => {
+    counter += 1;
+    const file = path.join(dir, `mpv-${counter}`);
+    await writeFile(file, `#!/bin/sh\n${script}`);
+    await chmod(file, 0o755);
+
+    return file;
+  };
+
+  it("the error carries mpv's fatal line", async () => {
+    const binary = await standIn(
+      'echo "[cplayer] Error parsing option input-gamepad (option not found)"\nexit 1'
+    );
+
+    const error = await rejectionOf(spawnMpv({ config: "none", binary }));
+
+    expect(error).toBeInstanceOf(MpvStartError);
+    expect(error.message).toBe("Error parsing option input-gamepad (option not found)");
+    expect(error).toHaveProperty("exit", { code: 1, signal: null });
+  });
+
+  it("with nothing fatal in the output, the message names the exit code", async () => {
+    const binary = await standIn("exit 1");
+    const error = await rejectionOf(spawnMpv({ config: "none", binary }));
+
+    expect(error).toBeInstanceOf(MpvStartError);
+    expect(error.message).toBe("mpv exited before its IPC socket was ready (code 1)");
+  });
+
+  it("keeps only the last three fatal lines", async () => {
+    const binary = await standIn('for n in 1 2 3 4 5; do echo "Error $n"; done\nexit 1');
+    const error = await rejectionOf(spawnMpv({ config: "none", binary }));
+
+    expect(error.message).toBe("Error 3 Error 4 Error 5");
+  });
+
+  it("a token in mpv's output never reaches the error", async () => {
+    const binary = await standIn(
+      'echo "Failed to open http://127.0.0.1:1/v.mkv?api_key=s3cretTok3n9f"\nexit 1'
+    );
+
+    const error = await rejectionOf(spawnMpv({ config: "none", binary }));
+
+    expect(error.message).toContain("api_key=REDACTED");
+    expect(error.message).not.toContain("s3cretTok3n9f");
+  });
+
+  it("a missing binary still fails with ENOENT", async () => {
+    const error = await rejectionOf(spawnMpv({ config: "none", binary: path.join(dir, "absent") }));
+
+    expect(error).not.toBeInstanceOf(MpvStartError);
+    expect(error).toHaveProperty("code", "ENOENT");
+  });
+
+  it("real mpv rejecting an option says which one", async () => {
+    const error = await rejectionOf(start(["--vo=null", "--harakiri-no-such-option"]));
+
+    expect(error).toBeInstanceOf(MpvStartError);
+    expect(error.message).toContain("harakiri-no-such-option");
   });
 });

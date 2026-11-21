@@ -18,13 +18,16 @@ import { MpvCommandError } from "./command-error";
 import { createLineSplitter, encodeRequest, parseInboundLine } from "./protocol";
 import type { InboundMessage, JsonValue, MpvEvent, Reply } from "./protocol";
 import { commandName, redactSecrets } from "./redact";
+import { fatalLines, MpvStartError } from "./start-error";
 import { MpvTimeoutError } from "./timeout-error";
 
 const logger = getLogger(["harakiri", "mpv"]);
 
+const TAIL_LINES = 20;
+
 export type { JsonValue, MpvEvent };
 
-export { MpvClosedError, MpvCommandError, MpvTimeoutError, redactSecrets };
+export { MpvClosedError, MpvCommandError, MpvStartError, MpvTimeoutError, redactSecrets };
 
 export type Unsubscribe = () => void;
 
@@ -335,9 +338,22 @@ export const spawnMpv = async (options: MpvSpawnOptions): Promise<MpvClient> => 
   );
 
   // Off a terminal, mpv writes its log messages to stdout, not stderr.
+  // The last redacted lines are kept for `MpvStartError`: they hold mpv's own reason for exiting.
+  const tail: string[] = [];
+  const closed: Promise<unknown>[] = [];
+
   for (const stream of [child.stdout, child.stderr]) {
-    createInterface({ input: stream }).on("line", (line) => {
-      logger.debug("mpv: {line}", { line: redactSecrets(line) });
+    const lines = createInterface({ input: stream });
+    closed.push(once(lines, "close"));
+    lines.on("line", (raw) => {
+      const line = redactSecrets(raw);
+      tail.push(line);
+
+      if (tail.length > TAIL_LINES) {
+        tail.shift();
+      }
+
+      logger.debug("mpv: {line}", { line });
     });
   }
 
@@ -345,10 +361,19 @@ export const spawnMpv = async (options: MpvSpawnOptions): Promise<MpvClient> => 
 
   const exitDeferred = Promise.withResolvers<MpvExit>();
   const spawnFailed = Promise.withResolvers<never>();
+  let startError: Promise<MpvStartError> | undefined;
+
+  /** Waits for both streams to close, so mpv's last lines are in the tail. */
+  const startErrorFor = async (settled: MpvExit): Promise<MpvStartError> => {
+    startError ??= Promise.all(closed).then(() => new MpvStartError(settled, fatalLines(tail)));
+
+    return await startError;
+  };
+
   child.once("exit", (code, signal) => {
     exit = { code, signal };
     exitDeferred.resolve(exit);
-    spawnFailed.reject(new Error(`mpv exited before its IPC socket was ready (code ${code})`));
+    startErrorFor(exit).then(spawnFailed.reject).catch(spawnFailed.reject);
   });
   child.once("error", spawnFailed.reject);
 
@@ -370,7 +395,8 @@ export const spawnMpv = async (options: MpvSpawnOptions): Promise<MpvClient> => 
     child.kill("SIGKILL");
     // A spawn error (e.g. ENOENT) never emits `exit`, so the dir cleanup above would not run.
     await rm(dir, { recursive: true, force: true });
-    throw error;
+    // mpv died first: its own reason beats the connect error the race may have thrown.
+    throw exit === undefined ? error : await startErrorFor(exit);
   }
 
   spawnFailed.promise.catch(() => {

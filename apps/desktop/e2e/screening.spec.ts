@@ -200,3 +200,24 @@ for (const station of ["House", "Programme"] as const) {
     await expectFocus(page, `Resume ${shown.Name}`);
   });
 }
+
+test.describe("when mpv does not start", () => {
+  test.use({ mpvArgs: "--vo=null --ao=null --harakiri-no-such-option" });
+
+  test("the screening shows mpv's own reason and Back to the programme has focus", async ({
+    launch,
+    jellyfin,
+    preserveUserData,
+  }) => {
+    const { shown } = await leadContinueWatching(jellyfin, preserveUserData);
+    const { page } = await launch();
+    await openFirstResumed(page, shown);
+
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByText(/It did not start\. .*harakiri-no-such-option/u)).toBeVisible({
+      timeout: 15_000,
+    });
+    await expectFocus(page, "Back to the programme");
+  });
+});
