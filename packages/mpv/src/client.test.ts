@@ -449,6 +449,17 @@ describe("when mpv does not start", () => {
     expect(error.message).not.toContain("s3cretTok3n9f");
   });
 
+  it("a child that holds mpv's stdout open after it exits does not hold up the error", async () => {
+    // The backgrounded sleep inherits stdout, so the stream closes 5 s after the exit.
+    const binary = await standIn('echo "Error opening the window"\nsleep 5 &\nexit 1');
+    const startedAt = performance.now();
+    const error = await rejectionOf(spawnMpv({ config: "none", binary }));
+
+    expect(performance.now() - startedAt).toBeLessThan(2000);
+    expect(error).toBeInstanceOf(MpvStartError);
+    expect(error.message).toBe("Error opening the window");
+  });
+
   it("a missing binary still fails with ENOENT", async () => {
     const error = await rejectionOf(spawnMpv({ config: "none", binary: path.join(dir, "absent") }));
 

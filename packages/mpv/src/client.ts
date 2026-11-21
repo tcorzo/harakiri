@@ -25,6 +25,9 @@ const logger = getLogger(["harakiri", "mpv"]);
 
 const TAIL_LINES = 20;
 
+/** How long a failed start waits for mpv's streams to close after it exits. */
+const LAST_LINES_WAIT_MS = 1000;
+
 export type { JsonValue, MpvEvent };
 
 export { MpvClosedError, MpvCommandError, MpvStartError, MpvTimeoutError, redactSecrets };
@@ -363,9 +366,27 @@ export const spawnMpv = async (options: MpvSpawnOptions): Promise<MpvClient> => 
   const spawnFailed = Promise.withResolvers<never>();
   let startError: Promise<MpvStartError> | undefined;
 
-  /** Waits for both streams to close, so mpv's last lines are in the tail. */
+  /**
+   * Waits for both streams to close, so mpv's last lines are in the tail. A child mpv left behind
+   * can hold the streams open after mpv exits, so the wait is bounded and the error carries the
+   * lines seen by then.
+   */
   const startErrorFor = async (settled: MpvExit): Promise<MpvStartError> => {
-    startError ??= Promise.all(closed).then(() => new MpvStartError(settled, fatalLines(tail)));
+    startError ??= (async () => {
+      const bound = Promise.withResolvers<undefined>();
+
+      const timer = setTimeout(() => {
+        bound.resolve(undefined);
+      }, LAST_LINES_WAIT_MS);
+
+      try {
+        await Promise.race([Promise.all(closed), bound.promise]);
+      } finally {
+        clearTimeout(timer);
+      }
+
+      return new MpvStartError(settled, fatalLines(tail));
+    })();
 
     return await startError;
   };
