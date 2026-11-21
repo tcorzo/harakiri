@@ -24,6 +24,7 @@ export default defineConfig({
       "**/*.live.test.{ts,tsx}",
       "**/*.contract.test.{ts,tsx}",
       "**/*.fate.test.{ts,tsx}",
+      "**/*.platform.test.{ts,tsx}",
     ],
   },
 });

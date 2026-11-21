@@ -13,6 +13,7 @@
     "vitest.shared.ts",
     "apps/desktop/vitest.config.ts",
     "packages/harness/vitest.config.ts",
-    "packages/jellyfin/vitest.config.ts"
+    "packages/jellyfin/vitest.config.ts",
+    "packages/mpv/vitest.config.ts"
   ]
 }

@@ -6,6 +6,7 @@ import type { TestProjectInlineConfiguration } from "vitest/config";
 import desktop from "./apps/desktop/vitest.config";
 import harness from "./packages/harness/vitest.config";
 import jellyfin from "./packages/jellyfin/vitest.config";
+import mpv from "./packages/mpv/vitest.config";
 import { TIERS } from "./vitest.shared";
 
 /**
@@ -32,6 +33,26 @@ const tier = (
   },
 });
 
+/**
+ * The platform tier checks the guest before its workers start: a project's globalSetup runs once,
+ * and only when a platform file is queued.
+ */
+const platform = (
+  project: string,
+  dir: string,
+  base: TestProjectInlineConfiguration
+): TestProjectInlineConfiguration => {
+  const projectConfig = tier("platform", project, dir, base);
+
+  return {
+    ...projectConfig,
+    test: {
+      ...projectConfig.test,
+      globalSetup: [path.resolve(import.meta.dirname, "packages/harness/src/guest-setup.ts")],
+    },
+  };
+};
+
 export default defineConfig({
   test: {
     projects: [
@@ -39,6 +60,8 @@ export default defineConfig({
       tier("live", "desktop", "apps/desktop", desktop),
       tier("contract", "jellyfin", "packages/jellyfin", jellyfin),
       tier("fate", "harness", "packages/harness", harness),
+      platform("mpv", "packages/mpv", mpv),
+      platform("desktop", "apps/desktop", desktop),
     ],
   },
 });
