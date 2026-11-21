@@ -7,7 +7,11 @@ import { z } from "zod";
 
 describe("recorded PlaybackInfo fixtures", () => {
   it("every recorded PlaybackInfo fixture is already scrubbed of the library it came from", () => {
-    const names = readdirSync(import.meta.dirname).filter((file) => file.endsWith(".json"));
+    // pactl-* fixtures are PipeWire sink listings, not recorded PlaybackInfo responses.
+    const names = readdirSync(import.meta.dirname).filter(
+      (file) => file.endsWith(".json") && !file.startsWith("pactl-")
+    );
+
     expect(names).toHaveLength(11);
 
     for (const file of names) {
