@@ -27,6 +27,16 @@ const Sinks = z.array(
 type Sinks = z.infer<typeof Sinks>;
 
 /**
+ * The codec token of a PipeWire format. PipeWire appends attributes after the codec, as in
+ * `truehd-iec61937, format.rate = "{ … }"`, so the codec is the text before the first comma.
+ */
+export const encodingOf = (format: string): string => {
+  const comma = format.indexOf(",");
+
+  return (comma === -1 ? format : format.slice(0, comma)).trim();
+};
+
+/**
  * The default sink, where mpv's `audio-device=auto` plays, from `pactl --format=json info` and
  * `list sinks`. A sink that lists only `pcm` (analog outputs, headsets, an HDMI port whose
  * passthrough codecs are not enabled in PipeWire) takes no bitstream.
@@ -42,7 +52,9 @@ export const outputFromPactl = (info: ServerInfo, sinks: Sinks): AudioOutput => 
   return {
     kind: "known",
     name: sink.description ?? sink.name,
-    bitstream: [...new Set(sink.formats.flatMap((format) => CODEC_BY_FORMAT.get(format) ?? []))],
+    bitstream: [
+      ...new Set(sink.formats.flatMap((format) => CODEC_BY_FORMAT.get(encodingOf(format)) ?? [])),
+    ],
   };
 };
 

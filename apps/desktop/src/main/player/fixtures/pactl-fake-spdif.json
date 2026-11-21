@@ -1,0 +1,17 @@
+{
+  "info": { "default_sink_name": "fake-spdif" },
+  "sinks": [
+    {
+      "name": "fake-spdif",
+      "description": "Fake S/PDIF",
+      "formats": [
+        "pcm",
+        "dts-iec61937, format.rate = \"{ \\\"min\\\": 1, \\\"max\\\": -1 }\"",
+        "ac3-iec61937, format.rate = \"{ \\\"min\\\": 1, \\\"max\\\": -1 }\"",
+        "eac3-iec61937, format.rate = \"{ \\\"min\\\": 1, \\\"max\\\": -1 }\"",
+        "truehd-iec61937, format.rate = \"{ \\\"min\\\": 1, \\\"max\\\": -1 }\"",
+        "dtshd-iec61937, format.rate = \"{ \\\"min\\\": 1, \\\"max\\\": -1 }\""
+      ]
+    }
+  ]
+}
