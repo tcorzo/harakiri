@@ -7,6 +7,7 @@ import { app, BrowserWindow, session } from "electron";
 
 import { appVersion } from "../shared/identity";
 import { env, isE2E } from "./env";
+import { hostCapabilities, hostFacts } from "./host/index";
 import { registerIpc } from "./ipc";
 import { holdQuitUntilStopped, killOnExit, removeStaleMpvDirs } from "./lifecycle";
 import * as player from "./player/index";
@@ -104,6 +105,12 @@ const logProcessTrouble = (): void => {
   });
 };
 
+/** Logs the host's facts once the keyring probe settles; reading them never rejects. */
+const logHost = async (): Promise<void> => {
+  const [facts, capabilities] = await Promise.all([hostFacts(), hostCapabilities()]);
+  logger.info("host {facts}; capabilities {capabilities}", { facts, capabilities });
+};
+
 const main = async (): Promise<void> => {
   // Every run writes a file a later postmortem can read; the terminal only gets info and up.
   const runLog = openRunLog(app.getPath("logs"), new Date());
@@ -169,6 +176,8 @@ const main = async (): Promise<void> => {
   installContentSecurityPolicy(session.defaultSession, isAppUrl, contentSecurityPolicy(appUrl));
   registerIpc(isAppUrl, updates);
   createWindow();
+  // The keyring probe can be slow or wait on a password prompt; it must never hold up the window.
+  void logHost();
 };
 
 // Not awaited: Electron emits `ready` only after the main module's top-level await settles, so

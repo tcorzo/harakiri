@@ -66,6 +66,9 @@ export const createPlayer = (wiring: PlayerWiring) => {
     | { readonly key: string; readonly at: number; readonly result: Promise<Prepared> }
     | undefined;
 
+  /** Bumped by `forgetPrepared`, so a prepare that loaded the old session keeps nothing of it. */
+  let sessionEpoch = 0;
+
   /** Runs player operations one at a time, so two plays can never race to spawn two mpvs. */
   const serialized = async <T>(operation: () => Promise<T>): Promise<T> => {
     const result = queue.then(operation, operation);
@@ -93,7 +96,13 @@ export const createPlayer = (wiring: PlayerWiring) => {
 
   /** Resolves PlaybackInfo for the request and keeps it for the `play` that follows. */
   const prepare = async (request: PlayRequest): Promise<SignalReport> => {
+    const epoch = sessionEpoch;
     const playback = await deps();
+
+    if (epoch !== sessionEpoch) {
+      throw new Error("The session changed while preparing");
+    }
+
     const result = wiring.preparePlayback(request, playback);
     pending = { key: requestKey(request, playback.session), at: Date.now(), result };
 
@@ -111,6 +120,7 @@ export const createPlayer = (wiring: PlayerWiring) => {
 
   /** Drops any kept resolution: the session it was made with is gone (sign out, or a new sign-in). */
   const forgetPrepared = (): void => {
+    sessionEpoch += 1;
     pending = undefined;
   };
 

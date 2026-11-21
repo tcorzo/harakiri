@@ -1,7 +1,7 @@
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { expect, test } from "./support/harakiri";
+import { expect, expectFocus, test } from "./support/harakiri";
 
 test("a seeded session is read back whole, with the profile's device id", async ({
   launch,
@@ -64,6 +64,44 @@ test("a session saved through the bridge survives a restart", async ({ launch, a
     accessToken,
     deviceId,
   });
+});
+
+test("a sign-in saved without a keyring survives a restart, and Settings says where it is kept", async ({
+  launch,
+  account,
+  userDataDir,
+}) => {
+  const { deviceId, ...newSession } = account;
+  // The profile runs on the worker's device, so the relaunch's session is the account itself.
+  writeFileSync(path.join(userDataDir, "device-id"), deviceId, { mode: 0o600 });
+  const first = await launch();
+
+  await first.page.evaluate(async (session) => {
+    await window.harakiri.session.save(session);
+  }, newSession);
+  expect(await first.page.evaluate(async () => await window.harakiri.session.storage())).toBe(
+    "file"
+  );
+
+  const sessionFile = path.join(userDataDir, "session.json");
+  expect(JSON.parse(readFileSync(sessionFile, "utf-8"))).toMatchObject({
+    token: { kind: "obfuscated" },
+  });
+  expect(statSync(sessionFile).mode.toString(8).slice(-3)).toBe("600");
+  await first.app.close();
+
+  const { page } = await launch();
+  expect(await page.evaluate(async () => await window.harakiri.session.get())).toEqual(account);
+
+  await expect(page.getByRole("main", { name: "Library", exact: true })).toBeVisible({
+    timeout: 20_000,
+  });
+  await expectFocus(page, /^(?:Play|Resume) \S/u, 10_000);
+  await page.keyboard.press("ArrowUp");
+  await expectFocus(page, "Settings");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("main", { name: "Settings", exact: true })).toBeVisible();
+  await expect(page.getByText("Signed in on this device without a keyring")).toBeVisible();
 });
 
 test("an unreadable session file reads as signed out and the app keeps working", async ({

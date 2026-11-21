@@ -8,7 +8,7 @@ import { env, isE2E } from "./env";
 import { forgetPrepared, play, prepare, probe, stop } from "./player/index";
 import { fromAppOnly } from "./security";
 import type { AppUrlCheck } from "./security";
-import { clearSession, deviceId, loadSession, saveSession } from "./session";
+import { clearSession, deviceId, loadSession, saveSession, sessionStorage } from "./session";
 import type { Updates } from "./updates";
 
 type HandlerResult = ReturnType<Parameters<typeof ipcMain.handle>[1]>;
@@ -45,16 +45,17 @@ export const registerIpc = (
     updates.restart();
   });
 
-  handle(channels.sessionGet, () => loadSession());
+  handle(channels.sessionGet, async () => await loadSession());
   // A resolution prepared under the old session holds its token: it must not outlive it.
-  handleParsed(channels.sessionSave, NewSession, (_event, session) => {
+  handleParsed(channels.sessionSave, NewSession, async (_event, session) => {
     forgetPrepared();
-    saveSession(session);
+    await saveSession(session);
   });
   handle(channels.sessionClear, () => {
     forgetPrepared();
     clearSession();
   });
+  handle(channels.sessionStorage, async () => await sessionStorage());
 
   const discoveryAddress = env.HARAKIRI_DISCOVERY_ADDRESS;
   handle(

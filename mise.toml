@@ -138,6 +138,10 @@ run = "JELLYFIN_DEV_NAME=harakiri-jellyfin-e2e JELLYFIN_DEV_STATE=.cache/jellyfi
 description = "Fail when a file holds workstation paths, owner domains or library titles (.private-denylist)"
 run = "bun scripts/lint-private.ts"
 
+[tasks."lint:host"]
+description = "Fail when feature code names a platform or reads the host environment (only src/main/host may)"
+run = "bun scripts/lint-host.ts"
+
 [tasks."lint:pr-title"]
 description = "Fail when a PR title is not a Conventional Commit (PR_TITLE, else the current branch's PR)"
 shell = "bash -euo pipefail -c"
@@ -153,7 +157,7 @@ hk util check-conventional-commit "$msg" || {
 
 [tasks.check]
 description = "Everything CI gates on"
-depends = ["lint", "fmt:check", "lint:skips", "lint:private", "typecheck", "test"]
+depends = ["lint", "fmt:check", "lint:skips", "lint:private", "lint:host", "typecheck", "test"]
 
 [tasks."package:check"]
 description = "Check apps/desktop/dist: latest-linux.yml matches the AppImage and the version, the feed is public GitHub, runtime deps are packed"

@@ -23,6 +23,14 @@ export const SettingsScreen = () => {
     refetchInterval: (query) => (query.state.data?.state === "unsupported" ? false : 1000),
   });
 
+  // Where the token is kept changes only at a sign-in. Signing out clears the query cache
+  // (`data/forget.ts`), so the next session asks again.
+  const storage = useQuery({
+    queryKey: ["session", "storage"],
+    queryFn: async () => await window.harakiri.session.storage(),
+    staleTime: Infinity,
+  });
+
   const { ref, focusKey } = useFocusable<object, HTMLElement>({
     focusKey: "settings",
     trackChildren: true,
@@ -58,7 +66,14 @@ export const SettingsScreen = () => {
           <h1 className="text-title stretch-extra-wide m-0 mb-10 font-[800]">Settings</h1>
           <dl className="text-body m-0 mb-12 grid grid-cols-[12rem_1fr] gap-x-8 gap-y-3">
             <dt className="text-paper-dim stretch-condensed">Signed in as</dt>
-            <dd className="m-0">{session.userName}</dd>
+            <dd className="m-0">
+              {session.userName}
+              {storage.data === "file" ? (
+                <span className="text-caption text-paper-dim stretch-condensed block font-[560]">
+                  Signed in on this device without a keyring
+                </span>
+              ) : null}
+            </dd>
             <dt className="text-paper-dim stretch-condensed">Server</dt>
             <dd className="m-0">
               {session.serverName} · Jellyfin {session.serverVersion}

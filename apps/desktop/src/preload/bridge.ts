@@ -8,6 +8,7 @@ import {
   PlayerEvent,
   PlayerProbe,
   Session,
+  SessionStorage,
   SignalReport,
   UpdateStatus,
 } from "../shared/bridge";
@@ -63,6 +64,7 @@ export const createBridge = (ipc: BridgeIpc, options: BridgeOptions): HarakiriBr
       clear: async () => {
         await invoke(channels.sessionClear, z.undefined());
       },
+      storage: async () => await invoke(channels.sessionStorage, SessionStorage),
     },
     updates: {
       status: async () => await invoke(channels.updateStatus, UpdateStatus),
