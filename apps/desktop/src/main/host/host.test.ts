@@ -1,3 +1,7 @@
+import { mkdirSync, mkdtempSync, realpathSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
 import { configure, reset as resetLogging } from "@logtape/logtape";
 import type { LogRecord } from "@logtape/logtape";
 import { describe, expect, it } from "vitest";
@@ -5,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import * as capabilities from "./capabilities";
 import * as facts from "./facts";
 import { gamescopeSession, plasmaWayland, secrets } from "./fixtures/environments";
+import { fakeSteamRoot } from "./fixtures/steam-root";
 import { createHost } from "./host";
 
 /** A secret store whose probe fails, as a locked or broken KWallet or Secret Service can. */
@@ -158,5 +163,84 @@ describe("host capabilities", () => {
     const read = await facts.readHostFacts(env, secrets("kwallet6", true));
 
     expect(capabilities.capabilitiesOf(read).hdrSignalling).toBe(signalling);
+  });
+});
+
+const freshHome = () => mkdtempSync(path.join(tmpdir(), "harakiri-steam-"));
+
+describe("Steam facts", () => {
+  const script = "/opt/harakiri/launch.sh";
+  const ours = [{ appId: 7, appName: "harakiri", exe: `"${script}"` }];
+
+  it("no HOME, or no Steam under it, is absent", async () => {
+    expect(capabilities.steamLibraryOf(await facts.readSteamFacts({}), script)).toBe("absent");
+    expect(
+      capabilities.steamLibraryOf(await facts.readSteamFacts({ HOME: freshHome() }), script)
+    ).toBe("absent");
+  });
+
+  it("a root with a user and no shortcut is present", async () => {
+    const home = freshHome();
+    fakeSteamRoot(home, { "12345678": null });
+    const steam = await facts.readSteamFacts({ HOME: home });
+
+    expect(steam.users.map((user) => user.id)).toStrictEqual(["12345678"]);
+    expect(capabilities.steamLibraryOf(steam, script)).toBe("present");
+  });
+
+  it("a user whose shortcut runs our script makes it has-harakiri", async () => {
+    const home = freshHome();
+    const root = fakeSteamRoot(home, { "12345678": ours });
+    const steam = await facts.readSteamFacts({ HOME: home });
+
+    expect(steam.root).toBe(realpathSync(root));
+    expect(steam.users[0]?.gridDir).toBe(
+      path.join(realpathSync(root), "userdata", "12345678", "config", "grid")
+    );
+    expect(capabilities.steamLibraryOf(steam, script)).toBe("has-harakiri");
+  });
+
+  it("~/.steam/steam linked to ~/.local/share/Steam is one root, users not doubled", async () => {
+    const home = freshHome();
+    const root = fakeSteamRoot(home, { "111": null });
+    mkdirSync(path.join(home, ".steam"), { recursive: true });
+    symlinkSync(root, path.join(home, ".steam", "steam"));
+    const steam = await facts.readSteamFacts({ HOME: home });
+
+    expect(steam.users.map((user) => user.id)).toStrictEqual(["111"]);
+  });
+
+  it("only ~/.steam/steam is enough", async () => {
+    const home = freshHome();
+    const real = path.join(home, "elsewhere");
+    mkdirSync(path.join(real, "userdata", "222", "config"), { recursive: true });
+    mkdirSync(path.join(home, ".steam"), { recursive: true });
+    symlinkSync(real, path.join(home, ".steam", "steam"));
+    const steam = await facts.readSteamFacts({ HOME: home });
+
+    expect(steam.users.map((user) => user.id)).toStrictEqual(["222"]);
+    expect(capabilities.steamLibraryOf(steam, script)).toBe("present");
+  });
+
+  it("userdata/ entries that are not digits, or have no config/, are not users", async () => {
+    const home = freshHome();
+    const root = fakeSteamRoot(home, { "333": null });
+    mkdirSync(path.join(root, "userdata", "anonymous", "config"), { recursive: true });
+    mkdirSync(path.join(root, "userdata", "0"), { recursive: true });
+    const steam = await facts.readSteamFacts({ HOME: home });
+
+    expect(steam.users.map((user) => user.id)).toStrictEqual(["333"]);
+  });
+
+  it("two users, the shortcut only in the second", async () => {
+    const home = freshHome();
+    fakeSteamRoot(home, { "111": [], "222": ours });
+    const steam = await facts.readSteamFacts({ HOME: home });
+
+    expect(steam.users.map((user) => [user.id, user.shortcuts.length])).toStrictEqual([
+      ["111", 0],
+      ["222", 1],
+    ]);
+    expect(capabilities.steamLibraryOf(steam, script)).toBe("has-harakiri");
   });
 });
