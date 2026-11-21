@@ -227,6 +227,19 @@ describe("output size", () => {
     ]);
   });
 
+  it("with no renderer left, no picture plays, so nothing is reported as scaled down", () => {
+    const { view } = run(
+      start({ picture: hdr10 }),
+      { kind: "outputSize", output: output1080, picture: output4k },
+      { kind: "rendererFailed" },
+      { kind: "rendererFailed" },
+      { kind: "rendererFailed" }
+    );
+
+    expect(view.renderer).toBe("none");
+    expect(view.downgrades.map(({ reason }) => reason.kind)).not.toContain("scaledDown");
+  });
+
   it("a letterboxed film that fits its output is not scaled down", () => {
     const { view } = run(
       start({ picture: hdr10 }),

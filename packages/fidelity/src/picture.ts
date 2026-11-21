@@ -33,9 +33,12 @@ export const colorspaceHintFor = (signalling: HdrSignalling): ColorspaceHint =>
 
 const sizeText = ({ width, height }: Size): string => `${width}×${height}`;
 
-/** A picture the output cannot show in full is scaled down by it, whatever the renderer. */
+/**
+ * A picture the output cannot show in full is scaled down by it, whatever the renderer. With no
+ * renderer left, no picture plays, so there is nothing to scale.
+ */
 export const scalePlan = (picture: PictureSource | null, world: PictureWorld): Downgrade | null =>
-  picture === null || world.scaled === null
+  picture === null || world.scaled === null || world.renderer === "none"
     ? null
     : {
         leg: "picture",
