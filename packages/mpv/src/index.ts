@@ -12,6 +12,7 @@ export {
 export {
   MpvClosedError,
   MpvCommandError,
+  MpvStartError,
   MpvTimeoutError,
   spawnMpv,
   type JsonValue,
