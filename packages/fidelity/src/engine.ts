@@ -158,8 +158,16 @@ const learn = (state: FidelityState, observation: Observation): FidelityState =>
       ...state,
       pictureWorld: { ...state.pictureWorld, display: hdr ? "hdr" : "sdr" },
     }))
-    // Contract stub: Task 9 of the plan records an output smaller than the picture.
-    .with({ kind: "outputSize" }, (): FidelityState => state)
+    .with({ kind: "outputSize" }, ({ output, picture }): FidelityState => ({
+      ...state,
+      pictureWorld: {
+        ...state.pictureWorld,
+        scaled:
+          picture.width > output.width || picture.height > output.height
+            ? { picture, output }
+            : null,
+      },
+    }))
     // In a transcode the server's output plays; a track change there is a new transcode.
     .with({ kind: "soundTrack" }, ({ sound }): FidelityState => ({ ...state, sound }))
     .exhaustive();
