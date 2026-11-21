@@ -209,6 +209,32 @@ describe("session store", () => {
     expect(store(unavailable, "file").storage()).toBe("file");
   });
 
+  it("a token saved without a keyring reads as kept in the file on a host that has one", async () => {
+    await store(unavailable, "file").save(newSession);
+    const s = store(prefixing, "keyring");
+
+    await expect(s.load()).resolves.toStrictEqual(expectedSession);
+    expect(s.storage()).toBe("file");
+    expect(readStored()).toMatchObject({ token: { kind: "obfuscated" } });
+  });
+
+  it("storage follows the token saved last, and clear falls back to what the host offers", async () => {
+    await store(unavailable, "file").save(newSession);
+    const s = store(prefixing, "keyring");
+    await s.load();
+    expect(s.storage()).toBe("file");
+
+    s.clear();
+    expect(s.storage()).toBe("keyring");
+
+    await s.save(newSession);
+    expect(s.storage()).toBe("keyring");
+
+    const fileStore = store(unavailable, "file");
+    await expect(fileStore.load()).resolves.toBeNull();
+    expect(fileStore.storage()).toBe("file");
+  });
+
   it("without a keyring the store says where the session is kept, once", async () => {
     const records: LogRecord[] = [];
     await configure({

@@ -67,7 +67,8 @@ interface OpenedSession {
 
 /**
  * The files under the profile dir. Clearing bumps `generation`, so a save still encrypting when
- * the session is cleared does not bring it back.
+ * the session is cleared does not bring it back. `keptIn` is where the token last loaded or saved
+ * is kept, and clearing forgets it.
  */
 interface SessionFiles {
   readonly sessionFile: string;
@@ -75,13 +76,23 @@ interface SessionFiles {
   readonly deviceId: () => DeviceId;
   readonly clear: () => void;
   readonly generation: () => number;
+  readonly keptIn: () => SecretStore | undefined;
+  readonly keep: (token: StoredToken | undefined) => void;
 }
+
+const storeOfToken = (token: StoredToken): SecretStore =>
+  match(token.kind)
+    .returnType<SecretStore>()
+    .with("encrypted", () => "keyring")
+    .with("obfuscated", () => "file")
+    .exhaustive();
 
 const sessionFiles = (dir: string): SessionFiles => {
   const sessionFile = path.join(dir, "session.json");
   const deviceIdFile = path.join(dir, "device-id");
   let cachedDeviceId: DeviceId | undefined;
   let generation = 0;
+  let keptIn: SecretStore | undefined;
 
   // A crash mid-write must leave the previous file, never a truncated one; the rename also
   // replaces whatever mode an existing file had with the temp file's 0600.
@@ -127,9 +138,14 @@ const sessionFiles = (dir: string): SessionFiles => {
     deviceId,
     clear: () => {
       generation += 1;
+      keptIn = undefined;
       rmSync(sessionFile, { force: true });
     },
     generation: () => generation,
+    keptIn: () => keptIn,
+    keep: (token) => {
+      keptIn = token === undefined ? undefined : storeOfToken(token);
+    },
   };
 };
 
@@ -179,6 +195,7 @@ const storeOn = (
 
     if (files.generation() === generation) {
       files.write(files.sessionFile, JSON.stringify({ ...rest, token } satisfies StoredSession));
+      files.keep(token);
     }
   };
 
@@ -188,6 +205,8 @@ const storeOn = (
     try {
       raw = readFileSync(files.sessionFile, "utf-8");
     } catch {
+      files.keep(undefined);
+
       return null;
     }
 
@@ -200,11 +219,13 @@ const storeOn = (
         session: Session.parse({ ...rest, accessToken, deviceId: files.deviceId() }),
         reseal,
       };
+      files.keep(token);
     } catch (error) {
       logger.error("Ignoring unreadable session file {file}: {error}", {
         file: files.sessionFile,
         error,
       });
+      files.keep(undefined);
 
       return null;
     }
@@ -229,7 +250,9 @@ const storeOn = (
     save,
     clear: files.clear,
     deviceId: files.deviceId,
-    storage: () => secretStore,
+    // Where the token on disk is, which can differ from what the host offers: a token saved
+    // without a keyring stays in the file when a keyring appears. With no session, the host decides.
+    storage: () => files.keptIn() ?? secretStore,
   };
 };
 
@@ -255,10 +278,15 @@ const electronStore = async (): Promise<SessionStore> => {
   return await defaultStore;
 };
 
+// Where the token is kept is known only once the store has looked at the file.
+let firstLook: Promise<unknown> | undefined;
+
 export const loadSession = async (): Promise<Session | null> => {
   const store = await electronStore();
+  const loading = store.load();
+  firstLook ??= loading;
 
-  return await store.load();
+  return await loading;
 };
 
 export const saveSession = async (session: NewSession): Promise<void> => {
@@ -268,6 +296,8 @@ export const saveSession = async (session: NewSession): Promise<void> => {
 
 export const sessionStorage = async (): Promise<SecretStore> => {
   const store = await electronStore();
+  firstLook ??= store.load();
+  await firstLook;
 
   return store.storage();
 };
