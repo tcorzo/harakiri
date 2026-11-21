@@ -32,6 +32,11 @@ steps {
     glob = List("**/*")
     check = "bun scripts/lint-private.ts {{files}}"
   }
+  // Features ask host capabilities; only apps/desktop/src/main/host names a platform.
+  ["lint-host"] {
+    glob = List("**/*.ts", "**/*.tsx")
+    check = "bun scripts/lint-host.ts {{files}}"
+  }
   ["typecheck"] = (typecheck) { profiles = List("ci") }
   ["test"] = (test) { profiles = List("ci") }
 }
