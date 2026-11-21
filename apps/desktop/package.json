@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "TV-first, gamepad-first Jellyfin player",
+  "license": "MIT",
   "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
