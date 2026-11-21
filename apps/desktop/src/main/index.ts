@@ -7,6 +7,7 @@ import { app, BrowserWindow, session } from "electron";
 
 import { appVersion } from "../shared/identity";
 import { env, isE2E } from "./env";
+import { hostCapabilities, hostFacts } from "./host/index";
 import { registerIpc } from "./ipc";
 import { holdQuitUntilStopped, killOnExit, removeStaleMpvDirs } from "./lifecycle";
 import * as player from "./player/index";
@@ -147,6 +148,10 @@ const main = async (): Promise<void> => {
   });
 
   await app.whenReady();
+  logger.info("host {facts}; capabilities {capabilities}", {
+    facts: await hostFacts(),
+    capabilities: await hostCapabilities(),
+  });
 
   // electron-updater requests through Electron's net stack, which needs ready.
   const updates = startUpdates({

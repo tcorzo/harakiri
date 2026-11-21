@@ -19,15 +19,16 @@ export interface HostFacts {
   readonly encryptionAvailable: boolean;
 }
 
-// Contract stub: Task 5 of the plan replaces this body with the real reading.
+const unsetIfEmpty = (value: string | undefined): string | undefined =>
+  value === undefined || value === "" ? undefined : value;
+
 export const readHostFacts = async (
-  _env: Readonly<Record<string, string | undefined>>,
-  _secrets: SecretProbe
-): Promise<HostFacts> =>
-  await Promise.resolve({
-    gamescopeDisplay: undefined,
-    waylandDisplay: undefined,
-    desktop: [],
-    secretBackend: "unknown",
-    encryptionAvailable: false,
-  });
+  env: Readonly<Record<string, string | undefined>>,
+  secrets: SecretProbe
+): Promise<HostFacts> => ({
+  gamescopeDisplay: unsetIfEmpty(env.GAMESCOPE_WAYLAND_DISPLAY),
+  waylandDisplay: unsetIfEmpty(env.WAYLAND_DISPLAY),
+  desktop: (env.XDG_CURRENT_DESKTOP ?? "").split(":").filter((entry) => entry !== ""),
+  secretBackend: secrets.getSelectedStorageBackend(),
+  encryptionAvailable: await secrets.isAsyncEncryptionAvailable(),
+});
