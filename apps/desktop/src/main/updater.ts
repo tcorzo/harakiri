@@ -2,6 +2,7 @@ import { getLogger } from "@logtape/logtape";
 import pkg from "electron-updater";
 import type { BaseUpdater, CancellationToken } from "electron-updater";
 
+import { feedUnreachable } from "./updates";
 import type { UpdaterLike } from "./updates";
 
 // electron-updater is CJS and the main bundle is ESM, so take the named exports off the default.
@@ -44,6 +45,13 @@ export const adaptUpdater = (real: InstallingUpdater): UpdaterLike => {
       log.warn("{m}", { m: text(message) });
     },
     error: (message) => {
+      // An unreachable feed is the controller's one warning; its stack trace is only debug noise.
+      if (feedUnreachable(message) !== undefined) {
+        log.debug("{m}", { m: text(message) });
+
+        return;
+      }
+
       log.error("{m}", { m: text(message) });
     },
   };
