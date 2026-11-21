@@ -27,6 +27,11 @@ const logger = getLogger(["harakiri", "session"]);
 export interface TokenCrypto {
   encryptStringAsync: (plain: string) => Promise<Buffer>;
   decryptStringAsync: (encrypted: Buffer) => Promise<{ result: string; shouldReEncrypt: boolean }>;
+  /**
+   * Reads a token that builds before the async calls encrypted with the synchronous call, which
+   * the async one cannot read. Tried only when the async decryption fails.
+   */
+  decryptLegacy?: (encrypted: Buffer) => string;
 }
 
 export interface SessionStoreOptions {
@@ -59,11 +64,38 @@ const StoredSession = Session.omit({ accessToken: true, deviceId: true }).extend
 
 type StoredSession = z.infer<typeof StoredSession>;
 
-/** A session read from disk, and whether Electron asked for its token to be encrypted again. */
+/**
+ * A session read from disk, whether its token should be encrypted again, and whether it was read
+ * through the legacy synchronous call.
+ */
 interface OpenedSession {
   readonly session: Session;
   readonly reseal: boolean;
+  readonly migrated: boolean;
 }
+
+/** A token read from disk, before the session around it is checked. */
+interface OpenedToken {
+  readonly accessToken: string;
+  readonly reseal: boolean;
+  readonly migrated: boolean;
+}
+
+/**
+ * Why a session file could not be read, without its content: a JSON.parse error quotes the start
+ * of the file, which can be the obfuscated token. A zod error is named by the fields at fault.
+ */
+const unreadableReason = (error: Error): string => {
+  if (error instanceof z.ZodError) {
+    const fields = error.issues.map(({ path: at }) =>
+      at.length === 0 ? "(root)" : at.map(String).join(".")
+    );
+
+    return `${error.name} at ${fields.join(", ")}`;
+  }
+
+  return error.name;
+};
 
 /**
  * The files under the profile dir. Clearing bumps `generation`, so a save still encrypting when
@@ -173,19 +205,31 @@ const storeOn = (
     return { kind: "obfuscated", base64: Buffer.from(accessToken, "utf-8").toString("base64") };
   };
 
-  const openToken = async (token: StoredToken): Promise<{ accessToken: string; reseal: boolean }> =>
+  const openEncrypted = async (encrypted: Buffer): Promise<OpenedToken> => {
+    try {
+      const { result, shouldReEncrypt } = await crypto.decryptStringAsync(encrypted);
+
+      return { accessToken: result, reseal: shouldReEncrypt, migrated: false };
+    } catch (error) {
+      if (crypto.decryptLegacy === undefined) {
+        throw error;
+      }
+
+      return { accessToken: crypto.decryptLegacy(encrypted), reseal: true, migrated: true };
+    }
+  };
+
+  const openToken = async (token: StoredToken): Promise<OpenedToken> =>
     await match(token)
       .with({ kind: "obfuscated" }, ({ base64 }) => ({
         accessToken: Buffer.from(base64, "base64").toString("utf-8"),
         reseal: false,
+        migrated: false,
       }))
-      .with({ kind: "encrypted" }, async ({ base64 }) => {
-        const { result, shouldReEncrypt } = await crypto.decryptStringAsync(
-          Buffer.from(base64, "base64")
-        );
-
-        return { accessToken: result, reseal: shouldReEncrypt };
-      })
+      .with(
+        { kind: "encrypted" },
+        async ({ base64 }) => await openEncrypted(Buffer.from(base64, "base64"))
+      )
       .exhaustive();
 
   const save = async (input: NewSession): Promise<void> => {
@@ -200,6 +244,8 @@ const storeOn = (
   };
 
   const load = async (): Promise<Session | null> => {
+    // A clear while the token decrypts wins: the load must not bring the session back.
+    const generation = files.generation();
     let raw: string;
 
     try {
@@ -214,26 +260,37 @@ const storeOn = (
 
     try {
       const { token, ...rest } = StoredSession.parse(JSON.parse(raw));
-      const { accessToken, reseal } = await openToken(token);
+      const { accessToken, reseal, migrated } = await openToken(token);
+
+      if (files.generation() !== generation) {
+        return null;
+      }
+
       opened = {
         session: Session.parse({ ...rest, accessToken, deviceId: files.deviceId() }),
         reseal,
+        migrated,
       };
       files.keep(token);
     } catch (error) {
-      logger.error("Ignoring unreadable session file {file}: {error}", {
+      logger.error("Ignoring unreadable session file {file}: {reason}", {
         file: files.sessionFile,
-        error,
+        reason: error instanceof Error ? unreadableReason(error) : "a thrown non-error",
       });
       files.keep(undefined);
 
       return null;
     }
 
-    if (opened.reseal) {
+    // Only a keyring host encrypts again: on a file host, `save` would move the token to the file.
+    if (opened.reseal && secretStore === "keyring") {
       // The token read fine; failing to write it under the new key must not sign the owner out.
       try {
         await save(opened.session);
+
+        if (opened.migrated) {
+          logger.info("migrated the saved session to the async keyring format");
+        }
       } catch (error) {
         logger.warn("Could not re-encrypt the session in {file}: {error}", {
           file: files.sessionFile,
@@ -270,9 +327,19 @@ const electronFiles = (): SessionFiles => {
   return defaultFiles;
 };
 
+const electronCrypto: TokenCrypto = {
+  encryptStringAsync: async (plain) => await safeStorage.encryptStringAsync(plain),
+  decryptStringAsync: async (encrypted) => await safeStorage.decryptStringAsync(encrypted),
+  // The only use of the synchronous safeStorage call, which Electron 45 deprecates and Electron 46
+  // removes: on KWallet, tokens that earlier builds wrote with it do not decrypt with the async
+  // call. Drop this path once Electron 46 lands; those sessions then sign in again.
+  // oxlint-disable-next-line typescript/no-deprecated -- the one-time migration of sync-encrypted tokens
+  decryptLegacy: (encrypted) => safeStorage.decryptString(encrypted),
+};
+
 const electronStore = async (): Promise<SessionStore> => {
   defaultStore ??= hostCapabilities().then(({ secretStore }) =>
-    storeOn(electronFiles(), safeStorage, secretStore)
+    storeOn(electronFiles(), electronCrypto, secretStore)
   );
 
   return await defaultStore;

@@ -23,7 +23,8 @@ export const SettingsScreen = () => {
     refetchInterval: (query) => (query.state.data?.state === "unsupported" ? false : 1000),
   });
 
-  // Where the token is kept cannot change while the app runs.
+  // Where the token is kept changes only at a sign-in. Signing out clears the query cache
+  // (`data/forget.ts`), so the next session asks again.
   const storage = useQuery({
     queryKey: ["session", "storage"],
     queryFn: async () => await window.harakiri.session.storage(),

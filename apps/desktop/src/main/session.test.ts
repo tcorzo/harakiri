@@ -10,6 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { inspect } from "node:util";
 
 import { configure, reset as resetLogging } from "@logtape/logtape";
 import type { LogRecord } from "@logtape/logtape";
@@ -62,6 +63,42 @@ const locked: TokenCrypto = {
 
 const unavailable = locked;
 
+/** A crypto whose decryption waits for `gate`, and asks for the token to be encrypted again. */
+const gatedResealing = (gate: Promise<undefined>): TokenCrypto => ({
+  ...prefixing,
+  decryptStringAsync: async (encrypted) => {
+    await gate;
+    const { result } = await prefixing.decryptStringAsync(encrypted);
+
+    return { result, shouldReEncrypt: true };
+  },
+});
+
+/** Captures what `harakiri` logs while `run` runs. */
+const recording = async (run: () => Promise<void>): Promise<LogRecord[]> => {
+  const records: LogRecord[] = [];
+  await configure({
+    reset: true,
+    sinks: {
+      memory: (record) => {
+        records.push(record);
+      },
+    },
+    loggers: [
+      { category: ["harakiri"], lowestLevel: "debug", sinks: ["memory"] },
+      { category: ["logtape", "meta"], sinks: [] },
+    ],
+  });
+
+  try {
+    await run();
+  } finally {
+    await resetLogging();
+  }
+
+  return records;
+};
+
 describe("session store", () => {
   let dir: string;
 
@@ -79,6 +116,21 @@ describe("session store", () => {
 
   const readStored = () =>
     z.json().parse(JSON.parse(readFileSync(path.join(dir, "session.json"), "utf-8")));
+
+  // The async calls cannot read what the sync call wrote; only `decryptLegacy` can.
+  const legacyFile = () => {
+    const { accessToken, ...rest } = newSession;
+    writeFileSync(
+      path.join(dir, "session.json"),
+      JSON.stringify({
+        ...rest,
+        token: {
+          kind: "encrypted",
+          base64: Buffer.from(`legacy:${accessToken}`).toString("base64"),
+        },
+      })
+    );
+  };
 
   it("round-trips a session with the token encrypted on disk and main's device id", async () => {
     await store(prefixing).save(newSession);
@@ -191,6 +243,161 @@ describe("session store", () => {
     });
     await expect(store(rotating).load()).resolves.toStrictEqual(expectedSession);
     expect(encryptions).toBe(2);
+  });
+
+  it("a clear while a load is still decrypting wins: the load is null and writes nothing", async () => {
+    await store(prefixing).save(newSession);
+    const gate = Promise.withResolvers<undefined>();
+    const s = store(gatedResealing(gate.promise), "keyring");
+    const loading = s.load();
+    s.clear();
+    gate.resolve(undefined);
+
+    await expect(loading).resolves.toBeNull();
+    expect(readdirSync(dir)).toStrictEqual(["device-id"]);
+  });
+
+  it("a clear while a load is still decrypting leaves storage to what the host offers", async () => {
+    await store(prefixing).save(newSession);
+    const gate = Promise.withResolvers<undefined>();
+    const s = store(gatedResealing(gate.promise), "file");
+    const loading = s.load();
+    s.clear();
+    gate.resolve(undefined);
+
+    await expect(loading).resolves.toBeNull();
+    expect(s.storage()).toBe("file");
+  });
+
+  it("on a host without a keyring, a token Electron asks to re-encrypt is left as it is", async () => {
+    await store(prefixing).save(newSession);
+    const before = readFileSync(path.join(dir, "session.json"), "utf-8");
+    let encryptions = 0;
+
+    const resealing: TokenCrypto = {
+      encryptStringAsync: async (plain) => {
+        encryptions += 1;
+
+        return await prefixing.encryptStringAsync(plain);
+      },
+      decryptStringAsync: async (encrypted) => ({
+        ...(await prefixing.decryptStringAsync(encrypted)),
+        shouldReEncrypt: true,
+      }),
+    };
+
+    await expect(store(resealing, "file").load()).resolves.toStrictEqual(expectedSession);
+    expect(encryptions).toBe(0);
+    expect(readFileSync(path.join(dir, "session.json"), "utf-8")).toBe(before);
+  });
+
+  it("the log for an unreadable session file never quotes the file", async () => {
+    const tokenLike = Buffer.from("secret-token-value").toString("base64");
+    writeFileSync(path.join(dir, "session.json"), `${tokenLike}{"kind":"obfuscated"`);
+
+    const records = await recording(async () => {
+      await expect(store(prefixing).load()).resolves.toBeNull();
+    });
+
+    expect(records.map(({ level }) => level)).toStrictEqual(["error"]);
+    expect(inspect(records, { depth: 10 })).not.toContain(tokenLike.slice(0, 8));
+    expect(records[0]?.properties).toStrictEqual({
+      file: path.join(dir, "session.json"),
+      reason: "SyntaxError",
+    });
+  });
+
+  it("the log for a session file of the wrong shape names only the fields", async () => {
+    const tokenLike = Buffer.from("secret-token-value").toString("base64");
+    writeFileSync(
+      path.join(dir, "session.json"),
+      JSON.stringify({ token: { kind: tokenLike, base64: tokenLike } })
+    );
+
+    const records = await recording(async () => {
+      await expect(store(prefixing).load()).resolves.toBeNull();
+    });
+
+    expect(inspect(records, { depth: 10 })).not.toContain(tokenLike.slice(0, 8));
+    expect(String(records[0]?.properties.reason)).toMatch(/^ZodError at .*token\.kind/u);
+  });
+
+  describe("a token encrypted by the synchronous safeStorage call of earlier builds", () => {
+    const asyncOnly: TokenCrypto = {
+      encryptStringAsync: async (plain) => await Promise.resolve(Buffer.from(`async:${plain}`)),
+      decryptStringAsync: async (encrypted) => {
+        const text = encrypted.toString("utf-8");
+
+        if (!text.startsWith("async:")) {
+          throw new Error("Error while decrypting the ciphertext");
+        }
+
+        return await Promise.resolve({ result: text.slice(6), shouldReEncrypt: false });
+      },
+    };
+
+    let legacyCalls = 0;
+
+    const withLegacy: TokenCrypto = {
+      ...asyncOnly,
+      decryptLegacy: (encrypted) => {
+        legacyCalls += 1;
+        const text = encrypted.toString("utf-8");
+
+        if (!text.startsWith("legacy:")) {
+          throw new Error("legacy decrypt failed");
+        }
+
+        return text.slice(7);
+      },
+    };
+
+    beforeEach(() => {
+      legacyCalls = 0;
+      legacyFile();
+    });
+
+    it("is read once through the legacy call and written again with the async one", async () => {
+      const records = await recording(async () => {
+        await expect(store(withLegacy).load()).resolves.toStrictEqual(expectedSession);
+      });
+
+      expect(legacyCalls).toBe(1);
+      expect(readStored()).toMatchObject({
+        token: { kind: "encrypted", base64: Buffer.from("async:secret-token").toString("base64") },
+      });
+      expect(records.map(({ level, rawMessage }) => ({ level, rawMessage }))).toStrictEqual([
+        { level: "info", rawMessage: "migrated the saved session to the async keyring format" },
+      ]);
+
+      await expect(store(withLegacy).load()).resolves.toStrictEqual(expectedSession);
+      expect(legacyCalls).toBe(1);
+    });
+
+    it("loads as null when the legacy call cannot read it either", async () => {
+      const { accessToken, ...rest } = newSession;
+      writeFileSync(
+        path.join(dir, "session.json"),
+        JSON.stringify({
+          ...rest,
+          token: { kind: "encrypted", base64: Buffer.from(accessToken).toString("base64") },
+        })
+      );
+
+      await expect(store(withLegacy).load()).resolves.toBeNull();
+      expect(legacyCalls).toBe(1);
+    });
+
+    it("loads as null without a legacy call", async () => {
+      await expect(store(asyncOnly).load()).resolves.toBeNull();
+    });
+
+    it("is not written again on a host without a keyring", async () => {
+      const before = readFileSync(path.join(dir, "session.json"), "utf-8");
+
+      await expect(store(withLegacy, "file").load()).resolves.toStrictEqual(expectedSession);
+      expect(readFileSync(path.join(dir, "session.json"), "utf-8")).toBe(before);
+    });
   });
 
   it("an old plain-text file reads as null", async () => {

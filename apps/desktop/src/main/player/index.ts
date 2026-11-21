@@ -1,7 +1,7 @@
 import { app } from "electron";
 
 import { isE2E } from "../env";
-import { hostCapabilities } from "../host";
+import { hostSignalling } from "../host";
 import { loadSession } from "../session";
 import { AudioOutputJson, readAudioOutput } from "./audio-output";
 import { createPlayer } from "./create-player";
@@ -25,11 +25,8 @@ export const { prepare, forgetPrepared, play, stop, probe, isPlaying, mpvPid } =
   userData: () => app.getPath("userData"),
   extraArgs: e2eMpvArgs,
   audioOutput,
-  hdrSignalling: async () => {
-    const { hdrSignalling } = await hostCapabilities();
-
-    return hdrSignalling;
-  },
+  // From the environment alone, so a play never waits on the keyring probe.
+  hdrSignalling: async () => await Promise.resolve(hostSignalling()),
   preparePlayback,
   startPlayback,
 });

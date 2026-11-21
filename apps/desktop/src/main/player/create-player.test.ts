@@ -156,6 +156,20 @@ describe("the player", () => {
     expect(preparedFor()).toStrictEqual([undefined, undefined]);
   });
 
+  it("a sign-out while prepare still loads the session keeps nothing from the old session", async () => {
+    const loaded = Promise.withResolvers<Session>();
+    const player = createPlayer({ ...wiring, loadSession: async () => await loaded.promise });
+    const preparing = player.prepare({ itemId });
+    player.forgetPrepared();
+    loaded.resolve(session("old-token"));
+
+    await expect(preparing).rejects.toThrow("The session changed while preparing");
+    expect(preparePlayback).not.toHaveBeenCalled();
+
+    await player.play({ itemId }, send);
+    expect(preparedFor()).toStrictEqual([undefined]);
+  });
+
   it("a play for another request leaves a newer prepare in place for its own play", async () => {
     await prepare({ itemId, startPositionTicks: 0 });
     await prepare({ itemId, startPositionTicks: 10 });

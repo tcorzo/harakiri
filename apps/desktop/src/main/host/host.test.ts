@@ -1,8 +1,51 @@
+import { configure, reset as resetLogging } from "@logtape/logtape";
+import type { LogRecord } from "@logtape/logtape";
 import { describe, expect, it } from "vitest";
 
 import * as capabilities from "./capabilities";
 import * as facts from "./facts";
 import { gamescopeSession, plasmaWayland, secrets } from "./fixtures/environments";
+import { createHost } from "./host";
+
+/** A secret store whose probe fails, as a locked or broken KWallet or Secret Service can. */
+const failingSecrets: facts.SecretProbe = {
+  getSelectedStorageBackend: () => "kwallet6",
+  isAsyncEncryptionAvailable: async () => await Promise.reject(new Error("D-Bus timed out")),
+};
+
+/** A secret store that must not be asked at all. */
+const untouchableSecrets: facts.SecretProbe = {
+  getSelectedStorageBackend: () => {
+    throw new Error("the secret store was probed");
+  },
+  isAsyncEncryptionAvailable: async () =>
+    await Promise.reject(new Error("the secret store was probed")),
+};
+
+/** Captures what `harakiri` logs while `run` runs. */
+const recording = async (run: () => Promise<void>): Promise<LogRecord[]> => {
+  const records: LogRecord[] = [];
+  await configure({
+    reset: true,
+    sinks: {
+      memory: (record) => {
+        records.push(record);
+      },
+    },
+    loggers: [
+      { category: ["harakiri"], lowestLevel: "debug", sinks: ["memory"] },
+      { category: ["logtape", "meta"], sinks: [] },
+    ],
+  });
+
+  try {
+    await run();
+  } finally {
+    await resetLogging();
+  }
+
+  return records;
+};
 
 const desktopOf = async (value: string) => {
   const read = await facts.readHostFacts({ XDG_CURRENT_DESKTOP: value }, secrets("kwallet6", true));
@@ -37,6 +80,51 @@ describe("host facts", () => {
 
     expect(read.gamescopeDisplay).toBeUndefined();
     expect(read.waylandDisplay).toBeUndefined();
+  });
+});
+
+describe("a secret store probe that fails", () => {
+  it("reads as no keyring, so the session goes to the file", async () => {
+    const read = await facts.readHostFacts(plasmaWayland, failingSecrets);
+
+    expect(read).toMatchObject({ secretBackend: "unknown", encryptionAvailable: false });
+    expect(capabilities.capabilitiesOf(read).secretStore).toBe("file");
+  });
+
+  it("reads as no keyring when naming the backend throws too", async () => {
+    const read = await facts.readHostFacts(plasmaWayland, untouchableSecrets);
+
+    expect(read).toMatchObject({ secretBackend: "unknown", encryptionAvailable: false });
+  });
+
+  it("is logged once at warn, however often the host is asked", async () => {
+    const host = createHost(plasmaWayland, failingSecrets);
+
+    const records = await recording(async () => {
+      await host.facts();
+      await host.capabilities();
+      await host.facts();
+    });
+
+    expect(records.map(({ level, category }) => ({ level, category }))).toStrictEqual([
+      { level: "warning", category: ["harakiri", "host"] },
+    ]);
+  });
+});
+
+describe("the host's HDR signalling", () => {
+  it("comes from the environment alone, without asking the secret store", () => {
+    expect(createHost(gamescopeSession, untouchableSecrets).signalling()).toBe("swapchain-formats");
+    expect(createHost(plasmaWayland, untouchableSecrets).signalling()).toBe("colour-management");
+  });
+
+  it("agrees with the capabilities", async () => {
+    const host = createHost(gamescopeSession, secrets("kwallet6", true));
+
+    await expect(host.capabilities()).resolves.toStrictEqual({
+      secretStore: "keyring",
+      hdrSignalling: host.signalling(),
+    });
   });
 });
 
