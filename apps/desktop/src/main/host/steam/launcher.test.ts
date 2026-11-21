@@ -91,6 +91,19 @@ describe(desktopEntry, () => {
     expect(entry).toContain("Path=/data/a'b$c\\\\d/steam\n");
   });
 
+  it("Exec writes a literal percent sign as %% inside quotes", () => {
+    const entry = desktopEntry(launcherFiles("/data/100%x"));
+
+    expect(entry).toContain('Exec="/data/100%%x/steam/harakiri.sh"\n');
+    expect(entry).toContain("Path=/data/100%x/steam\n");
+  });
+
+  it("Exec escapes a backtick and a double quote, then doubles backslashes", () => {
+    expect(desktopEntry(launcherFiles('/data/a`b"c'))).toContain(
+      'Exec="/data/a\\\\`b\\\\"c/steam/harakiri.sh"\n'
+    );
+  });
+
   it("throws on a path with a newline", () => {
     expect(() => desktopEntry(launcherFiles("/data/a\nb"))).toThrow(/newline/u);
   });
