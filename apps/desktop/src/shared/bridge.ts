@@ -16,6 +16,7 @@ export const channels = {
   sessionGet: "session:get",
   sessionSave: "session:save",
   sessionClear: "session:clear",
+  sessionStorage: "session:storage",
   deviceId: "device:id",
   updateStatus: "updates:status",
   updateRestart: "updates:restart",
@@ -28,7 +29,8 @@ export const channels = {
 } as const;
 
 /**
- * A signed-in Jellyfin session. The main process persists it with the token encrypted by safeStorage.
+ * A signed-in Jellyfin session. The main process persists it with the token encrypted by safeStorage,
+ * or, where no keyring is available, obfuscated in a file only this user can read.
  * The renderer receives the token by design: it calls Jellyfin directly for the browse UI.
  */
 export const Session = z.object({
@@ -49,6 +51,9 @@ export type Session = z.output<typeof Session>;
 export const NewSession = Session.omit({ deviceId: true });
 
 export type NewSession = z.output<typeof NewSession>;
+
+/** Where main keeps the token: encrypted by an OS keyring, or in a file only this user can read. */
+export const SessionStorage = z.enum(["keyring", "file"]);
 
 /** A server that answered Jellyfin's UDP discovery broadcast on port 7359. */
 export const DiscoveredServer = z.object({
@@ -197,6 +202,8 @@ export interface HarakiriBridge {
     readonly get: () => Promise<Session | null>;
     readonly save: (session: NewSession) => Promise<void>;
     readonly clear: () => Promise<void>;
+    /** Where the token is kept on this device; Settings says so when there is no keyring. */
+    readonly storage: () => Promise<"keyring" | "file">;
   };
   readonly discover: () => Promise<DiscoveredServer[]>;
   readonly updates: {

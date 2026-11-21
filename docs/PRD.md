@@ -62,7 +62,7 @@ On first launch the owner reaches a playable library without help.
 
 1. Find the server. harakiri broadcasts Jellyfin discovery (UDP 7359) and lists the servers that answer. The owner can also type an address. harakiri validates it with `GET /System/Info/Public` and shows the server name and version.
 2. Sign in. The owner signs in with a username and password, or with Quick Connect when the server supports it. harakiri lists the server's public users as a shortcut.
-3. Land in the library. The session (server, user, token, device ID) persists across restarts. The token is encrypted with Electron `safeStorage`.
+3. Land in the library. The session (server, user, token, device ID) persists across restarts. The token is encrypted with Electron `safeStorage`. Where no keyring is available, as in Steam Game Mode under autologin, the token is kept in a file only this user can read. Settings says so, and the token can be revoked from the server's dashboard.
 
 Acceptance:
 

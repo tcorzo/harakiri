@@ -21,7 +21,7 @@ const audioOutput = async () => {
 };
 
 export const { prepare, forgetPrepared, play, stop, probe, isPlaying, mpvPid } = createPlayer({
-  loadSession: async () => await Promise.resolve(loadSession()),
+  loadSession,
   userData: () => app.getPath("userData"),
   extraArgs: e2eMpvArgs,
   audioOutput,

@@ -173,7 +173,16 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
   launch: async ({ userDataDir, mpvArgs, extraEnv, apps }, use) => {
     // Without DISPLAY, Electron cannot fall back to the user's X session if the nested compositor is missing.
     // A terminal that is itself an AppImage exports APPIMAGE, which would switch the updater on.
-    const dropped = new Set(["DISPLAY", "APPIMAGE"]);
+    // Without the desktop-session variables, and with XDG_CURRENT_DESKTOP set below, Electron
+    // finds no keyring and picks `basic_text`, as in Game Mode: every run takes the no-keyring path.
+    const dropped = new Set([
+      "DISPLAY",
+      "APPIMAGE",
+      "DESKTOP_SESSION",
+      "KDE_FULL_SESSION",
+      "KDE_SESSION_VERSION",
+      "GNOME_DESKTOP_SESSION_ID",
+    ]);
 
     const inherited = Object.entries(process.env).filter(
       (entry): entry is [string, string] => !dropped.has(entry[0]) && entry[1] !== undefined
@@ -185,6 +194,7 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
         args: ["--ozone-platform=wayland", mainEntry],
         env: {
           ...Object.fromEntries(inherited),
+          XDG_CURRENT_DESKTOP: "gamescope",
           ...extraEnv,
           HARAKIRI_E2E: "1",
           HARAKIRI_USER_DATA: userDataDir,

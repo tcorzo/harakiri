@@ -59,14 +59,17 @@ export const signInAccount = async (backend: Backend): Promise<SessionData> => {
 
 /**
  * Writes the files main's session store reads (apps/desktop/src/main/session.ts): `session.json`
- * with the token as a `plain` tagged value, which only HARAKIRI_E2E=1 accepts, and `device-id`.
- * session.spec.ts proves the app reads this format back.
+ * with the token `obfuscated`, as the store keeps it where there is no keyring, and `device-id`.
+ * session.spec.ts proves the app reads this format back and writes it itself.
  */
 export const seedSession = (userDataDir: string, session: SessionData): void => {
   const { accessToken, deviceId, ...rest } = session;
   writeFileSync(
     path.join(userDataDir, "session.json"),
-    JSON.stringify({ ...rest, token: { kind: "plain", value: accessToken } }),
+    JSON.stringify({
+      ...rest,
+      token: { kind: "obfuscated", base64: Buffer.from(accessToken).toString("base64") },
+    }),
     { mode: 0o600 }
   );
   writeFileSync(path.join(userDataDir, "device-id"), deviceId, { mode: 0o600 });

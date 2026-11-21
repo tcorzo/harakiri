@@ -164,6 +164,18 @@ describe(createBridge, () => {
     expect(invoked).toStrictEqual([["device:id"]]);
   });
 
+  it("session.storage parses where main keeps the token and refuses anything else", async () => {
+    const { ipc, invoked } = fakeIpc({ channel: channels.sessionStorage, value: "file" });
+
+    await expect(createBridge(ipc, { e2e: false, warn }).session.storage()).resolves.toBe("file");
+    expect(invoked).toStrictEqual([["session:storage"]]);
+
+    const plain = fakeIpc({ channel: channels.sessionStorage, value: "plain" });
+    await expect(createBridge(plain.ipc, { e2e: false, warn }).session.storage()).rejects.toThrow(
+      /Invalid option/u
+    );
+  });
+
   it("parses the update status and restart invokes its channel", async () => {
     const { ipc, invoked } = fakeIpc({
       channel: channels.updateStatus,
