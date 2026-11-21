@@ -42,7 +42,7 @@ Basically, I got fed up with not being able to just sit down with a meal and _wa
 
 ### Install the AppImage
 
-Each [GitHub release](https://github.com/tcorzo/harakiri/releases) ships one Linux x64 AppImage. It uses the system mpv, so install `mpv` 0.41 or newer and `ffmpeg` from RPM Fusion first.
+Each [GitHub release](https://github.com/tcorzo/harakiri/releases) ships one Linux x64 AppImage. Until harakiri bundles its own mpv, it uses the system mpv, so install `mpv` 0.41 or newer and `ffmpeg` from RPM Fusion first.
 
 > [!WARNING]
 > Fedora's own `ffmpeg-free` has no HEVC, H.264 or VC-1 decoder. Install the RPM Fusion `ffmpeg`, or most of a real library will not play.
@@ -109,3 +109,7 @@ No part of the harness needs an HDR TV or an AV receiver.
 - [`docs/fidelity/compatibility.md`](docs/fidelity/compatibility.md): what plays on which output, and why each downgrade happens.
 - [`docs/research/`](docs/research): the research behind every choice, including a census of a real 1,600-file library.
 - [`CLAUDE.md`](CLAUDE.md): how to work in the repo, the rules, and what enforces each one.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

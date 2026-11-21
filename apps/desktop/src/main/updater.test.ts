@@ -1,8 +1,10 @@
 // @vitest-environment node
 import { EventEmitter } from "node:events";
 
+import { configure, reset as resetLogging } from "@logtape/logtape";
+import type { LogRecord } from "@logtape/logtape";
 import type { BaseUpdater, CancellationToken } from "electron-updater";
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { adaptUpdater } from "./updater";
 
@@ -23,7 +25,45 @@ const fakeUpdater = () => {
   });
 };
 
+const ISSUE_15_MESSAGE =
+  "Error: HttpError: 404 \n" +
+  '"method: GET url: https://github.com/example/app/releases.atom\\n\\nPlease double check that your authentication token is correct. Due to security reasons, actual status maybe not reported, but 404.\\n"\n';
+
 describe(adaptUpdater, () => {
+  const records: LogRecord[] = [];
+
+  beforeAll(async () => {
+    await configure({
+      reset: true,
+      sinks: {
+        memory: (record) => {
+          records.push(record);
+        },
+      },
+      loggers: [
+        { category: ["harakiri"], lowestLevel: "debug", sinks: ["memory"] },
+        { category: ["logtape", "meta"], sinks: [] },
+      ],
+    });
+  });
+
+  afterAll(async () => {
+    await resetLogging();
+  });
+
+  it("logs a 404 from the feed at debug and any other error at error", () => {
+    const fake = fakeUpdater();
+    adaptUpdater(fake);
+    records.length = 0;
+
+    fake.logger?.error(ISSUE_15_MESSAGE);
+    expect(records.filter((r) => r.level === "error")).toStrictEqual([]);
+    expect(records.filter((r) => r.level === "debug")).toHaveLength(1);
+
+    fake.logger?.error("Error: EACCES");
+    expect(records.filter((r) => r.level === "error")).toHaveLength(1);
+  });
+
   it("turns off auto download and install-on-quit and logs through logtape", () => {
     const fake = fakeUpdater();
     adaptUpdater(fake);

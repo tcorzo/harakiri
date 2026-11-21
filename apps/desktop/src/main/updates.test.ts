@@ -1,7 +1,9 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { configure, reset as resetLogging } from "@logtape/logtape";
+import type { LogRecord } from "@logtape/logtape";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ownAppImage, startUpdates } from "./updates";
+import { feedUnreachable, ownAppImage, startUpdates } from "./updates";
 import type { UpdateDeps, UpdaterLike } from "./updates";
 
 interface Handlers {
@@ -11,6 +13,13 @@ interface Handlers {
   downloaded?: (v: string) => void;
   error?: (e: Error) => void;
 }
+
+// electron-updater's text for a feed that answers 404, as the log showed it, with the feed's
+// owner and repository replaced.
+const ISSUE_15_MESSAGE =
+  "Error: HttpError: 404 \n" +
+  '"method: GET url: https://github.com/example/app/releases.atom\\n\\nPlease double check that your authentication token is correct. Due to security reasons, actual status maybe not reported, but 404.\\n"\n' +
+  "    at createHttpError (/app/node_modules/builder-util-runtime/out/httpExecutor.js:10:12)";
 
 const resolved = async (): Promise<void> => {
   await Promise.resolve();
@@ -105,13 +114,46 @@ const start = (fake: ReturnType<typeof fakeUpdater>, over: Partial<UpdateDeps> =
     ...over,
   });
 
+describe(feedUnreachable, () => {
+  it.each([
+    [Object.assign(new Error("404 Not Found"), { statusCode: 404 }), 404],
+    [Object.assign(new Error("401 Unauthorized"), { statusCode: 401 }), 401],
+    [new Error(ISSUE_15_MESSAGE), 404],
+    [new Error("net::ERR_INTERNET_DISCONNECTED"), undefined],
+    [Object.assign(new Error("500"), { statusCode: 500 }), undefined],
+  ])("%s -> %s", (thrown, status) => {
+    expect(feedUnreachable(thrown)).toBe(status);
+  });
+});
+
 describe(startUpdates, () => {
+  const records: LogRecord[] = [];
+
+  beforeAll(async () => {
+    await configure({
+      reset: true,
+      sinks: {
+        memory: (record) => {
+          records.push(record);
+        },
+      },
+      loggers: [
+        { category: ["harakiri"], lowestLevel: "debug", sinks: ["memory"] },
+        { category: ["logtape", "meta"], sinks: [] },
+      ],
+    });
+  });
+
   beforeEach(() => {
     vi.useFakeTimers();
   });
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  afterAll(async () => {
+    await resetLogging();
   });
 
   it("is unsupported without an AppImage, and electron-updater is never created", () => {
@@ -188,6 +230,37 @@ describe(startUpdates, () => {
       state: "failed",
       message: "net::ERR_INTERNET_DISCONNECTED",
     });
+  });
+
+  it("a 404 from the feed fails the check with one plain warning and no error", async () => {
+    records.length = 0;
+    const fake = fakeUpdater();
+    const updates = start(fake);
+    await vi.advanceTimersByTimeAsync(0);
+    fake.on.error?.(Object.assign(new Error(ISSUE_15_MESSAGE), { statusCode: 404 }));
+
+    expect(updates.status()).toStrictEqual({
+      state: "failed",
+      message: "update feed unreachable (HTTP 404)",
+    });
+    const warnings = records.flatMap((r) => (r.level === "warning" ? [r.message.join("")] : []));
+
+    expect(warnings).toStrictEqual(["update feed unreachable (HTTP 404); tries again later"]);
+    expect(records.filter((r) => r.level === "error")).toStrictEqual([]);
+  });
+
+  it("a 404 is retried like any failed check", async () => {
+    const fake = fakeUpdater();
+    fake.failChecks(new Error(ISSUE_15_MESSAGE));
+    const updates = start(fake);
+    await vi.advanceTimersByTimeAsync(0);
+    fake.on.error?.(Object.assign(new Error(ISSUE_15_MESSAGE), { statusCode: 404 }));
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(fake.calls.check).toBe(1);
+    await vi.advanceTimersByTimeAsync(840_000);
+    expect(fake.calls.check).toBe(2);
+    fake.on.notAvailable?.();
+    expect(updates.status()).toStrictEqual({ state: "idle" });
   });
 
   it("retries a failed check 15 minutes after it started", async () => {

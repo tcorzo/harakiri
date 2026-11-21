@@ -74,6 +74,32 @@ const ThrownMessage = z
   .unknown()
   .transform((thrown) => (thrown instanceof Error ? thrown.message : String(thrown)));
 
+const FeedStatus = z.object({ statusCode: z.union([z.literal(401), z.literal(404)]) });
+const FEED_STATUS = /\bHttpError: (?<status>401|404)\b/u;
+
+/**
+ * The status when an update feed answers 401 or 404, which GitHub does for a private repository,
+ * else undefined. Reads electron-updater's `statusCode`, or its text when only text is left.
+ */
+export const feedUnreachable = (
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- a catch clause and a log line hand over anything; FeedStatus and FEED_STATUS parse it here
+  error: unknown
+): 401 | 404 | undefined => {
+  const fromCode = FeedStatus.safeParse(error);
+
+  if (fromCode.success) {
+    return fromCode.data.statusCode;
+  }
+
+  const status = FEED_STATUS.exec(String(error))?.groups?.status;
+
+  if (status === "401") {
+    return 401;
+  }
+
+  return status === "404" ? 404 : undefined;
+};
+
 export const startUpdates = (deps: UpdateDeps): Updates => {
   if (deps.appImage === undefined) {
     return {
@@ -155,7 +181,18 @@ export const startUpdates = (deps: UpdateDeps): Updates => {
     set({ state: "ready", version });
   });
   updater.onError((failure) => {
-    set({ state: "failed", message: failure.message });
+    const unreachable = feedUnreachable(failure);
+
+    if (unreachable === undefined) {
+      set({ state: "failed", message: failure.message });
+
+      return;
+    }
+
+    set({ state: "failed", message: `update feed unreachable (HTTP ${unreachable})` });
+    log.warn("update feed unreachable (HTTP {status}); tries again later", {
+      status: unreachable,
+    });
   });
 
   void check();
