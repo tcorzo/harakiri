@@ -165,7 +165,8 @@ The guest is a `fedora:44` smolvm machine with KWin, lavapipe, PipeWire with the
 
 ```diff
  dev/vm/
-+├── guest.sh                         + up / down / exec: smolvm machine under bounded.sh, state in .cache/vm
++├── guest.sh                         + up / down / exec: smolvm machine under bounded.sh, state in .cache/vm;
+                                        --net --allow-host-loopback (host's e2e Jellyfin), -v <worktree>:/workspace
 +├── provision.sh                     + dnf: kwin, mesa-vulkan-drivers, pipewire, wireplumber, pipewire-pulse, mpv (until Phase 7)
 +├── pipewire/fake-spdif.conf         + api.alsa.pcm.sink on iec958_null, iec958.codecs = [ PCM AC3 EAC3 TrueHD DTS DTS-HD ]
 +├── asoundrc                         + pcm.iec958_null { type null }
@@ -383,6 +384,7 @@ export const mpvBinary = (): string   // HARAKIRI_MPV ?? bundledMpv()   (package
  apps/desktop/e2e/support/            ~ the app resolves the bundle; lavapipe device unchanged
  dev/vm/provision.sh                  - Fedora mpv
  README.md, CLAUDE.md                 ~ onboarding drops system mpv; video row → bundled mpv 0.42 / libplacebo 7.387 / FFmpeg 9
+                                      ~ offline rule: check needs no network once the cached mpv build exists, like the corpus
 ```
 
 ### Validation
@@ -519,7 +521,11 @@ at startup
 +├── steam-setup/
 +│   ├── launcher.ts                   + script and .desktop text, writes, the heal at startup
 +│   ├── shortcuts-vdf.ts              + binary VDF reader: entries with appid, Exe, AppName
-+│   ├── artwork.ts                    + grid files from the packaged icon set (shipped by #23)
++│   ├── artwork.ts                    + copies the packaged grid set into grid/ under the appId names
+ apps/desktop/build/steam/
++├── portrait.png, wide.png, hero.png, logo.png   + 600×900, 920×430, 3840×1240, transparent wordmark
++└── render.ts                        + composes them from icon.svg and logo-dark.svg on #0a0605; committed output,
+                                        a test re-renders and diffs, like the fidelity table
 +│   ├── add.ts                        + the flow above, with injected openExternal and clock
 +│   └── *.test.ts                     + script text, vdf fixture built in the test, the appid/Exe match, artwork names
  ├── ipc.ts / shared/bridge.ts        + steamStatus → steamLibrary; steamAdd → result
@@ -594,7 +600,7 @@ The PRD and README catch up with the end state (Q1). The HTPC checks from Phases
 
 ## Open Questions
 
-- **Network for the default tier.** After Phase 7, `client.test.ts` in `mise run check` needs a built bundle. Building it needs the network once. Is a cached `.cache/mpv/<hash>` like the corpus acceptable under "check never needs the network"? Or should those tests move to a `*.local` tier that throws naming `mise run mpv:build`?
-- **Jellyfin from inside the guest.** Phase 4's e2e in the guest needs the e2e Jellyfin. Does the guest reach the host's container at 127.0.0.1:8296 through smolvm's networking, or does podman run inside the guest? Can the guest mount the worktree to run vitest there?
+- **Network for the default tier. Resolved 2026-11-21 (owner):** a cached `.cache/mpv/<recipe-hash>` is acceptable, like the corpus. `client.test.ts` stays in `mise run check`. `setup` builds the bundle once. With no bundle, `bundledMpv()` throws and names `mise run mpv:build`.
+- **Jellyfin from inside the guest.** Phase 4's e2e in the guest needs the e2e Jellyfin. smolvm v1.35's docs give both routes. `--allow-host-loopback` lets the guest reach the host's 127.0.0.1:8296. Containers can also run inside the machine. `-v <worktree>:/workspace` mounts the worktree over virtiofs, and host-side changes reach the guest's inotify. **Resolved 2026-11-21 (owner):** the guest reaches the host's container through `--allow-host-loopback`. The host keeps the warm container and its scan, and the guest stays at 4 GiB. Phase 4's plan first checks whether the discovery spec's UDP to 127.0.0.3 crosses the grant. If it does not, that one spec stays on the host, and the plan says so.
 - **mpv's DV FEL report.** Phase 9 needs the property or log line through which mpv 0.42 says the enhancement layer was applied. That is not yet identified.
-- **Steam artwork sizes.** Phase 10 assumes the icon set from #23 can produce the grid, hero and logo images. A grid or hero image may need new art at Steam's sizes.
+- **Steam artwork sizes. Resolved 2026-11-21:** no new art is needed. Main has the icon (`docs/assets/readme/icon.svg`, 1024×1024, warm black) and a transparent wordmark (`logo-dark.svg`) as vectors. `apps/desktop/build/steam/render.ts` composes the portrait, wide, hero and logo images from them at Steam's sizes. Only the hero's layout is a design call, made in the impeccable loop.
