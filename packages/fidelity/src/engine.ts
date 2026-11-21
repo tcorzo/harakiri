@@ -4,15 +4,23 @@ import type {
   Action,
   AudioOutput,
   BitstreamCodec,
+  ColorspaceHint,
   Delivery,
   Downgrade,
   Fact,
+  HdrSignalling,
   Observation,
   PictureSource,
   Renderer,
   SoundSource,
 } from "./model";
-import { bestPictureFact, nextRenderer, picturePlan } from "./picture";
+import {
+  bestPictureFact,
+  colorspaceHintFor,
+  nextRenderer,
+  picturePlan,
+  scalePlan,
+} from "./picture";
 import type { PictureWorld } from "./picture";
 import { bestSoundFact, isBitstreaming, soundPlan } from "./sound";
 import type { SoundWorld } from "./sound";
@@ -33,6 +41,8 @@ export interface FidelityView {
   /** What mpv may bitstream (`--audio-spdif`). */
   readonly bitstream: readonly BitstreamCodec[];
   readonly renderer: Renderer | "none";
+  /** mpv's `--target-colorspace-hint`, from how the compositor takes HDR. */
+  readonly colorspaceHint: ColorspaceHint;
   /** The signal path as it plays: the picture leg, then the sound leg. */
   readonly facts: readonly Fact[];
   /** Every way the playback is below its best right now, picture first. */
@@ -44,6 +54,7 @@ export interface FidelityStart {
   readonly sound: SoundSource | null;
   readonly delivery: Delivery;
   readonly output: AudioOutput;
+  readonly hdrSignalling: HdrSignalling;
 }
 
 export const startFidelity = (start: FidelityStart): FidelityState => ({
@@ -51,7 +62,12 @@ export const startFidelity = (start: FidelityStart): FidelityState => ({
   sound: start.sound,
   delivery: start.delivery,
   soundWorld: { output: start.output, bitstreamFailed: false, silent: false },
-  pictureWorld: { renderer: "vulkan", display: "unknown" },
+  pictureWorld: {
+    renderer: "vulkan",
+    display: "unknown",
+    hdrSignalling: start.hdrSignalling,
+    scaled: null,
+  },
 });
 
 /** What actually plays: the file's own streams, or the server's transcode of them. */
@@ -99,6 +115,7 @@ export const fidelityView = (state: FidelityState): FidelityView => {
   const downgrades = [
     transcoded("picture", state.picture, now.picture, bestPictureFact, state.delivery),
     picture.downgrade,
+    scalePlan(now.picture, state.pictureWorld),
     transcoded("sound", state.sound, now.sound, bestSoundFact, state.delivery),
     sound.downgrade,
   ].filter((downgrade): downgrade is Downgrade => downgrade !== null);
@@ -106,6 +123,7 @@ export const fidelityView = (state: FidelityState): FidelityView => {
   return {
     bitstream: sound.bitstream,
     renderer: state.pictureWorld.renderer,
+    colorspaceHint: colorspaceHintFor(state.pictureWorld.hdrSignalling),
     facts: [picture.fact, sound.fact].filter((fact): fact is Fact => fact !== null),
     downgrades,
   };
@@ -130,12 +148,18 @@ const learn = (state: FidelityState, observation: Observation): FidelityState =>
     .with({ kind: "rendererFailed" }, (): FidelityState => ({
       ...state,
       // A new renderer has not shown what the display takes yet.
-      pictureWorld: { renderer: nextRenderer(state.pictureWorld.renderer), display: "unknown" },
+      pictureWorld: {
+        ...state.pictureWorld,
+        renderer: nextRenderer(state.pictureWorld.renderer),
+        display: "unknown",
+      },
     }))
     .with({ kind: "displayTarget" }, ({ hdr }): FidelityState => ({
       ...state,
       pictureWorld: { ...state.pictureWorld, display: hdr ? "hdr" : "sdr" },
     }))
+    // Contract stub: Task 9 of the plan records an output smaller than the picture.
+    .with({ kind: "outputSize" }, (): FidelityState => state)
     // In a transcode the server's output plays; a track change there is a new transcode.
     .with({ kind: "soundTrack" }, ({ sound }): FidelityState => ({ ...state, sound }))
     .exhaustive();

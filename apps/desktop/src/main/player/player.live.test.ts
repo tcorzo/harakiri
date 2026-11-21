@@ -26,10 +26,11 @@ interface Harness {
 const harness: Harness = { userData: "", session: null };
 
 const { play, probe, stop } = createPlayer({
-  loadSession: () => harness.session,
+  loadSession: async () => await Promise.resolve(harness.session),
   userData: () => harness.userData,
   extraArgs: () => ["--vo=null", "--ao=null"],
   audioOutput: readAudioOutput,
+  hdrSignalling: async () => await Promise.resolve("colour-management" as const),
   preparePlayback,
   startPlayback,
 });

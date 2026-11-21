@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { fidelityView, startFidelity } from "@harakiri/fidelity";
-import type { AudioOutput, FidelityState, FidelityView } from "@harakiri/fidelity";
+import type { AudioOutput, FidelityState, FidelityView, HdrSignalling } from "@harakiri/fidelity";
 import {
   AccessToken,
   DeviceId,
@@ -83,6 +83,8 @@ export interface PlaybackDeps {
   readonly extraArgs: readonly string[];
   /** The output mpv plays to, which decides what it may bitstream. */
   readonly audioOutput: AudioOutput;
+  /** How the compositor takes HDR, which decides mpv's colorspace hint. */
+  readonly hdrSignalling: HdrSignalling;
 }
 
 export interface Playback {
@@ -118,7 +120,10 @@ const mpvArgs = (
   deps: PlaybackDeps,
   fidelity: FidelityView
 ) => [
-  ...buildPlaybackArgs({ audioPassthrough: passthroughOf(fidelity) }),
+  ...buildPlaybackArgs({
+    audioPassthrough: passthroughOf(fidelity),
+    colorspaceHint: fidelity.colorspaceHint,
+  }),
   // Verbose, so the run log shows which audio and video outputs mpv opened and why one failed.
   "--msg-level=all=v",
   "--no-osc",
@@ -164,10 +169,14 @@ export interface Prepared {
 const ENTRY_TIMEOUT_MS = 3000;
 
 /** Where fidelity starts for a resolution: the file, how the server sends it, and the output. */
-export const startingFidelity = (resolution: Resolution, output: AudioOutput): FidelityState => {
+export const startingFidelity = (
+  resolution: Resolution,
+  output: AudioOutput,
+  hdrSignalling: HdrSignalling
+): FidelityState => {
   const file = fileStreams(resolution.source, resolution.audioStreamIndex);
 
-  return startFidelity({ ...file, delivery: deliveryOf(resolution, file), output });
+  return startFidelity({ ...file, delivery: deliveryOf(resolution, file), output, hdrSignalling });
 };
 
 /** What the handoff states: how the file will play, every downgrade, and the server's reasons. */
@@ -294,7 +303,7 @@ export const startPlayback = async (
   try {
     const ready = prepared ?? (await preparePlayback(request, deps));
     const { client, auth, resolution } = ready;
-    const fidelity = startingFidelity(resolution, deps.audioOutput);
+    const fidelity = startingFidelity(resolution, deps.audioOutput, deps.hdrSignalling);
     const signal = signalReport(resolution, fidelityView(fidelity));
 
     base =

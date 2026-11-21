@@ -1,6 +1,13 @@
 import { fidelityView, observe, startFidelity } from "./engine";
 import type { FidelityView } from "./engine";
-import type { AudioOutput, Delivery, Observation, PictureSource, SoundSource } from "./model";
+import type {
+  AudioOutput,
+  Delivery,
+  HdrSignalling,
+  Observation,
+  PictureSource,
+  SoundSource,
+} from "./model";
 
 /** Sound tracks as the library has them (docs/research/07-media-census.md). */
 export const soundTracks: readonly SoundSource[] = [
@@ -84,6 +91,8 @@ export const pictures: readonly PictureSource[] = [
 /** Display and GPU setups, as what mpv reports on each. */
 export const displays: readonly {
   readonly name: string;
+  /** Default "colour-management". */
+  readonly hdrSignalling?: HdrSignalling;
   readonly observed: readonly Observation[];
 }[] = [
   { name: "HDR display, Vulkan", observed: [{ kind: "displayTarget", hdr: true }] },
@@ -144,9 +153,10 @@ export const simulate = (
   sound: SoundSource | null,
   delivery: Delivery,
   output: AudioOutput,
-  observed: (sent: FidelityView) => readonly Observation[]
+  observed: (sent: FidelityView) => readonly Observation[],
+  hdrSignalling: HdrSignalling = "colour-management"
 ): FidelityView => {
-  let state = startFidelity({ picture, sound, delivery, output });
+  let state = startFidelity({ picture, sound, delivery, output, hdrSignalling });
 
   for (const observation of observed(fidelityView(state))) {
     ({ state } = observe(state, observation));
@@ -159,7 +169,14 @@ export const soundCell = (track: SoundSource, output: (typeof audioOutputs)[numb
   simulate(null, track, { kind: "direct" }, output.output, (sent) => output.observed(sent, track));
 
 export const pictureCell = (picture: PictureSource, display: (typeof displays)[number]) =>
-  simulate(picture, null, { kind: "direct" }, receiver, () => display.observed);
+  simulate(
+    picture,
+    null,
+    { kind: "direct" },
+    receiver,
+    () => display.observed,
+    display.hdrSignalling
+  );
 
 export const deliveryRow = (row: (typeof deliveries)[number]) =>
   simulate(row.picture, row.sound, row.delivery, receiver, () => hdrDisplay);

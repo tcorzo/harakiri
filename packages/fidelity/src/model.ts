@@ -40,6 +40,20 @@ export const renderers = ["vulkan", "opengl", "opengl-legacy"] as const;
 
 export type Renderer = (typeof renderers)[number];
 
+/**
+ * How the compositor takes HDR from mpv: through the Wayland colour-management protocol, or only
+ * through the Vulkan swapchain's HDR formats and metadata.
+ */
+export type HdrSignalling = "colour-management" | "swapchain-formats";
+
+/** mpv's `--target-colorspace-hint`. */
+export type ColorspaceHint = "auto" | "yes";
+
+export interface Size {
+  readonly width: number;
+  readonly height: number;
+}
+
 /** PRD signal-path vocabulary: native passes as it is, mapped is converted, decoded became PCM. */
 export type FactState = "native" | "mapped" | "decoded";
 
@@ -54,7 +68,8 @@ export type DowngradeReason =
   | { readonly kind: "outputUnknown"; readonly detail: string }
   | { readonly kind: "outputFailed"; readonly output: string | null }
   | { readonly kind: "rendererFailed"; readonly renderer: Renderer | "none" }
-  | { readonly kind: "displaySdr" };
+  | { readonly kind: "displaySdr" }
+  | { readonly kind: "scaledDown"; readonly output: Size };
 
 export interface Downgrade {
   readonly leg: "picture" | "sound";
@@ -75,6 +90,8 @@ export type Observation =
   | { readonly kind: "rendererFailed" }
   /** What the display took: HDR (PQ or HLG), or SDR. */
   | { readonly kind: "displayTarget"; readonly hdr: boolean }
+  /** The size mpv renders to, and the picture's display size (`video-params` dw×dh). */
+  | { readonly kind: "outputSize"; readonly output: Size; readonly picture: Size }
   /** The owner chose another sound track, or none. */
   | { readonly kind: "soundTrack"; readonly sound: SoundSource | null };
 

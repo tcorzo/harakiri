@@ -1,7 +1,16 @@
 import { match } from "ts-pattern";
 
 import { renderers } from "./model";
-import type { Downgrade, DowngradeReason, Fact, PictureSource, Renderer } from "./model";
+import type {
+  ColorspaceHint,
+  Downgrade,
+  DowngradeReason,
+  Fact,
+  HdrSignalling,
+  PictureSource,
+  Renderer,
+  Size,
+} from "./model";
 
 /** What is known about the picture path. */
 export interface PictureWorld {
@@ -9,7 +18,18 @@ export interface PictureWorld {
   readonly renderer: Renderer | "none";
   /** What the display took, once mpv has said. */
   readonly display: "unknown" | "hdr" | "sdr";
+  /** How the compositor takes HDR, from the host. */
+  readonly hdrSignalling: HdrSignalling;
+  /** The picture and the smaller output it is scaled down to, or null while it fits. */
+  readonly scaled: { readonly picture: Size; readonly output: Size } | null;
 }
+
+// Contract stub: Task 8 of the plan gives "swapchain-formats" the "yes" hint.
+export const colorspaceHintFor = (_signalling: HdrSignalling): ColorspaceHint => "auto";
+
+// Contract stub: Task 9 of the plan reports a picture scaled down by the output.
+export const scalePlan = (_picture: PictureSource | null, _world: PictureWorld): Downgrade | null =>
+  null;
 
 export interface PictureResult {
   readonly fact: Fact | null;
