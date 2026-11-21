@@ -105,6 +105,16 @@ export const displays: readonly {
     name: "No working GPU renderer",
     observed: [{ kind: "rendererFailed" }, { kind: "rendererFailed" }, { kind: "rendererFailed" }],
   },
+  {
+    name: "HDR via swapchain formats, HDR on",
+    hdrSignalling: "swapchain-formats",
+    observed: [{ kind: "displayTarget", hdr: true }],
+  },
+  {
+    name: "HDR via swapchain formats, HDR off",
+    hdrSignalling: "swapchain-formats",
+    observed: [{ kind: "displayTarget", hdr: false }],
+  },
 ];
 
 /** How the server sends the file. */

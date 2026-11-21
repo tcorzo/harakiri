@@ -10,6 +10,11 @@ import {
   soundTracks,
 } from "./scenarios";
 
+const hdr10Picture = pictures.find((p) => p.range === "HDR10") ?? {
+  range: "HDR10",
+  label: "HDR10",
+};
+
 const graphemes = new Intl.Segmenter();
 const width = (text: string): number => [...graphemes.segment(text)].length;
 
@@ -87,6 +92,13 @@ export const renderTables = (): string => {
           return view.downgrades.length === 0 ? [] : [[picture.label, display.name, why(view)]];
         })
       )
+    ),
+    "",
+    "### Colorspace hint",
+    "",
+    ...table(
+      ["Setup", "mpv colorspace hint"],
+      displays.map((display) => [display.name, pictureCell(hdr10Picture, display).colorspaceHint])
     ),
     "",
     "## Delivery",

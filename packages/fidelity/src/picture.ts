@@ -24,8 +24,12 @@ export interface PictureWorld {
   readonly scaled: { readonly picture: Size; readonly output: Size } | null;
 }
 
-// Contract stub: Task 8 of the plan gives "swapchain-formats" the "yes" hint.
-export const colorspaceHintFor = (_signalling: HdrSignalling): ColorspaceHint => "auto";
+/** The compositor that takes HDR as swapchain formats needs the hint; one with colour management detects it. */
+export const colorspaceHintFor = (signalling: HdrSignalling): ColorspaceHint =>
+  match(signalling)
+    .with("colour-management", () => "auto" as const)
+    .with("swapchain-formats", () => "yes" as const)
+    .exhaustive();
 
 // Contract stub: Task 9 of the plan reports a picture scaled down by the output.
 export const scalePlan = (_picture: PictureSource | null, _world: PictureWorld): Downgrade | null =>

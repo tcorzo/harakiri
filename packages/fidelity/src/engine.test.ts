@@ -178,6 +178,31 @@ describe("picture", () => {
     expect(view.facts[0]).toStrictEqual({ text: "SDR", state: "native" });
     expect(view.downgrades).toStrictEqual([]);
   });
+
+  it("a colour-management compositor gets the auto hint", () => {
+    expect(fidelityView(start({ hdrSignalling: "colour-management" })).colorspaceHint).toBe("auto");
+  });
+
+  it("a swapchain-format compositor gets the yes hint, and keeps it after a renderer step-down", () => {
+    expect(fidelityView(start({ hdrSignalling: "swapchain-formats" })).colorspaceHint).toBe("yes");
+
+    const { view } = run(start({ hdrSignalling: "swapchain-formats" }), {
+      kind: "rendererFailed",
+    });
+
+    expect(view.colorspaceHint).toBe("yes");
+  });
+
+  it("swapchain formats with HDR off is reported as an SDR display", () => {
+    const { view } = run(start({ hdrSignalling: "swapchain-formats", picture: hdr10 }), {
+      kind: "displayTarget",
+      hdr: false,
+    });
+
+    expect(view.downgrades[0]?.message).toBe(
+      "The display takes SDR only, so HDR10 is tone-mapped to SDR."
+    );
+  });
 });
 
 describe("delivery", () => {

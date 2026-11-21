@@ -108,6 +108,17 @@ describe("the player", () => {
     expect(startPlayback.mock.calls[0]?.[3]).toBe(prepared);
   });
 
+  it("play hands the compositor's HDR signalling to the playback it starts", async () => {
+    const player = createPlayer({
+      ...wiring,
+      hdrSignalling: async () => await Promise.resolve("swapchain-formats" as const),
+    });
+
+    await player.play({ itemId }, send);
+
+    expect(startPlayback.mock.calls[0]?.[2]).toMatchObject({ hdrSignalling: "swapchain-formats" });
+  });
+
   it("both the player and the renderer identify as one client with the main device id", async () => {
     await prepare({ itemId });
 
