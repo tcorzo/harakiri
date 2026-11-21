@@ -9,6 +9,11 @@ directories:
 files:
   - out/**
   - package.json
+# Steam library artwork, copied into grid/ when harakiri adds itself to Steam.
+extraResources:
+  - from: build/steam
+    to: steam
+    filter: ["*.png"]
 # Writes latest-linux.yml and embeds resources/app-update.yml. Uploading is release.yml's job (--publish never).
 publish:
   provider: github

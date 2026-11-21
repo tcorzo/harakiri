@@ -110,6 +110,10 @@ run = "bun run gen"
 description = "Regenerate docs/fidelity/compatibility.md from the fidelity engine's scenarios"
 run = "bun packages/fidelity/src/table-cli.ts docs/fidelity/compatibility.md"
 
+[tasks."steam:art"]
+description = "Render the Steam library artwork in apps/desktop/build/steam from the README's icon and wordmark"
+run = "bun apps/desktop/build/steam/render.ts"
+
 [tasks."lint:skips"]
 description = "Fail when a test file can skip instead of living in a live, contract or FATE tier"
 run = "bun scripts/lint-skips.ts"

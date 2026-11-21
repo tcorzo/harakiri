@@ -98,6 +98,12 @@ export const CHECKS: readonly Check[] = [
     judge: listsAll(["ac3", "eac3", "dca", "truehd"], ffmpegRow),
   },
   {
+    label: "ffmpeg decoder librsvg",
+    required: true,
+    probe: ["ffmpeg", "-hide_banner", "-decoders"],
+    judge: listsAll(["librsvg"], ffmpegRow),
+  },
+  {
     label: "kwin_wayland",
     required: true,
     probe: ["kwin_wayland", "--version"],
