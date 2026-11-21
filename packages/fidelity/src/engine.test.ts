@@ -205,6 +205,50 @@ describe("picture", () => {
   });
 });
 
+describe("output size", () => {
+  const output1080 = { width: 1920, height: 1080 };
+  const output4k = { width: 3840, height: 2160 };
+
+  it("a 4K picture on a 1080p output is reported as scaled down", () => {
+    const { view } = run(
+      start({ picture: hdr10 }),
+      { kind: "displayTarget", hdr: true },
+      { kind: "outputSize", output: output1080, picture: output4k }
+    );
+
+    expect(view.downgrades).toStrictEqual([
+      {
+        leg: "picture",
+        from: "3840×2160",
+        to: "1920×1080",
+        reason: { kind: "scaledDown", output: output1080 },
+        message: "Scaled down to 1920×1080 by the output.",
+      },
+    ]);
+  });
+
+  it("a letterboxed film that fits its output is not scaled down", () => {
+    const { view } = run(
+      start({ picture: hdr10 }),
+      { kind: "displayTarget", hdr: true },
+      { kind: "outputSize", output: output4k, picture: { width: 3840, height: 1608 } }
+    );
+
+    expect(view.downgrades).toStrictEqual([]);
+  });
+
+  it("an output that grows back clears the downgrade", () => {
+    const { view } = run(
+      start({ picture: hdr10 }),
+      { kind: "displayTarget", hdr: true },
+      { kind: "outputSize", output: output1080, picture: output4k },
+      { kind: "outputSize", output: output4k, picture: output4k }
+    );
+
+    expect(view.downgrades).toStrictEqual([]);
+  });
+});
+
 describe("delivery", () => {
   it("a server transcode is reported leg by leg with the server's reasons", () => {
     const view = fidelityView(

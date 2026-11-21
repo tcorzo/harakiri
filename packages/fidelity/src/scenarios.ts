@@ -115,6 +115,18 @@ export const displays: readonly {
     hdrSignalling: "swapchain-formats",
     observed: [{ kind: "displayTarget", hdr: false }],
   },
+  {
+    name: "4K video on a 1080p output",
+    hdrSignalling: "swapchain-formats",
+    observed: [
+      { kind: "displayTarget", hdr: true },
+      {
+        kind: "outputSize",
+        output: { width: 1920, height: 1080 },
+        picture: { width: 3840, height: 2160 },
+      },
+    ],
+  },
 ];
 
 /** How the server sends the file. */

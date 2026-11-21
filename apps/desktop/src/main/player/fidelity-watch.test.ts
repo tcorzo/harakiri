@@ -13,6 +13,8 @@ type MpvValue =
   | string
   | number
   | { readonly gamma: string }
+  | { readonly w: number; readonly h: number }
+  | { readonly dw: number; readonly dh: number }
   | readonly { readonly id: number; readonly type: string; readonly albumart?: boolean }[];
 
 type SetValue = Parameters<FidelityMpv["setProperty"]>[1];
@@ -233,6 +235,31 @@ describe("fidelity watcher", () => {
     props.set("video-target-params", { gamma: "bt.1886" });
     await samples(watcher, 1);
     expect(watcher.view().downgrades.map((d) => d.reason)).toStrictEqual([{ kind: "displaySdr" }]);
+  });
+
+  it("an output smaller than the picture is reported, and 0×0 before the output is up is not", async () => {
+    const props = new Map<string, MpvValue>([
+      ["current-ao", "pipewire"],
+      ["current-vo", "gpu-next"],
+      ["video-target-params", { gamma: "pq" }],
+      ["osd-dimensions", { w: 0, h: 0 }],
+      ["video-params", { dw: 3840, dh: 2160 }],
+    ]);
+
+    const { mpv } = fakeMpv(props, () => {});
+    const { watcher } = watcherOn(mpv);
+    await samples(watcher, 2);
+    expect(watcher.view().downgrades).toStrictEqual([]);
+
+    props.set("osd-dimensions", { w: 1920, h: 1080 });
+    await samples(watcher, 1);
+    expect(watcher.view().downgrades.map((d) => d.reason)).toStrictEqual([
+      { kind: "scaledDown", output: { width: 1920, height: 1080 } },
+    ]);
+
+    props.set("osd-dimensions", { w: 3840, h: 2160 });
+    await samples(watcher, 1);
+    expect(watcher.view().downgrades).toStrictEqual([]);
   });
 
   it("a step-down returns to the last moment an output was playing", async () => {

@@ -62,6 +62,9 @@ const RENDERER_OPTIONS: Readonly<Record<Renderer, { readonly vo: string; readonl
 
 const TargetParams = z.object({ gamma: z.string() });
 
+const OsdDimensions = z.object({ w: z.number(), h: z.number() });
+const VideoParams = z.object({ dw: z.number(), dh: z.number() });
+
 const TrackList = z.array(
   z.object({ id: z.number(), type: z.string(), albumart: z.boolean().optional() })
 );
@@ -98,6 +101,7 @@ export const watchFidelity = (
   let rendererErrors = 0;
   let settling = 0;
   let display: boolean | undefined;
+  let sentSize: string | undefined;
   // With both outputs down mpv has no clock and races through the file, so a step-down returns
   // to the last moment something was playing.
   let lastHealthy: number | undefined;
@@ -216,6 +220,7 @@ export const watchFidelity = (
     if (failed) {
       settling = RENDERER_SETTLE;
       display = undefined;
+      sentSize = undefined;
       await learn({ kind: "rendererFailed" }, true);
 
       return;
@@ -233,12 +238,44 @@ export const watchFidelity = (
 
     const hdr = HDR_GAMMAS.has(target.gamma);
 
-    if (hdr === display) {
+    if (hdr !== display) {
+      display = hdr;
+      await learn({ kind: "displayTarget", hdr }, false);
+    }
+
+    await sampleOutputSize();
+  };
+
+  /** The output is 0×0 until its window is up; only a real size is judged against the picture. */
+  const sampleOutputSize = async (): Promise<void> => {
+    const [osd, params] = await Promise.all([
+      optional(mpv, "osd-dimensions", OsdDimensions),
+      optional(mpv, "video-params", VideoParams),
+    ]);
+
+    if (osd === undefined || params === undefined) {
       return;
     }
 
-    display = hdr;
-    await learn({ kind: "displayTarget", hdr }, false);
+    if (osd.w <= 0 || osd.h <= 0 || params.dw <= 0 || params.dh <= 0) {
+      return;
+    }
+
+    const key = `${osd.w}x${osd.h}/${params.dw}x${params.dh}`;
+
+    if (key === sentSize) {
+      return;
+    }
+
+    sentSize = key;
+    await learn(
+      {
+        kind: "outputSize",
+        output: { width: osd.w, height: osd.h },
+        picture: { width: params.dw, height: params.dh },
+      },
+      false
+    );
   };
 
   const sampleOrWarn = async (): Promise<void> => {

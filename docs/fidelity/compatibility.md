@@ -60,14 +60,14 @@ Each cell is what plays. ⬇ marks a downgrade. Sound and picture are decided in
 
 ## Picture
 
-| Picture                 | HDR display, Vulkan                     | SDR display, Vulkan                          | HDR display, no Vulkan driver                | No working GPU renderer | HDR via swapchain formats, HDR on       | HDR via swapchain formats, HDR off           |
-| ----------------------- | --------------------------------------- | -------------------------------------------- | -------------------------------------------- | ----------------------- | --------------------------------------- | -------------------------------------------- |
-| Dolby Vision            | Dolby Vision mapped to HDR10            | Dolby Vision tone-mapped to SDR ⬇            | Dolby Vision tone-mapped to SDR ⬇            | No picture ⬇            | Dolby Vision mapped to HDR10            | Dolby Vision tone-mapped to SDR ⬇            |
-| Dolby Vision base layer | Dolby Vision base layer mapped to HDR10 | Dolby Vision base layer tone-mapped to SDR ⬇ | Dolby Vision base layer tone-mapped to SDR ⬇ | No picture ⬇            | Dolby Vision base layer mapped to HDR10 | Dolby Vision base layer tone-mapped to SDR ⬇ |
-| HDR10+                  | HDR10+                                  | HDR10+ tone-mapped to SDR ⬇                  | HDR10+ tone-mapped to SDR ⬇                  | No picture ⬇            | HDR10+                                  | HDR10+ tone-mapped to SDR ⬇                  |
-| HDR10                   | HDR10                                   | HDR10 tone-mapped to SDR ⬇                   | HDR10 tone-mapped to SDR ⬇                   | No picture ⬇            | HDR10                                   | HDR10 tone-mapped to SDR ⬇                   |
-| HLG                     | HLG mapped to HDR10                     | HLG tone-mapped to SDR ⬇                     | HLG tone-mapped to SDR ⬇                     | No picture ⬇            | HLG mapped to HDR10                     | HLG tone-mapped to SDR ⬇                     |
-| SDR                     | SDR                                     | SDR                                          | SDR                                          | No picture ⬇            | SDR                                     | SDR                                          |
+| Picture                 | HDR display, Vulkan                     | SDR display, Vulkan                          | HDR display, no Vulkan driver                | No working GPU renderer | HDR via swapchain formats, HDR on       | HDR via swapchain formats, HDR off           | 4K video on a 1080p output                |
+| ----------------------- | --------------------------------------- | -------------------------------------------- | -------------------------------------------- | ----------------------- | --------------------------------------- | -------------------------------------------- | ----------------------------------------- |
+| Dolby Vision            | Dolby Vision mapped to HDR10            | Dolby Vision tone-mapped to SDR ⬇            | Dolby Vision tone-mapped to SDR ⬇            | No picture ⬇            | Dolby Vision mapped to HDR10            | Dolby Vision tone-mapped to SDR ⬇            | Dolby Vision mapped to HDR10 ⬇            |
+| Dolby Vision base layer | Dolby Vision base layer mapped to HDR10 | Dolby Vision base layer tone-mapped to SDR ⬇ | Dolby Vision base layer tone-mapped to SDR ⬇ | No picture ⬇            | Dolby Vision base layer mapped to HDR10 | Dolby Vision base layer tone-mapped to SDR ⬇ | Dolby Vision base layer mapped to HDR10 ⬇ |
+| HDR10+                  | HDR10+                                  | HDR10+ tone-mapped to SDR ⬇                  | HDR10+ tone-mapped to SDR ⬇                  | No picture ⬇            | HDR10+                                  | HDR10+ tone-mapped to SDR ⬇                  | HDR10+ ⬇                                  |
+| HDR10                   | HDR10                                   | HDR10 tone-mapped to SDR ⬇                   | HDR10 tone-mapped to SDR ⬇                   | No picture ⬇            | HDR10                                   | HDR10 tone-mapped to SDR ⬇                   | HDR10 ⬇                                   |
+| HLG                     | HLG mapped to HDR10                     | HLG tone-mapped to SDR ⬇                     | HLG tone-mapped to SDR ⬇                     | No picture ⬇            | HLG mapped to HDR10                     | HLG tone-mapped to SDR ⬇                     | HLG mapped to HDR10 ⬇                     |
+| SDR                     | SDR                                     | SDR                                          | SDR                                          | No picture ⬇            | SDR                                     | SDR                                          | SDR ⬇                                     |
 
 ### Why
 
@@ -77,23 +77,29 @@ Each cell is what plays. ⬇ marks a downgrade. Sound and picture are decided in
 | Dolby Vision            | HDR display, no Vulkan driver      | Vulkan could not start, so harakiri renders with OpenGL, which cannot send HDR. Dolby Vision is tone-mapped to SDR.            |
 | Dolby Vision            | No working GPU renderer            | No video renderer could start. The sound carries on without a picture.                                                         |
 | Dolby Vision            | HDR via swapchain formats, HDR off | The display takes SDR only, so Dolby Vision is tone-mapped to SDR.                                                             |
+| Dolby Vision            | 4K video on a 1080p output         | Scaled down to 1920×1080 by the output.                                                                                        |
 | Dolby Vision base layer | SDR display, Vulkan                | The display takes SDR only, so Dolby Vision base layer is tone-mapped to SDR.                                                  |
 | Dolby Vision base layer | HDR display, no Vulkan driver      | Vulkan could not start, so harakiri renders with OpenGL, which cannot send HDR. Dolby Vision base layer is tone-mapped to SDR. |
 | Dolby Vision base layer | No working GPU renderer            | No video renderer could start. The sound carries on without a picture.                                                         |
 | Dolby Vision base layer | HDR via swapchain formats, HDR off | The display takes SDR only, so Dolby Vision base layer is tone-mapped to SDR.                                                  |
+| Dolby Vision base layer | 4K video on a 1080p output         | Scaled down to 1920×1080 by the output.                                                                                        |
 | HDR10+                  | SDR display, Vulkan                | The display takes SDR only, so HDR10+ is tone-mapped to SDR.                                                                   |
 | HDR10+                  | HDR display, no Vulkan driver      | Vulkan could not start, so harakiri renders with OpenGL, which cannot send HDR. HDR10+ is tone-mapped to SDR.                  |
 | HDR10+                  | No working GPU renderer            | No video renderer could start. The sound carries on without a picture.                                                         |
 | HDR10+                  | HDR via swapchain formats, HDR off | The display takes SDR only, so HDR10+ is tone-mapped to SDR.                                                                   |
+| HDR10+                  | 4K video on a 1080p output         | Scaled down to 1920×1080 by the output.                                                                                        |
 | HDR10                   | SDR display, Vulkan                | The display takes SDR only, so HDR10 is tone-mapped to SDR.                                                                    |
 | HDR10                   | HDR display, no Vulkan driver      | Vulkan could not start, so harakiri renders with OpenGL, which cannot send HDR. HDR10 is tone-mapped to SDR.                   |
 | HDR10                   | No working GPU renderer            | No video renderer could start. The sound carries on without a picture.                                                         |
 | HDR10                   | HDR via swapchain formats, HDR off | The display takes SDR only, so HDR10 is tone-mapped to SDR.                                                                    |
+| HDR10                   | 4K video on a 1080p output         | Scaled down to 1920×1080 by the output.                                                                                        |
 | HLG                     | SDR display, Vulkan                | The display takes SDR only, so HLG is tone-mapped to SDR.                                                                      |
 | HLG                     | HDR display, no Vulkan driver      | Vulkan could not start, so harakiri renders with OpenGL, which cannot send HDR. HLG is tone-mapped to SDR.                     |
 | HLG                     | No working GPU renderer            | No video renderer could start. The sound carries on without a picture.                                                         |
 | HLG                     | HDR via swapchain formats, HDR off | The display takes SDR only, so HLG is tone-mapped to SDR.                                                                      |
+| HLG                     | 4K video on a 1080p output         | Scaled down to 1920×1080 by the output.                                                                                        |
 | SDR                     | No working GPU renderer            | No video renderer could start. The sound carries on without a picture.                                                         |
+| SDR                     | 4K video on a 1080p output         | Scaled down to 1920×1080 by the output.                                                                                        |
 
 ### Colorspace hint
 
@@ -105,6 +111,7 @@ Each cell is what plays. ⬇ marks a downgrade. Sound and picture are decided in
 | No working GPU renderer            | auto                |
 | HDR via swapchain formats, HDR on  | yes                 |
 | HDR via swapchain formats, HDR off | yes                 |
+| 4K video on a 1080p output         | yes                 |
 
 ## Delivery
 

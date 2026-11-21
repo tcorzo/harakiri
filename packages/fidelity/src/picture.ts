@@ -31,9 +31,19 @@ export const colorspaceHintFor = (signalling: HdrSignalling): ColorspaceHint =>
     .with("swapchain-formats", () => "yes" as const)
     .exhaustive();
 
-// Contract stub: Task 9 of the plan reports a picture scaled down by the output.
-export const scalePlan = (_picture: PictureSource | null, _world: PictureWorld): Downgrade | null =>
-  null;
+const sizeText = ({ width, height }: Size): string => `${width}×${height}`;
+
+/** A picture the output cannot show in full is scaled down by it, whatever the renderer. */
+export const scalePlan = (picture: PictureSource | null, world: PictureWorld): Downgrade | null =>
+  picture === null || world.scaled === null
+    ? null
+    : {
+        leg: "picture",
+        from: sizeText(world.scaled.picture),
+        to: sizeText(world.scaled.output),
+        reason: { kind: "scaledDown", output: world.scaled.output },
+        message: `Scaled down to ${sizeText(world.scaled.output)} by the output.`,
+      };
 
 export interface PictureResult {
   readonly fact: Fact | null;
