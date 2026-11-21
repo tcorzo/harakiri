@@ -1,7 +1,7 @@
 import path from "node:path";
 
 import { fidelityView } from "@harakiri/fidelity";
-import type { AudioOutput } from "@harakiri/fidelity";
+import type { AudioOutput, HdrSignalling } from "@harakiri/fidelity";
 
 import type {
   PlayerEvent,
@@ -16,12 +16,14 @@ import type { Playback, PlaybackDeps, Prepared } from "./playback";
 
 /** What the player needs from the app and the machine; `index.ts` passes the real ones. */
 export interface PlayerWiring {
-  readonly loadSession: () => Session | null;
+  readonly loadSession: () => Promise<Session | null>;
   /** The app's user data dir, which holds mpv's config dir. */
   readonly userData: () => string;
   /** mpv arguments appended after ours. */
   readonly extraArgs: () => string[];
   readonly audioOutput: () => Promise<AudioOutput>;
+  /** How the compositor takes HDR; asked per play, after the app is ready. */
+  readonly hdrSignalling: () => Promise<HdrSignalling>;
   readonly preparePlayback: (
     request: PlayRequest,
     deps: Pick<PlaybackDeps, "session" | "identity">
@@ -72,8 +74,8 @@ export const createPlayer = (wiring: PlayerWiring) => {
     return await result;
   };
 
-  const deps = (): Omit<PlaybackDeps, "audioOutput"> => {
-    const session = wiring.loadSession();
+  const deps = async (): Promise<Omit<PlaybackDeps, "audioOutput" | "hdrSignalling">> => {
+    const session = await wiring.loadSession();
 
     if (!session) {
       throw new Error("Not signed in");
@@ -91,12 +93,20 @@ export const createPlayer = (wiring: PlayerWiring) => {
 
   /** Resolves PlaybackInfo for the request and keeps it for the `play` that follows. */
   const prepare = async (request: PlayRequest): Promise<SignalReport> => {
-    const playback = deps();
+    const playback = await deps();
     const result = wiring.preparePlayback(request, playback);
     pending = { key: requestKey(request, playback.session), at: Date.now(), result };
-    const [{ resolution }, output] = await Promise.all([result, wiring.audioOutput()]);
 
-    return signalReport(resolution, fidelityView(startingFidelity(resolution, output)));
+    const [{ resolution }, output, hdrSignalling] = await Promise.all([
+      result,
+      wiring.audioOutput(),
+      wiring.hdrSignalling(),
+    ]);
+
+    return signalReport(
+      resolution,
+      fidelityView(startingFidelity(resolution, output, hdrSignalling))
+    );
   };
 
   /** Drops any kept resolution: the session it was made with is gone (sign out, or a new sign-in). */
@@ -144,7 +154,14 @@ export const createPlayer = (wiring: PlayerWiring) => {
   const play = async (request: PlayRequest, send: (event: PlayerEvent) => void): Promise<void> => {
     await serialized(async () => {
       await current?.stop();
-      const playbackDeps = { ...deps(), audioOutput: await wiring.audioOutput() };
+
+      const [base, audioOutput, hdrSignalling] = await Promise.all([
+        deps(),
+        wiring.audioOutput(),
+        wiring.hdrSignalling(),
+      ]);
+
+      const playbackDeps = { ...base, audioOutput, hdrSignalling };
       const prepared = await takePrepared(request, playbackDeps.session);
       const playback = await wiring.startPlayback(request, send, playbackDeps, prepared);
       current = playback;

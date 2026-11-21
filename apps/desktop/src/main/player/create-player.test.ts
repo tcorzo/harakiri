@@ -46,13 +46,14 @@ const startPlayback = vi.fn<PlayerWiring["startPlayback"]>();
 const send = vi.fn<(event: PlayerEvent) => void>();
 
 const wiring: PlayerWiring = {
-  loadSession: () => session(token),
+  loadSession: async () => await Promise.resolve(session(token)),
   userData: () => "/tmp/harakiri-create-player-test",
   extraArgs: () => [],
   audioOutput: vi.fn<PlayerWiring["audioOutput"]>().mockResolvedValue({
     kind: "unknown",
     detail: "test",
   }),
+  hdrSignalling: async () => await Promise.resolve("colour-management" as const),
   preparePlayback,
   startPlayback,
 };

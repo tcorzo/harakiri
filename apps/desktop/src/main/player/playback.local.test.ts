@@ -343,6 +343,7 @@ const play = async (
       configDir: path.join(dir, "mpv"),
       extraArgs: ["--vo=null", "--ao=null"],
       audioOutput: { kind: "known", name: "test receiver", bitstream: [...PRD_PASSTHROUGH] },
+      hdrSignalling: "colour-management",
     }
   );
 

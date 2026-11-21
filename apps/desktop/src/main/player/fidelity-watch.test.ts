@@ -54,6 +54,7 @@ const start = () =>
     sound: { carriage: "eac3", label: "E-AC3" },
     delivery: { kind: "direct" },
     output: receiver,
+    hdrSignalling: "colour-management",
   });
 
 const watches: FidelityWatch[] = [];

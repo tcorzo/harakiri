@@ -26,6 +26,7 @@ const start = (overrides: Partial<FidelityStart> = {}) =>
     sound: eac3,
     delivery: { kind: "direct" },
     output: receiver,
+    hdrSignalling: "colour-management",
     ...overrides,
   });
 

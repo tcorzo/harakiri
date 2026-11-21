@@ -26,7 +26,11 @@ const viewOf = (
   audioStreamIndex?: number
 ) =>
   fidelityView(
-    startingFidelity(resolve(playbackInfo(fixture), { itemId, audioStreamIndex }, server), output)
+    startingFidelity(
+      resolve(playbackInfo(fixture), { itemId, audioStreamIndex }, server),
+      output,
+      "colour-management"
+    )
   );
 
 const DV_TRUEHD = "fe56760a326f401c35863368589d15f1";
@@ -77,7 +81,7 @@ describe("fidelity input", () => {
       server
     );
 
-    const view = fidelityView(startingFidelity(resolution, receiver));
+    const view = fidelityView(startingFidelity(resolution, receiver, "colour-management"));
     expect([view.downgrades, view.facts]).toStrictEqual([
       [],
       [

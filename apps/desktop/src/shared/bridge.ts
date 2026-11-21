@@ -97,6 +97,10 @@ const DowngradeReason = z.discriminatedUnion("kind", [
     renderer: z.enum([...renderers, "none"]),
   }),
   z.object({ kind: z.literal("displaySdr") }),
+  z.object({
+    kind: z.literal("scaledDown"),
+    output: z.object({ width: z.number(), height: z.number() }),
+  }),
 ]) satisfies z.ZodType<FidelityDowngrade["reason"]>;
 
 export const Downgrade = z.object({

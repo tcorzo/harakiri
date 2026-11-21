@@ -1,6 +1,7 @@
 import { app } from "electron";
 
 import { isE2E } from "../env";
+import { hostCapabilities } from "../host";
 import { loadSession } from "../session";
 import { AudioOutputJson, readAudioOutput } from "./audio-output";
 import { createPlayer } from "./create-player";
@@ -20,10 +21,15 @@ const audioOutput = async () => {
 };
 
 export const { prepare, forgetPrepared, play, stop, probe, isPlaying, mpvPid } = createPlayer({
-  loadSession,
+  loadSession: async () => await Promise.resolve(loadSession()),
   userData: () => app.getPath("userData"),
   extraArgs: e2eMpvArgs,
   audioOutput,
+  hdrSignalling: async () => {
+    const { hdrSignalling } = await hostCapabilities();
+
+    return hdrSignalling;
+  },
   preparePlayback,
   startPlayback,
 });
