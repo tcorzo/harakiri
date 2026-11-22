@@ -24,3 +24,5 @@ export {
 } from "./client";
 
 export { setHttpHeaders, type HttpHeaders } from "./http";
+
+export { bundledMpv } from "./bundle";
