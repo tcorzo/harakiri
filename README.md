@@ -58,7 +58,8 @@ You need [mise](https://mise.jdx.dev), which pins bun, node, hk and the HDR tool
 
 - `ffmpeg` from RPM Fusion, for the test harness.
 - `weston` 15 or newer, `kwin` and `mesa-vulkan-drivers`, for the headless harness.
-- `podman`, for the dev and test Jellyfin.
+- `podman`, for the dev and test Jellyfin and the mpv build.
+- A read-write `/dev/kvm` (join the `kvm` group), for the microVM guest that runs e2e and the platform tests. Its first run downloads smolvm, a Fedora image and about 2 GB of packages into `.cache/vm`.
 
 ```sh
 mise trust && mise run setup   # deps, git hooks, and a check of the media stack
@@ -71,7 +72,7 @@ mise run package               # the same AppImage a release ships, into apps/de
 | Command              | What it does                                                                                                               |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `mise run check`     | Everything CI gates on: lints, types, unit and harness tests. No server, no network.                                       |
-| `mise run e2e`       | Builds the app and drives it with Playwright inside a nested, invisible KWin.                                              |
+| `mise run e2e`       | Builds the app and drives it with Playwright inside a nested, invisible KWin, mostly in the dev/vm guest.                  |
 | `mise run doctor`    | Checks the harness tools: ffmpeg, the headless compositors, podman, dovi_tool, hdr10plus_tool and a read-write `/dev/kvm`. |
 | `mise run test:fate` | Proves DTS-HD MA, DTS:X and TrueHD Atmos passthrough on FFmpeg's FATE samples.                                             |
 | `mise tasks`         | Lists the rest.                                                                                                            |
@@ -102,6 +103,7 @@ No part of the harness needs an HDR TV or an AV receiver.
 | [`packages/input`](packages/input)       | One action model for keyboard, gamepad and remote, and the guard between the UI and mpv.     |
 | [`packages/harness`](packages/harness)   | The IEC 61937 extractor, picture checks, the `doctor` CLI, and the generated media corpus.   |
 | [`dev/jellyfin`](dev/jellyfin)           | The local dev Jellyfin: podman, a pinned image, an idempotent bootstrap.                     |
+| [`dev/vm`](dev/vm)                       | The microVM guest (smolvm, Fedora) that runs e2e and the platform tests off your desktop.    |
 
 ## Further reading
 
