@@ -93,6 +93,10 @@ bun dev/jellyfin/bootstrap.ts
 description = "Stop the dev Jellyfin, keeping its state"
 run = "dev/jellyfin/jellyfin.sh down"
 
+[tasks."test:platform"]
+description = "Run the platform tier inside the dev/vm microVM guest (KVM; the first run downloads smolvm and provisions the guest)"
+run = "dev/vm/guest.sh exec -- bun x vitest run --config vitest.tiers.config.ts --project 'platform:*' --maxWorkers=2"
+
 [tasks."test:contract"]
 description = "Prove a real Jellyfin direct plays every fixture and the whole library under harakiri's profile (JELLYFIN_DEV_URL/_USER/_PASSWORD)"
 run = "scripts/bounded.sh contract 2G -- bun x vitest run --config vitest.tiers.config.ts --project 'contract:*' --maxWorkers=2"
