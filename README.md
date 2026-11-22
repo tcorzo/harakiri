@@ -56,7 +56,7 @@ chmod +x harakiri-x86_64.AppImage
 
 You need [mise](https://mise.jdx.dev), which pins bun, node, hk and the HDR tools, and these Fedora packages outside mise:
 
-- `mpv` 0.41 or newer, and `ffmpeg` from RPM Fusion.
+- `ffmpeg` from RPM Fusion, for the test harness.
 - `weston` 15 or newer, `kwin` and `mesa-vulkan-drivers`, for the headless harness.
 - `podman`, for the dev and test Jellyfin.
 
@@ -68,13 +68,13 @@ mise run package               # the same AppImage a release ships, into apps/de
 
 ### Everyday commands
 
-| Command              | What it does                                                                         |
-| -------------------- | ------------------------------------------------------------------------------------ |
-| `mise run check`     | Everything CI gates on: lints, types, unit and harness tests. No server, no network. |
-| `mise run e2e`       | Builds the app and drives it with Playwright inside a nested, invisible KWin.        |
-| `mise run doctor`    | Checks mpv, libplacebo, ffmpeg and the headless compositors.                         |
-| `mise run test:fate` | Proves DTS-HD MA, DTS:X and TrueHD Atmos passthrough on FFmpeg's FATE samples.       |
-| `mise tasks`         | Lists the rest.                                                                      |
+| Command              | What it does                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------------- |
+| `mise run check`     | Everything CI gates on: lints, types, unit and harness tests. No server, no network.              |
+| `mise run e2e`       | Builds the app and drives it with Playwright inside a nested, invisible KWin.                     |
+| `mise run doctor`    | Checks the harness tools: ffmpeg, the headless compositors, podman, dovi_tool and hdr10plus_tool. |
+| `mise run test:fate` | Proves DTS-HD MA, DTS:X and TrueHD Atmos passthrough on FFmpeg's FATE samples.                    |
+| `mise tasks`         | Lists the rest.                                                                                   |
 
 > [!TIP]
 > Heavy processes run in their own memory-capped systemd scope through [`scripts/bounded.sh`](scripts/bounded.sh), and `mise run watchdog` stops the largest one before the machine runs out of memory. The `mise` tasks already do this.

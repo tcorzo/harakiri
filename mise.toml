@@ -15,17 +15,18 @@ hk = "2.10.0"
 _.file = ".env"
 
 [tasks.setup]
-description = "Install deps, register git hooks and check the system media stack"
+description = "Install deps, register git hooks, build harakiri's mpv once and check the harness tools"
 shell = "bash -euo pipefail -c"
 run = """
 bun install --frozen-lockfile
 hk install --global --mise
 git config --get-regexp '^hook\\.' >/dev/null || { echo 'hk hooks are not registered' >&2; exit 1; }
+mise run mpv:build
 mise run doctor
 """
 
 [tasks.doctor]
-description = "Check mpv, libplacebo, ffmpeg and the headless compositors the harness needs"
+description = "Check the tools the validation harness needs: ffmpeg, the headless compositors, podman, dovi_tool and hdr10plus_tool"
 shell = "bash -euo pipefail -c"
 run = "bun run --filter @harakiri/harness doctor"
 

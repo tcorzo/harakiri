@@ -75,7 +75,7 @@ describe("T1: the player's mpv argv writes the IEC 61937 stream unmodified", () 
     }
   });
 
-  // Observed with mpv 0.41.0 / FFmpeg 8.1.3: from Matroska, mpv emits every E-AC-3 burst
+  // Observed with mpv 0.42.0 / FFmpeg 9.0.2 (the bundle), reference ffmpeg 8.1.3: from Matroska, mpv emits every E-AC-3 burst
   // except the last (the same .eac3 file played raw loses nothing). The bytes it does emit
   // are identical, so the tolerance is at most one trailing burst.
   it("eac3 capture is FFmpeg's spdif output, at most its final burst short", () => {

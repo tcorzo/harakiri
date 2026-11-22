@@ -67,18 +67,6 @@ const ffmpegRow = (name: string) => new RegExp(`^\\s*\\S+\\s+${name}\\s`, "mu");
 
 export const CHECKS: readonly Check[] = [
   {
-    label: "mpv",
-    required: true,
-    probe: ["mpv", "--version"],
-    judge: versionAtLeast(/^mpv v?/mu, [0, 41, 0]),
-  },
-  {
-    label: "libplacebo (linked into mpv)",
-    required: true,
-    probe: ["mpv", "--version"],
-    judge: versionAtLeast(/^libplacebo version: v?/mu, null),
-  },
-  {
     label: "ffmpeg filter libplacebo",
     required: true,
     probe: ["ffmpeg", "-hide_banner", "-filters"],
@@ -117,7 +105,7 @@ export const CHECKS: readonly Check[] = [
   },
   {
     label: "podman",
-    required: false,
+    required: true,
     probe: ["podman", "--version"],
     judge: versionAtLeast(/podman version /u, null),
   },

@@ -18,6 +18,7 @@ import { z } from "zod";
 
 import { buildPlaybackArgs } from "./args";
 import type { MpvConfig } from "./args";
+import { bundledMpv } from "./bundle";
 import {
   MpvClosedError,
   MpvCommandError,
@@ -40,7 +41,7 @@ const start = async (
   args: readonly string[] = headless,
   options: { config?: MpvConfig; requestTimeoutMs?: number } = {}
 ): Promise<MpvClient> => {
-  const client = await spawnMpv({ config: "none", ...options, args });
+  const client = await spawnMpv({ config: "none", binary: bundledMpv(), ...options, args });
   clients.push(client);
 
   return client;
@@ -99,10 +100,10 @@ describe("mpv IPC client", () => {
   });
 
   describe(spawnMpv, () => {
-    it("talks to the real mpv 0.41", async () => {
+    it("talks to the real mpv 0.42.0", async () => {
       const client = await start();
       await expect(client.getProperty("mpv-version", z.string())).resolves.toMatch(
-        /^mpv v0\.41\./u
+        /^mpv v0\.42\.0$/u
       );
     });
 

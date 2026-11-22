@@ -1,19 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { listsAll, versionAtLeast } from "./doctor";
+import { CHECKS, listsAll, versionAtLeast } from "./doctor";
 import { compareVersions, parseVersion } from "./version";
 
 const exited = (stdout: string, code = 0) =>
   ({ kind: "exited", code, stdout, stderr: "" }) as const;
 
-const MPV_VERSION = `mpv v0.41.0 Copyright © 2000-2025 mpv/MPlayer/mplayer2 projects
-libplacebo version: v7.360.1
-FFmpeg version: 8.0.1 (runtime 8.1.3)`;
-
 describe(parseVersion, () => {
-  it("reads mpv and libplacebo versions from `mpv --version`", () => {
-    expect(parseVersion(MPV_VERSION, /^mpv v?/mu)).toStrictEqual([0, 41, 0]);
-    expect(parseVersion(MPV_VERSION, /^libplacebo version: v?/mu)).toStrictEqual([7, 360, 1]);
+  it("reads a version after its prefix", () => {
+    expect(parseVersion("weston 15.0.0", /weston /u)).toStrictEqual([15, 0, 0]);
+    expect(parseVersion("podman version 5.6.2", /podman version /u)).toStrictEqual([5, 6, 2]);
   });
 
   it("pads missing components with zero and returns null when the prefix is absent", () => {
@@ -24,29 +20,29 @@ describe(parseVersion, () => {
 
 describe(compareVersions, () => {
   it("orders numerically per component, not lexically", () => {
-    expect(compareVersions([0, 9, 0], [0, 41, 0])).toBe(-1);
+    expect(compareVersions([14, 9, 0], [15, 0, 0])).toBe(-1);
     expect(compareVersions([15, 0, 1], [15, 0, 0])).toBe(1);
-    expect(compareVersions([0, 41, 0], [0, 41, 0])).toBe(0);
+    expect(compareVersions([15, 0, 0], [15, 0, 0])).toBe(0);
   });
 });
 
 describe("check judges", () => {
-  const mpv = versionAtLeast(/^mpv v?/mu, [0, 41, 0]);
+  const weston = versionAtLeast(/weston /u, [15, 0, 0]);
 
-  it("accepts mpv 0.41.0 and flags 0.40.0 as outdated", () => {
-    expect(mpv(exited(MPV_VERSION))).toStrictEqual({ status: "ok", detail: "0.41.0" });
-    expect(mpv(exited("mpv v0.40.0 Copyright"))).toStrictEqual({
+  it("accepts weston 15.0.0 and flags 14.0.2 as outdated", () => {
+    expect(weston(exited("weston 15.0.0"))).toStrictEqual({ status: "ok", detail: "15.0.0" });
+    expect(weston(exited("weston 14.0.2"))).toStrictEqual({
       status: "outdated",
-      detail: "0.40.0 < 0.41.0",
+      detail: "14.0.2 < 15.0.0",
     });
   });
 
   it("reports a tool that is not on PATH or fails", () => {
-    expect(mpv({ kind: "not-found", command: "mpv" })).toStrictEqual({
+    expect(weston({ kind: "not-found", command: "weston" })).toStrictEqual({
       status: "missing",
-      detail: "mpv is not on PATH",
+      detail: "weston is not on PATH",
     });
-    expect(mpv(exited("", 127))).toStrictEqual({ status: "missing", detail: "exited 127" });
+    expect(weston(exited("", 127))).toStrictEqual({ status: "missing", detail: "exited 127" });
   });
 
   it("names the encoders an ffmpeg listing lacks", () => {
@@ -61,5 +57,22 @@ describe("check judges", () => {
       status: "ok",
       detail: "ac3, eac3, dca",
     });
+  });
+});
+
+describe("the doctor check list", () => {
+  it("checks the harness tools only: no mpv, and podman is required", () => {
+    expect(CHECKS.map((c) => c.label)).toStrictEqual([
+      "ffmpeg filter libplacebo",
+      "ffmpeg bitstream filter dovi_rpu",
+      "ffmpeg encoders",
+      "ffmpeg decoder librsvg",
+      "kwin_wayland",
+      "weston",
+      "podman",
+      "dovi_tool",
+      "hdr10plus_tool",
+    ]);
+    expect(CHECKS.find((c) => c.label === "podman")?.required).toBe(true);
   });
 });
