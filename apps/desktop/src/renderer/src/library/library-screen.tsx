@@ -28,6 +28,7 @@ import {
 } from "../data/queries";
 import { useSignedIn } from "../data/session";
 import { useActionHandler, useNavigationGuard } from "../input/handlers";
+import { LauncherCard, launcherAddKey } from "../launcher/launcher-card";
 import { PlayAction, QuietAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
 import { catalogueLabel, remPx } from "../ui/marks";
@@ -250,8 +251,9 @@ const ProgrammeView = ({
     restored.current = true;
     const { place } = useLit.getState();
 
+    // The launcher card holds focus while it shows, so it comes before any remembered place.
     if (place !== null || !hero) {
-      focusFirst(...restoreKeys(place, hero, first));
+      focusFirst(launcherAddKey, ...restoreKeys(place, hero, first));
     }
   }, [hero, first]);
 
@@ -449,7 +451,8 @@ export const LibraryScreen = () => {
     }
 
     useLit.setState({ entry: null, section: tonight });
-    focusFirst("hero-play");
+    // A card drawn from a cached status registers in this same render, before this effect runs.
+    focusFirst(launcherAddKey, "hero-play");
   }, []);
 
   preloadBackdrop(server, next);
@@ -581,6 +584,8 @@ export const LibraryScreen = () => {
         <div className="right-safe-x absolute top-[calc(var(--spacing-safe-y)-0.5rem)]">
           <SettingsLink />
         </div>
+
+        <LauncherCard />
 
         {heroPanel()}
 
