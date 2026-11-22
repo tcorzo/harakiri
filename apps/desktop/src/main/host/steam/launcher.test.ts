@@ -11,6 +11,17 @@ const ARTWORK = path.resolve(import.meta.dirname, "../../../../build/steam");
 
 const tempDir = async () => await mkdtemp(path.join(tmpdir(), "harakiri-launcher-"));
 
+/** The permission bits of each file's mode. */
+const permissions = async (paths: readonly string[]): Promise<number[]> =>
+  await Promise.all(
+    paths.map(async (file) => {
+      const { mode } = await stat(file);
+
+      // oxlint-disable-next-line no-bitwise -- the permission bits of the mode
+      return mode & 0o777;
+    })
+  );
+
 describe(launcherScript, () => {
   it("the script clears the preload and execs the AppImage in place", () => {
     expect(launcherScript("/opt/harakiri/harakiri-x86_64.AppImage")).toBe(
@@ -126,6 +137,44 @@ describe(writeLauncher, () => {
       await expect(readFile(files.icon)).resolves.toStrictEqual(
         await readFile(path.join(ARTWORK, "icon.png"))
       );
+      await expect(writeLauncher(files, target, ARTWORK)).resolves.toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("writes 0755 and 0644 under a restrictive umask", async () => {
+    const root = await tempDir();
+    const umask = process.umask(0o077);
+
+    try {
+      const files = launcherFiles(root);
+      await writeLauncher(files, "/opt/harakiri/harakiri-x86_64.AppImage", ARTWORK);
+
+      await expect(permissions([files.script, files.desktop, files.icon])).resolves.toStrictEqual([
+        0o755, 0o644, 0o644,
+      ]);
+    } finally {
+      process.umask(umask);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("repairs a mode when the bytes already match", async () => {
+    const root = await tempDir();
+
+    try {
+      const files = launcherFiles(root);
+      const target = "/opt/harakiri/harakiri-x86_64.AppImage";
+      await writeLauncher(files, target, ARTWORK);
+      await chmod(files.script, 0o644);
+      await chmod(files.desktop, 0o600);
+
+      await expect(writeLauncher(files, target, ARTWORK)).resolves.toBe(true);
+
+      await expect(permissions([files.script, files.desktop])).resolves.toStrictEqual([
+        0o755, 0o644,
+      ]);
       await expect(writeLauncher(files, target, ARTWORK)).resolves.toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });

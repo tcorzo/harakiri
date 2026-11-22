@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export interface LauncherFiles {
@@ -76,18 +76,31 @@ const readOrNull = async (file: string): Promise<Buffer | null> => {
   }
 };
 
-/** Temp file, then rename; skipped when the bytes already match. */
+/**
+ * Temp file, then rename; skipped when the bytes already match, though a wrong mode is still
+ * repaired in place. The mode is set with chmod, so the umask cannot narrow it.
+ */
 const writeAtomic = async (file: string, bytes: Buffer, mode: number): Promise<boolean> => {
   const current = await readOrNull(file);
 
   if (current?.equals(bytes) === true) {
-    return false;
+    const { mode: currentMode } = await stat(file);
+
+    // oxlint-disable-next-line no-bitwise -- the permission bits of the mode
+    if ((currentMode & 0o777) === mode) {
+      return false;
+    }
+
+    await chmod(file, mode);
+
+    return true;
   }
 
   const temp = `${file}.${process.pid}.tmp`;
 
   try {
     await writeFile(temp, bytes, { mode });
+    await chmod(temp, mode);
     await rename(temp, file);
   } catch (error) {
     await rm(temp, { force: true });
