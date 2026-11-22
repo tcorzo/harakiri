@@ -67,7 +67,7 @@ running() { sv machine exec --name "$NAME" --timeout 5s -- true >/dev/null 2>&1;
 # The guest reaches the host's loopback over TCP only with this grant, which machine create rejects.
 start() {
   SMOLVM_ALLOW_HOST_LOOPBACK=1 "$REPO/scripts/bounded.sh" "$SCOPE" 5G -- \
-    "$SMOLVM" --state-dir "$STATE" machine start --name "$NAME"
+    "$SMOLVM" --state-dir "$STATE" machine start --name "$NAME" 9>&-
 }
 
 up() {
@@ -153,17 +153,30 @@ cmd_exec() {
     [ -n "${!var+set}" ] && pass+=(--secret-env "$var=$var")
   done
 
+  # One exec at a time per checkout: a second one would share the guest, and the first to finish
+  # would stop it under the other. The guest's own processes do not inherit the lock (start closes
+  # fd 9), so a guest left running after a killed exec does not hold it.
+  mkdir -p "$STATE"
+  exec 9>"$STATE/lock"
+  flock -n 9 || die "this checkout's guest is busy with another exec. Wait for it to finish; if none is running, $STATE/lock is held by a leftover process (fuser -v $STATE/lock)."
+
+  # A signal stops the command and, through the EXIT trap, the guest this exec started. The command
+  # runs in the background so that the traps run at once instead of after it ends. Background jobs
+  # ignore SIGINT in a non-interactive shell, so the command gets SIGTERM for both.
+  local child="" status=0
+  trap '[ -z "$child" ] || kill -TERM "$child" 2>/dev/null; exit 130' INT
+  trap '[ -z "$child" ] || kill -TERM "$child" 2>/dev/null; exit 143' TERM
   if ! running; then
     trap 'down >&2' EXIT
-    trap 'exit 130' INT
-    trap 'exit 143' TERM
   fi
   # Always: a changed recipe recreates even a running guest.
   up >&2
 
-  local status=0
+  # <&0: a background job's stdin would otherwise be /dev/null.
   sv machine exec --name "$NAME" --stream --user "$(id -u):$(id -g)" -w "/workspace${cwd:+/$cwd}" \
-    "${pass[@]}" -- /workspace/dev/vm/session.sh "$@" || status=$?
+    "${pass[@]}" -- /workspace/dev/vm/session.sh "$@" <&0 &
+  child=$!
+  wait "$child" || status=$?
   exit "$status"
 }
 
