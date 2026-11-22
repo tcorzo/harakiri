@@ -127,12 +127,18 @@ dir = "{{config_root}}/apps/desktop"
 shell = "bash -euo pipefail -c"
 # Electron 45 has no install script: it downloads its binary on first use. install-electron does
 # that here, on the host, so the guest finds it in node_modules through the mount.
+# A red host half still runs the guest half, and the task fails when either did.
 run = """
 if [ -z "${HARAKIRI_E2E_SERVER:-}" ]; then mise run media:fetch-fate; fi
 bun x install-electron
 ../../scripts/bounded.sh build 3G -- bun run build
-../../scripts/bounded.sh e2e 4G -- bash e2e/headless.sh --project=host
-../../dev/vm/guest.sh exec --cwd apps/desktop -- bash e2e/headless.sh --project=guest
+host=0 guest=0
+../../scripts/bounded.sh e2e 4G -- bash e2e/headless.sh --project=host || host=$?
+../../dev/vm/guest.sh exec --cwd apps/desktop -- bash e2e/headless.sh --project=guest || guest=$?
+if [ "$host" != 0 ] || [ "$guest" != 0 ]; then
+  echo "e2e failed: host project exit $host, guest project exit $guest" >&2
+  exit 1
+fi
 """
 
 [tasks.package]
