@@ -57,6 +57,13 @@ const jellyfinSh = (command: string) => {
   run(`jellyfin.sh ${command}`, path.resolve(REPO, "dev/jellyfin/jellyfin.sh"), [command]);
 };
 
+/**
+ * Each request to the e2e Jellyfin gets this long. A server that accepts the connection and never
+ * answers would otherwise hang the setup with no message. A busy scan still answers in well under
+ * a second.
+ */
+const REQUEST_TIMEOUT_MS = 10_000;
+
 const AUTH =
   'MediaBrowser Client="harakiri-e2e-setup", Device="setup", DeviceId="harakiri-e2e-setup", Version="0"';
 
@@ -67,6 +74,7 @@ const get = async <Schema extends z.ZodType>(
 ): Promise<z.infer<Schema>> => {
   const response = await fetch(new URL(route, SERVER), {
     headers: { Authorization: `${AUTH}, Token="${token}"` },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 
   if (!response.ok) {
@@ -85,6 +93,8 @@ const waitForScan = async (expected: number, timeoutMs = 180_000): Promise<void>
       Username: E2E_CONTAINER_ENV.JELLYFIN_DEV_USER,
       Pw: E2E_CONTAINER_ENV.JELLYFIN_DEV_PASSWORD,
     }),
+    // Signing in hashes the password server-side, the slowest call here; it gets twice as long.
+    signal: AbortSignal.timeout(2 * REQUEST_TIMEOUT_MS),
   });
 
   if (!signIn.ok) {
