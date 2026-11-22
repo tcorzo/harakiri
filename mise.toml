@@ -177,6 +177,7 @@ rm -rf "$out.partial"
 scripts/bounded.sh mpv-build 6G -- podman build --memory 5g --memory-swap 5g \
   --build-arg BASE_IMAGE="$BASE_IMAGE" --build-arg JOBS="${HARAKIRI_MPV_JOBS:-4}" \
   -v "$PWD/.cache/mpv/src:/src:ro,Z" -f mpv/Containerfile -o "type=local,dest=$out.partial" mpv
+rm -rf "$out"
 mv "$out.partial" "$out"
 find .cache/mpv -mindepth 1 -maxdepth 1 -type d ! -name src ! -name "$(basename "$out")" -exec rm -rf {} +
 echo "mpv build ready: $out"

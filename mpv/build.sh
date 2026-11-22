@@ -42,12 +42,19 @@ ninja -C /build/sdl2-build -j"$jobs" install
 )
 
 # 4. libplacebo: the tarball's 3rdparty/ dirs are empty, so it builds against the image's Vulkan
-#    headers, vk.xml, jinja2 and glad2
+#    headers, vk.xml, jinja2 and glad2. --auto-features=disabled, and every feature is named:
+#    - vk-proc-addr: mpv creates its Vulkan instance with no vkGetInstanceProcAddr of its own
+#      (pl_vk_inst_params()), so libplacebo links it from the host's libvulkan.so.1.
+#    - gl-proc-addr: off. mpv hands libplacebo its own GL loader (get_proc_addr_ex), so the
+#      built-in dlopen loader is never used.
+#    - glslang: off, shaderc compiles SPIR-V. libdovi: off, FFmpeg parses the Dolby Vision RPU
+#      and libplacebo's built-in dovi applies it.
+#    - d3d11 is Windows only. unwind and xxhash are debugging and speed extras with no package here.
 meson setup /build/libplacebo-build "/build/libplacebo-v$LIBPLACEBO_VERSION" \
-	--prefix="$prefix" --buildtype=release \
-	-Dvulkan=enabled -Dshaderc=enabled -Dglslang=disabled -Dlcms=enabled -Dopengl=enabled \
-	-Ddovi=enabled -Dlibdovi=disabled -Ddemos=false -Dtests=false \
-	-Dd3d11=disabled -Dunwind=disabled -Dxxhash=disabled
+	--prefix="$prefix" --buildtype=release --auto-features=disabled \
+	-Dvulkan=enabled -Dvk-proc-addr=enabled -Dshaderc=enabled -Dglslang=disabled \
+	-Dopengl=enabled -Dgl-proc-addr=disabled -Dlcms=enabled -Ddovi=enabled -Dlibdovi=disabled \
+	-Dd3d11=disabled -Dunwind=disabled -Dxxhash=disabled -Ddemos=false -Dtests=false
 ninja -C /build/libplacebo-build -j"$jobs" install
 
 # 5. mpv: --auto-features=disabled, so every feature mpv needs is named here, and every other one
@@ -57,7 +64,7 @@ ninja -C /build/libplacebo-build -j"$jobs" install
 #    vdpau-gl-x11 needs GLX (gl-x11), which stays off; VDPAU decodes through vdpau-copy.
 meson setup /build/mpv-build "/build/mpv-$MPV_VERSION" \
 	--prefix="$prefix" --buildtype=release --auto-features=disabled \
-	-Dgpl=true -Dcplayer=true -Dlibmpv=false -Dtests=false \
+	-Dgpl=true -Dcplayer=true -Dlibmpv=false -Dtests=false -Dbuild-date=false \
 	-Dmanpage-build=disabled -Dhtml-build=disabled \
 	-Dsdl2-gamepad=enabled -Dlibcurl=enabled -Dlua=luajit -Diconv=enabled -Dzlib=enabled \
 	-Dvector=enabled -Dlcms2=enabled -Dzimg=enabled -Duchardet=enabled \
@@ -89,7 +96,8 @@ resolve() {
 			return
 		}
 	done
-	ldconfig -p | awk -v soname="$1" '$1 == soname && /x86-64/ { print $NF; found = 1; exit } END { exit !found }'
+	# awk reads all of ldconfig's output: an early exit would SIGPIPE ldconfig under pipefail
+	ldconfig -p | awk -v soname="$1" '!found && $1 == soname && /x86-64/ { print $NF; found = 1 } END { exit !found }'
 }
 
 mkdir -p /out/lib
