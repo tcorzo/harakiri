@@ -52,6 +52,7 @@ import { inputConf } from "./input-conf";
 import { OVERLAY_HEIGHT, OVERLAY_WIDTH, renderControls } from "./overlay";
 import { programmeEntry, resolve } from "./resolve";
 import type { ProgrammeEntry, Resolution } from "./resolve";
+import { CERTIFICATE_NOT_TRUSTED, isCertificateRejection } from "./tls";
 
 const logger = getLogger(["harakiri", "player"]);
 
@@ -87,6 +88,8 @@ export interface PlaybackDeps {
   readonly hdrSignalling: HdrSignalling;
   /** The mpv executable: harakiri's build, or HARAKIRI_MPV. */
   readonly mpvBinary: string;
+  /** How long an IPC request waits for mpv's answer before mpv counts as dead; the client's 10 s when unset. */
+  readonly requestTimeoutMs?: number;
 }
 
 export interface Playback {
@@ -109,6 +112,7 @@ const logMessage = z.object({
   event: z.literal("log-message"),
   prefix: z.string(),
   level: z.string(),
+  text: z.string(),
 });
 
 const trackArg = (name: "aid" | "sid", id: number | false | undefined): string[] =>
@@ -320,6 +324,7 @@ export const startPlayback = async (
     logger.info("Starting mpv {binary}", { binary: deps.mpvBinary });
     mpv = await spawnMpv({
       binary: deps.mpvBinary,
+      requestTimeoutMs: deps.requestTimeoutMs,
       config: { dir: deps.configDir },
       args: mpvArgs(resolution, entry.title, request, deps, fidelityView(fidelity)),
     });
@@ -633,6 +638,9 @@ const run = async (mpv: MpvClient, context: RunContext): Promise<Playback> => {
     }
   };
 
+  // mpv logs why libcurl refused the server's certificate just before the file fails to load.
+  let certificateRejected = false;
+
   const failOnExit = async () => {
     const exit = await mpv.exited;
     fail(`mpv exited unexpectedly (code ${exit.code ?? exit.signal})`);
@@ -664,7 +672,11 @@ const run = async (mpv: MpvClient, context: RunContext): Promise<Playback> => {
     }
 
     if (reason === "error") {
-      fail(`mpv could not play the file: ${fileError ?? "unknown error"}`);
+      fail(
+        certificateRejected
+          ? CERTIFICATE_NOT_TRUSTED
+          : `mpv could not play the file: ${fileError ?? "unknown error"}`
+      );
     }
   });
   void failOnExit();
@@ -727,6 +739,10 @@ const run = async (mpv: MpvClient, context: RunContext): Promise<Playback> => {
 
     if (!log.success) {
       return;
+    }
+
+    if (isCertificateRejection(log.data)) {
+      certificateRejected = true;
     }
 
     if (log.data.prefix.startsWith("ao")) {

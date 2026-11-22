@@ -142,6 +142,26 @@ describe("the player", () => {
     expect(startPlayback).not.toHaveBeenCalled();
   });
 
+  it("a missing mpv build leaves the film already playing alone", async () => {
+    const missing =
+      "harakiri's mpv build 0123456789abcdef is missing (/b): run `mise run mpv:build`";
+
+    const playing: Playback = { ...idle, stop: vi.fn<Playback["stop"]>().mockResolvedValue() };
+    const binary = vi.fn<PlayerWiring["mpvBinary"]>().mockReturnValueOnce("/b/mpv");
+    startPlayback.mockResolvedValueOnce(playing);
+
+    const player = createPlayer({ ...wiring, mpvBinary: binary });
+    await player.play({ itemId }, send);
+    binary.mockImplementation(() => {
+      throw new Error(missing);
+    });
+
+    await expect(player.play({ itemId }, send)).rejects.toThrow(missing);
+    expect(playing.stop).not.toHaveBeenCalled();
+    expect(player.isPlaying()).toBe(true);
+    expect(startPlayback).toHaveBeenCalledOnce();
+  });
+
   it("both the player and the renderer identify as one client with the main device id", async () => {
     await prepare({ itemId });
 

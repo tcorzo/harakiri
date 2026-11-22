@@ -11,6 +11,8 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 import { describe, expect, it } from "vitest";
 
+import { bundledMpv } from "./bundle";
+
 const PAD_SOCKET = "/run/harakiri/pad.sock";
 
 /** One request to the guest's pad daemon (dev/vm/pad.py). Throws on an `error ...` reply. */
@@ -117,8 +119,9 @@ describe("a virtual pad in the guest", () => {
       const conf = path.join(dir, "input.conf");
       await writeFile(conf, "GAMEPAD_ACTION_DOWN quit 42\n");
       await expect(padCommand("plug")).resolves.toMatch(/^ok \/dev\/input\/event\d+$/u);
-      // session.sh sets SDL_JOYSTICK_DISABLE_UDEV, so SDL scans /dev/input.
-      mpv = spawn("mpv", [
+      // session.sh sets SDL_JOYSTICK_DISABLE_UDEV, so SDL scans /dev/input. The pad reaches the
+      // build's own SDL2.
+      mpv = spawn(bundledMpv(), [
         "--no-config",
         "--idle=yes",
         "--vo=null",
@@ -128,7 +131,8 @@ describe("a virtual pad in the guest", () => {
         "--msg-level=all=v",
       ]);
       const lines = collect(mpv);
-      await lineMatching(mpv, lines, /added controller: Xbox 360 Controller/u, 10_000);
+      // SDL2's own mapping name for the pad. Fedora's SDL3-backed SDL2 calls it "Xbox 360 Controller".
+      await lineMatching(mpv, lines, /added controller: X360 Controller$/u, 10_000);
       await expect(padCommand("press BTN_SOUTH")).resolves.toBe("ok");
       await expect(exitCode(mpv, lines, 10_000)).resolves.toBe(42);
     } finally {

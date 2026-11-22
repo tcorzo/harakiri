@@ -2,9 +2,10 @@
 import { execFile } from "node:child_process";
 import { once } from "node:events";
 import { readdirSync, readFileSync } from "node:fs";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer } from "node:http";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
+import { createServer as createHttpsServer } from "node:https";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
@@ -63,6 +64,12 @@ const serveFile = (req: IncomingMessage, res: ServerResponse, bytes: Buffer): vo
 
 const TcpAddress = z.object({ port: z.number() });
 
+// Test-only self-signed pair for 127.0.0.1 (the one packages/mpv's TLS test serves), so no key is
+// generated or committed twice.
+const TLS_DIR = path.join(import.meta.dirname, "../../../../../packages/mpv/src/fixtures/tls");
+const TLS_CERT = path.join(TLS_DIR, "loopback.crt");
+const TLS_KEY = path.join(TLS_DIR, "loopback.key");
+
 /** Just enough of Jellyfin to play one item, refusing any request without the token header. */
 class FakeJellyfin {
   readonly requests: Recorded[] = [];
@@ -76,6 +83,8 @@ class FakeJellyfin {
   stallSidecar = false;
   /** The item request (the overlay's title) is held open and never answered. */
   stallItem = false;
+  /** When set, the item is a server-side transcode and PlaybackInfo hands out this URL. */
+  transcodingUrl: string | undefined;
   private readonly server: Server = createServer((req, res) => {
     void this.handle(req, res);
   });
@@ -181,7 +190,8 @@ class FakeJellyfin {
         {
           Id: SOURCE,
           RunTimeTicks: this.runTimeTicks,
-          SupportsDirectPlay: true,
+          SupportsDirectPlay: this.transcodingUrl === undefined,
+          TranscodingUrl: this.transcodingUrl,
           DefaultAudioStreamIndex: 2,
           MediaStreams: [
             {
@@ -320,10 +330,72 @@ const session = (serverUrl: string) =>
 
 const identity = { client: "Harakiri", device: "vitest", version: "0.0.0-test" };
 
+/** A TLS server for the HLS files of a transcode; it records every request like FakeJellyfin does. */
+interface HlsOverTls {
+  readonly requests: { url: string; authorized: boolean }[];
+  listen: () => Promise<string>;
+  close: () => Promise<void>;
+}
+
+const hlsOverTls = (root: string): HlsOverTls => {
+  const requests: HlsOverTls["requests"] = [];
+
+  const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    const url = req.url ?? "";
+    const authorized = (req.headers.authorization ?? "").includes(`Token="${TOKEN}"`);
+    requests.push({ url, authorized });
+
+    const name = path.basename(url.split("?")[0] ?? "");
+
+    if (!authorized || !/^[\w.-]+$/u.test(name)) {
+      res.writeHead(authorized ? 404 : 401).end();
+
+      return;
+    }
+
+    const type = name.endsWith(".m3u8") ? "application/vnd.apple.mpegurl" : "video/mp2t";
+
+    try {
+      const bytes = await readFile(path.join(root, name));
+      res.writeHead(200, { "Content-Type": type, "Content-Length": bytes.length }).end(bytes);
+    } catch {
+      res.writeHead(404).end();
+    }
+  };
+
+  const server = createHttpsServer(
+    { cert: readFileSync(TLS_CERT), key: readFileSync(TLS_KEY) },
+    (req, res) => {
+      void handle(req, res);
+    }
+  );
+
+  return {
+    requests,
+    listen: async () => {
+      server.listen(0, "127.0.0.1");
+      await once(server, "listening");
+      const { port } = TcpAddress.parse(server.address());
+
+      return `https://127.0.0.1:${port}`;
+    },
+    close: async () => {
+      server.closeAllConnections();
+      server.close();
+      await once(server, "close");
+    },
+  };
+};
+
+/** The events of the latest `play`, kept for a play that fails to start and so never returns them. */
+let lastEvents: PlayerEvent[] = [];
+
 const play = async (
   media: string,
   seconds: number,
-  setup: (server: FakeJellyfin) => void = () => {}
+  setup: (server: FakeJellyfin) => void = () => {},
+  extraArgs: readonly string[] = [],
+  requestTimeoutMs?: number
 ): Promise<{ events: PlayerEvent[]; playback: Playback }> => {
   jellyfin = new FakeJellyfin();
   setup(jellyfin);
@@ -331,6 +403,7 @@ const play = async (
   jellyfin.runTimeTicks = seconds * TICKS;
   const serverUrl = await jellyfin.listen();
   const events: PlayerEvent[] = [];
+  lastEvents = events;
 
   const playback = await startPlayback(
     { itemId: ItemId.parse(ITEM), subtitleStreamIndex: 0 },
@@ -341,10 +414,11 @@ const play = async (
       session: session(serverUrl),
       identity,
       configDir: path.join(dir, "mpv"),
-      extraArgs: ["--vo=null", "--ao=null"],
+      extraArgs: ["--vo=null", "--ao=null", ...extraArgs],
       audioOutput: { kind: "known", name: "test receiver", bitstream: [...PRD_PASSTHROUGH] },
       hdrSignalling: "colour-management",
       mpvBinary: bundledMpv(),
+      requestTimeoutMs,
     }
   );
 
@@ -360,6 +434,27 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
     shortClip = path.join(dir, "short.mkv");
     longClip = path.join(dir, "long.mkv");
     await Promise.all([synthesize(shortClip, 2), synthesize(longClip, 30)]);
+    await mkdir(path.join(dir, "hls"));
+    // The clip cut the way a Jellyfin transcode serves it: a playlist and its MPEG-TS segments.
+    await run("ffmpeg", [
+      "-v",
+      "error",
+      "-i",
+      shortClip,
+      "-c:v",
+      "mpeg4",
+      "-c:a",
+      "aac",
+      "-f",
+      "hls",
+      "-hls_time",
+      "1",
+      "-hls_list_size",
+      "0",
+      "-hls_segment_filename",
+      path.join(dir, "hls", "seg%d.ts"),
+      path.join(dir, "hls", "master.m3u8"),
+    ]);
   });
 
   afterEach(async () => {
@@ -468,11 +563,18 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
   it("a sidecar mpv never finishes loading leaves its ApiKey out of the log and the events", async () => {
     records.length = 0;
 
-    const { events, playback } = await play(longClip, 30, (server) => {
-      server.stallSidecar = true;
-    });
+    const { events, playback } = await play(
+      longClip,
+      30,
+      (server) => {
+        server.stallSidecar = true;
+      },
+      [],
+      // The app waits 10 s; 2 s gives mpv up sooner and still answers every other request in time
+      2000
+    );
 
-    // sub-add waits on the held request until the client's 10 s timeout gives mpv up as dead.
+    // sub-add waits on the held request until the client's request timeout gives mpv up as dead.
     await playback.done;
 
     expect(events.map((e) => e.phase).slice(-2)).toStrictEqual(["error", "reported"]);
@@ -498,6 +600,47 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
 
     await expect(prepared.entry).resolves.toStrictEqual({ title: "Untitled", programme: "" });
     expect(Date.now() - startedAt).toBeGreaterThanOrEqual(2900);
+  });
+
+  describe("a transcode served over https", () => {
+    let hls: HlsOverTls;
+
+    const playTranscode = async (...extraArgs: string[]) => {
+      hls = hlsOverTls(path.join(dir, "hls"));
+      const origin = await hls.listen();
+
+      return await play(
+        shortClip,
+        2,
+        (server) => {
+          server.transcodingUrl = `${origin}/hls/master.m3u8?TranscodeReasons=ContainerNotSupported`;
+        },
+        extraArgs
+      );
+    };
+
+    afterEach(async () => {
+      await hls.close();
+    });
+
+    it("a server certificate mpv does not trust ends the play with the sentence", async () => {
+      await expect(playTranscode()).rejects.toThrow("The server's certificate is not trusted");
+
+      const error = lastEvents.findLast((e) => e.phase === "error");
+
+      expect(error?.error).toBe("The server's certificate is not trusted");
+    });
+
+    it("with the certificate trusted, HLS over https plays to its end and every request carries the token", async () => {
+      const { events, playback } = await playTranscode(`--tls-ca-file=${TLS_CERT}`);
+      await playback.done;
+
+      expect(events.findLast((e) => e.phase !== "reported")?.phase).toBe("ended");
+      expect(hls.requests.map((r) => r.url.split("?")[0])).toStrictEqual(
+        expect.arrayContaining(["/hls/master.m3u8", expect.stringMatching(/\.ts$/u)])
+      );
+      expect(hls.requests.every((r) => r.authorized)).toBe(true);
+    });
   });
 
   it("mpv killed mid-play ends playback with `error` and a failed stop report", async () => {

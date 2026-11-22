@@ -130,7 +130,12 @@ describe("mpv IPC client", () => {
         seen.push(value);
       });
 
+      // mpv coalesces property-change events: a change made before the previous one is
+      // delivered can replace it, so each step waits for its own notification.
+      await expect.poll(() => seen).toStrictEqual([false]);
+
       await client.setProperty("pause", true);
+      await expect.poll(() => seen).toStrictEqual([false, true]);
       await client.command("cycle", "pause");
       await expect.poll(() => seen).toStrictEqual([false, true, false]);
 

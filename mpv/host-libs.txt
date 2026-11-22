@@ -28,6 +28,11 @@ libva-drm.so.2
 libva-wayland.so.2
 libva-x11.so.2
 libvdpau.so.1
+# What the host's Mesa drivers link (Vulkan drivers, libgallium, libLLVM). A copy in lib/ would be
+# loaded first, and the host's drivers would bind to it instead of their own.
+libz.so.1
+libdisplay-info.so.3
+libxml2.so.2
 # PipeWire and the sound stack
 libpipewire-0.3.so.0
 libpulse.so.0

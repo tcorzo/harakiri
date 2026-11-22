@@ -17,8 +17,21 @@ const Manifest = z.object({
   ffmpeg: z.string(),
   sdl2: z.string(),
   nvCodecHeaders: z.string(),
+  curl: z.string(),
   caBundle: z.string(),
 });
+
+/** A version mpv/versions.env pins, e.g. `pinned("CURL")`. */
+const pinned = (name: string): string => {
+  const env = readFileSync(path.join(recipe, "versions.env"), "utf-8");
+  const version = new RegExp(`^${name}_VERSION=(?<version>\\S+)$`, "mu").exec(env)?.groups?.version;
+
+  if (version === undefined) {
+    throw new Error(`mpv/versions.env pins no ${name}_VERSION`);
+  }
+
+  return version;
+};
 
 const run = (...args: string[]): string =>
   execFileSync(bundledMpv(), ["--no-config", ...args], { encoding: "utf-8" });
@@ -58,6 +71,17 @@ describe("harakiri's mpv build", () => {
     }
   });
 
+  it("reads http through the libcurl versions.env pins, not the 8.18.0 that stalls seeks (curl #20641)", () => {
+    // curl_version() builds "libcurl/<version>" from a literal compiled into the library
+    const libcurl = readFileSync(bundleFile("lib/libcurl.so.4")).toString("latin1");
+    expect(/libcurl\/(?<version>\d+\.\d+\.\d+)/u.exec(libcurl)?.groups?.version).toBe(
+      pinned("CURL")
+    );
+    expect(
+      Manifest.parse(JSON.parse(readFileSync(bundleFile("manifest.json"), "utf-8"))).curl
+    ).toBe(pinned("CURL"));
+  });
+
   it("has --input-gamepad, and verifies TLS by default", () => {
     const options = run("--list-options");
     expect(options).toMatch(/^\s*--input-gamepad\s/mu);
@@ -88,9 +112,16 @@ describe("harakiri's mpv build", () => {
   });
 
   it("finds this host's CA bundle where its libcurl looks", () => {
-    const manifest = bundleFile("manifest.json");
-    expect(existsSync(Manifest.parse(JSON.parse(readFileSync(manifest, "utf-8"))).caBundle)).toBe(
-      true
+    const { caBundle } = Manifest.parse(
+      JSON.parse(readFileSync(bundleFile("manifest.json"), "utf-8"))
     );
+
+    // The failure names the path: the build's libcurl reads one fixed CA path
+    const missing = existsSync(caBundle)
+      ? undefined
+      : `no CA bundle at ${caBundle}: the build's libcurl reads Fedora's path, so it is built ` +
+        "for Fedora-family hosts; another host's CA path is a Phase 8 host capability";
+
+    expect(missing).toBeUndefined();
   });
 });

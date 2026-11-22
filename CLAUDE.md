@@ -18,6 +18,8 @@ mise trust && mise run setup
 
 `setup` installs deps from the lockfile, registers hk hooks globally and verifies them, builds harakiri's mpv once (`mise run mpv:build`, cached in `.cache/mpv/<recipe-hash>`), and then runs `mise run doctor` to check the harness tools. Fedora system packages are outside mise: `weston` (>= 15), `kwin`, `mesa-vulkan-drivers`, `podman`, and the RPM Fusion `ffmpeg`, for the harness (Fedora's `ffmpeg-free` has no HEVC decoder).
 
+To run the app on your own mpv (a build of mpv master, say), set `HARAKIRI_MPV` to its path in `.env`; tests and e2e always play harakiri's build.
+
 `mise tasks` lists every command. `mise run check` is what CI gates on. `dev/jellyfin/COMMANDS.txt` starts the local dev Jellyfin on the generated corpus (`mise run media:gen`), or on your own library with `JELLYFIN_DEV_LIBRARY=own` in `.env`.
 
 ## Bound every heavy process
@@ -80,6 +82,9 @@ All web UI goes through the impeccable loop: load the `impeccable` skill, run it
 - End-to-end tests (`mise run e2e`) drive the built Electron app with Playwright under a nested `kwin_wayland --virtual`, so they never open windows on the owner's desktop. They run against a real Jellyfin 12.4 container on the corpus (`harakiri-jellyfin-e2e`, 127.0.0.1:8296, discovery on 127.0.0.3), which the suite starts, scans, and leaves running for the next run; `mise run e2e:down` stops it. e2e runs inside the guest and reaches the host's e2e Jellyfin over TCP on the host's loopback. Specs tagged `@host` (the UDP discovery probe, which does not reach the host) run on the host under nested KWin. A fresh clone needs podman, `kwin_wayland` for the host half and a read-write `/dev/kvm` for the guest (`mise run doctor` checks all three). The first run builds harakiri's mpv and downloads smolvm, the Fedora guest image and about 2 GB of guest packages. The guest specs run Electron with software compositing, so GPU compositing is covered only by the `@host` specs and, once it exists, the opt-in HTPC checklist.
 - `mise run test:platform` runs `*.platform.test.ts` in the guest, and `dev/vm/guest.sh exec -- <cmd>` runs anything there. The guest lives in `.cache/vm` (about 2 GB); `rm -rf .cache/vm` resets it, but only after `mise run vm:down`. A guest package goes in `PACKAGES` in `dev/vm/provision.sh`.
 - After an interrupted run (a killed terminal, a stopped scope), `mise run vm:down`: a guest left running holds up to 5 GB of the 7 GB `harakiri.slice`.
+- A signal sent to `guest.sh exec` while the guest was already running stops only the local exec client; the command in the guest keeps running until the guest stops.
+- A recipe change on a running guest recreates it without the exec's down trap, so `mise run vm:down` stops it.
+- A signal during `guest.sh up`, or the `up` that `exec` runs first, waits until the current step finishes.
 - The guest is a reproducibility boundary, not a sandbox: it mounts the repo read-write and can reach every TCP service on the host's 127.0.0.1.
 - After each build wave, adversarial reviews (the `interrogate` skill) check UI design, architecture, and other agents' code with at least two reviewers on different models.
 - Report something as done only after observing it work: the test output, the built app, or the harness result.
@@ -127,7 +132,7 @@ Chosen on 2026-10-30 after a researched ledger. Versions are pinned in `mise.tom
 | toolchain             | mise: bun 1.4.4, node 26.13.0, hk 2.10.0, dovi_tool 2.3.4, hdr10plus_tool 1.7.2                                                                          | exact pins, one onboarding command                                   |
 | shell                 | electron 45.1.0                                                                                                                                          | TS main process, mature Chromium input                               |
 | dev build / packaging | electron-vite 6.0.0, electron-builder 26.18.0                                                                                                            | dev server; AppImage                                                 |
-| video                 | harakiri's mpv build (`mpv/`): mpv 0.42.0 + libplacebo 7.387.0 + FFmpeg 9.0.2 + SDL2 2.32.10; RPM Fusion ffmpeg 8.1.3 for the harness                    | playback, HDR, passthrough                                           |
+| video                 | harakiri's mpv build (`mpv/`): mpv 0.42.0 + libplacebo 7.387.0 + FFmpeg 9.0.2 + SDL2 2.32.10 + curl 8.23.0; RPM Fusion ffmpeg 8.1.3 for the harness      | playback, HDR, passthrough                                           |
 | mpv control           | hand-rolled JSON IPC client (`packages/mpv`)                                                                                                             | every npm client is stale                                            |
 | player controls       | hand-rolled `osd-overlay` ASS from the main process                                                                                                      | Wayland cannot stack a web window over mpv                           |
 | Jellyfin client       | @hey-api/openapi-ts 0.99.0 + ky 2.2.0, from a pinned 12.4.0 spec                                                                                         | generated typed client, zod and Query plugins                        |
@@ -164,6 +169,7 @@ Chosen on 2026-10-30 after a researched ledger. Versions are pinned in `mise.tom
 - Bun fullstack dev server: TanStack Router's plugin does not support Bun's bundler.
 - @electron-forge 8.0.1: more maintainers, kept as the packaging fallback.
 - Fedora `ffmpeg-free`: no HEVC, H.264 or VC-1 decoders.
+- Fedora 44's libcurl 8.18.0 in the mpv bundle: it keeps a paused handle paused when mpv adds it again (curl #20641), so seeks over HTTP stall. The recipe builds curl 8.23.0.
 - System mpv for dev and tests: Fedora's build hid #13 (`sdl2-gamepad`), so dev, tests and e2e run harakiri's own build (Q12).
 - FFmpeg's spdif demuxer for verification: no TrueHD or DTS-HD support. PipeWire null sink: accepts plain PCM only.
 - VKMS virtual display for HDR: no EDID or HDR_OUTPUT_METADATA support. Faking HDR on KWin virtual: its output always reports SDR.

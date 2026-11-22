@@ -70,6 +70,8 @@ export const bundledMpvIn = (root: string): string => {
   return binary;
 };
 
+// A long-running dev app keeps the path it first resolved, even after `mise run mpv:build` makes a
+// build with a new hash and deletes the old one: restart it after a rebuild.
 let resolved: string | undefined;
 
 /** bundledMpvIn(repoRootFrom(import.meta.dirname)), memoized. A failure is not kept. */
