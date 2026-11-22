@@ -85,6 +85,8 @@ export interface PlaybackDeps {
   readonly audioOutput: AudioOutput;
   /** How the compositor takes HDR, which decides mpv's colorspace hint. */
   readonly hdrSignalling: HdrSignalling;
+  /** The mpv executable: harakiri's build, or HARAKIRI_MPV. */
+  readonly mpvBinary: string;
 }
 
 export interface Playback {
@@ -315,7 +317,9 @@ export const startPlayback = async (
 
     await mkdir(deps.configDir, { recursive: true });
     await writeFile(path.join(deps.configDir, "input.conf"), inputConf());
+    logger.info("Starting mpv {binary}", { binary: deps.mpvBinary });
     mpv = await spawnMpv({
+      binary: deps.mpvBinary,
       config: { dir: deps.configDir },
       args: mpvArgs(resolution, entry.title, request, deps, fidelityView(fidelity)),
     });

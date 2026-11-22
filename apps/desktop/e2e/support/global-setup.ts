@@ -4,6 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
+import { bundledMpv } from "@harakiri/mpv";
 import { z } from "zod";
 
 import { CATALOG } from "../../../../packages/harness/src/corpus/catalog";
@@ -172,8 +173,12 @@ const expectPrepared = async (): Promise<void> => {
  * from empty state. FATE samples are not fetched here (that is network); `mise run e2e` fetches
  * them first, and without them the TrueHD Atmos test fails naming `mise run media:fetch-fate`.
  * In the dev/vm guest it starts nothing, and only checks what the host half prepared.
+ * First of all, every spec plays with harakiri's mpv build, so a missing one fails the run at
+ * once, naming `mise run mpv:build`, before anything starts.
  */
 export default async function globalSetup(): Promise<void> {
+  bundledMpv();
+
   if (REAL_SERVER !== undefined && REAL_SERVER !== "") {
     return;
   }

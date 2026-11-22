@@ -196,6 +196,8 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
       "KDE_FULL_SESSION",
       "KDE_SESSION_VERSION",
       "GNOME_DESKTOP_SESSION_ID",
+      // A developer's own mpv; e2e always plays harakiri's build.
+      "HARAKIRI_MPV",
     ]);
 
     const inherited = Object.entries(process.env).filter(

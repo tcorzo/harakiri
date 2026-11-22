@@ -32,6 +32,7 @@ run = "bun run --filter @harakiri/harness doctor"
 
 [tasks.dev]
 description = "Run the desktop app with hot reload"
+depends = ["mpv:build"]
 dir = "{{config_root}}/apps/desktop"
 run = "../../scripts/bounded.sh dev 4G -- bun run dev"
 
@@ -121,6 +122,7 @@ run = "bun scripts/lint-skips.ts"
 
 [tasks.e2e]
 description = "Build the app and run the Playwright e2e against a real Jellyfin container on the corpus: the specs tagged @host run on the host under nested KWin, the rest inside the dev/vm guest (HARAKIRI_E2E_SERVER=<url> runs it against another server)"
+depends = ["mpv:build"]
 dir = "{{config_root}}/apps/desktop"
 shell = "bash -euo pipefail -c"
 # Electron 45 has no install script: it downloads its binary on first use. install-electron does

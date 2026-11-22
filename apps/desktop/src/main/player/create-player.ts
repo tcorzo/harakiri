@@ -24,6 +24,8 @@ export interface PlayerWiring {
   readonly audioOutput: () => Promise<AudioOutput>;
   /** How the compositor takes HDR; asked per play, after the app is ready. */
   readonly hdrSignalling: () => Promise<HdrSignalling>;
+  /** The mpv executable; asked per play, so a missing build fails that play and not the app. */
+  readonly mpvBinary: () => string;
   readonly preparePlayback: (
     request: PlayRequest,
     deps: Pick<PlaybackDeps, "session" | "identity">
@@ -77,7 +79,9 @@ export const createPlayer = (wiring: PlayerWiring) => {
     return await result;
   };
 
-  const deps = async (): Promise<Omit<PlaybackDeps, "audioOutput" | "hdrSignalling">> => {
+  const deps = async (): Promise<
+    Omit<PlaybackDeps, "audioOutput" | "hdrSignalling" | "mpvBinary">
+  > => {
     const session = await wiring.loadSession();
 
     if (!session) {
@@ -171,7 +175,7 @@ export const createPlayer = (wiring: PlayerWiring) => {
         wiring.hdrSignalling(),
       ]);
 
-      const playbackDeps = { ...base, audioOutput, hdrSignalling };
+      const playbackDeps = { ...base, audioOutput, hdrSignalling, mpvBinary: wiring.mpvBinary() };
       const prepared = await takePrepared(request, playbackDeps.session);
       const playback = await wiring.startPlayback(request, send, playbackDeps, prepared);
       current = playback;

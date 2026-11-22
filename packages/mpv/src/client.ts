@@ -42,8 +42,8 @@ export interface MpvExit {
 export interface MpvSpawnOptions {
   /** Emitted first, as `--config-dir=<dir>` or `--no-config`. */
   readonly config: MpvConfig;
-  /** Path to the mpv executable. Defaults to `mpv` on PATH. */
-  readonly binary?: string;
+  /** Path to the mpv executable: `bundledMpv()` in tests, `mpvBinary()` in the app. */
+  readonly binary: string;
   /** Extra mpv arguments, e.g. from `buildPlaybackArgs`. Never a secret: argv is world-readable. */
   readonly args?: readonly string[];
   readonly socketTimeoutMs?: number;
@@ -330,7 +330,7 @@ export const spawnMpv = async (options: MpvSpawnOptions): Promise<MpvClient> => 
   const socketPath = path.join(dir, "ipc.sock");
 
   const child = spawn(
-    options.binary ?? "mpv",
+    options.binary,
     [
       configArg(options.config),
       "--idle=yes",

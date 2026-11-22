@@ -5,10 +5,13 @@ import { connect } from "node:net";
 import path from "node:path";
 import { createInterface } from "node:readline";
 
+import { bundledMpv } from "@harakiri/mpv";
 import { z } from "zod";
 
 export interface MpvProcess {
   readonly pid: number;
+  /** argv[0]: the executable the app spawned. */
+  readonly binary: string;
   readonly ipcSocket: string | undefined;
 }
 
@@ -38,7 +41,11 @@ export const mpvProcesses = (userDataDir: string): MpvProcess[] => {
     }
 
     const ipc = argv.find((arg) => arg.startsWith("--input-ipc-server="));
-    found.push({ pid: Number(entry), ipcSocket: ipc?.slice("--input-ipc-server=".length) });
+    found.push({
+      pid: Number(entry),
+      binary: argv[0] ?? "",
+      ipcSocket: ipc?.slice("--input-ipc-server=".length),
+    });
   }
 
   return found;
@@ -121,7 +128,10 @@ export const pressKey = async (userDataDir: string, key: string) =>
  * version, so it is read from mpv rather than written down.
  */
 export const lavapipeDeviceUuid = (): string => {
-  const list = execFileSync("mpv", ["--no-config", "--vulkan-device=help"], { encoding: "utf-8" });
+  const list = execFileSync(bundledMpv(), ["--no-config", "--vulkan-device=help"], {
+    encoding: "utf-8",
+  });
+
   const uuid = /'llvmpipe[^']*'.*UUID (?<uuid>[0-9a-f-]{36})/u.exec(list)?.groups?.uuid;
 
   if (uuid === undefined) {

@@ -5,6 +5,7 @@ import { hostSignalling } from "../host";
 import { loadSession } from "../session";
 import { AudioOutputJson, readAudioOutput } from "./audio-output";
 import { createPlayer } from "./create-player";
+import { mpvBinary } from "./mpv-binary";
 import { preparePlayback, startPlayback } from "./playback";
 
 // Whitespace-split only: e2e passes plain flags such as `--vo=null --ao=pcm --ao-pcm-file=/tmp/x`.
@@ -27,6 +28,7 @@ export const { prepare, forgetPrepared, play, stop, probe, isPlaying, mpvPid } =
   audioOutput,
   // From the environment alone, so a play never waits on the keyring probe.
   hdrSignalling: async () => await Promise.resolve(hostSignalling()),
+  mpvBinary,
   preparePlayback,
   startPlayback,
 });
