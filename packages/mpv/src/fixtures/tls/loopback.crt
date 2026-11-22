@@ -1,0 +1,15 @@
+Test-only: a self-signed pair for 127.0.0.1 that curl-tls.test.ts serves on loopback. It
+protects nothing and must never be trusted outside that test. Valid until 2126.
+
+-----BEGIN CERTIFICATE-----
+MIIBtTCCAVqgAwIBAgIUfPgNQRJktpoucidnalgXrgWOpRgwCgYIKoZIzj0EAwIw
+JjEkMCIGA1UEAwwbaGFyYWtpcmkgdGVzdC1vbmx5IGxvb3BiYWNrMCAXDTI2MTEy
+MjE1MDQxMVoYDzIxMjYxMDI5MTUwNDExWjAmMSQwIgYDVQQDDBtoYXJha2lyaSB0
+ZXN0LW9ubHkgbG9vcGJhY2swWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQqRUbw
+kQzG3hU9oczwCTbE/jJ4Q2FeAaCUEjsC3XD6pZ2b2MRiuT/V4rKdQAtcVVgauyYi
+8hpVBlfKOizuEvefo2QwYjAdBgNVHQ4EFgQUvUgnuhGERpBfpOz4KfeGEiWVQqEw
+HwYDVR0jBBgwFoAUvUgnuhGERpBfpOz4KfeGEiWVQqEwDwYDVR0RBAgwBocEfwAA
+ATAPBgNVHRMBAf8EBTADAQH/MAoGCCqGSM49BAMCA0kAMEYCIQD3fgKIV3AYaFC0
+ducAc4ikbZ8hr1IpBNKXddhmU6f+mgIhAPmkhpS09hACArn576lRd7/V+Kypzlcd
+08AWisypB4p+
+-----END CERTIFICATE-----

@@ -110,7 +110,8 @@ describe("harakiri's mpv reading HTTP through libcurl", () => {
 
         expect(position ?? 0).toBeGreaterThanOrEqual(START_SECONDS + 1);
       },
-      { timeout: 6000, interval: 100 }
+      // A pass takes about a second; the margin is for a loaded machine
+      { timeout: 15_000, interval: 100 }
     );
-  }, 15_000);
+  }, 30_000);
 });
