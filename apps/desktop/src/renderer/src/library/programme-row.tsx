@@ -1,7 +1,8 @@
 import type { ServerUrl } from "@harakiri/jellyfin";
 import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-navigation";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { memo, useRef } from "react";
+import { defaultRangeExtractor, useVirtualizer } from "@tanstack/react-virtual";
+import type { Range } from "@tanstack/react-virtual";
+import { memo, useCallback, useRef, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 
 import type { Entry } from "../data/entry";
@@ -28,6 +29,25 @@ export interface ProgrammeRowProps {
 }
 
 const gapRem = 2;
+
+/**
+ * The cards on screen, plus the focused card's neighbours on both sides. A smooth scroll trails a
+ * held key's autorepeat, and norigin can only move to a mounted card, so without these a press
+ * past the last mounted card is lost.
+ */
+const aroundFocus = (range: Range, focused: number | null): number[] => {
+  const shown = defaultRangeExtractor(range);
+
+  if (focused === null) {
+    return shown;
+  }
+
+  const from = Math.max(0, focused - range.overscan);
+  const to = Math.min(range.count - 1, focused + range.overscan);
+  const near = Array.from({ length: to - from + 1 }, (_, at) => from + at);
+
+  return [...new Set([...shown, ...near])].toSorted((a, b) => a - b);
+};
 
 const RowHeader = ({ name, children }: { readonly name: string; readonly children: ReactNode }) => (
   <header className="pr-safe-x flex h-[3rem] items-center gap-6">
@@ -56,6 +76,8 @@ const ProgrammeRowView = ({
 
   const scroller = useRef<HTMLDivElement>(null);
   const rem = rootRem();
+  const [focused, setFocused] = useState<number | null>(null);
+  const rangeExtractor = useCallback((range: Range) => aroundFocus(range, focused), [focused]);
 
   // oxlint-disable-next-line react/incompatible-library -- no React Compiler in this build, so the virtualizer's unmemoizable API is fine
   const virtualizer = useVirtualizer({
@@ -66,6 +88,7 @@ const ProgrammeRowView = ({
     gap: gapRem * rem,
     // Norigin only sees mounted cards, so keep neighbours mounted in the direction of travel.
     overscan: 4,
+    rangeExtractor,
     // Room for the focused card's scale and ring at the row's leading edge.
     paddingStart: 1.5 * rem,
     scrollPaddingStart: 1.5 * rem,
@@ -119,6 +142,7 @@ const ProgrammeRowView = ({
                     server={server}
                     focusKey={cardKey(sectionId, entry.id)}
                     onFocus={() => {
+                      setFocused(item.index);
                       virtualizer.scrollToIndex(item.index, {
                         align: "start",
                         behavior: reduced ? "auto" : "smooth",

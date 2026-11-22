@@ -15,10 +15,11 @@ hk = "2.10.0"
 _.file = ".env"
 
 [tasks.setup]
-description = "Install deps, register git hooks, build harakiri's mpv once and check the harness tools"
+description = "Install deps and the browser tests' Chromium, register git hooks, build harakiri's mpv once and check the harness tools"
 shell = "bash -euo pipefail -c"
 run = """
 bun install --frozen-lockfile
+mise run browser:install
 hk install --global --mise
 git config --get-regexp '^hook\\.' >/dev/null || { echo 'hk hooks are not registered' >&2; exit 1; }
 mise run mpv:build
@@ -55,6 +56,17 @@ run = "scripts/bounded.sh typecheck 2G -- bun x tsc -b"
 [tasks.test]
 description = "Run unit and harness tests that need no network or display"
 run = "scripts/bounded.sh test 3G -- bun x vitest run --maxWorkers=2"
+
+[tasks."test:browser"]
+description = "Run the renderer's browser tests (*.browser.test.tsx) in headless Chromium; mise run test runs them too"
+run = "scripts/bounded.sh browser 2G -- bun x vitest run --project desktop-browser --maxWorkers=2"
+
+[tasks."browser:install"]
+description = "Download the Chromium the browser tests run in, the build bun.lock's Playwright pins (needs the network; setup runs it)"
+dir = "{{config_root}}/apps/desktop"
+# Playwright's browser cache is shared with other projects: this install only adds to it, and skips
+# the garbage collection that would delete builds it does not know are still wanted.
+run = "PLAYWRIGHT_SKIP_BROWSER_GC=1 bun x playwright install --no-shell chromium"
 
 [tasks.watchdog]
 description = "Watch harakiri's memory and stop the largest harakiri scope when the system runs low"

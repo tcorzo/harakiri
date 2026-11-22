@@ -13,3 +13,6 @@ apps/desktop/e2e/screenshots/
 .cache/
 apps/desktop/.impeccable/hook.cache.json
 .private-denylist
+# Browser tests: failure screenshots (.vitest/attachments) and page.screenshot() output.
+.vitest/
+__screenshots__/

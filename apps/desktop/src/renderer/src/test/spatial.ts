@@ -1,15 +1,10 @@
-import {
-  destroy,
-  GetBoundingClientRectAdapter,
-  init,
-  setKeyMap,
-  updateAllLayouts,
-} from "@noriginmedia/norigin-spatial-navigation";
+import { destroy, updateAllLayouts } from "@noriginmedia/norigin-spatial-navigation";
+
+import { startSpatialNavigation } from "../ui/spatial";
 
 /** Starts norigin the way main.tsx does: DOM focus follows it, and it handles no keys itself. */
 export const startSpatial = (): void => {
-  init({ layoutAdapter: GetBoundingClientRectAdapter, shouldFocusDOMNode: true });
-  setKeyMap({ left: [], up: [], right: [], down: [], enter: [] });
+  startSpatialNavigation();
 };
 
 export const stopSpatial = (): void => {

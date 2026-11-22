@@ -59,25 +59,27 @@ You need [mise](https://mise.jdx.dev), which pins bun, node, hk and the HDR tool
 - `ffmpeg` from RPM Fusion, for the test harness.
 - `weston` 15 or newer, `kwin` and `mesa-vulkan-drivers`, for the headless harness.
 - `podman`, for the dev and test Jellyfin and the mpv build.
+- The libraries Playwright's Chromium links, for the browser tests: `nss`, `atk`, `at-spi2-atk`, `alsa-lib`, `cups-libs`, `pango`, `libXcomposite`, `libXdamage`, `libXrandr`, `mesa-libgbm`, `libxkbcommon`. A Fedora desktop has them all.
 - A read-write `/dev/kvm` (join the `kvm` group), for the microVM guest that runs e2e and the platform tests. Its first run downloads smolvm, a Fedora image and about 2 GB of packages into `.cache/vm`.
 
 `setup` also builds harakiri's mpv in podman. The first build takes minutes and pulls about 2 GB of images; the bundle it leaves in `.cache/mpv` is about 67 MB.
 
 ```sh
-mise trust && mise run setup   # deps, git hooks, harakiri's mpv, and a check of the media stack
+mise trust && mise run setup   # deps, Chromium for the browser tests, git hooks, harakiri's mpv, and a check of the media stack
 mise run dev                   # the app with hot reload
 mise run package               # the same AppImage a release ships, into apps/desktop/dist
 ```
 
 ### Everyday commands
 
-| Command              | What it does                                                                                                               |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `mise run check`     | Everything CI gates on: lints, types, unit and harness tests. No server, no network.                                       |
-| `mise run e2e`       | Builds the app and drives it with Playwright inside a nested, invisible KWin, mostly in the dev/vm guest.                  |
-| `mise run doctor`    | Checks the harness tools: ffmpeg, the headless compositors, podman, dovi_tool, hdr10plus_tool and a read-write `/dev/kvm`. |
-| `mise run test:fate` | Proves DTS-HD MA, DTS:X and TrueHD Atmos passthrough on FFmpeg's FATE samples.                                             |
-| `mise tasks`         | Lists the rest.                                                                                                            |
+| Command                 | What it does                                                                                                               |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `mise run check`        | Everything CI gates on: lints, types, unit, browser and harness tests. No server, no network.                              |
+| `mise run test:browser` | Only the renderer's component tests that need a real layout, in headless Chromium.                                         |
+| `mise run e2e`          | Builds the app and drives it with Playwright inside a nested, invisible KWin, mostly in the dev/vm guest.                  |
+| `mise run doctor`       | Checks the harness tools: ffmpeg, the headless compositors, podman, dovi_tool, hdr10plus_tool and a read-write `/dev/kvm`. |
+| `mise run test:fate`    | Proves DTS-HD MA, DTS:X and TrueHD Atmos passthrough on FFmpeg's FATE samples.                                             |
+| `mise tasks`            | Lists the rest.                                                                                                            |
 
 > [!TIP]
 > Heavy processes run in their own memory-capped systemd scope through [`scripts/bounded.sh`](scripts/bounded.sh), and `mise run watchdog` stops the largest one before the machine runs out of memory. The `mise` tasks already do this.
@@ -92,6 +94,7 @@ No part of the harness needs an HDR TV or an AV receiver.
 | Picture  | mpv runs headless under `kwin_wayland --virtual` with lavapipe, and its properties prove the Dolby Vision profile, the reshaping pass and the target colorspace.              |
 | HDR      | Weston 15 headless stands in for an HDR TV, and the Wayland protocol log shows mpv setting PQ, BT.2020 and the HDR metadata.                                                  |
 | Jellyfin | A real Jellyfin 12.4 and 10.11 in podman return direct play with no transcoding URL for every fixture. Jellyfin Desktop's own profile, run as a negative control, transcodes. |
+| Screens  | Renderer components render in headless Chromium with the real stylesheet, and the d-pad is pressed through the input hub: focus lands where the layout puts it.               |
 | App      | Playwright drives the built Electron app through onboarding, d-pad and gamepad navigation, the play handoff, and resume, asserting mpv's real state over IPC.                 |
 
 ## Project layout

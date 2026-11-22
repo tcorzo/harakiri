@@ -12,6 +12,8 @@
     "src/shared",
     "build/steam",
     "electron.vite.config.ts",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "vitest.browser.config.ts",
+    "vitest.browser.global.ts"
   ]
 }
