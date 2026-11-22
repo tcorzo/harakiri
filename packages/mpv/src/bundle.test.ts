@@ -112,9 +112,16 @@ describe("harakiri's mpv build", () => {
   });
 
   it("finds this host's CA bundle where its libcurl looks", () => {
-    const manifest = bundleFile("manifest.json");
-    expect(existsSync(Manifest.parse(JSON.parse(readFileSync(manifest, "utf-8"))).caBundle)).toBe(
-      true
+    const { caBundle } = Manifest.parse(
+      JSON.parse(readFileSync(bundleFile("manifest.json"), "utf-8"))
     );
+
+    // The failure names the path: the build's libcurl reads one fixed CA path
+    const missing = existsSync(caBundle)
+      ? undefined
+      : `no CA bundle at ${caBundle}: the build's libcurl reads Fedora's path, so it is built ` +
+        "for Fedora-family hosts; another host's CA path is a Phase 8 host capability";
+
+    expect(missing).toBeUndefined();
   });
 });
