@@ -572,7 +572,12 @@ const run = async (mpv: MpvClient, context: RunContext): Promise<Playback> => {
       .with({ type: "pause" }, async ({ paused }) => {
         await mpv.setProperty("pause", paused);
       })
-      .with({ type: "seek" }, async ({ seconds }) => await mpv.command("seek", seconds, "relative"))
+      // `exact`: mpv's relative seeks snap to a keyframe by default, so a skip could land as far
+      // as a whole keyframe interval (often 10 s) from where it says.
+      .with(
+        { type: "seek" },
+        async ({ seconds }) => await mpv.command("seek", seconds, "relative+exact")
+      )
       .with({ type: "track" }, async ({ property, id }) => {
         if (property === "aid") {
           await beforeAudioTrack(id);

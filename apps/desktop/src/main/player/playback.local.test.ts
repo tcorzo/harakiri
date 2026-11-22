@@ -66,7 +66,7 @@ const serveFile = (req: IncomingMessage, res: ServerResponse, bytes: Buffer): vo
 
 const TcpAddress = z.object({ port: z.number() });
 
-const MpvReply = z.object({ request_id: z.number() });
+const MpvMessage = z.object({ request_id: z.number().optional(), event: z.string().optional() });
 
 /** The one field of a start, progress or stop report the fake server keeps. */
 const PlaybackReport = z.object({ PositionTicks: z.number() });
@@ -286,9 +286,11 @@ const mpvChild = () => {
 
 /**
  * Presses `key` in the running mpv as a second IPC client, so the press goes through the app's
- * input.conf and `script-message harakiri <action>`, as a remote's does.
+ * input.conf and `script-message harakiri <action>`, as a remote's does. With `untilEvent`, it
+ * returns once mpv sends that event to every client after the press, such as the
+ * `playback-restart` that ends a seek.
  */
-const pressKey = async (key: string): Promise<void> => {
+const pressKey = async (key: string, untilEvent?: string): Promise<void> => {
   const socketPath = /--input-ipc-server=(?<path>[^\0]+)/u.exec(mpvChild().cmdline)?.groups?.path;
 
   if (socketPath === undefined) {
@@ -297,6 +299,7 @@ const pressKey = async (key: string): Promise<void> => {
 
   const socket = createConnection(socketPath);
   const requestId = 7;
+  let answered = false;
 
   try {
     await once(socket, "connect");
@@ -304,12 +307,17 @@ const pressKey = async (key: string): Promise<void> => {
 
     // mpv may send an event to every client first; the reply is the line with our request id.
     for await (const line of createInterface({ input: socket })) {
-      if (MpvReply.safeParse(JSON.parse(line)).data?.request_id === requestId) {
+      const message = MpvMessage.safeParse(JSON.parse(line)).data;
+      answered ||= message?.request_id === requestId;
+
+      if (answered && (untilEvent === undefined || message?.event === untilEvent)) {
         return;
       }
     }
 
-    throw new Error(`mpv closed the socket before answering keypress ${key}`);
+    throw new Error(
+      `mpv closed the socket before ${answered ? untilEvent : "answering"} keypress ${key}`
+    );
   } finally {
     socket.destroy();
   }
@@ -345,7 +353,8 @@ const until = async (
 // oxlint-disable-next-line typescript/strict-void-return -- execFile has no promise form; promisify types it through Node's own __promisify__ overload
 const run = promisify(execFile);
 
-const synthesize = async (out: string, seconds: number) =>
+/** A 10 fps clip with a tone; `keyframeEvery` seconds apart, when given, are its only keyframes. */
+const synthesize = async (out: string, seconds: number, keyframeEvery?: number) =>
   await run("ffmpeg", [
     "-v",
     "error",
@@ -359,6 +368,9 @@ const synthesize = async (out: string, seconds: number) =>
     `sine=duration=${seconds}`,
     "-c:v",
     "mpeg4",
+    ...(keyframeEvery === undefined
+      ? []
+      : ["-g", String(keyframeEvery * 10), "-sc_threshold", "0"]),
     "-c:a",
     "flac",
     "-shortest",
@@ -368,6 +380,10 @@ const synthesize = async (out: string, seconds: number) =>
 let dir: string;
 let shortClip: string;
 let longClip: string;
+
+/** Keyframes 10 s apart, as many encodes have: a seek that snaps to one is off by seconds. */
+let sparseKeyframesClip: string;
+
 let jellyfin: FakeJellyfin;
 let current: Playback | undefined;
 const records: LogRecord[] = [];
@@ -513,7 +529,12 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
     dir = await mkdtemp(path.join(tmpdir(), "harakiri-playback-test-"));
     shortClip = path.join(dir, "short.mkv");
     longClip = path.join(dir, "long.mkv");
-    await Promise.all([synthesize(shortClip, 2), synthesize(longClip, 30)]);
+    sparseKeyframesClip = path.join(dir, "sparse-keyframes.mkv");
+    await Promise.all([
+      synthesize(shortClip, 2),
+      synthesize(longClip, 30),
+      synthesize(sparseKeyframesClip, 50, 10),
+    ]);
     await mkdir(path.join(dir, "hls"));
     // The clip cut the way a Jellyfin transcode serves it: a playlist and its MPEG-TS segments.
     await run("ffmpeg", [
@@ -677,6 +698,25 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
     const routes = jellyfin.stored.map((r) => r.route);
     expect(routes[0]).toBe("/Sessions/Playing");
     expect(routes.indexOf("/Sessions/Playing/Progress")).toBeGreaterThanOrEqual(1);
+  }, 30_000);
+
+  it("Right and Left skip exactly 30 s forward and 10 s back while paused, between keyframes 10 s apart", async () => {
+    const { playback } = await play(sparseKeyframesClip, 50);
+    await until("playing past 1 s", playback, (p) => (p.timePos ?? 0) > 1);
+    await pressKey("SPACE");
+    const paused = await until("paused", playback, (p) => p.pause === true);
+    const frozenAt = paused.timePos ?? Number.NaN;
+
+    // Each skip is read once mpv has finished it: while a seek runs, time-pos reads its target.
+    await pressKey("RIGHT", "playback-restart");
+    const forward = await playback.probe();
+    await pressKey("LEFT", "playback-restart");
+    const back = await playback.probe();
+
+    // A keyframe seek would land on 40 and then 30, the keyframes past and before each target.
+    expect(forward.timePos).toBeCloseTo(frozenAt + 30, 0);
+    expect(back.timePos).toBeCloseTo(frozenAt + 20, 0);
+    expect(back.pause).toBe(true);
   }, 30_000);
 
   it("the token and the ApiKey sidecar never reach mpv's argv", async () => {

@@ -106,8 +106,9 @@ test("mpv's own key bindings pause, seek, resume and stop through the app", asyn
   const atFreeze = await probe(page);
   expect(atFreeze.timePos).toBeCloseTo(frozenAt, 1);
 
-  await pressKey(userDataDir, "RIGHT");
-  const seeked = await probeUntil(page, (p) => (p.timePos ?? 0) >= frozenAt + 25);
+  // Read once mpv has finished the seek: while one runs, time-pos already reads its target.
+  await pressKey(userDataDir, "RIGHT", "playback-restart");
+  const seeked = await probe(page);
   expect(seeked.timePos).toBeCloseTo(frozenAt + 30, 0);
   expect(seeked.pause).toBe(true);
 
