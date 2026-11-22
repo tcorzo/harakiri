@@ -630,7 +630,7 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
       route: "/Sessions/Playing/Stopped",
       positionTicks: stopped?.positionTicks,
     });
-  });
+  }, 30_000);
 
   it("with a slow server, progress reports wait as one, and Back's stop report goes out once the one on the wire is answered", async () => {
     const { events, playback } = await play(longClip, 30);
@@ -667,12 +667,17 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
     });
 
     await until("playing past 1 s", playback, (p) => (p.timePos ?? 0) > 1);
+    // A pause reports progress, so the run has at least one progress report to order.
+    await pressKey("SPACE");
+    await until("paused", playback, (p) => p.pause === true);
 
     await playback.stop();
     await jellyfin.settled();
 
-    expect(jellyfin.stored[0]?.route).toBe("/Sessions/Playing");
-  });
+    const routes = jellyfin.stored.map((r) => r.route);
+    expect(routes[0]).toBe("/Sessions/Playing");
+    expect(routes.indexOf("/Sessions/Playing/Progress")).toBeGreaterThanOrEqual(1);
+  }, 30_000);
 
   it("the token and the ApiKey sidecar never reach mpv's argv", async () => {
     const { playback } = await play(longClip, 30);
