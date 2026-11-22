@@ -1,18 +1,32 @@
-import { queryOptions, useIsMutating, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { UseMutationResult } from "@tanstack/react-query";
+import {
+  queryOptions,
+  useIsMutating,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 import { match } from "ts-pattern";
 
-import type { LauncherAddResult } from "../../../shared/bridge";
+import type { LauncherAddResult, LauncherStatus } from "../../../shared/bridge";
 
 /**
- * Whether harakiri can be added to the game launcher. It changes only through an add, which
- * refetches it, so it is read once. Signing out clears the cache (`data/forget.ts`).
+ * Whether harakiri can be added to the game launcher. An add refetches it, so the library's card
+ * reads it once and keeps the cached value its focus depends on. Signing out clears the cache
+ * (`data/forget.ts`).
  */
 export const launcherStatusQuery = queryOptions({
   queryKey: ["launcher", "status"] as const,
   queryFn: async () => await window.harakiri.launcher.status(),
   staleTime: Infinity,
 });
+
+/**
+ * The status as Settings shows it: read again each time Settings opens, because the owner can
+ * remove harakiri from the launcher while harakiri runs.
+ */
+export const useLauncherStatusOnOpen = (): UseQueryResult<LauncherStatus> =>
+  useQuery({ ...launcherStatusQuery, refetchOnMount: "always" });
 
 const addKey = ["launcher", "add"] as const;
 

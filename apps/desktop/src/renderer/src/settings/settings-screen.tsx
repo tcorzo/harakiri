@@ -10,9 +10,9 @@ import {
   addOutcomeLine,
   addResultOf,
   isProblem,
-  launcherStatusQuery,
   useAddingToLauncher,
   useAddToLauncher,
+  useLauncherStatusOnOpen,
 } from "../launcher/queries";
 import { ListAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
@@ -62,7 +62,7 @@ export const SettingsScreen = () => {
   });
 
   // Offered here whether or not the library's card was put off with Not now.
-  const { data: launcher } = useQuery(launcherStatusQuery);
+  const { data: launcher } = useLauncherStatusOnOpen();
   const add = useAddToLauncher();
   const adding = useAddingToLauncher();
   const addResult = addResultOf(add);
