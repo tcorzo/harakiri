@@ -34,11 +34,14 @@ const appUrl =
 
 const isAppUrl = appUrlCheck(appUrl);
 
+// The window shows at once, painted in the background colour until the renderer's first frame.
+// Waiting for ready-to-show instead hangs where Chromium composites in software (no GPU, or a
+// GPU process that will not start): it never paints a window that was never shown, so the
+// window stayed hidden and the renderer got no animation frames.
 const createWindow = (): void => {
   const window = new BrowserWindow({
     width: 1920,
     height: 1080,
-    show: false,
     fullscreen: app.isPackaged,
     autoHideMenuBar: true,
     backgroundColor: "#0a0605",
@@ -50,9 +53,6 @@ const createWindow = (): void => {
     },
   });
 
-  window.once("ready-to-show", () => {
-    window.show();
-  });
   window.on("closed", () => {
     void player.stop();
   });
