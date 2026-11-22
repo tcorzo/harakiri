@@ -1,5 +1,5 @@
 import { constants } from "node:fs";
-import { copyFile, mkdir } from "node:fs/promises";
+import { copyFile, mkdir, readdir } from "node:fs/promises";
 import path from "node:path";
 
 export type GridKind = "portrait" | "wide" | "hero" | "logo";
@@ -13,17 +13,44 @@ export const ARTWORK_SOURCES: Readonly<Record<GridKind, string>> = {
 
 const KINDS: readonly GridKind[] = ["portrait", "wide", "hero", "logo"];
 
-export const gridNames = (appId: number): Readonly<Record<GridKind, string>> => {
+/** Each slot's file name without its extension. */
+const gridStems = (appId: number): Readonly<Record<GridKind, string>> => {
   if (!Number.isInteger(appId) || appId < 0 || appId >= 2 ** 32) {
     throw new RangeError(`A Steam app ID is an unsigned 32-bit integer, got ${appId}.`);
   }
 
   return {
-    portrait: `${appId}p.png`,
-    wide: `${appId}.png`,
-    hero: `${appId}_hero.png`,
-    logo: `${appId}_logo.png`,
+    portrait: `${appId}p`,
+    wide: `${appId}`,
+    hero: `${appId}_hero`,
+    logo: `${appId}_logo`,
   };
+};
+
+export const gridNames = (appId: number): Readonly<Record<GridKind, string>> => {
+  const stems = gridStems(appId);
+
+  return {
+    portrait: `${stems.portrait}.png`,
+    wide: `${stems.wide}.png`,
+    hero: `${stems.hero}.png`,
+    logo: `${stems.logo}.png`,
+  };
+};
+
+/** Steam's "Set custom artwork" can keep the picked file's extension, so any of these fills a slot. */
+const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "webp"] as const;
+
+/** The slots that already hold an image under any extension, in any case. */
+const filledSlots = async (gridDir: string, stems: Readonly<Record<GridKind, string>>) => {
+  const entries = await readdir(gridDir);
+  const present = new Set(entries.map((name) => name.toLowerCase()));
+
+  return new Set(
+    KINDS.filter((kind) =>
+      IMAGE_EXTENSIONS.some((extension) => present.has(`${stems[kind]}.${extension}`))
+    )
+  );
 };
 
 /** Copies one image; false when the destination exists, because that art is the owner's. */
@@ -41,20 +68,30 @@ const copyAbsent = async (from: string, to: string): Promise<boolean> => {
   }
 };
 
-/** mkdir -p `gridDir`, then copies each absent name; returns the names written, in GridKind order. */
+/**
+ * mkdir -p `gridDir`, then copies each slot that holds no image yet; returns the names written,
+ * in GridKind order.
+ */
 export const writeArtwork = async (
   artwork: string,
   gridDir: string,
   appId: number
 ): Promise<readonly string[]> => {
+  const stems = gridStems(appId);
   const names = gridNames(appId);
 
   await mkdir(gridDir, { recursive: true });
 
+  const filled = await filledSlots(gridDir, stems);
+
   const copied = await Promise.all(
     KINDS.map(
       async (kind) =>
-        await copyAbsent(path.join(artwork, ARTWORK_SOURCES[kind]), path.join(gridDir, names[kind]))
+        !filled.has(kind) &&
+        (await copyAbsent(
+          path.join(artwork, ARTWORK_SOURCES[kind]),
+          path.join(gridDir, names[kind])
+        ))
     )
   );
 

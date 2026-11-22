@@ -1,3 +1,4 @@
+import { readdirSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -70,6 +71,55 @@ describe("artwork", () => {
         names.logo,
       ]);
       await expect(readFile(path.join(grid, names.hero), "utf-8")).resolves.toBe("custom");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each(["3141592653p.jpg", "3141592653p.JPEG", "3141592653p.webp", "3141592653p.PNG"])(
+    "keeps a custom portrait saved as %s, and adds no .png beside it",
+    async (custom) => {
+      const root = await mkdtemp(path.join(tmpdir(), "harakiri-art-"));
+
+      try {
+        const grid = path.join(root, "grid");
+        const names = gridNames(APP_ID);
+
+        await mkdir(grid, { recursive: true });
+        await writeFile(path.join(grid, custom), "custom");
+
+        await expect(writeArtwork(ARTWORK, grid, APP_ID)).resolves.toStrictEqual([
+          names.wide,
+          names.hero,
+          names.logo,
+        ]);
+        expect(readdirSync(grid).toSorted()).toStrictEqual(
+          [custom, names.wide, names.hero, names.logo].toSorted()
+        );
+        await expect(readFile(path.join(grid, custom), "utf-8")).resolves.toBe("custom");
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it("an image of another slot or another app does not count as this slot's", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "harakiri-art-"));
+
+    try {
+      const grid = path.join(root, "grid");
+      const names = gridNames(APP_ID);
+
+      await mkdir(grid, { recursive: true });
+      await writeFile(path.join(grid, "3141592653p.txt"), "not art");
+      await writeFile(path.join(grid, "1p.jpg"), "another app");
+
+      await expect(writeArtwork(ARTWORK, grid, APP_ID)).resolves.toStrictEqual([
+        names.portrait,
+        names.wide,
+        names.hero,
+        names.logo,
+      ]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

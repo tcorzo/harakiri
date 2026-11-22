@@ -133,6 +133,15 @@ describe("add to Steam", () => {
     return { deps, opened };
   };
 
+  /** An add that Steam does not answer in time: it leaves the launcher and owes the art. */
+  const timedOutAdd = async () => {
+    fakeSteamRoot(home, { "111": [], "222": [] });
+
+    await expect(addToSteam(place(), depsWith({}).deps)).resolves.toStrictEqual({
+      state: "timedOut",
+    });
+  };
+
   describe(addToSteam, () => {
     it("adds: script, .desktop, sentinel present while the URL opens, art under the read-back ID, sentinel gone", async () => {
       const { deps, opened } = steamAddsOnOpen();
@@ -350,17 +359,17 @@ describe("add to Steam", () => {
   });
 
   describe("the heal at startup", () => {
-    it("rewrites a launcher whose AppImage moved", async () => {
+    it("rewrites a launcher whose AppImage moved, and writes no art", async () => {
       fakeSteamRoot(home, { "111": [], "222": [ours()] });
       await writeLauncher(files(), "/opt/old.AppImage", ARTWORK);
 
       await expect(healSteamLauncher(place(), await readSteam())).resolves.toStrictEqual({
         launcher: "rewritten",
-        artwork: [{ user: "222", written: ALL_ART }],
+        artwork: [],
       });
 
       await expect(readFile(files().script, "utf-8")).resolves.toBe(launcherScript(TARGET));
-      expect(existsSync(grid("111"))).toBe(false);
+      expect([existsSync(grid("111")), existsSync(grid("222"))]).toStrictEqual([false, false]);
     });
 
     it("writes a launcher Steam points at even when userData lost it", async () => {
@@ -368,7 +377,7 @@ describe("add to Steam", () => {
 
       await expect(healSteamLauncher(place(), await readSteam())).resolves.toStrictEqual({
         launcher: "rewritten",
-        artwork: [{ user: "222", written: ALL_ART }],
+        artwork: [],
       });
 
       await expect(readFile(files().script, "utf-8")).resolves.toBe(launcherScript(TARGET));
@@ -399,10 +408,10 @@ describe("add to Steam", () => {
     });
 
     it("adds art Steam listed after a timed-out add, and keeps custom art", async () => {
-      fakeSteamRoot(home, { "111": [], "222": [ours()] });
-      await writeLauncher(files(), TARGET, ARTWORK);
+      await timedOutAdd();
+      await writeShortcuts("222", encodeShortcuts([ours()]));
       await mkdir(grid("222"), { recursive: true });
-      await writeFile(path.join(grid("222"), "3141592653_hero.png"), "custom");
+      await writeFile(path.join(grid("222"), "3141592653_hero.jpg"), "custom");
 
       await expect(healSteamLauncher(place(), await readSteam())).resolves.toStrictEqual({
         launcher: "unchanged",
@@ -411,14 +420,80 @@ describe("add to Steam", () => {
         ],
       });
 
-      await expect(readFile(path.join(grid("222"), "3141592653_hero.png"), "utf-8")).resolves.toBe(
+      await expect(readFile(path.join(grid("222"), "3141592653_hero.jpg"), "utf-8")).resolves.toBe(
         "custom"
       );
+      expect(existsSync(path.join(grid("222"), "3141592653_hero.png"))).toBe(false);
       expect(existsSync(grid("111"))).toBe(false);
     });
 
-    it("warns and resolves when nothing can be written", async () => {
-      fakeSteamRoot(home, { "222": [ours()] });
+    it("writes the art a timed-out add owed once: art removed afterwards stays removed", async () => {
+      await timedOutAdd();
+      await writeShortcuts("222", encodeShortcuts([ours()]));
+
+      await expect(healSteamLauncher(place(), await readSteam())).resolves.toStrictEqual({
+        launcher: "unchanged",
+        artwork: [{ user: "222", written: ALL_ART }],
+      });
+
+      await rm(path.join(grid("222"), "3141592653p.png"));
+
+      await expect(healSteamLauncher(place(), await readSteam())).resolves.toStrictEqual({
+        launcher: "unchanged",
+        artwork: [],
+      });
+      expect(existsSync(path.join(grid("222"), "3141592653p.png"))).toBe(false);
+    });
+
+    it("a timed-out add that Steam still does not list keeps its art owed", async () => {
+      await timedOutAdd();
+
+      await expect(healSteamLauncher(place(), await readSteam())).resolves.toStrictEqual({
+        launcher: "unchanged",
+        artwork: [],
+      });
+
+      await writeShortcuts("222", encodeShortcuts([ours()]));
+
+      await expect(healSteamLauncher(place(), await readSteam())).resolves.toStrictEqual({
+        launcher: "unchanged",
+        artwork: [{ user: "222", written: ALL_ART }],
+      });
+    });
+
+    it("never restores art the owner removed after an add", async () => {
+      const { deps } = steamAddsOnOpen();
+
+      await expect(addToSteam(place(), deps)).resolves.toStrictEqual({ state: "added" });
+      await rm(path.join(grid("222"), "3141592653_hero.png"));
+      await rm(path.join(grid("222"), "3141592653_logo.png"));
+
+      await expect(healSteamLauncher(place(), await readSteam())).resolves.toStrictEqual({
+        launcher: "unchanged",
+        artwork: [],
+      });
+      expect(readdirSync(grid("222")).toSorted()).toStrictEqual([
+        "3141592653.png",
+        "3141592653p.png",
+      ]);
+    });
+
+    it("a later add that Steam lists pays the art a timed-out one owed", async () => {
+      await timedOutAdd();
+      const { deps } = steamAddsOnOpen();
+
+      await expect(addToSteam(place(), deps)).resolves.toStrictEqual({ state: "added" });
+      await rm(path.join(grid("222"), "3141592653_hero.png"));
+
+      await expect(healSteamLauncher(place(), await readSteam())).resolves.toStrictEqual({
+        launcher: "unchanged",
+        artwork: [],
+      });
+    });
+
+    it("warns and resolves when nothing can be written, and still owes the art", async () => {
+      await timedOutAdd();
+      await writeShortcuts("222", encodeShortcuts([ours()]));
 
       const missing = path.join(root, "no-art");
       let report: unknown;
@@ -435,6 +510,11 @@ describe("add to Steam", () => {
         "The launcher could not be rewritten: {error}",
         "Art for user {user} could not be written: {error}",
       ]);
+
+      await expect(healSteamLauncher(place(), await readSteam())).resolves.toStrictEqual({
+        launcher: "unchanged",
+        artwork: [{ user: "222", written: ALL_ART }],
+      });
     });
   });
 });
