@@ -9,6 +9,7 @@ import { createServer as createHttpsServer } from "node:https";
 import { createConnection } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { createInterface } from "node:readline";
 import { setTimeout } from "node:timers/promises";
 import { promisify, inspect } from "node:util";
 
@@ -65,6 +66,8 @@ const serveFile = (req: IncomingMessage, res: ServerResponse, bytes: Buffer): vo
 
 const TcpAddress = z.object({ port: z.number() });
 
+const MpvReply = z.object({ request_id: z.number() });
+
 /** The one field of a start, progress or stop report the fake server keeps. */
 const PlaybackReport = z.object({ PositionTicks: z.number() });
 
@@ -81,6 +84,8 @@ class FakeJellyfin {
   runTimeTicks = 0;
   /** How long the stop report waits before the server answers it. */
   stopDelayMs = 0;
+  /** When the stop report reached the server. */
+  stopArrivedAt: number | undefined;
   /** When the server finished answering the stop report. */
   stopAnsweredAt: number | undefined;
   /** How long a progress report waits before the server stores it and answers. */
@@ -90,6 +95,8 @@ class FakeJellyfin {
    * whichever report it handles last, so the last entry is the resume point the owner returns to.
    */
   readonly stored: { readonly route: string; readonly positionTicks: number }[] = [];
+  /** How long the sidecar subtitle request waits before the server answers it. */
+  sidecarDelayMs = 0;
   /** The sidecar subtitle request is held open and never answered. */
   stallSidecar = false;
   /** The item request (the overlay's title) is held open and never answered. */
@@ -123,7 +130,10 @@ class FakeJellyfin {
    * 500 ms, so a report sent late has had its chance to land.
    */
   async settled(): Promise<void> {
-    const reports = () => this.requests.filter((r) => r.url.startsWith("/Sessions/Playing"));
+    // A report answered 401 is never stored, so only authorized ones count.
+    const reports = () =>
+      this.requests.filter((r) => r.authorized && r.url.startsWith("/Sessions/Playing"));
+
     const deadline = Date.now() + 5000;
     let seen = -1;
 
@@ -180,6 +190,7 @@ class FakeJellyfin {
     }
 
     if (route === "/Sessions/Playing/Stopped") {
+      this.stopArrivedAt = Date.now();
       await setTimeout(this.stopDelayMs);
       this.store(route, PlaybackReport.parse(body).PositionTicks);
       this.stopAnsweredAt = Date.now();
@@ -204,6 +215,7 @@ class FakeJellyfin {
     }
 
     if (route === SUBTITLE_PATH) {
+      await setTimeout(this.sidecarDelayMs);
       res
         .writeHead(200, { "Content-Type": "application/x-subrip" })
         .end("1\n00:00:00,000 --> 00:00:30,000\nSidecar\n");
@@ -284,11 +296,20 @@ const pressKey = async (key: string): Promise<void> => {
   }
 
   const socket = createConnection(socketPath);
+  const requestId = 7;
 
   try {
     await once(socket, "connect");
-    socket.write(`${JSON.stringify({ command: ["keypress", key], request_id: 1 })}\n`);
-    await once(socket, "data");
+    socket.write(`${JSON.stringify({ command: ["keypress", key], request_id: requestId })}\n`);
+
+    // mpv may send an event to every client first; the reply is the line with our request id.
+    for await (const line of createInterface({ input: socket })) {
+      if (MpvReply.safeParse(JSON.parse(line)).data?.request_id === requestId) {
+        return;
+      }
+    }
+
+    throw new Error(`mpv closed the socket before answering keypress ${key}`);
   } finally {
     socket.destroy();
   }
@@ -609,6 +630,48 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
       route: "/Sessions/Playing/Stopped",
       positionTicks: stopped?.positionTicks,
     });
+  });
+
+  it("with a slow server, progress reports wait as one, and Back's stop report goes out once the one on the wire is answered", async () => {
+    const { events, playback } = await play(longClip, 30);
+    await until("playing past 1 s", playback, (p) => (p.timePos ?? 0) > 1);
+    const before = jellyfin.posted("/Sessions/Playing/Progress").length;
+    jellyfin.progressDelayMs = 1500;
+
+    // Three pause changes, each reporting progress, while the server takes 1.5 s per report.
+    /* oxlint-disable eslint/no-await-in-loop -- the presses are ordered */
+    for (const paused of [true, false, true]) {
+      await pressKey("SPACE");
+      await until(`pause ${String(paused)}`, playback, (p) => p.pause === paused);
+    }
+    /* oxlint-enable eslint/no-await-in-loop */
+
+    const stopAt = Date.now();
+    await playback.stop();
+    await jellyfin.settled();
+
+    const stopped = events.find((event) => event.phase === "stopped");
+    // Only the report already on the wire reached the server; the newest waiting one was dropped.
+    expect(jellyfin.posted("/Sessions/Playing/Progress")).toHaveLength(before + 1);
+    expect(jellyfin.stored.at(-1)).toStrictEqual({
+      route: "/Sessions/Playing/Stopped",
+      positionTicks: stopped?.positionTicks,
+    });
+    // The stop waited for that one report at most, not for one per pause.
+    expect((jellyfin.stopArrivedAt ?? Number.NaN) - stopAt).toBeLessThan(2000);
+  }, 30_000);
+
+  it("the start report is the first the server stores, even when mpv reports progress while a slow sidecar loads", async () => {
+    const { playback } = await play(longClip, 30, (server) => {
+      server.sidecarDelayMs = 1500;
+    });
+
+    await until("playing past 1 s", playback, (p) => (p.timePos ?? 0) > 1);
+
+    await playback.stop();
+    await jellyfin.settled();
+
+    expect(jellyfin.stored[0]?.route).toBe("/Sessions/Playing");
   });
 
   it("the token and the ApiKey sidecar never reach mpv's argv", async () => {
