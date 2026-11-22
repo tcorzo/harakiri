@@ -28,6 +28,9 @@ PACKAGES=(
   libdrm
   libva
   libvdpau
+  zlib-ng-compat
+  libdisplay-info
+  libxml2
   pipewire-libs
   pulseaudio-libs
   alsa-lib

@@ -433,6 +433,14 @@ mpvBinary()
   otherwise            → bundledMpv()       (dev, tests, e2e)
 ```
 
+### Host libraries the GPU drivers share (from plan 07's final review)
+
+The host's Mesa drivers (every Vulkan driver, libgallium, libLLVM) load into mpv's process, and a library mpv already loaded from its `lib/` satisfies their needs before the host's copy does.
+
+- From the host now: `libz.so.1`, `libdisplay-info.so.3` and `libxml2.so.2` are in `mpv/host-libs.txt`. `packages/mpv/src/vulkan.test.ts` fails when the bundled mpv cannot load a Vulkan driver the host installs.
+- Known risk: SPIRV-Tools and shaderc stay bundled. `libSPIRV-Tools.so` has an unversioned soname and a C++ API, so after a host spirv-tools update the host's Mesa drivers bind to the bundle's older copy and Vulkan (and the GL fallback) can fail. How the bundle gets them (from the host, or a static `shaderc_combined` with hidden symbols) is the owner's decision.
+- The CA bundle path the build's libcurl reads is Fedora's (`caBundle` in `manifest.json`). A host outside the Fedora family needs it as a host capability.
+
 ### Validation
 
 #### Automated Verification
