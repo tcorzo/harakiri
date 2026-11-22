@@ -4,7 +4,7 @@ import type { HdrSignalling } from "@harakiri/fidelity";
 import { safeStorage } from "electron";
 
 import type { HostCapabilities } from "./capabilities";
-import { readSteamFacts } from "./facts";
+import { readEnvFacts, readSteamFacts } from "./facts";
 import type { HostFacts, SteamFacts } from "./facts";
 import { createHost } from "./host";
 import {
@@ -15,6 +15,8 @@ import {
   unavailableReason,
 } from "./steam/add";
 import type { AddResult, HealReport, LauncherPlace, LauncherState } from "./steam/add";
+import { steamHints } from "./steam/hints";
+import type { LauncherHints } from "./steam/hints";
 import { launcherFiles } from "./steam/launcher";
 
 export type { AddResult, HealReport, LauncherState } from "./steam/add";
@@ -53,6 +55,9 @@ export interface LauncherWhere {
 
 /** The game launcher harakiri can add itself to, for the UI to name. */
 export const launcherName = "Steam";
+
+/** The launcher's words for the add, for this session; reads the environment on each call. */
+export const launcherHints = (): LauncherHints => steamHints(readEnvFacts(process.env));
 
 const placeOf = (where: LauncherWhere): LauncherPlace => ({
   files: launcherFiles(where.userData),

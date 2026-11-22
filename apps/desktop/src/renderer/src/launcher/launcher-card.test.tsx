@@ -20,7 +20,13 @@ import { focusFirst } from "../ui/focus";
 import { LauncherCard } from "./launcher-card";
 import { useAddingToLauncher } from "./queries";
 
-const offered: LauncherStatus = { state: "offered", name: "Steam" };
+// The host's words; the card shows them as sent, so these differ from the desktop's.
+const offered: LauncherStatus = {
+  state: "offered",
+  name: "Steam",
+  launchHint: "Launch it from there next time.",
+  retryHint: "Try again in a moment.",
+};
 
 const launcher = {
   status: vi.fn<() => Promise<LauncherStatus>>(),
@@ -148,7 +154,7 @@ describe("launcher card", () => {
     await expect(shown("Play harakiri from Steam")).resolves.toBe("Play harakiri from Steam");
     expect(screen.getByRole("region").textContent).toBe(
       "Play harakiri from Steam" +
-        "Adds harakiri to your Steam library, with its art. Launch it from there in Game Mode." +
+        "Adds harakiri to your Steam library, with its art. Launch it from there next time." +
         "Add to SteamNot now"
     );
     await focusIs("launcher-add");
@@ -167,8 +173,8 @@ describe("launcher card", () => {
     expect(screen.queryByText("Play harakiri from Steam")).toBeNull();
   });
 
-  it("a timed-out add says to open the launcher and try again", async () => {
-    const line = "Steam did not list harakiri in time. Open Steam, then try again.";
+  it("a timed-out add says what the host says to do next", async () => {
+    const line = "Steam did not list harakiri in time. Try again in a moment.";
     launcher.status.mockResolvedValue(offered);
     launcher.add.mockResolvedValue({ state: "timedOut" });
     mount(fresh());

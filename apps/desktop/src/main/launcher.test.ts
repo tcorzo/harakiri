@@ -163,12 +163,27 @@ describe(createLauncher, () => {
     expect(opened).toStrictEqual([]);
   });
 
-  it("status carries the launcher's name", async () => {
+  it("status carries the launcher's name and its words for the desktop", async () => {
     fakeSteamRoot(home, { "222": [] });
+    vi.stubEnv("GAMESCOPE_WAYLAND_DISPLAY", "");
 
     await expect(build(idle).status()).resolves.toStrictEqual({
       state: "offered",
       name: "Steam",
+      launchHint: "Launch it from there in Game Mode.",
+      retryHint: "Open Steam, then try again.",
+    });
+  });
+
+  it("inside Game Mode the words do not send the owner to Game Mode or to open Steam", async () => {
+    fakeSteamRoot(home, { "222": [] });
+    vi.stubEnv("GAMESCOPE_WAYLAND_DISPLAY", "gamescope-0");
+
+    await expect(build(idle).status()).resolves.toStrictEqual({
+      state: "offered",
+      name: "Steam",
+      launchHint: "Launch it from there next time.",
+      retryHint: "Try again in a moment.",
     });
   });
 

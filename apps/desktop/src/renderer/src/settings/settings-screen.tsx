@@ -150,7 +150,7 @@ export const SettingsScreen = () => {
                 detail={
                   <LauncherDetail
                     line={
-                      addOutcomeLine(launcher.name, addResult, adding) ??
+                      addOutcomeLine(launcher, addResult, adding) ??
                       `Adds harakiri to your ${launcher.name} library, with its art`
                     }
                     problem={isProblem(addResult, adding)}

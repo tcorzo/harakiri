@@ -56,9 +56,12 @@ export const addResultOf = (
 ): LauncherAddResult | undefined =>
   add.error === null ? add.data : { state: "failed", reason: add.error.message };
 
+/** A launcher harakiri can be added to, with the words main sends for it. */
+export type OfferedLauncher = Extract<LauncherStatus, { readonly state: "offered" }>;
+
 /** The line to show under the action for a result, or null when there is nothing to say. */
 export const addOutcomeLine = (
-  name: string,
+  { name, retryHint }: OfferedLauncher,
   result: LauncherAddResult | undefined,
   pending: boolean
 ): string | null => {
@@ -72,10 +75,7 @@ export const addOutcomeLine = (
 
   return match(result)
     .with({ state: "added" }, () => null)
-    .with(
-      { state: "timedOut" },
-      () => `${name} did not list harakiri in time. Open ${name}, then try again.`
-    )
+    .with({ state: "timedOut" }, () => `${name} did not list harakiri in time. ${retryHint}`)
     .with({ state: "failed" }, ({ reason }) => `Could not add harakiri to ${name}: ${reason}`)
     .exhaustive();
 };

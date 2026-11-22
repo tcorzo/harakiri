@@ -6,7 +6,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LauncherStatus } from "../../../shared/bridge";
 import { launcherStatusQuery, useLauncherStatusOnOpen } from "./queries";
 
-const offered: LauncherStatus = { state: "offered", name: "Steam" };
+const offered: LauncherStatus = {
+  state: "offered",
+  name: "Steam",
+  launchHint: "Launch it from there in Game Mode.",
+  retryHint: "Open Steam, then try again.",
+};
 
 const added: LauncherStatus = { state: "added", name: "Steam" };
 

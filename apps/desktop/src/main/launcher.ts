@@ -11,6 +11,7 @@ import {
   addToLauncher,
   artworkDir,
   healLauncher,
+  launcherHints,
   launcherName,
   launcherState,
   launcherUnavailableReason,
@@ -41,7 +42,7 @@ export const createLauncher = (deps: LauncherDeps): Launcher => {
     match(await launcherState(deps.where()))
       .returnType<LauncherStatus>()
       .with("unavailable", () => ({ state: "unavailable" }))
-      .with("offered", () => ({ state: "offered", name: launcherName }))
+      .with("offered", () => ({ state: "offered", name: launcherName, ...launcherHints() }))
       .with("added", () => ({ state: "added", name: launcherName }))
       .exhaustive();
 

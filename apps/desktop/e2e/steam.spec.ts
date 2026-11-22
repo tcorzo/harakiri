@@ -157,7 +157,8 @@ test("Not now hides the card across a restart, and Settings still offers Add to 
   const { page } = await launch();
   await expectFocus(page, playOrResume, 20_000);
   // Steam is still there to add to: only the card was put off.
-  expect(await page.evaluate(async () => await window.harakiri.launcher.status())).toEqual({
+  // The hints depend on whether the run is inside gamescope; the unit tests pin them.
+  expect(await page.evaluate(async () => await window.harakiri.launcher.status())).toMatchObject({
     state: "offered",
     name: "Steam",
   });

@@ -193,10 +193,20 @@ export const UpdateStatus = z.discriminatedUnion("state", [
 
 export type UpdateStatus = z.infer<typeof UpdateStatus>;
 
-/** Whether harakiri can be added to the game launcher, or already is; `name` is the launcher's. */
+/**
+ * Whether harakiri can be added to the game launcher, or already is. The words about the
+ * launcher come from main, so the renderer never names one: `name` is the launcher's,
+ * `launchHint` says where to launch harakiri once added, and `retryHint` what to do after an add
+ * the launcher did not answer in time.
+ */
 export const LauncherStatus = z.discriminatedUnion("state", [
   z.object({ state: z.literal("unavailable") }),
-  z.object({ state: z.literal("offered"), name: z.string() }),
+  z.object({
+    state: z.literal("offered"),
+    name: z.string(),
+    launchHint: z.string(),
+    retryHint: z.string(),
+  }),
   z.object({ state: z.literal("added"), name: z.string() }),
 ]);
 
