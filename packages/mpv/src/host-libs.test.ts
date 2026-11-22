@@ -4,8 +4,14 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { neededLibs } from "./elf";
-import { isHostLib, readHostLibs, unbundledNeeds } from "./host-libs";
+import { exportedSymbols, neededLibs } from "./elf";
+import {
+  isHostLib,
+  isShaderCompilerSymbol,
+  readHostLibs,
+  shaderCompilerExports,
+  unbundledNeeds,
+} from "./host-libs";
 
 // packages/mpv/src -> repo root -> mpv
 const recipe = path.resolve(import.meta.dirname, "../../../mpv");
@@ -32,6 +38,58 @@ describe("host libs", () => {
       const text = path.join(tmp, "plain.txt");
       writeFileSync(text, "not an elf file, just text\n");
       expect(() => neededLibs(text)).toThrow(`${text} is not an ELF64 file`);
+    });
+  });
+
+  describe(exportedSymbols, () => {
+    it("reads the defined, visible dynamic symbols of a real ELF, and not the ones it imports", () => {
+      // node exports N-API for native addons, and imports malloc from libc
+      const symbols = exportedSymbols(process.execPath);
+      expect(symbols).toContain("napi_create_object");
+      expect(symbols).not.toContain("malloc");
+    });
+
+    it("refuses a file that is not ELF64", () => {
+      const text = path.join(tmp, "plain.txt");
+      writeFileSync(text, "not an elf file, just text\n");
+      expect(() => exportedSymbols(text)).toThrow(`${text} is not an ELF64 file`);
+    });
+  });
+
+  describe(isShaderCompilerSymbol, () => {
+    it.each([
+      // SPIRV-Tools: its C API, its C++ namespaces, and its free functions
+      ["spvContextCreate", true],
+      ["spvOptimizerRun", true],
+      ["_ZN8spvtools3opt9Optimizer3RunEPKjmPSt6vectorIjSaIjEE", true],
+      ["_Z10spvFixWordj16spv_endianness_t", true],
+      ["_ZN8spvutils9HexFloatIfNS_6TraitsIfEEE4castEv", true],
+      ["_ZNK3spv9Validator7isValidEv", true],
+      // a std template instantiated over a SPIRV-Tools type
+      ["_ZNSt6vectorIN8spvtools3opt11InstructionESaIS2_EE9push_backEOS2_", true],
+      // shaderc and glslang
+      ["shaderc_compile_into_spv", true],
+      ["_ZN12shaderc_util8Compiler7CompileEv", true],
+      ["_ZN7glslang7TShader5parseEv", true],
+      ["glslang_initialize_process", true],
+      ["ShCompile", true],
+      // libplacebo's own exports
+      ["pl_shader_alloc", false],
+      ["memcpy_layout", false],
+      ["_ZNSt8__detail22__from_chars_pow2_baseILb0EjEEbRPKcS2_RT0_i", false],
+      // other libraries in the bundle
+      ["SDL_Init", false],
+      ["hb_shape", false],
+      ["avcodec_send_packet", false],
+    ])("isShaderCompilerSymbol(%j) is %j", (name, compiler) => {
+      expect(isShaderCompilerSymbol(name)).toBe(compiler);
+    });
+  });
+
+  describe(shaderCompilerExports, () => {
+    it("is empty for a bundle whose files export no shader compiler symbol", () => {
+      copyFileSync(process.execPath, path.join(tmp, "mpv"));
+      expect(shaderCompilerExports(tmp)).toStrictEqual([]);
     });
   });
 

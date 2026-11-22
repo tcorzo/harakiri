@@ -15,8 +15,10 @@ set -a # manifest.json reads the versions from the environment
 set +a
 
 mkdir -p /build
-for url in "$NV_CODEC_HEADERS_URL" "$SDL2_URL" "$FFMPEG_URL" "$LIBPLACEBO_URL" "$CURL_URL" "$MPV_URL"; do
-	tar -xf "/src/$(basename "$url")" -C /build
+# mpv/fetch.sh saves each tarball as <NAME>_FILE, or as its URL's last segment
+for name in NV_CODEC_HEADERS SDL2 FFMPEG SPIRV_HEADERS SPIRV_TOOLS GLSLANG SHADERC LIBPLACEBO CURL MPV; do
+	url_var="${name}_URL" file_var="${name}_FILE"
+	tar -xf "/src/${!file_var:-$(basename "${!url_var}")}" -C /build
 done
 
 # 1. nv-codec-headers: the NVDEC/CUDA headers FFmpeg loads the driver through
@@ -42,23 +44,70 @@ ninja -C /build/sdl2-build -j"$jobs" install
 	make install
 )
 
-# 4. libplacebo: the tarball's 3rdparty/ dirs are empty, so it builds against the image's Vulkan
+# 4. shaderc, with the glslang, SPIRV-Tools and SPIRV-Headers versions.env pins, as one static
+#    archive (libshaderc_combined.a) for libplacebo to link. The host's Mesa drivers (every Vulkan
+#    driver, libgallium) link libSPIRV-Tools.so, whose soname is unversioned and whose API is C++:
+#    a copy in lib/ would be loaded first and bind the host's drivers to it. So the bundle ships no
+#    shaderc or SPIRV-Tools library, and libplacebo exports none of their symbols: every object is
+#    built position-independent with hidden visibility, and libplacebo links the archive with
+#    --exclude-libs (step 5), which also hides the std templates these objects instantiate.
+#    Only the archive's target is built: no tests, examples, glslc, glslang or spirv-* tools, and
+#    no shared libraries. HLSL input is off (libplacebo compiles GLSL), and -Werror is off so a
+#    newer compiler's warnings do not stop the build.
+#    Licensing: shaderc and SPIRV-Tools are Apache-2.0, glslang is BSD, MIT and Apache-2.0, and
+#    SPIRV-Headers is MIT-style. As before, they are conveyed inside the GPL program, now linked
+#    into libplacebo instead of beside it. Apache-2.0 is compatible with GPL version 3, and mpv
+#    and FFmpeg are GPL version 2 or later.
+cmake -S "/build/shaderc-$SHADERC_VERSION" -B /build/shaderc-build -G Ninja \
+	-DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+	-DCMAKE_C_FLAGS='-fvisibility=hidden' \
+	-DCMAKE_CXX_FLAGS='-fvisibility=hidden -fvisibility-inlines-hidden' \
+	-DSHADERC_SPIRV_HEADERS_DIR="/build/SPIRV-Headers-$SPIRV_HEADERS_VERSION" \
+	-DSHADERC_SPIRV_TOOLS_DIR="/build/SPIRV-Tools-$SPIRV_TOOLS_VERSION" \
+	-DSHADERC_GLSLANG_DIR="/build/glslang-$GLSLANG_VERSION" \
+	-DSHADERC_SKIP_TESTS=ON -DSHADERC_SKIP_EXAMPLES=ON -DSHADERC_SKIP_EXECUTABLES=ON \
+	-DSHADERC_SKIP_COPYRIGHT_CHECK=ON -DSHADERC_ENABLE_HLSL=OFF \
+	-DSHADERC_ENABLE_WERROR_COMPILE=OFF -DSPIRV_SKIP_EXECUTABLES=ON -DSPIRV_WERROR=OFF \
+	-DENABLE_GLSLANG_BINARIES=OFF
+ninja -C /build/shaderc-build -j"$jobs" shaderc_combined
+install -Dm0644 /build/shaderc-build/libshaderc/libshaderc_combined.a "$prefix/lib64/libshaderc_combined.a"
+install -Dm0644 -t "$prefix/include/shaderc" "/build/shaderc-$SHADERC_VERSION"/libshaderc/include/shaderc/*.h
+# shaderc's own shaderc.pc names the shared library, and its shaderc_combined.pc is a target the
+# archive's build skips; libplacebo looks shaderc up as `shaderc`, so this one names the archive.
+mkdir -p "$prefix/lib64/pkgconfig"
+cat > "$prefix/lib64/pkgconfig/shaderc.pc" <<PC
+prefix=$prefix
+libdir=\${prefix}/lib64
+includedir=\${prefix}/include
+
+Name: shaderc
+Description: shaderc, glslang and SPIRV-Tools in one static archive, with hidden symbols
+Version: $SHADERC_VERSION
+Libs: -L\${libdir} -lshaderc_combined
+Cflags: -I\${includedir}
+PC
+
+# 5. libplacebo: the tarball's 3rdparty/ dirs are empty, so it builds against the image's Vulkan
 #    headers, vk.xml, jinja2 and glad2. --auto-features=disabled, and every feature is named:
 #    - vk-proc-addr: mpv creates its Vulkan instance with no vkGetInstanceProcAddr of its own
 #      (pl_vk_inst_params()), so libplacebo links it from the host's libvulkan.so.1.
 #    - gl-proc-addr: off. mpv hands libplacebo its own GL loader (get_proc_addr_ex), so the
 #      built-in dlopen loader is never used.
-#    - glslang: off, shaderc compiles SPIR-V. libdovi: off, FFmpeg parses the Dolby Vision RPU
-#      and libplacebo's built-in dovi applies it.
+#    - glslang: off, shaderc (step 4) compiles SPIR-V. libdovi: off, FFmpeg parses the Dolby
+#      Vision RPU and libplacebo's built-in dovi applies it.
 #    - d3d11 is Windows only. unwind and xxhash are debugging and speed extras with no package here.
+#    --exclude-libs makes every symbol libplacebo takes from libshaderc_combined.a local to it.
+#    libplacebo links C++, so both languages' link args carry it.
 meson setup /build/libplacebo-build "/build/libplacebo-v$LIBPLACEBO_VERSION" \
 	--prefix="$prefix" --buildtype=release --auto-features=disabled \
+	-Dc_link_args=-Wl,--exclude-libs,libshaderc_combined.a \
+	-Dcpp_link_args=-Wl,--exclude-libs,libshaderc_combined.a \
 	-Dvulkan=enabled -Dvk-proc-addr=enabled -Dshaderc=enabled -Dglslang=disabled \
 	-Dopengl=enabled -Dgl-proc-addr=disabled -Dlcms=enabled -Ddovi=enabled -Dlibdovi=disabled \
 	-Dd3d11=disabled -Dunwind=disabled -Dxxhash=disabled -Ddemos=false -Dtests=false
 ninja -C /build/libplacebo-build -j"$jobs" install
 
-# 5. libcurl: what mpv reads http, https and ftp through. Fedora 44's 8.18.0 keeps an easy handle
+# 6. libcurl: what mpv reads http, https and ftp through. Fedora 44's 8.18.0 keeps an easy handle
 #    paused when mpv adds it again after a seek (curl #20641). Only the features Fedora's
 #    libcurl-minimal has: http, https, ftp, ftps and file over OpenSSL, HTTP/2 (nghttp2), IDN
 #    (libidn2), GSS-API (krb5) and zlib. Every dependency is named, and every other protocol is off.
@@ -79,10 +128,11 @@ cmake -S "/build/curl-$CURL_VERSION" -B /build/curl-build -G Ninja \
 	-DCURL_CA_BUNDLE=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem -DCURL_CA_PATH=none
 ninja -C /build/curl-build -j"$jobs" install
 
-# 6. mpv: --auto-features=disabled, so every feature mpv needs is named here, and every other one
+# 7. mpv: --auto-features=disabled, so every feature mpv needs is named here, and every other one
 #    (DVD, Blu-ray, JavaScript, libarchive, JACK, ...) stays off. Lua is required: e2e loads
 #    hold-load.lua. In mpv 0.42.0, Vulkan hwdec interop has no option (it comes with vulkan), and
-#    the shaderc option is Windows-only: Vulkan compiles its shaders through libplacebo's shaderc.
+#    the shaderc option is Windows-only: Vulkan compiles its shaders through the shaderc linked
+#    into libplacebo (step 4).
 #    vdpau-gl-x11 needs GLX (gl-x11), which stays off; VDPAU decodes through vdpau-copy.
 meson setup /build/mpv-build "/build/mpv-$MPV_VERSION" \
 	--prefix="$prefix" --buildtype=release --auto-features=disabled \
@@ -160,6 +210,10 @@ print(json.dumps({
     "sdl2": os.environ["SDL2_VERSION"],
     "nvCodecHeaders": os.environ["NV_CODEC_HEADERS_VERSION"],
     "curl": os.environ["CURL_VERSION"],
+    "shaderc": os.environ["SHADERC_VERSION"],
+    "glslang": os.environ["GLSLANG_VERSION"],
+    "spirvTools": os.environ["SPIRV_TOOLS_VERSION"],
+    "spirvHeaders": os.environ["SPIRV_HEADERS_VERSION"],
     "caBundle": sys.argv[1],
 }, indent=2))
 PY

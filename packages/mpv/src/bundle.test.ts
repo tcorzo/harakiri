@@ -6,7 +6,8 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { bundledMpv, repoRootFrom } from "./bundle";
-import { readHostLibs, unbundledNeeds } from "./host-libs";
+import { neededLibs } from "./elf";
+import { readHostLibs, shaderCompilerExports, unbundledNeeds } from "./host-libs";
 
 // The real build in .cache/mpv/<recipe-hash>. With none, bundledMpv() throws naming `mise run mpv:build`.
 const recipe = path.join(repoRootFrom(import.meta.dirname), "mpv");
@@ -48,6 +49,15 @@ const readAvcodec = (): string => {
 
   return readFileSync(path.join(lib, name)).toString("latin1");
 };
+
+// The libraries of the shader compiler libplacebo links: shaderc, glslang and SPIRV-Tools
+const shaderCompilerLib = /^lib(?:shaderc|glslang|SPIRV)/u;
+
+/** `mpv`, then `lib/<name>` for each file in the bundle's lib/ */
+const bundleFiles = (): string[] => [
+  "mpv",
+  ...readdirSync(bundleFile("lib")).map((name) => `lib/${name}`),
+];
 
 describe("harakiri's mpv build", () => {
   it("is mpv 0.42.0 on libplacebo 7.387.0 and FFmpeg 9.0.2", () => {
@@ -102,6 +112,32 @@ describe("harakiri's mpv build", () => {
 
   it("needs nothing from the host beyond mpv/host-libs.txt", () => {
     expect(unbundledNeeds(path.dirname(bundledMpv()), readHostLibs(recipe))).toStrictEqual([]);
+  });
+
+  describe("leaves SPIRV-Tools to the host's Mesa drivers", () => {
+    // Every host Vulkan driver and libgallium link libSPIRV-Tools.so, whose soname is unversioned
+    // and whose API is C++. A copy the bundle loads, or symbols it exports, would bind the host's
+    // drivers to the bundle's SPIRV-Tools. libplacebo links shaderc, glslang and SPIRV-Tools
+    // statically and exports none of their symbols (mpv/build.sh).
+    it("ships no shaderc, glslang or SPIRV-Tools library in lib/", () => {
+      expect(
+        readdirSync(bundleFile("lib")).filter((name) => shaderCompilerLib.test(name))
+      ).toStrictEqual([]);
+    });
+
+    it("has no file that needs a shaderc, glslang or SPIRV-Tools library", () => {
+      const needs = bundleFiles().flatMap((rel) =>
+        neededLibs(bundleFile(rel))
+          .filter((soname) => shaderCompilerLib.test(soname))
+          .map((soname) => `${rel}: ${soname}`)
+      );
+
+      expect(needs).toStrictEqual([]);
+    });
+
+    it("exports no shaderc, glslang or SPIRV-Tools symbol from any file", () => {
+      expect(shaderCompilerExports(path.dirname(bundledMpv()))).toStrictEqual([]);
+    });
   });
 
   it("is FFmpeg under the GPL, never nonfree (Q4a)", () => {
