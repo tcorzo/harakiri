@@ -200,14 +200,18 @@ describe(createBridge, () => {
   });
 
   it("parses the launcher status and add result, and rejects a status without a name", async () => {
-    const status = fakeIpc({
-      channel: channels.launcherStatus,
-      value: { state: "offered", name: "Steam" },
-    });
+    const offered = {
+      state: "offered",
+      name: "Steam",
+      launchHint: "Launch it from there in Game Mode.",
+      retryHint: "Open Steam, then try again.",
+    };
+
+    const status = fakeIpc({ channel: channels.launcherStatus, value: offered });
 
     await expect(
       createBridge(status.ipc, { e2e: false, warn }).launcher.status()
-    ).resolves.toStrictEqual({ state: "offered", name: "Steam" });
+    ).resolves.toStrictEqual(offered);
 
     const bad = fakeIpc({ channel: channels.launcherStatus, value: { state: "offered" } });
     await expect(createBridge(bad.ipc, { e2e: false, warn }).launcher.status()).rejects.toThrow(
@@ -223,5 +227,16 @@ describe(createBridge, () => {
       { state: "failed", reason: "x" }
     );
     expect(add.invoked).toContainEqual([channels.launcherAdd]);
+  });
+
+  it("rejects an offered launcher status without the host's hints", async () => {
+    const bad = fakeIpc({
+      channel: channels.launcherStatus,
+      value: { state: "offered", name: "Steam", launchHint: "Launch it from there." },
+    });
+
+    await expect(createBridge(bad.ipc, { e2e: false, warn }).launcher.status()).rejects.toThrow(
+      /retryHint/u
+    );
   });
 });

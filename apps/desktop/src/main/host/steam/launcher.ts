@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export interface LauncherFiles {
@@ -35,13 +35,17 @@ export const launcherScript = (target: string): string =>
 /** The Desktop Entry string-value escape. */
 const stringValue = (value: string): string => value.replaceAll("\\", "\\\\");
 
-// No `%`: in Exec it starts a field code, so a path with one is quoted and written as `%%`.
-const BARE_EXEC = /^[\w./+,=@-]+$/u;
+/**
+ * The Desktop Entry spec's reserved characters, which only a quoted Exec argument may hold, and
+ * `%`, which starts a field code, so a path with one is quoted and written as `%%`. Anything else,
+ * non-ASCII included, stays bare.
+ */
+const EXEC_RESERVED = /[ \t\n\r"'\\><~|&;$*?#()`%]/u;
 
 const execArgument = (value: string): string =>
-  BARE_EXEC.test(value)
-    ? value
-    : stringValue(`"${value.replaceAll("%", "%%").replaceAll(/[`"$\\]/gu, String.raw`\$&`)}"`);
+  EXEC_RESERVED.test(value)
+    ? stringValue(`"${value.replaceAll("%", "%%").replaceAll(/[`"$\\]/gu, String.raw`\$&`)}"`)
+    : value;
 
 export const desktopEntry = (files: LauncherFiles): string => {
   for (const value of [files.script, files.dir, files.icon]) {
@@ -76,18 +80,31 @@ const readOrNull = async (file: string): Promise<Buffer | null> => {
   }
 };
 
-/** Temp file, then rename; skipped when the bytes already match. */
+/**
+ * Temp file, then rename; skipped when the bytes already match, though a wrong mode is still
+ * repaired in place. The mode is set with chmod, so the umask cannot narrow it.
+ */
 const writeAtomic = async (file: string, bytes: Buffer, mode: number): Promise<boolean> => {
   const current = await readOrNull(file);
 
   if (current?.equals(bytes) === true) {
-    return false;
+    const { mode: currentMode } = await stat(file);
+
+    // oxlint-disable-next-line no-bitwise -- the permission bits of the mode
+    if ((currentMode & 0o777) === mode) {
+      return false;
+    }
+
+    await chmod(file, mode);
+
+    return true;
   }
 
   const temp = `${file}.${process.pid}.tmp`;
 
   try {
     await writeFile(temp, bytes, { mode });
+    await chmod(temp, mode);
     await rename(temp, file);
   } catch (error) {
     await rm(temp, { force: true });

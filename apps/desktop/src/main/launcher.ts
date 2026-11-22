@@ -7,7 +7,15 @@ import { match } from "ts-pattern";
 
 import type { LauncherAddResult, LauncherStatus } from "../shared/bridge";
 import { env, isE2E } from "./env";
-import { addToLauncher, artworkDir, healLauncher, launcherName, launcherState } from "./host";
+import {
+  addToLauncher,
+  artworkDir,
+  healLauncher,
+  launcherHints,
+  launcherName,
+  launcherState,
+  launcherUnavailableReason,
+} from "./host";
 import type { LauncherWhere } from "./host";
 import { ownAppImage } from "./updates";
 
@@ -34,7 +42,7 @@ export const createLauncher = (deps: LauncherDeps): Launcher => {
     match(await launcherState(deps.where()))
       .returnType<LauncherStatus>()
       .with("unavailable", () => ({ state: "unavailable" }))
-      .with("offered", () => ({ state: "offered", name: launcherName }))
+      .with("offered", () => ({ state: "offered", name: launcherName, ...launcherHints() }))
       .with("added", () => ({ state: "added", name: launcherName }))
       .exhaustive();
 
@@ -45,16 +53,26 @@ export const createLauncher = (deps: LauncherDeps): Launcher => {
 
     const attempt = (async (): Promise<LauncherAddResult> => {
       try {
+        const where = deps.where();
+        const state = await launcherState(where);
+
         // Already listed: nothing new to write or open.
-        if ((await launcherState(deps.where())) === "added") {
+        if (state === "added") {
           return { state: "added" };
         }
 
-        return await addToLauncher(deps.where(), {
+        // The UI offers no add here; a press that reaches it anyway writes and opens nothing.
+        if (state === "unavailable") {
+          return { state: "failed", reason: launcherUnavailableReason(where) };
+        }
+
+        return await addToLauncher(where, {
           openExternal: deps.openExternal,
           tmpDir: deps.tmpDir,
         });
       } catch (error) {
+        logger.warn("The {launcher} add failed: {error}", { launcher: launcherName, error });
+
         return { state: "failed", reason: error instanceof Error ? error.message : String(error) };
       }
     })();

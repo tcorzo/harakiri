@@ -32,12 +32,14 @@ const targetFor = (direction: Direction, current: string | null): string =>
 
 const Offer = ({
   name,
+  launchHint,
   adding,
   problem,
   onAdd,
   onNotNow,
 }: {
   readonly name: string;
+  readonly launchHint: string;
   readonly adding: boolean;
   readonly problem: string | null;
   readonly onAdd: () => void;
@@ -70,7 +72,7 @@ const Offer = ({
       {/* One sentence a line, as the sketch sets it; the space keeps the text one sentence pair. */}
       <p className="text-body text-paper-dim m-0">
         <span className="block">{`Adds harakiri to your ${name} library, with its art.`}</span>{" "}
-        <span className="block">Launch it from there in Game Mode.</span>
+        <span className="block">{launchHint}</span>
       </p>
       <div className="flex items-center gap-6 pt-2">
         <QuietAction focusKey={launcherAddKey} label={label} onPress={onAdd} />
@@ -103,8 +105,9 @@ export const LauncherCard = () => {
   return (
     <Offer
       name={status.name}
+      launchHint={status.launchHint}
       adding={adding}
-      problem={isProblem(result, adding) ? addOutcomeLine(status.name, result, false) : null}
+      problem={isProblem(result, adding) ? addOutcomeLine(status, result, false) : null}
       onAdd={() => {
         if (adding) {
           return;

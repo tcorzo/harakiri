@@ -51,6 +51,10 @@ export interface HealReport {
 
 const NOT_APPIMAGE = "harakiri is not running from its AppImage";
 
+/** Why the state is "unavailable", for a press that reaches the add anyway. */
+export const unavailableReason = (place: LauncherPlace): string =>
+  place.target === undefined ? NOT_APPIMAGE : "no Steam library was found";
+
 /** unavailable: no target or steamLibraryOf is "absent"; added: "has-harakiri"; offered: "present". */
 export const steamLauncherState = (steam: SteamFacts, place: LauncherPlace): LauncherState =>
   place.target === undefined
@@ -75,25 +79,52 @@ const listedIn = (steam: SteamFacts, script: string): readonly Listed[] =>
     return shortcut === undefined ? [] : [{ user, shortcut }];
   });
 
+interface ArtworkOutcome {
+  readonly report: HealReport["artwork"];
+  /** Every listed user's art was written or already there. */
+  readonly complete: boolean;
+}
+
 /** Writes the art each listed user lacks. One user's failure is a warning, not the others'. */
-const artworkFor = async (
-  artwork: string,
-  listed: readonly Listed[]
-): Promise<HealReport["artwork"]> =>
-  await Promise.all(
+const artworkFor = async (artwork: string, listed: readonly Listed[]): Promise<ArtworkOutcome> => {
+  const outcomes = await Promise.all(
     listed.map(async ({ user, shortcut }) => {
       try {
         return {
           user: user.id,
           written: await writeArtwork(artwork, user.gridDir, shortcut.appId),
+          failed: false,
         };
       } catch (error) {
         logger.warn("Art for user {user} could not be written: {error}", { user: user.id, error });
 
-        return { user: user.id, written: [] };
+        return { user: user.id, written: [], failed: true };
       }
     })
   );
+
+  return {
+    report: outcomes.map(({ user, written }) => ({ user, written })),
+    complete: outcomes.every((outcome) => !outcome.failed),
+  };
+};
+
+/**
+ * Marks art as owed: an add that timed out before Steam listed the shortcut sets it, and the heal
+ * that writes the art clears it. Without it the heal writes no art, so art the owner removed in
+ * Steam stays removed.
+ */
+const artOwedFile = (files: LauncherFiles): string => path.join(files.dir, "art-owed");
+
+const owesArt = async (files: LauncherFiles, owed: boolean): Promise<void> => {
+  const file = artOwedFile(files);
+
+  try {
+    await (owed ? writeFile(file, "") : rm(file, { force: true }));
+  } catch (error) {
+    logger.warn("The art-owed mark {file} could not be updated: {error}", { file, error });
+  }
+};
 
 /** Creates the sentinel empty; false when it was already there, so it is not ours to remove. */
 const createSentinel = async (sentinel: string): Promise<boolean> => {
@@ -129,21 +160,24 @@ const pollForShortcut = async (place: LauncherPlace, deps: AddDeps): Promise<Add
     const listed = listedIn(await readOrNoSteam(deps), place.files.script);
 
     if (listed.length > 0) {
-      const written = await artworkFor(place.artwork, listed);
+      const { report, complete } = await artworkFor(place.artwork, listed);
 
       for (const [index, { user, shortcut }] of listed.entries()) {
         logger.info("The launcher listed harakiri as {appId} for user {user}; wrote {written}", {
           appId: shortcut.appId,
           user: user.id,
-          written: written[index]?.written ?? [],
+          written: report[index]?.written ?? [],
         });
       }
+
+      await owesArt(place.files, !complete);
 
       return { state: "added" };
     }
 
     if (deps.now() - start >= TIMEOUT_MS) {
       logger.info("The launcher did not list harakiri within {ms} ms", { ms: TIMEOUT_MS });
+      await owesArt(place.files, true);
 
       return { state: "timedOut" };
     }
@@ -183,6 +217,8 @@ export const addToSteam = async (place: LauncherPlace, deps: AddDeps): Promise<A
 
     return await pollForShortcut(place, deps);
   } catch (error) {
+    logger.warn("The launcher add failed: {error}", { error });
+
     return { state: "failed", reason: error instanceof Error ? error.message : String(error) };
   } finally {
     if (created) {
@@ -198,8 +234,9 @@ const exists = async (file: string): Promise<boolean> =>
   );
 
 /**
- * At startup: points the launcher at the current AppImage, and writes the art Steam's shortcut
- * lacks, keeping any already in `grid/`. Never rejects.
+ * At startup: points the launcher at the current AppImage. When an earlier add timed out before
+ * its art was written, writes the art Steam's shortcut lacks, keeping any already in `grid/`.
+ * Never rejects.
  */
 export const healSteamLauncher = async (
   place: LauncherPlace,
@@ -225,5 +262,15 @@ export const healSteamLauncher = async (
     logger.warn("The launcher could not be rewritten: {error}", { error });
   }
 
-  return { launcher, artwork: await artworkFor(place.artwork, listed) };
+  if (listed.length === 0 || !(await exists(artOwedFile(files)))) {
+    return { launcher, artwork: [] };
+  }
+
+  const { report, complete } = await artworkFor(place.artwork, listed);
+
+  if (complete) {
+    await owesArt(files, false);
+  }
+
+  return { launcher, artwork: report };
 };
