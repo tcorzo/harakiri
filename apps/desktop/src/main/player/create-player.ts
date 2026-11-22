@@ -167,6 +167,8 @@ export const createPlayer = (wiring: PlayerWiring) => {
   /** Plays an item in mpv, replacing whatever is playing. Resolves once mpv has loaded the file. */
   const play = async (request: PlayRequest, send: (event: PlayerEvent) => void): Promise<void> => {
     await serialized(async () => {
+      // Before the stop: a missing build fails this play and leaves the film playing alone.
+      const mpvBinary = wiring.mpvBinary();
       await current?.stop();
 
       const [base, audioOutput, hdrSignalling] = await Promise.all([
@@ -175,7 +177,7 @@ export const createPlayer = (wiring: PlayerWiring) => {
         wiring.hdrSignalling(),
       ]);
 
-      const playbackDeps = { ...base, audioOutput, hdrSignalling, mpvBinary: wiring.mpvBinary() };
+      const playbackDeps = { ...base, audioOutput, hdrSignalling, mpvBinary };
       const prepared = await takePrepared(request, playbackDeps.session);
       const playback = await wiring.startPlayback(request, send, playbackDeps, prepared);
       current = playback;
