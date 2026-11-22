@@ -29,7 +29,8 @@ cmake -S "/build/SDL2-$SDL2_VERSION" -B /build/sdl2-build -G Ninja \
 	-DSDL_JOYSTICK=ON -DSDL_HAPTIC=ON -DSDL_HIDAPI=ON -DSDL_LIBUDEV=ON -DSDL_TEST=OFF
 ninja -C /build/sdl2-build -j"$jobs" install
 
-# 3. FFmpeg: GPL, never nonfree or version 3, no TLS library (mpv reads http and https through libcurl)
+# 3. FFmpeg: --enable-gpl, never --enable-nonfree; --enable-version3 is off, so FFmpeg's own
+#    license is GPL version 2 or later. No TLS library (mpv reads http and https through libcurl).
 (
 	cd "/build/ffmpeg-$FFMPEG_VERSION"
 	./configure --prefix="$prefix" \
