@@ -22,6 +22,19 @@ const TYPE_STRING = 0x01;
 const TYPE_INT = 0x02;
 const TYPE_END = 0x08;
 
+/**
+ * Value types harakiri does not read, by their width in bytes: float32 (0x03), pointer (0x04),
+ * color (0x06), uint64 (0x07) and int64 (0x0a), as ValvePython/vdf's `binary_loads` reads them.
+ * A field of one is skipped, so a type Steam adds to an entry does not hide every shortcut.
+ */
+const SKIPPED_WIDTHS: ReadonlyMap<number, number> = new Map([
+  [0x03, 4],
+  [0x04, 4],
+  [0x06, 4],
+  [0x07, 8],
+  [0x0a, 8],
+]);
+
 type VdfValue =
   | { readonly kind: "string"; readonly value: string }
   | { readonly kind: "int"; readonly value: number }
@@ -34,6 +47,7 @@ interface Cursor {
   readonly byte: () => number;
   readonly uint32: () => number;
   readonly cstring: () => string;
+  readonly skip: (bytes: number) => void;
 }
 
 const cursorOver = (buffer: Buffer): Cursor => {
@@ -73,6 +87,13 @@ const cursorOver = (buffer: Buffer): Cursor => {
 
       return value;
     },
+    skip: (bytes) => {
+      if (offset + bytes > buffer.length) {
+        throw new VdfError(`truncated value at byte ${offset}`);
+      }
+
+      offset += bytes;
+    },
   };
 };
 
@@ -87,16 +108,21 @@ const readObject = (cursor: Cursor): VdfObject => {
     }
 
     const name = cursor.cstring();
+    const skipped = SKIPPED_WIDTHS.get(type);
 
-    const value = match<number, VdfValue>(type)
-      .with(TYPE_NESTED, () => ({ kind: "object", fields: readObject(cursor) }))
-      .with(TYPE_STRING, () => ({ kind: "string", value: cursor.cstring() }))
-      .with(TYPE_INT, () => ({ kind: "int", value: cursor.uint32() }))
-      .otherwise(() => {
-        throw new VdfError(`unknown type byte 0x${type.toString(16)} for "${name}"`);
-      });
+    if (skipped === undefined) {
+      const value = match<number, VdfValue>(type)
+        .with(TYPE_NESTED, () => ({ kind: "object", fields: readObject(cursor) }))
+        .with(TYPE_STRING, () => ({ kind: "string", value: cursor.cstring() }))
+        .with(TYPE_INT, () => ({ kind: "int", value: cursor.uint32() }))
+        .otherwise(() => {
+          throw new VdfError(`unknown type byte 0x${type.toString(16)} for "${name}"`);
+        });
 
-    fields.set(name, value);
+      fields.set(name, value);
+    } else {
+      cursor.skip(skipped);
+    }
   }
 };
 
