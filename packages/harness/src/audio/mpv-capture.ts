@@ -1,4 +1,4 @@
-import { buildPlaybackArgs, configArg } from "@harakiri/mpv";
+import { buildPlaybackArgs, bundledMpv, configArg } from "@harakiri/mpv";
 import type { AudioPassthrough } from "@harakiri/mpv";
 
 import { runToolOrThrow } from "../process";
@@ -20,7 +20,7 @@ export const captureWithMpv = (
   wavOut: string,
   audioPassthrough?: AudioPassthrough
 ): AudioOut => {
-  const { stdout, stderr } = runToolOrThrow("mpv", [
+  const { stdout, stderr } = runToolOrThrow(bundledMpv(), [
     configArg("none"),
     ...buildPlaybackArgs(audioPassthrough === undefined ? {} : { audioPassthrough }),
     "--ao=pcm",

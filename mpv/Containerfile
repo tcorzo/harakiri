@@ -1,0 +1,31 @@
+# harakiri's mpv build. `mise run mpv:build` runs it with the sources bind-mounted read-only at /src,
+# and exports the last stage (the bundle) to .cache/mpv/<recipe-hash>.
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE} AS build
+
+# The release repo only, never `updates`: that repo never changes, so it and the base image digest
+# pin the whole toolchain.
+# The base image ships the full libcurl, so --allowerasing swaps it for libcurl-minimal (named with
+# its arch, or dnf satisfies the name with the i686 package). libdisplay-info-devel: mpv's drm
+# feature needs it. libXfixes-devel: Xpresent.h includes Xfixes.h, and libXpresent-devel does not
+# require it.
+RUN dnf -y --disablerepo='*' --enablerepo=fedora --setopt=install_weak_deps=False install --allowerasing \
+      gcc gcc-c++ make cmake meson ninja-build pkgconf nasm patchelf binutils \
+      python3 python3-jinja2 python3-markupsafe python3-glad2 \
+      vulkan-headers vulkan-loader-devel libshaderc-devel lcms2-devel libdav1d-devel \
+      zlib-ng-compat-devel bzip2-devel xz-devel \
+      libass-devel freetype-devel fribidi-devel harfbuzz-devel fontconfig-devel \
+      luajit-devel uchardet-devel zimg-devel libcurl-minimal.x86_64 libcurl-devel \
+      libva-devel libvdpau-devel libdrm-devel libdisplay-info-devel mesa-libgbm-devel \
+      mesa-libEGL-devel libglvnd-devel \
+      wayland-devel wayland-protocols-devel libxkbcommon-devel \
+      libX11-devel libXext-devel libXrandr-devel libXScrnSaver-devel libXpresent-devel libXfixes-devel libXinerama-devel \
+      pipewire-devel pulseaudio-libs-devel alsa-lib-devel systemd-devel \
+    && dnf clean all
+
+COPY build.sh host-libs.txt versions.env /recipe/
+ARG JOBS
+RUN JOBS="${JOBS}" /recipe/build.sh
+
+FROM scratch
+COPY --from=build /out/ /

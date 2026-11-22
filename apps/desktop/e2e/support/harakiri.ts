@@ -37,6 +37,8 @@ interface Options {
   readonly mpvArgs: string;
   /** Extra environment for Electron and, through it, mpv (for example VK_DRIVER_FILES). */
   readonly extraEnv: Readonly<Record<string, string>>;
+  /** Chromium switches for every app the test launches, placed before the app's entry point. */
+  readonly electronArgs: readonly string[];
 }
 
 interface TestFixtures {
@@ -72,6 +74,7 @@ interface WorkerFixtures {
 export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
   mpvArgs: ["--vo=null --ao=null", { option: true }],
   extraEnv: [{}, { option: true }],
+  electronArgs: [[], { option: true }],
 
   backend: [
     // oxlint-disable-next-line no-empty-pattern -- Playwright reads the fixture's dependencies from this pattern
@@ -170,7 +173,7 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
     { auto: true },
   ],
 
-  launch: async ({ userDataDir, mpvArgs, extraEnv, apps }, use) => {
+  launch: async ({ userDataDir, mpvArgs, extraEnv, electronArgs, apps }, use) => {
     // Without DISPLAY, Electron cannot fall back to the user's X session if the nested compositor is missing.
     // A terminal that is itself an AppImage exports APPIMAGE, which would switch the updater on.
     // Without the desktop-session variables, and with XDG_CURRENT_DESKTOP set below, Electron
@@ -191,7 +194,7 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
     await use(async () => {
       const app = await _electron.launch({
         executablePath: electronPath,
-        args: ["--ozone-platform=wayland", mainEntry],
+        args: ["--ozone-platform=wayland", ...electronArgs, mainEntry],
         env: {
           ...Object.fromEntries(inherited),
           XDG_CURRENT_DESKTOP: "gamescope",

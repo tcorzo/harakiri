@@ -16,7 +16,7 @@ A TV-first, gamepad-first Jellyfin player. mpv plays every file as it is, HDR re
 mise trust && mise run setup
 ```
 
-`setup` installs deps from the lockfile, registers hk hooks globally and verifies them, then runs `mise run doctor` to check the media stack. Fedora system packages are outside mise: `mpv` (>= 0.41), `weston` (>= 15), `kwin`, `mesa-vulkan-drivers`, `podman`, and the RPM Fusion `ffmpeg` (Fedora's `ffmpeg-free` has no HEVC decoder).
+`setup` installs deps from the lockfile, registers hk hooks globally and verifies them, builds harakiri's mpv once (`mise run mpv:build`, cached in `.cache/mpv/<recipe-hash>`), and then runs `mise run doctor` to check the harness tools. Fedora system packages are outside mise: `weston` (>= 15), `kwin`, `mesa-vulkan-drivers`, `podman`, and the RPM Fusion `ffmpeg`, for the harness (Fedora's `ffmpeg-free` has no HEVC decoder).
 
 `mise tasks` lists every command. `mise run check` is what CI gates on. `dev/jellyfin/COMMANDS.txt` starts the local dev Jellyfin on the generated corpus (`mise run media:gen`), or on your own library with `JELLYFIN_DEV_LIBRARY=own` in `.env`.
 
@@ -29,7 +29,7 @@ scripts/bounded.sh <name> <cap> -- <command>
 scripts/bounded.sh e2e 4G -- bun x playwright test --workers=1
 ```
 
-- Use it for test suites, builds, Electron, Playwright, `kwin_wayland`, Weston, and mpv or ffmpeg batches. The `mise` tasks and hk steps already do.
+- Use it for test suites, builds, the mpv build (`mise run mpv:build`, podman with `--memory`), Electron, Playwright, `kwin_wayland`, Weston, and mpv or ffmpeg batches. The `mise` tasks and hk steps already do.
 - Cap test workers: `--maxWorkers=2` for vitest, `--workers=1` for Playwright.
 - Containers get `--memory`. The dev Jellyfin runs at 2 GB.
 - `mise run watchdog` (`scripts/watchdog.sh`) watches system headroom and memory pressure. When either crosses its limit, it stops the largest scope in `harakiri.slice` and prints `WATCHDOG KILLED`. It never touches processes outside the slice.
@@ -43,6 +43,7 @@ scripts/bounded.sh e2e 4G -- bun x playwright test --workers=1
 - `packages/fidelity`: the pure engine that decides how each play reaches the output and how it steps down (bitstream to PCM, Vulkan to OpenGL, HDR to SDR), with a reason for every downgrade. No mpv, Electron, or Jellyfin types. `apps/desktop/src/main/player/fidelity-*.ts` adapts it to Jellyfin and mpv.
 - `packages/harness`: the validation harness (IEC 61937 extractor, picture checks, the `doctor` CLI) and the generated media corpus (`src/corpus`, one catalog of every file and the Jellyfin classification it gets).
 - `dev/jellyfin`: the local dev Jellyfin (podman, pinned image, idempotent bootstrap).
+- `dev/vm`: the smolvm microVM guest (Fedora 44, KWin virtual, lavapipe, PipeWire with a fake S/PDIF sink, a uinput pad) that runs e2e and the platform tier.
 
 <important if="you are touching playback, video output, or the player UI">
 mpv runs as its own fullscreen native window with `vo=gpu-next` and Vulkan. Never render mpv through libmpv's render API into the web view: it takes the swapchain away from mpv and kills HDR (jellyfin-desktop#523). On Wayland an app cannot stack its window over mpv's, so the player controls are drawn by the main process through mpv's `osd-overlay` (ASS), and mpv input bindings send `script-message harakiri <action>` back over IPC. Playback spawns mpv with an app-owned `--config-dir`.
@@ -76,12 +77,13 @@ All web UI goes through the impeccable loop: load the `impeccable` skill, run it
 ## How work is verified
 
 - Tests run the real thing where it is cheap (real mpv, real ffmpeg, generated media) and assert literal expected values.
-- End-to-end tests (`mise run e2e`) drive the built Electron app with Playwright under a nested `kwin_wayland --virtual`, so they never open windows on the owner's desktop. They run against a real Jellyfin 12.4 container on the corpus (`harakiri-jellyfin-e2e`, 127.0.0.1:8296, discovery on 127.0.0.3), which the suite starts, scans, and leaves running for the next run; `mise run e2e:down` stops it. Podman is the only thing a fresh clone needs.
+- End-to-end tests (`mise run e2e`) drive the built Electron app with Playwright under a nested `kwin_wayland --virtual`, so they never open windows on the owner's desktop. They run against a real Jellyfin 12.4 container on the corpus (`harakiri-jellyfin-e2e`, 127.0.0.1:8296, discovery on 127.0.0.3), which the suite starts, scans, and leaves running for the next run; `mise run e2e:down` stops it. e2e runs inside the guest and reaches the host's e2e Jellyfin over TCP on the host's loopback. Specs tagged `@host` (the UDP discovery probe, which does not reach the host) run on the host under nested KWin. Podman and a read-write `/dev/kvm` are the only things a fresh clone needs.
+- `mise run test:platform` runs `*.platform.test.ts` in the guest, and `dev/vm/guest.sh exec -- <cmd>` runs anything there. The guest lives in `.cache/vm` (about 2 GB), and `rm -rf .cache/vm` resets it. A guest package goes in `PACKAGES` in `dev/vm/provision.sh`.
 - After each build wave, adversarial reviews (the `interrogate` skill) check UI design, architecture, and other agents' code with at least two reviewers on different models.
 - Report something as done only after observing it work: the test output, the built app, or the harness result.
 
 <important if="you are adding or changing a test, a fixture, a harness check, or anything under dev/">
-Everything committed must run and validate from a fresh clone on any machine: no NAS, no seeded server, no service the suite does not start itself, no personal paths, titles, domains or hardware. Media comes from the corpus catalog (`packages/harness/src/corpus/catalog.ts`): add an entry there for a new format. A test that needs a real Jellyfin or FATE samples goes in a tier file (`*.live.test.ts`, `*.contract.test.ts`, `*.fate.test.ts`) and throws naming the mise task that provides its dependency.
+Everything committed must run and validate from a fresh clone on any machine: no NAS, no seeded server, no service the suite does not start itself, no personal paths, titles, domains or hardware. Media comes from the corpus catalog (`packages/harness/src/corpus/catalog.ts`): add an entry there for a new format. A test that needs a real Jellyfin or FATE samples goes in a tier file (`*.live.test.ts`, `*.contract.test.ts`, `*.fate.test.ts`, `*.platform.test.ts` (the guest)) and throws naming the mise task that provides its dependency.
 
 Validating against the owner's real library stays supported, as an opt-in run (`JELLYFIN_DEV_LIBRARY=own`, `JELLYFIN_DEV_URL`, `HARAKIRI_E2E_SERVER`, set in `.env`). Reproduce a bug found there, then commit a test that recreates it on the corpus, never a test that needs the owner's file.
 </important>
@@ -90,18 +92,19 @@ Validating against the owner's real library stays supported, as an opt-in run (`
 
 When the owner corrects a mistake, fix it and add the rule here with what enforces it. A rule that has no enforcement and is broken again gets enforcement in the same change.
 
-| Rule                                                                                                                       | Enforced by                                                                                                                                                 |
-| -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tests never skip; a test that needs a server or samples lives in a tier and fails loudly without it                        | `scripts/lint-skips.ts` (hk pre-commit, `mise run check`); tiers selected by file name in `vitest.shared.ts`                                                |
-| `mise run check` never needs a server, the NAS or the network                                                              | Tier files are excluded from every package's default `vitest.config.ts`                                                                                     |
-| No workstation paths, owner domains or library titles in tracked files                                                     | `scripts/lint-private.ts` (hk pre-commit, `mise run check`), with titles in the gitignored `.private-denylist`                                              |
-| Recorded Jellyfin fixtures carry no real library data                                                                      | The recorders scrub through `@harakiri/jellyfin/fixture-scrub`; `scrub.test.ts` fails on an unscrubbed fixture                                              |
-| The corpus gets the classification its catalog declares                                                                    | `mise run test:corpus` against a real scan                                                                                                                  |
-| Fidelity decisions live in `packages/fidelity`                                                                             | `docs/fidelity/compatibility.md` is regenerated and diffed by `table.test.ts`                                                                               |
-| No feature code names a platform; features ask host capabilities                                                           | `scripts/lint-host.ts` (hk pre-commit, `mise run check`)                                                                                                    |
-| Secrets never reach mpv's argv                                                                                             | `playback.local.test.ts` reads mpv's real cmdline                                                                                                           |
-| A hook that misfires is fixed in its config, never bypassed with `HK=0`; every tracked source file is linted and formatted | `oxlint.config.ts` and `oxfmt.config.ts` drop the preset's `**/build` (apps/desktop/build holds source); `hk.pkl` passes `--no-error-on-unmatched-pattern`  |
-| PR titles are Conventional Commits: GitHub only squash-merges, and the PR title becomes the commit on `main`               | `mise run lint:pr-title` (CI: `.github/workflows/pr-title.yml` on every PR open, edit and push); squash-only with PR-title commits is a GitHub repo setting |
+| Rule                                                                                                                                                       | Enforced by                                                                                                                                                 |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tests never skip; a test that needs a server or samples lives in a tier and fails loudly without it                                                        | `scripts/lint-skips.ts` (hk pre-commit, `mise run check`); tiers selected by file name in `vitest.shared.ts`                                                |
+| `mise run check` never needs a server, the NAS or the network once `mise run setup` has built the cached mpv (`.cache/mpv/<recipe-hash>`), like the corpus | Tier files are excluded from every package's default `vitest.config.ts`; `bundledMpv()` throws naming `mise run mpv:build` and never fetches                |
+| No workstation paths, owner domains or library titles in tracked files                                                                                     | `scripts/lint-private.ts` (hk pre-commit, `mise run check`), with titles in the gitignored `.private-denylist`                                              |
+| Recorded Jellyfin fixtures carry no real library data                                                                                                      | The recorders scrub through `@harakiri/jellyfin/fixture-scrub`; `scrub.test.ts` fails on an unscrubbed fixture                                              |
+| The corpus gets the classification its catalog declares                                                                                                    | `mise run test:corpus` against a real scan                                                                                                                  |
+| Fidelity decisions live in `packages/fidelity`                                                                                                             | `docs/fidelity/compatibility.md` is regenerated and diffed by `table.test.ts`                                                                               |
+| No feature code names a platform; features ask host capabilities                                                                                           | `scripts/lint-host.ts` (hk pre-commit, `mise run check`)                                                                                                    |
+| Secrets never reach mpv's argv                                                                                                                             | `playback.local.test.ts` reads mpv's real cmdline                                                                                                           |
+| Platform tests run only inside the dev/vm guest                                                                                                            | `packages/harness/src/guest-setup.ts`, the platform tier's globalSetup, throws without `/etc/harakiri-guest`                                                |
+| A hook that misfires is fixed in its config, never bypassed with `HK=0`; every tracked source file is linted and formatted                                 | `oxlint.config.ts` and `oxfmt.config.ts` drop the preset's `**/build` (apps/desktop/build holds source); `hk.pkl` passes `--no-error-on-unmatched-pattern`  |
+| PR titles are Conventional Commits: GitHub only squash-merges, and the PR title becomes the commit on `main`                                               | `mise run lint:pr-title` (CI: `.github/workflows/pr-title.yml` on every PR open, edit and push); squash-only with PR-title commits is a GitHub repo setting |
 
 ## Conventions
 
@@ -122,7 +125,7 @@ Chosen on 2026-10-30 after a researched ledger. Versions are pinned in `mise.tom
 | toolchain             | mise: bun 1.4.4, node 26.13.0, hk 2.10.0, dovi_tool 2.3.4, hdr10plus_tool 1.7.2                                                                          | exact pins, one onboarding command                                   |
 | shell                 | electron 45.1.0                                                                                                                                          | TS main process, mature Chromium input                               |
 | dev build / packaging | electron-vite 6.0.0, electron-builder 26.18.0                                                                                                            | dev server; AppImage                                                 |
-| video                 | system mpv 0.41.0 + libplacebo 7.360.1 + RPM Fusion ffmpeg 8.1.3                                                                                         | playback, HDR, passthrough                                           |
+| video                 | harakiri's mpv build (`mpv/`): mpv 0.42.0 + libplacebo 7.387.0 + FFmpeg 9.0.2 + SDL2 2.32.10; RPM Fusion ffmpeg 8.1.3 for the harness                    | playback, HDR, passthrough                                           |
 | mpv control           | hand-rolled JSON IPC client (`packages/mpv`)                                                                                                             | every npm client is stale                                            |
 | player controls       | hand-rolled `osd-overlay` ASS from the main process                                                                                                      | Wayland cannot stack a web window over mpv                           |
 | Jellyfin client       | @hey-api/openapi-ts 0.99.0 + ky 2.2.0, from a pinned 12.4.0 spec                                                                                         | generated typed client, zod and Query plugins                        |
@@ -159,6 +162,6 @@ Chosen on 2026-10-30 after a researched ledger. Versions are pinned in `mise.tom
 - Bun fullstack dev server: TanStack Router's plugin does not support Bun's bundler.
 - @electron-forge 8.0.1: more maintainers, kept as the packaging fallback.
 - Fedora `ffmpeg-free`: no HEVC, H.264 or VC-1 decoders.
-- mpv master + libplacebo 7.387 now: deferred until we ship our own mpv build.
+- System mpv for dev and tests: Fedora's build hid #13 (`sdl2-gamepad`), so dev, tests and e2e run harakiri's own build (Q12).
 - FFmpeg's spdif demuxer for verification: no TrueHD or DTS-HD support. PipeWire null sink: accepts plain PCM only.
 - VKMS virtual display for HDR: no EDID or HDR_OUTPUT_METADATA support. Faking HDR on KWin virtual: its output always reports SDR.
