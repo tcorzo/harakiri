@@ -213,6 +213,8 @@ export const addToSteam = async (place: LauncherPlace, deps: AddDeps): Promise<A
 
     return await pollForShortcut(place, deps);
   } catch (error) {
+    logger.warn("The launcher add failed: {error}", { error });
+
     return { state: "failed", reason: error instanceof Error ? error.message : String(error) };
   } finally {
     if (created) {

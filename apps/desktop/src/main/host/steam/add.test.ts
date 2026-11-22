@@ -316,6 +316,25 @@ describe("add to Steam", () => {
       expect(reads).toBe(0);
     });
 
+    it("logs a failed add as a warning", async () => {
+      fakeSteamRoot(home, { "222": [] });
+
+      const failure = new Error("No application handles steam:");
+
+      const { deps } = depsWith({
+        openExternal: async () => {
+          await Promise.reject(failure);
+        },
+      });
+
+      const records = await recording(async () => {
+        await addToSteam(place(), deps);
+      });
+
+      expect(at(records, "warning")).toStrictEqual(["The launcher add failed: {error}"]);
+      expect(records.at(-1)?.properties).toStrictEqual({ error: failure });
+    });
+
     it("a launcher that cannot be written fails with the error, before the URL opens", async () => {
       fakeSteamRoot(home, { "222": [] });
 

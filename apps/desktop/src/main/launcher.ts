@@ -55,6 +55,8 @@ export const createLauncher = (deps: LauncherDeps): Launcher => {
           tmpDir: deps.tmpDir,
         });
       } catch (error) {
+        logger.warn("The {launcher} add failed: {error}", { launcher: launcherName, error });
+
         return { state: "failed", reason: error instanceof Error ? error.message : String(error) };
       }
     })();
