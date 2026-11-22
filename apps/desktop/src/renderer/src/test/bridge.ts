@@ -20,6 +20,10 @@ export const unstubbedBridge: HarakiriBridge = {
     status: unstubbed("updates.status"),
     restart: unstubbed("updates.restart"),
   },
+  launcher: {
+    status: unstubbed("launcher.status"),
+    add: unstubbed("launcher.add"),
+  },
   player: {
     prepare: unstubbed("player.prepare"),
     play: unstubbed("player.play"),
