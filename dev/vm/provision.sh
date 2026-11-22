@@ -16,7 +16,37 @@ PACKAGES=(
   pulseaudio-utils
   # RPM Fusion: Fedora's ffmpeg-free has no HEVC decoder.
   ffmpeg
-  mpv # until Phase 7: the bundled mpv replaces it
+  # The host side of mpv/host-libs.txt: what harakiri's mpv build (.cache/mpv) does not bundle.
+  # No system mpv pulls these in.
+  vulkan-loader
+  mesa-vulkan-drivers
+  mesa-libEGL
+  mesa-libgbm
+  libglvnd-egl
+  libglvnd-glx
+  libglvnd-opengl
+  libdrm
+  libva
+  libvdpau
+  pipewire-libs
+  pulseaudio-libs
+  alsa-lib
+  libwayland-client
+  libwayland-cursor
+  libwayland-egl
+  libxkbcommon
+  libX11
+  libX11-xcb
+  libXext
+  libXrandr
+  libXScrnSaver
+  libXpresent
+  libXinerama
+  libXrender
+  libXfixes
+  libxcb
+  libstdc++
+  libgcc
   python3-evdev
   dbus-daemon
   procps-ng
