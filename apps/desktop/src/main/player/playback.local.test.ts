@@ -6,6 +6,7 @@ import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer } from "node:http";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
+import { createConnection } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
@@ -64,6 +65,9 @@ const serveFile = (req: IncomingMessage, res: ServerResponse, bytes: Buffer): vo
 
 const TcpAddress = z.object({ port: z.number() });
 
+/** The one field of a start, progress or stop report the fake server keeps. */
+const PlaybackReport = z.object({ PositionTicks: z.number() });
+
 // Test-only self-signed pair for 127.0.0.1 (the one packages/mpv's TLS test serves), so no key is
 // generated or committed twice.
 const TLS_DIR = path.join(import.meta.dirname, "../../../../../packages/mpv/src/fixtures/tls");
@@ -79,6 +83,13 @@ class FakeJellyfin {
   stopDelayMs = 0;
   /** When the server finished answering the stop report. */
   stopAnsweredAt: number | undefined;
+  /** How long a progress report waits before the server stores it and answers. */
+  progressDelayMs = 0;
+  /**
+   * The playback reports in the order the server stored them. Jellyfin keeps the resume point of
+   * whichever report it handles last, so the last entry is the resume point the owner returns to.
+   */
+  readonly stored: { readonly route: string; readonly positionTicks: number }[] = [];
   /** The sidecar subtitle request is held open and never answered. */
   stallSidecar = false;
   /** The item request (the overlay's title) is held open and never answered. */
@@ -107,6 +118,30 @@ class FakeJellyfin {
     return this.requests.filter((r) => r.method === "POST" && r.url === route).map((r) => r.body);
   }
 
+  /**
+   * Resolves once every playback report the server received is stored and none arrived for
+   * 500 ms, so a report sent late has had its chance to land.
+   */
+  async settled(): Promise<void> {
+    const reports = () => this.requests.filter((r) => r.url.startsWith("/Sessions/Playing"));
+    const deadline = Date.now() + 5000;
+    let seen = -1;
+
+    while (seen !== reports().length || this.stored.length !== seen) {
+      if (Date.now() > deadline) {
+        throw new Error(`${reports().length} reports received, ${this.stored.length} stored`);
+      }
+
+      seen = reports().length;
+      // oxlint-disable-next-line eslint/no-await-in-loop -- polling the fake server
+      await setTimeout(500);
+    }
+  }
+
+  private store(route: string, positionTicks: number): void {
+    this.stored.push({ route, positionTicks });
+  }
+
   private async handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
     req.setEncoding("utf-8");
     let text = "";
@@ -117,12 +152,8 @@ class FakeJellyfin {
 
     const url = req.url ?? "";
     const authorized = (req.headers.authorization ?? "").includes(`Token="${TOKEN}"`);
-    this.requests.push({
-      method: req.method ?? "",
-      url,
-      authorized,
-      body: text ? z.json().parse(JSON.parse(text)) : undefined,
-    });
+    const body = text ? z.json().parse(JSON.parse(text)) : undefined;
+    this.requests.push({ method: req.method ?? "", url, authorized, body });
 
     if (!authorized) {
       res.writeHead(401).end();
@@ -150,13 +181,19 @@ class FakeJellyfin {
 
     if (route === "/Sessions/Playing/Stopped") {
       await setTimeout(this.stopDelayMs);
+      this.store(route, PlaybackReport.parse(body).PositionTicks);
       this.stopAnsweredAt = Date.now();
       res.writeHead(204).end();
 
       return;
     }
 
+    if (route === "/Sessions/Playing/Progress") {
+      await setTimeout(this.progressDelayMs);
+    }
+
     if (route?.startsWith("/Sessions/Playing") === true) {
+      this.store(route, PlaybackReport.parse(body).PositionTicks);
       res.writeHead(204).end();
 
       return;
@@ -233,6 +270,28 @@ const mpvChild = () => {
   }
 
   throw new Error("no mpv child process");
+};
+
+/**
+ * Presses `key` in the running mpv as a second IPC client, so the press goes through the app's
+ * input.conf and `script-message harakiri <action>`, as a remote's does.
+ */
+const pressKey = async (key: string): Promise<void> => {
+  const socketPath = /--input-ipc-server=(?<path>[^\0]+)/u.exec(mpvChild().cmdline)?.groups?.path;
+
+  if (socketPath === undefined) {
+    throw new Error("mpv has no --input-ipc-server");
+  }
+
+  const socket = createConnection(socketPath);
+
+  try {
+    await once(socket, "connect");
+    socket.write(`${JSON.stringify({ command: ["keypress", key], request_id: 1 })}\n`);
+    await once(socket, "data");
+  } finally {
+    socket.destroy();
+  }
 };
 
 /** Polls the playback every 100 ms until `check` holds, and fails with the last probe after 20 s. */
@@ -526,6 +585,30 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
     expect(jellyfin.posted("/Sessions/Playing/Stopped")).toStrictEqual([
       expect.objectContaining({ ItemId: ITEM, Failed: false }),
     ]);
+  });
+
+  it("a progress report still on its way when playback stops is stored before the stop report, so the server keeps the stop's resume point", async () => {
+    const { events, playback } = await play(longClip, 30);
+    await until("playing past 1 s", playback, (p) => (p.timePos ?? 0) > 1);
+    const before = jellyfin.posted("/Sessions/Playing/Progress").length;
+    // Pausing reports progress at once, as a skip does; the server takes 1.5 s to store it.
+    jellyfin.progressDelayMs = 1500;
+    await pressKey("SPACE");
+    await until(
+      "the pause's progress report reaches the server",
+      playback,
+      () => jellyfin.posted("/Sessions/Playing/Progress").length > before
+    );
+
+    await playback.stop();
+    await jellyfin.settled();
+
+    const stopped = events.find((event) => event.phase === "stopped");
+    expect(stopped?.positionTicks).toBeGreaterThan(TICKS);
+    expect(jellyfin.stored.at(-1)).toStrictEqual({
+      route: "/Sessions/Playing/Stopped",
+      positionTicks: stopped?.positionTicks,
+    });
   });
 
   it("the token and the ApiKey sidecar never reach mpv's argv", async () => {

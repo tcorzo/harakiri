@@ -419,12 +419,30 @@ const run = async (mpv: MpvClient, context: RunContext): Promise<Playback> => {
     SubtitleStreamIndex: resolution.subtitleStreamIndex ?? null,
   });
 
+  // Jellyfin keeps the resume point of whichever report it handles last, and a progress report
+  // takes it longer than a stop report. Each report waits for the one before it to be answered, so
+  // a progress report still on its way when playback stops cannot land after the stop report and
+  // roll the resume point back.
+  let reports = Promise.resolve();
+
+  const inOrder = async <T>(what: string, call: () => Promise<T>): Promise<void> => {
+    const previous = reports;
+
+    reports = (async () => {
+      await previous;
+      await report(what, call);
+    })();
+    await reports;
+  };
+
   const reportProgress = () => {
-    if (started) {
-      void report(
+    // Once finishing has begun the stop report is the last word, so a pause or seek mpv shows
+    // while it quits reports nothing.
+    if (started && !finished) {
+      const body = progressBody();
+      void inOrder(
         "progress",
-        async () =>
-          await reportPlaybackProgress({ client, throwOnError: true, body: progressBody() })
+        async () => await reportPlaybackProgress({ client, throwOnError: true, body })
       );
     }
   };
@@ -594,7 +612,7 @@ const run = async (mpv: MpvClient, context: RunContext): Promise<Playback> => {
       );
 
       const reported = started
-        ? report(
+        ? inOrder(
             "stop",
             async () =>
               await reportPlaybackStopped({
@@ -762,7 +780,7 @@ const run = async (mpv: MpvClient, context: RunContext): Promise<Playback> => {
   await addSidecarSubtitles(mpv, resolution);
 
   if (!finished) {
-    await report(
+    await inOrder(
       "start",
       async () => await reportPlaybackStart({ client, throwOnError: true, body: progressBody() })
     );
