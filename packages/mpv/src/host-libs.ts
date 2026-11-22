@@ -31,7 +31,7 @@ const bundledLibs = (bundleDir: string): string[] => {
 };
 
 /** `mpv`, then `lib/<name>` for each regular file in the bundle's lib/. */
-const bundleFiles = (bundleDir: string): string[] => [
+export const bundleFiles = (bundleDir: string): string[] => [
   "mpv",
   ...bundledLibs(bundleDir).map((name) => `lib/${name}`),
 ];

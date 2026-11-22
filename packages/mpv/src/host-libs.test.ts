@@ -21,6 +21,73 @@ const nodeHostLibs = [...readHostLibs(recipe), "libatomic.so.*"];
 
 let tmp = "";
 
+interface TinyElfOptions {
+  /** e_shoff; 0 is a file with no section headers, as sstrip leaves it */
+  shoff?: number;
+  /** the .dynsym's sh_link, the index of its string table (section 1) */
+  dynsymLink?: number;
+  /** the .dynstr's sh_size */
+  dynstrSize?: number;
+}
+
+const DYNSTR = "\0exported\0hidden\0imported\0";
+
+/**
+ * A minimal ELF64 little-endian file: sections null, .dynstr and .dynsym, and four symbols: the
+ * null one, `exported` (global, default, defined), `hidden` (global, hidden, defined) and
+ * `imported` (global, undefined).
+ */
+const tinyElf = (options: TinyElfOptions = {}): Buffer => {
+  const dynstrAt = 64;
+  const dynsymAt = 96;
+  const shdrAt = dynsymAt + 4 * 24;
+  const buf = Buffer.alloc(shdrAt + 3 * 64);
+
+  buf.writeUInt32BE(0x7f_45_4c_46, 0);
+  // EI_CLASS 64-bit, EI_DATA little-endian, EI_VERSION 1
+  buf.writeUInt8(2, 4);
+  buf.writeUInt8(1, 5);
+  buf.writeUInt8(1, 6);
+  // e_shoff, e_ehsize, e_shentsize, e_shnum
+  buf.writeBigUInt64LE(BigInt(options.shoff ?? shdrAt), 40);
+  buf.writeUInt16LE(64, 52);
+  buf.writeUInt16LE(64, 58);
+  buf.writeUInt16LE(3, 60);
+
+  buf.write(DYNSTR, dynstrAt, "latin1");
+
+  // st_name, st_info (binding << 4 | type), st_other (visibility), st_shndx
+  const symbols = [
+    [DYNSTR.indexOf("exported"), 0x12, 0, 1],
+    [DYNSTR.indexOf("hidden"), 0x12, 2, 1],
+    [DYNSTR.indexOf("imported"), 0x12, 0, 0],
+  ];
+
+  for (const [index, [name, info, other, shndx]] of symbols.entries()) {
+    const at = dynsymAt + (index + 1) * 24;
+    buf.writeUInt32LE(name ?? 0, at);
+    buf.writeUInt8(info ?? 0, at + 4);
+    buf.writeUInt8(other ?? 0, at + 5);
+    buf.writeUInt16LE(shndx ?? 0, at + 6);
+  }
+
+  // section 1: .dynstr (SHT_STRTAB); section 2: .dynsym (SHT_DYNSYM)
+  const sections = [
+    [3, dynstrAt, options.dynstrSize ?? DYNSTR.length, 0],
+    [11, dynsymAt, 4 * 24, options.dynsymLink ?? 1],
+  ];
+
+  for (const [index, [type, offset, size, link]] of sections.entries()) {
+    const at = shdrAt + (index + 1) * 64;
+    buf.writeUInt32LE(type ?? 0, at + 4);
+    buf.writeBigUInt64LE(BigInt(offset ?? 0), at + 24);
+    buf.writeBigUInt64LE(BigInt(size ?? 0), at + 32);
+    buf.writeUInt32LE(link ?? 0, at + 40);
+  }
+
+  return buf;
+};
+
 describe("host libs", () => {
   beforeEach(() => {
     tmp = mkdtempSync(path.join(tmpdir(), "host-libs-"));
@@ -53,6 +120,33 @@ describe("host libs", () => {
       const text = path.join(tmp, "plain.txt");
       writeFileSync(text, "not an elf file, just text\n");
       expect(() => exportedSymbols(text)).toThrow(`${text} is not an ELF64 file`);
+    });
+
+    it("reads only the defined, default-visibility symbol of a crafted ELF", () => {
+      const file = path.join(tmp, "tiny.so");
+      writeFileSync(file, tinyElf());
+      expect(exportedSymbols(file)).toStrictEqual(["exported"]);
+    });
+
+    it("refuses a file with no section headers, so a stripped file cannot pass as exporting nothing", () => {
+      const file = path.join(tmp, "sstripped.so");
+      writeFileSync(file, tinyElf({ shoff: 0 }));
+      expect(() => exportedSymbols(file)).toThrow(`${file} has no .dynsym`);
+    });
+
+    it("refuses a .dynsym whose sh_link is not a string table", () => {
+      const file = path.join(tmp, "bad-link.so");
+      writeFileSync(file, tinyElf({ dynsymLink: 0 }));
+      expect(() => exportedSymbols(file)).toThrow(
+        `${file} has a .dynsym whose sh_link 0 is not a string table`
+      );
+    });
+
+    it("refuses a symbol name that runs past its .dynstr", () => {
+      const file = path.join(tmp, "short-dynstr.so");
+      // "\0exported\0" ends at 10: the name starts inside and is unterminated within 5 bytes
+      writeFileSync(file, tinyElf({ dynstrSize: 5 }));
+      expect(() => exportedSymbols(file)).toThrow(`${file} has a symbol name outside its .dynstr`);
     });
   });
 

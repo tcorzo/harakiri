@@ -6,8 +6,8 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { bundledMpv, repoRootFrom } from "./bundle";
-import { neededLibs } from "./elf";
-import { readHostLibs, shaderCompilerExports, unbundledNeeds } from "./host-libs";
+import { exportedSymbols, neededLibs } from "./elf";
+import { bundleFiles, readHostLibs, shaderCompilerExports, unbundledNeeds } from "./host-libs";
 
 // The real build in .cache/mpv/<recipe-hash>. With none, bundledMpv() throws naming `mise run mpv:build`.
 const recipe = path.join(repoRootFrom(import.meta.dirname), "mpv");
@@ -53,11 +53,17 @@ const readAvcodec = (): string => {
 // The libraries of the shader compiler libplacebo links: shaderc, glslang and SPIRV-Tools
 const shaderCompilerLib = /^lib(?:shaderc|glslang|SPIRV)/u;
 
-/** `mpv`, then `lib/<name>` for each file in the bundle's lib/ */
-const bundleFiles = (): string[] => [
-  "mpv",
-  ...readdirSync(bundleFile("lib")).map((name) => `lib/${name}`),
-];
+/** The bundle's lib/libplacebo.so.<abi> */
+const libplacebo = (): string => {
+  const lib = bundleFile("lib");
+  const name = readdirSync(lib).find((file) => file.startsWith("libplacebo.so."));
+
+  if (name === undefined) {
+    throw new Error(`no libplacebo.so.* in ${lib}`);
+  }
+
+  return path.join(lib, name);
+};
 
 describe("harakiri's mpv build", () => {
   it("is mpv 0.42.0 on libplacebo 7.387.0 and FFmpeg 9.0.2", () => {
@@ -126,7 +132,7 @@ describe("harakiri's mpv build", () => {
     });
 
     it("has no file that needs a shaderc, glslang or SPIRV-Tools library", () => {
-      const needs = bundleFiles().flatMap((rel) =>
+      const needs = bundleFiles(path.dirname(bundledMpv())).flatMap((rel) =>
         neededLibs(bundleFile(rel))
           .filter((soname) => shaderCompilerLib.test(soname))
           .map((soname) => `${rel}: ${soname}`)
@@ -137,6 +143,16 @@ describe("harakiri's mpv build", () => {
 
     it("exports no shaderc, glslang or SPIRV-Tools symbol from any file", () => {
       expect(shaderCompilerExports(path.dirname(bundledMpv()))).toStrictEqual([]);
+    });
+
+    it("exports only libplacebo's own symbols from libplacebo, whatever a leaked name looks like", () => {
+      // libplacebo's API is pl_*; memcpy_layout and the std::__detail from_chars helpers of its
+      // own C++ (convert.cc) leak at default visibility. 537 symbols on libplacebo 7.387.0.
+      const foreign = exportedSymbols(libplacebo()).filter(
+        (symbol) => !/^pl_|^memcpy_layout$|^_ZNSt8__detail/u.test(symbol)
+      );
+
+      expect(foreign).toStrictEqual([]);
     });
   });
 
