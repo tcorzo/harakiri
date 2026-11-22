@@ -172,6 +172,7 @@ Chosen on 2026-10-30 after a researched ledger. Versions are pinned in `mise.tom
 - @electron-forge 8.0.1: more maintainers, kept as the packaging fallback.
 - Fedora `ffmpeg-free`: no HEVC, H.264 or VC-1 decoders.
 - Fedora 44's libcurl 8.18.0 in the mpv bundle: it keeps a paused handle paused when mpv adds it again (curl #20641), so seeks over HTTP stall. The recipe builds curl 8.23.0.
+- A CA path compiled into the bundle's libcurl, and a host capability listing distro CA paths: each distro keeps its trust store elsewhere. The bundle takes OpenSSL from the host (its `OPENSSLDIR` is the distro's) and libcurl asks it with `CURL_CA_FALLBACK=ON`; `SSL_CERT_FILE` and `SSL_CERT_DIR` still apply.
 - Fedora 44's libshaderc and libSPIRV-Tools in the mpv bundle: the host's Mesa drivers link `libSPIRV-Tools.so` (unversioned soname, C++ API) and would bind to the bundle's copy, so a host SPIRV-Tools update could break Vulkan and the GL fallback. Taking them from the host instead ties libplacebo to whatever shaderc the host has. The recipe links shaderc statically into libplacebo with its symbols hidden (`bundle.test.ts` checks).
 - System mpv for dev and tests: Fedora's build hid #13 (`sdl2-gamepad`), so dev, tests and e2e run harakiri's own build (Q12).
 - FFmpeg's spdif demuxer for verification: no TrueHD or DTS-HD support. PipeWire null sink: accepts plain PCM only.

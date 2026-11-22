@@ -33,6 +33,10 @@ libvdpau.so.1
 libz.so.1
 libdisplay-info.so.3
 libxml2.so.2
+# OpenSSL: the distro patches it, and its OPENSSLDIR names the distro's trust store, which libcurl
+# reads through X509_STORE_set_default_paths. A bundled copy would trust a path the host lacks.
+libssl.so.3
+libcrypto.so.3
 # PipeWire and the sound stack
 libpipewire-0.3.so.0
 libpulse.so.0

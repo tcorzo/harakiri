@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -12,15 +12,20 @@ import { bundleFiles, readHostLibs, shaderCompilerExports, unbundledNeeds } from
 // The real build in .cache/mpv/<recipe-hash>. With none, bundledMpv() throws naming `mise run mpv:build`.
 const recipe = path.join(repoRootFrom(import.meta.dirname), "mpv");
 
-const Manifest = z.object({
-  mpv: z.string(),
-  libplacebo: z.string(),
-  ffmpeg: z.string(),
-  sdl2: z.string(),
-  nvCodecHeaders: z.string(),
-  curl: z.string(),
-  caBundle: z.string(),
-});
+const Manifest = z
+  .object({
+    mpv: z.string(),
+    libplacebo: z.string(),
+    ffmpeg: z.string(),
+    sdl2: z.string(),
+    nvCodecHeaders: z.string(),
+    curl: z.string(),
+    shaderc: z.string(),
+    glslang: z.string(),
+    spirvTools: z.string(),
+    spirvHeaders: z.string(),
+  })
+  .strict();
 
 /** A version mpv/versions.env pins, e.g. `pinned("CURL")`. */
 const pinned = (name: string): string => {
@@ -163,17 +168,26 @@ describe("harakiri's mpv build", () => {
     expect(avcodec).not.toContain("nonfree and unredistributable");
   });
 
-  it("finds this host's CA bundle where its libcurl looks", () => {
-    const { caBundle } = Manifest.parse(
-      JSON.parse(readFileSync(bundleFile("manifest.json"), "utf-8"))
-    );
+  it("takes OpenSSL from the host, and ships no Kerberos (curl has no GSS-API)", () => {
+    const shipped = readdirSync(bundleFile("lib"));
+    expect(
+      shipped.filter((f) =>
+        /^lib(?:ssl|crypto|krb5|gssapi_krb5|k5crypto|krb5support|keyutils|com_err)\.so/u.test(f)
+      )
+    ).toStrictEqual([]);
+    expect(neededLibs(bundleFile("lib/libcurl.so.4")).toSorted()).toStrictEqual([
+      "libc.so.6",
+      "libcrypto.so.3",
+      "libidn2.so.0",
+      "libnghttp2.so.14",
+      "libssl.so.3",
+      "libz.so.1",
+    ]);
+  });
 
-    // The failure names the path: the build's libcurl reads one fixed CA path
-    const missing = existsSync(caBundle)
-      ? undefined
-      : `no CA bundle at ${caBundle}: the build's libcurl reads Fedora's path, so it is built ` +
-        "for Fedora-family hosts; another host's CA path is a Phase 8 host capability";
-
-    expect(missing).toBeUndefined();
+  it("has a manifest with no CA bundle path", () => {
+    expect(() =>
+      Manifest.parse(JSON.parse(readFileSync(bundleFile("manifest.json"), "utf-8")))
+    ).not.toThrow();
   });
 });

@@ -439,7 +439,7 @@ The host's Mesa drivers (every Vulkan driver, libgallium, libLLVM) load into mpv
 
 - From the host now: `libz.so.1`, `libdisplay-info.so.3` and `libxml2.so.2` are in `mpv/host-libs.txt`. `packages/mpv/src/vulkan.test.ts` fails when the bundled mpv cannot load a Vulkan driver the host installs.
 - Resolved (owner decision: static and hidden): SPIRV-Tools and shaderc no longer ship in `lib/`. `libSPIRV-Tools.so` has an unversioned soname and a C++ API, so a bundled copy would bind the host's Mesa drivers to it after a host spirv-tools update. The recipe now builds shaderc 2026.4 with the glslang 16.6.0, SPIRV-Tools 2026.4 and SPIRV-Headers 1.202609.0 its release names, as one static `libshaderc_combined.a` built with hidden visibility, and links it into libplacebo with `--exclude-libs`. `packages/mpv/src/bundle.test.ts` fails when `lib/` holds a shaderc, glslang or SPIRV-Tools library, when a bundled file needs one, or when a bundled file exports one of their symbols.
-- The CA bundle path the build's libcurl reads is Fedora's (`caBundle` in `manifest.json`). A host outside the Fedora family needs it as a host capability.
+- The CA bundle question is resolved (plan 09, Task 1): the bundle takes OpenSSL from the host, and its libcurl asks that OpenSSL for the host's trust store, so no CA path is compiled in and no host capability lists distro CA paths.
 
 ### Validation
 
