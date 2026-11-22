@@ -32,7 +32,8 @@ export const unstubbedBridge: HarakiriBridge = {
 
 /**
  * Stands in for the preload's `window.harakiri`, which component tests run without: Electron is
- * not there. A test passes the parts it needs, typed against the real bridge.
+ * not there. It takes a whole bridge, so a test spreads `unstubbedBridge` and overrides the parts
+ * it needs: `{ ...unstubbedBridge, session: { ...unstubbedBridge.session, get } }`.
  */
 export const installBridge = (bridge: HarakiriBridge = unstubbedBridge): void => {
   Object.defineProperty(window, "harakiri", { configurable: true, value: bridge });

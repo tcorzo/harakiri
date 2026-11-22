@@ -57,7 +57,7 @@ describe("error screen on a real layout", () => {
       .toHaveTextContent("Signed out by the server");
     await expect.element(page.getByRole("button", { name: "Sign in again" })).toHaveFocus();
 
-    // 5vh of the 1080p screen is the safe area: 54px from the bottom, 96px from the left.
+    // The safe area of a 1920x1080 screen: 5vh is 54px from the bottom, 5vw is 96px from the left.
     const signIn = box("Sign in again");
     const change = box("Change server");
     expect([signIn.left, signIn.bottom]).toStrictEqual([96, 1026]);
