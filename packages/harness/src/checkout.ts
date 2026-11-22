@@ -1,5 +1,7 @@
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { realpathSync } from "node:fs";
+import path from "node:path";
 
 import { inGuest } from "./guest";
 
@@ -70,30 +72,72 @@ export const e2eServerOf = (id: string, port?: number): E2eServer => {
   };
 };
 
+/** The checkout id inside the guest, which guest.sh passes; on the host it is always the path's. */
+const guestCheckoutId = (env: Readonly<Record<string, string | undefined>>): string => {
+  const passed = env.HARAKIRI_CHECKOUT_ID;
+
+  if (passed === undefined || passed === "") {
+    throw new Error(
+      "In the dev/vm guest the e2e Jellyfin is named after the host checkout, and HARAKIRI_CHECKOUT_ID is not set. Run the command through dev/vm/guest.sh exec, which sets it."
+    );
+  }
+
+  return passed;
+};
+
 /**
  * This checkout's e2e Jellyfin. In the dev/vm guest the repo is at /workspace, so its path says
- * nothing: guest.sh passes the host's id as HARAKIRI_CHECKOUT_ID. HARAKIRI_E2E_PORT replaces the
- * derived port when something else holds it.
+ * nothing: guest.sh passes the host's id as HARAKIRI_CHECKOUT_ID, which only the guest reads (on
+ * the host a stray exported value must not point the run at another checkout's container).
+ * HARAKIRI_E2E_PORT replaces the derived port when something else holds it.
  */
 export const e2eServerFor = (
   repo: string,
   env: Readonly<Record<string, string | undefined>> = process.env,
   guest: boolean = inGuest()
 ): E2eServer => {
-  const passed = env.HARAKIRI_CHECKOUT_ID;
-  let id: string;
-
-  if (passed !== undefined && passed !== "") {
-    id = passed;
-  } else if (guest) {
-    throw new Error(
-      "In the dev/vm guest the e2e Jellyfin is named after the host checkout, and HARAKIRI_CHECKOUT_ID is not set. Run the command through dev/vm/guest.sh exec, which sets it."
-    );
-  } else {
-    id = checkoutIdOf(repo);
-  }
-
+  const id = guest ? guestCheckoutId(env) : checkoutIdOf(repo);
   const port = env.HARAKIRI_E2E_PORT;
 
   return e2eServerOf(id, port === undefined || port === "" ? undefined : portOverride(port));
+};
+
+/** Where a checkout keeps its e2e Jellyfin's state (config, cache and the scanned-corpus mark). */
+export const e2eStateOf = (repo: string): string => path.resolve(repo, ".cache/jellyfin-e2e");
+
+/** A path as the kernel sees it, so a symlinked checkout compares equal to its target. */
+const canonical = (file: string): string => {
+  try {
+    return realpathSync(file);
+  } catch {
+    return path.resolve(file);
+  }
+};
+
+/**
+ * Whether the legacy shared container belongs to this checkout: it mounts this checkout's e2e
+ * state as /config. Such a container must go before this checkout's own starts on the same state,
+ * or two servers write one database. One that mounts another checkout's state is left alone.
+ * `configSource` is its /config mount source, or undefined when there is no legacy container.
+ */
+export const ownsLegacyE2e = (configSource: string | undefined, state: string): boolean =>
+  configSource !== undefined &&
+  configSource !== "" &&
+  canonical(configSource) === canonical(path.join(state, "config"));
+
+/** The /config mount source of the legacy shared container, or undefined when it does not exist. */
+export const legacyE2eConfigSource = (): string | undefined => {
+  const result = spawnSync(
+    "podman",
+    [
+      "container",
+      "inspect",
+      "-f",
+      '{{range .Mounts}}{{if eq .Destination "/config"}}{{.Source}}{{end}}{{end}}',
+      LEGACY_E2E_NAME,
+    ],
+    { encoding: "utf-8" }
+  );
+
+  return result.status === 0 ? result.stdout.trim() : undefined;
 };

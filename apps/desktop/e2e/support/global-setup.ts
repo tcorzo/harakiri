@@ -9,18 +9,31 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { bundledMpv } from "@harakiri/mpv";
 import { z } from "zod";
 
+import {
+  LEGACY_E2E_NAME,
+  legacyE2eConfigSource,
+  ownsLegacyE2e,
+} from "../../../../packages/harness/src/checkout";
 import { CATALOG } from "../../../../packages/harness/src/corpus/catalog";
 import { fateState } from "../../../../packages/harness/src/corpus/fate";
 import { MANIFEST, readManifest } from "../../../../packages/harness/src/corpus/generate";
 import { inGuest } from "../../../../packages/harness/src/guest";
-import { CORPUS_DIR, E2E_CONTAINER_ENV, E2E_SERVER, REAL_SERVER, REPO } from "./backend";
+import {
+  CORPUS_DIR,
+  E2E_PASSWORD,
+  E2E_STATE,
+  E2E_USER,
+  REAL_SERVER,
+  REPO,
+  e2eContainerEnv,
+  e2eServer,
+} from "./backend";
 
 const FATE_DIR = process.env.HARAKIRI_FATE_DIR ?? path.resolve(REPO, ".cache/fate");
-const STATE = E2E_CONTAINER_ENV.JELLYFIN_DEV_STATE;
+const STATE = E2E_STATE;
 
 /** The corpus manifest the container last finished scanning; a different one recreates it. */
 const SCANNED = path.resolve(STATE, "corpus.sha256");
-const SERVER = E2E_CONTAINER_ENV.JELLYFIN_DEV_URL;
 
 /** Why the corpus must be (re)generated before the server can scan it, or null when it is current. */
 const staleness = (): string | null => {
@@ -47,7 +60,7 @@ const run = (what: string, command: string, args: readonly string[]): void => {
   const result = spawnSync(command, args, {
     cwd: REPO,
     stdio: "inherit",
-    env: { ...process.env, ...E2E_CONTAINER_ENV },
+    env: { ...process.env, ...e2eContainerEnv() },
   });
 
   if (result.error !== undefined || result.status !== 0) {
@@ -74,7 +87,7 @@ const get = async <Schema extends z.ZodType>(
   route: string,
   token: string
 ): Promise<z.infer<Schema>> => {
-  const response = await fetch(new URL(route, SERVER), {
+  const response = await fetch(new URL(route, e2eServer().url), {
     headers: { Authorization: `${AUTH}, Token="${token}"` },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
@@ -88,12 +101,12 @@ const get = async <Schema extends z.ZodType>(
 
 /** Waits until the library scan is idle and has found every file in the corpus. */
 const waitForScan = async (expected: number, timeoutMs = 180_000): Promise<void> => {
-  const signIn = await fetch(new URL("Users/AuthenticateByName", SERVER), {
+  const signIn = await fetch(new URL("Users/AuthenticateByName", e2eServer().url), {
     method: "POST",
     headers: { Authorization: AUTH, "Content-Type": "application/json" },
     body: JSON.stringify({
-      Username: E2E_CONTAINER_ENV.JELLYFIN_DEV_USER,
-      Pw: E2E_CONTAINER_ENV.JELLYFIN_DEV_PASSWORD,
+      Username: E2E_USER,
+      Pw: E2E_PASSWORD,
     }),
     // Signing in hashes the password server-side, the slowest call here; it gets twice as long.
     signal: AbortSignal.timeout(2 * REQUEST_TIMEOUT_MS),
@@ -173,7 +186,7 @@ const expectPrepared = async (): Promise<void> => {
 
   if (reason !== null) {
     throw new Error(
-      `The e2e Jellyfin at ${SERVER} is not ready for this corpus (${reason}). \`mise run e2e\` prepares it on the host before the guest runs.`
+      `The e2e Jellyfin at ${e2eServer().url} is not ready for this corpus (${reason}). \`mise run e2e\` prepares it on the host before the guest runs.`
     );
   }
 };
@@ -192,7 +205,7 @@ const Inspected = z.array(
 
 /** This checkout's e2e container as podman sees it, or undefined when there is none. */
 const inspectContainer = () => {
-  const result = spawnSync("podman", ["container", "inspect", E2E_SERVER.name], {
+  const result = spawnSync("podman", ["container", "inspect", e2eServer().name], {
     encoding: "utf-8",
   });
 
@@ -229,6 +242,7 @@ const portTaken = async (port: number): Promise<boolean> => {
  * podman's bare "address already in use".
  */
 const claimPort = async (): Promise<void> => {
+  const server = e2eServer();
   const container = inspectContainer();
 
   if (container !== undefined) {
@@ -237,8 +251,8 @@ const claimPort = async (): Promise<void> => {
 
     if (
       !existsSync(STATE) ||
-      http?.HostPort !== String(E2E_SERVER.port) ||
-      discovery?.HostIp !== E2E_SERVER.discoveryAddress
+      http?.HostPort !== String(server.port) ||
+      discovery?.HostIp !== server.discoveryAddress
     ) {
       console.log("e2e: the e2e Jellyfin container does not match this checkout; recreating it");
       jellyfinSh("down");
@@ -247,11 +261,25 @@ const claimPort = async (): Promise<void> => {
     }
   }
 
-  if (await portTaken(E2E_SERVER.port)) {
+  if (await portTaken(server.port)) {
     throw new Error(
-      `Port ${E2E_SERVER.port} on 127.0.0.1, where this checkout's e2e Jellyfin (${E2E_SERVER.name}) listens, is held by another process. Its port derives from the checkout's path. Stop that process (\`ss -ltnp 'sport = :${E2E_SERVER.port}'\` names it), or set HARAKIRI_E2E_PORT to a free port.`
+      `Port ${server.port} on 127.0.0.1, where this checkout's e2e Jellyfin (${server.name}) listens, is held by another process. Its port derives from the checkout's path. Stop that process (\`ss -ltnp 'sport = :${server.port}'\` names it), or set HARAKIRI_E2E_PORT to a free port.`
     );
   }
+};
+
+/**
+ * Removes the shared e2e container of older checkouts when it runs on this checkout's state. Left
+ * running, it and this checkout's own container would serve one Jellyfin database. One on another
+ * checkout's state is left alone: it cannot collide (port 8296, discovery on 127.0.0.3).
+ */
+const removeOwnedLegacy = (): void => {
+  if (!ownsLegacyE2e(legacyE2eConfigSource(), STATE)) {
+    return;
+  }
+
+  console.log(`e2e: ${LEGACY_E2E_NAME} runs on this checkout's state; removing it`);
+  run(`Removing ${LEGACY_E2E_NAME}`, "podman", ["rm", "-f", "-t", "20", LEGACY_E2E_NAME]);
 };
 
 /**
@@ -298,6 +326,9 @@ export default async function globalSetup(): Promise<void> {
       CORPUS_DIR,
     ]);
   }
+
+  // Before anything touches the state dir: a legacy container on it would share its database.
+  removeOwnedLegacy();
 
   const fingerprint = fingerprintOf(CORPUS_DIR);
   const scanned = existsSync(SCANNED) ? readFileSync(SCANNED, "utf-8").trim() : undefined;

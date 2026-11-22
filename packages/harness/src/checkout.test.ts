@@ -5,7 +5,41 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { E2E_PORT_RANGE, checkoutIdOf, e2eServerFor, e2eServerOf } from "./checkout";
+import { E2E_PORT_RANGE, checkoutIdOf, e2eServerFor, e2eServerOf, ownsLegacyE2e } from "./checkout";
+
+/** "00" to "ff". */
+const BYTES = Array.from({ length: 256 }, (_, value) => value.toString(16).padStart(2, "0"));
+
+describe(ownsLegacyE2e, () => {
+  it("removes the legacy container only when its /config is this checkout's state/config", () => {
+    const state = "/srv/checkout-a/.cache/jellyfin-e2e";
+
+    expect(ownsLegacyE2e("/srv/checkout-a/.cache/jellyfin-e2e/config", state)).toBe(true);
+    expect(ownsLegacyE2e("/srv/checkout-a/.cache/jellyfin-e2e/config/", state)).toBe(true);
+    expect(ownsLegacyE2e("/srv/checkout-b/.cache/jellyfin-e2e/config", state)).toBe(false);
+    expect(ownsLegacyE2e("/srv/checkout-a/.cache/jellyfin-e2e", state)).toBe(false);
+    expect(ownsLegacyE2e(undefined, state)).toBe(false);
+  });
+
+  it("compares real paths, so a symlinked checkout owns the container its target made", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "harakiri-legacy-"));
+
+    try {
+      mkdirSync(path.join(dir, "real/.cache/jellyfin-e2e/config"), { recursive: true });
+      symlinkSync(path.join(dir, "real"), path.join(dir, "link"));
+
+      expect(
+        ownsLegacyE2e(
+          path.join(dir, "real/.cache/jellyfin-e2e/config"),
+          path.join(dir, "link/.cache/jellyfin-e2e")
+        )
+      ).toBe(true);
+      expect(ownsLegacyE2e("", path.join(dir, "link/.cache/jellyfin-e2e"))).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
 
 describe(checkoutIdOf, () => {
   let dir = "";
@@ -56,16 +90,27 @@ describe(e2eServerOf, () => {
     });
   });
 
-  it("stays in range, clear of 127.0.0.0/24, for every id", () => {
-    const ids = ["00000000", "ffffffff", "fe00fe00", "ff00ff00", "00ff00ff"];
+  it("wraps the port and the address octets at their edges", () => {
+    expect(e2eServerOf("0000270f").port).toBe(29_999);
+    expect(e2eServerOf("00002710").port).toBe(20_000);
+    expect(e2eServerOf("fdfffd00")).toMatchObject({
+      port: 22_096,
+      discoveryAddress: "127.254.255.254",
+    });
+    expect(e2eServerOf("fe00fe00")).toMatchObject({ port: 27_888, discoveryAddress: "127.1.0.1" });
+  });
 
-    for (let i = 0; i < 5000; i += 1) {
-      ids.push(
-        Math.floor(Math.random() * 0x1_00_00_00_00)
-          .toString(16)
-          .padStart(8, "0")
-      );
-    }
+  it("stays in range, clear of 127.0.0.0/24, for every value of every byte", () => {
+    // Each byte position takes every value from 00 to ff, with the other bytes all 00 or all ff.
+    const ids = BYTES.flatMap((byte) =>
+      [0, 1, 2, 3].flatMap((at) =>
+        ["00", "ff"].map((rest) =>
+          Array.from({ length: 4 }, (_unused, i) => (i === at ? byte : rest)).join("")
+        )
+      )
+    );
+
+    expect(ids).toHaveLength(2048);
 
     const outside = ids.filter((id) => {
       const { port, discoveryAddress } = e2eServerOf(id);
@@ -97,8 +142,11 @@ describe(e2eServerOf, () => {
 describe(e2eServerFor, () => {
   const repo = import.meta.dirname;
 
-  it("on the host, derives everything from the checkout's path", () => {
+  it("on the host, derives everything from the checkout's path, ignoring HARAKIRI_CHECKOUT_ID", () => {
     expect(e2eServerFor(repo, {}, false)).toStrictEqual(e2eServerOf(checkoutIdOf(repo)));
+    expect(e2eServerFor(repo, { HARAKIRI_CHECKOUT_ID: "0000ffff" }, false)).toStrictEqual(
+      e2eServerOf(checkoutIdOf(repo))
+    );
   });
 
   it("takes the host checkout's id from HARAKIRI_CHECKOUT_ID, which guest.sh passes", () => {
@@ -116,7 +164,7 @@ describe(e2eServerFor, () => {
   it("lets HARAKIRI_E2E_PORT replace the derived port, and rejects a bad one", () => {
     const env = { HARAKIRI_CHECKOUT_ID: "00000000", HARAKIRI_E2E_PORT: "28123" };
 
-    expect(e2eServerFor(repo, env, false)).toMatchObject({
+    expect(e2eServerFor(repo, env, true)).toMatchObject({
       port: 28_123,
       url: "http://127.0.0.1:28123",
     });

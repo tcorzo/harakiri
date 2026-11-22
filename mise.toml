@@ -154,16 +154,19 @@ run = "for s in 256 512; do magick -background none RSVG:docs/assets/readme/icon
 [tasks."e2e:down"]
 description = "Stop and remove this checkout's e2e Jellyfin container (harakiri-jellyfin-e2e-<checkout id>), keeping its scan in .cache/jellyfin-e2e"
 shell = "bash -euo pipefail -c"
-# Also removes the one shared harakiri-jellyfin-e2e that checkouts ran before each had its own. Its
-# state stays in whichever checkout's .cache/jellyfin-e2e made it. The name is resolved on its own
-# line, so a failure stops the task instead of passing an empty name, which jellyfin.sh would read
-# as the dev server's.
+# Also removes the shared harakiri-jellyfin-e2e that checkouts ran before each had its own, when it
+# runs on this checkout's state; one on another checkout's state is that checkout's to stop. The
+# names are resolved on their own lines, so a failure stops the task instead of passing an empty
+# name, which jellyfin.sh would read as the dev server's.
 run = """
-name="$(bun packages/harness/src/checkout-cli.ts e2e-name)"
+cli=packages/harness/src/checkout-cli.ts
+name="$(bun "$cli" e2e-name)"
+legacy="$(bun "$cli" e2e-legacy-name)"
+owned="$(bun "$cli" e2e-legacy-owned)"
 JELLYFIN_DEV_NAME="$name" JELLYFIN_DEV_STATE=.cache/jellyfin-e2e dev/jellyfin/jellyfin.sh down
-if podman container exists harakiri-jellyfin-e2e; then
-  podman stop -t 20 harakiri-jellyfin-e2e >/dev/null && podman rm harakiri-jellyfin-e2e >/dev/null
-  echo "harakiri-jellyfin-e2e (the shared e2e server of older checkouts) removed"
+if [ "$owned" = yes ]; then
+  podman rm -f -t 20 "$legacy" >/dev/null
+  echo "$legacy (the shared e2e server of older checkouts, on this checkout's state) removed"
 fi
 """
 

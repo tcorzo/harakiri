@@ -65,7 +65,8 @@ bun packages/harness/src/checkout-cli.ts e2e-port
 bun packages/harness/src/checkout-cli.ts e2e-discovery
 # its status
 name="$(bun packages/harness/src/checkout-cli.ts e2e-name)" && JELLYFIN_DEV_NAME="$name" dev/jellyfin/jellyfin.sh status
-# stop and remove it, keeping its scan (also removes the shared harakiri-jellyfin-e2e of older checkouts)
+# stop and remove it, keeping its scan (also the shared harakiri-jellyfin-e2e of older checkouts, when it
+#   runs on this checkout's state; `mise run e2e` removes that one too, before it starts its own)
 mise run e2e:down
 
 # a second server alongside (another name, port and state dir), e.g. for a throwaway check
