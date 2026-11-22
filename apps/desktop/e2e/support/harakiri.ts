@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -44,6 +44,11 @@ interface Options {
 interface TestFixtures {
   /** The test's isolated HARAKIRI_USER_DATA dir, removed at teardown. */
   readonly userDataDir: string;
+  /**
+   * The HOME of every app the test launches: `<userDataDir>/home`, created empty, so no spec sees
+   * the machine's own Steam or dotfiles. A test that needs one builds it there.
+   */
+  readonly homeDir: string;
   /** Seeds the profile with this run's signed-in session, as if the user had onboarded. */
   readonly signIn: () => void;
   /** Every app the test launched; all are closed, and their mpvs checked gone, at teardown. */
@@ -105,6 +110,12 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
     const dir = mkdtempSync(path.join(tmpdir(), "harakiri-e2e-"));
     await use(dir);
     rmSync(dir, { recursive: true, force: true });
+  },
+
+  homeDir: async ({ userDataDir }, use) => {
+    const dir = path.join(userDataDir, "home");
+    mkdirSync(dir);
+    await use(dir);
   },
 
   signIn: async ({ userDataDir, account }, use) => {
@@ -173,7 +184,7 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
     { auto: true },
   ],
 
-  launch: async ({ userDataDir, mpvArgs, extraEnv, electronArgs, apps }, use) => {
+  launch: async ({ userDataDir, homeDir, mpvArgs, extraEnv, electronArgs, apps }, use) => {
     // Without DISPLAY, Electron cannot fall back to the user's X session if the nested compositor is missing.
     // A terminal that is itself an AppImage exports APPIMAGE, which would switch the updater on.
     // Without the desktop-session variables, and with XDG_CURRENT_DESKTOP set below, Electron
@@ -198,6 +209,7 @@ export const test = base.extend<Options & TestFixtures, WorkerFixtures>({
         env: {
           ...Object.fromEntries(inherited),
           XDG_CURRENT_DESKTOP: "gamescope",
+          HOME: homeDir,
           ...extraEnv,
           HARAKIRI_E2E: "1",
           HARAKIRI_USER_DATA: userDataDir,

@@ -6,6 +6,12 @@
     "outDir": "${configDir}/.tsbuild/e2e",
     "tsBuildInfoFile": "${configDir}/.tsbuild/e2e.tsbuildinfo"
   },
-  "include": ["e2e", "playwright.config.ts", "src/shared"],
+  "include": [
+    "e2e",
+    "playwright.config.ts",
+    "src/shared",
+    "src/main/host/fixtures/steam-root.ts",
+    "src/main/host/steam/fixtures/vdf.ts"
+  ],
   "references": [{ "path": "../../packages/jellyfin" }, { "path": "../../packages/harness" }]
 }
