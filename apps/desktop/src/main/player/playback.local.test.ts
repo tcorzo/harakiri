@@ -394,7 +394,8 @@ const play = async (
   media: string,
   seconds: number,
   setup: (server: FakeJellyfin) => void = () => {},
-  extraArgs: readonly string[] = []
+  extraArgs: readonly string[] = [],
+  requestTimeoutMs?: number
 ): Promise<{ events: PlayerEvent[]; playback: Playback }> => {
   jellyfin = new FakeJellyfin();
   setup(jellyfin);
@@ -417,6 +418,7 @@ const play = async (
       audioOutput: { kind: "known", name: "test receiver", bitstream: [...PRD_PASSTHROUGH] },
       hdrSignalling: "colour-management",
       mpvBinary: bundledMpv(),
+      requestTimeoutMs,
     }
   );
 
@@ -561,11 +563,18 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
   it("a sidecar mpv never finishes loading leaves its ApiKey out of the log and the events", async () => {
     records.length = 0;
 
-    const { events, playback } = await play(longClip, 30, (server) => {
-      server.stallSidecar = true;
-    });
+    const { events, playback } = await play(
+      longClip,
+      30,
+      (server) => {
+        server.stallSidecar = true;
+      },
+      [],
+      // The app waits 10 s; 2 s gives mpv up sooner and still answers every other request in time
+      2000
+    );
 
-    // sub-add waits on the held request until the client's 10 s timeout gives mpv up as dead.
+    // sub-add waits on the held request until the client's request timeout gives mpv up as dead.
     await playback.done;
 
     expect(events.map((e) => e.phase).slice(-2)).toStrictEqual(["error", "reported"]);
