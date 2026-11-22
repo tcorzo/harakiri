@@ -106,13 +106,17 @@ const exitCode = async (
 
 describe("a virtual pad in the guest", () => {
   it("a pad's BTN_SOUTH reaches mpv as GAMEPAD_ACTION_DOWN", async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), "harakiri-pad-"));
-    const conf = path.join(dir, "input.conf");
-    await writeFile(conf, "GAMEPAD_ACTION_DOWN quit 42\n");
-    await expect(padCommand("plug")).resolves.toMatch(/^ok \/dev\/input\/event\d+$/u);
+    // A killed run leaves its pad plugged in the daemon, and plug refuses a second one. The daemon
+    // answers ok to an unplug with nothing plugged.
+    await padCommand("unplug");
+    let dir: string | undefined;
     let mpv: ChildProcess | undefined;
 
     try {
+      dir = await mkdtemp(path.join(tmpdir(), "harakiri-pad-"));
+      const conf = path.join(dir, "input.conf");
+      await writeFile(conf, "GAMEPAD_ACTION_DOWN quit 42\n");
+      await expect(padCommand("plug")).resolves.toMatch(/^ok \/dev\/input\/event\d+$/u);
       // session.sh sets SDL_JOYSTICK_DISABLE_UDEV, so SDL scans /dev/input.
       mpv = spawn("mpv", [
         "--no-config",
@@ -129,8 +133,12 @@ describe("a virtual pad in the guest", () => {
       await expect(exitCode(mpv, lines, 10_000)).resolves.toBe(42);
     } finally {
       mpv?.kill("SIGKILL");
+
+      if (dir !== undefined) {
+        await rm(dir, { recursive: true, force: true });
+      }
+
       await padCommand("unplug");
-      await rm(dir, { recursive: true, force: true });
     }
   }, 30_000);
 });
