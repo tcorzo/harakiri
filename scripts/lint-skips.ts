@@ -2,8 +2,8 @@
 /**
  * Fails when a test file can skip. A skipped test proves nothing while the run looks green, so a
  * test that needs the dev Jellyfin or the FATE samples belongs in a tier (`*.live.test.ts`,
- * `*.contract.test.ts`, `*.fate.test.ts`, see vitest.shared.ts) that fails when its dependency
- * is missing.
+ * `*.contract.test.ts`, `*.fate.test.ts`, `*.platform.test.ts`, see vitest.shared.ts) that fails
+ * when its dependency is missing.
  *
  *   bun scripts/lint-skips.ts            every test file git tracks or would track
  *   bun scripts/lint-skips.ts <file>...  only these (hk pre-commit passes the staged ones)
@@ -23,8 +23,8 @@ const ALLOW_FULL =
 
 const RULE =
   "tests must not skip: a skipped test proves nothing while the run stays green. " +
-  "Move a test that needs the dev Jellyfin or FATE samples into a tier file " +
-  "(*.live.test.ts, *.contract.test.ts or *.fate.test.ts) and throw when the dependency is " +
+  "Move a test that needs the dev Jellyfin, FATE samples or the dev/vm guest into a tier file " +
+  "(*.live.test.ts, *.contract.test.ts, *.fate.test.ts or *.platform.test.ts) and throw when the dependency is " +
   "missing, naming the mise task that provides it. A temporary exception needs, on the same line: " +
   "// allow-skip: <reason> (expires YYYY-MM-DD, approved-by <name>)";
 

@@ -93,6 +93,10 @@ bun dev/jellyfin/bootstrap.ts
 description = "Stop the dev Jellyfin, keeping its state"
 run = "dev/jellyfin/jellyfin.sh down"
 
+[tasks."test:platform"]
+description = "Run the platform tier inside the dev/vm microVM guest (KVM; the first run downloads smolvm and provisions the guest)"
+run = "dev/vm/guest.sh exec -- bun x vitest run --config vitest.tiers.config.ts --project 'platform:*' --maxWorkers=2"
+
 [tasks."test:contract"]
 description = "Prove a real Jellyfin direct plays every fixture and the whole library under harakiri's profile (JELLYFIN_DEV_URL/_USER/_PASSWORD)"
 run = "scripts/bounded.sh contract 2G -- bun x vitest run --config vitest.tiers.config.ts --project 'contract:*' --maxWorkers=2"
@@ -158,6 +162,15 @@ hk util check-conventional-commit "$msg" || {
 [tasks.check]
 description = "Everything CI gates on"
 depends = ["lint", "fmt:check", "lint:skips", "lint:private", "lint:host", "typecheck", "test"]
+
+# The dev/vm microVM guest. guest.sh is its only entry point.
+[tasks."vm:up"]
+description = "Start the dev/vm microVM guest (KVM; the first run downloads smolvm 1.35.5 and provisions Fedora 44 into .cache/vm)"
+run = "dev/vm/guest.sh up"
+
+[tasks."vm:down"]
+description = "Stop the dev/vm guest, keeping its provisioned disk in .cache/vm"
+run = "dev/vm/guest.sh down"
 
 [tasks."package:check"]
 description = "Check apps/desktop/dist: latest-linux.yml matches the AppImage and the version, the feed is public GitHub, runtime deps are packed"

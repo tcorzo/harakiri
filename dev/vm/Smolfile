@@ -1,0 +1,9 @@
+# The dev/vm guest: what is the same in every checkout. guest.sh adds what differs on the CLI:
+# the mounts (absolute host paths) and the host loopback grant (SMOLVM_ALLOW_HOST_LOOPBACK=1 at start).
+# The image here is a placeholder. guest.sh passes --image "$GUEST_IMAGE" from versions.env, and CLI flags win.
+image = "fedora:44"
+cpus = 4
+memory = 4096
+net = true
+cmd = ["sleep", "infinity"]
+stop_timeout = 10
