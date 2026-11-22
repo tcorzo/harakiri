@@ -193,7 +193,7 @@ hk util check-conventional-commit "$msg" || {
 
 # podman's build containers run outside the bounded scope (in app.slice), so --memory caps them.
 [tasks."mpv:build"]
-description = "Build harakiri's mpv (mpv 0.42.0, libplacebo 7.387.0, FFmpeg 9.0.2, SDL2 2.32.10, curl 8.23.0) into .cache/mpv/<recipe-hash>; a no-op when that build exists"
+description = "Build harakiri's mpv (mpv 0.42.0, libplacebo 7.387.0 with shaderc 2026.4 static, FFmpeg 9.0.2, SDL2 2.32.10, curl 8.23.0) into .cache/mpv/<recipe-hash>; a no-op when that build exists"
 shell = "bash -euo pipefail -c"
 run = """
 out="$(bun packages/mpv/src/bundle-dir.ts)"

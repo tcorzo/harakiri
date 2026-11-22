@@ -9,10 +9,12 @@ FROM ${BASE_IMAGE} AS build
 # only that one. openssl, nghttp2, libidn2 and krb5 give it TLS, HTTP/2, IDN and GSS-API, the
 # features Fedora's libcurl-minimal has. libdisplay-info-devel: mpv's drm feature needs it.
 # libXfixes-devel: Xpresent.h includes Xfixes.h, and libXpresent-devel does not require it.
+# shaderc, glslang, SPIRV-Tools and SPIRV-Headers are built from source too (build.sh), and no
+# -devel package of theirs is installed; python3 generates SPIRV-Tools' grammar tables.
 RUN dnf -y --disablerepo='*' --enablerepo=fedora --setopt=install_weak_deps=False install \
       gcc gcc-c++ make cmake meson ninja-build pkgconf nasm patchelf binutils \
       python3 python3-jinja2 python3-markupsafe python3-glad2 \
-      vulkan-headers vulkan-loader-devel libshaderc-devel lcms2-devel libdav1d-devel \
+      vulkan-headers vulkan-loader-devel lcms2-devel libdav1d-devel \
       zlib-ng-compat-devel bzip2-devel xz-devel \
       libass-devel freetype-devel fribidi-devel harfbuzz-devel fontconfig-devel \
       luajit-devel uchardet-devel zimg-devel \

@@ -5,6 +5,19 @@ const PT_DYNAMIC = 2;
 const DT_NULL = 0n;
 const DT_NEEDED = 1n;
 const DT_STRTAB = 5n;
+const SHT_STRTAB = 3;
+const SHT_DYNSYM = 11;
+const SHN_UNDEF = 0;
+const STB_GLOBAL = 1;
+const STB_WEAK = 2;
+
+// GCC's binding for a C++ template's static data member (and an inline function's static
+// variable): the dynamic linker keeps one definition for the whole process
+const STB_GNU_UNIQUE = 10;
+const STV_DEFAULT = 0;
+const STV_PROTECTED = 3;
+const SYM_SIZE = 24;
+const SHDR_SIZE = 64;
 
 interface Segment {
   offset: bigint;
@@ -12,8 +25,16 @@ interface Segment {
   filesz: bigint;
 }
 
-/** The DT_NEEDED sonames of an ELF64 little-endian file, in file order. Throws `${file} is not an ELF64 file`. */
-export const neededLibs = (file: string): string[] => {
+/** The fields of an Elf64_Shdr that exportedSymbols reads */
+interface Section {
+  type: number;
+  offset: number;
+  size: number;
+  link: number;
+}
+
+/** The bytes of an ELF64 little-endian file. Throws `${file} is not an ELF64 file`. */
+const readElf64 = (file: string): Buffer => {
   const buf = readFileSync(file);
 
   const isElf64Le =
@@ -27,6 +48,13 @@ export const neededLibs = (file: string): string[] => {
   if (!isElf64Le) {
     throw new Error(`${file} is not an ELF64 file`);
   }
+
+  return buf;
+};
+
+/** The DT_NEEDED sonames of an ELF64 little-endian file, in file order. Throws `${file} is not an ELF64 file`. */
+export const neededLibs = (file: string): string[] => {
+  const buf = readElf64(file);
 
   const phoff = Number(buf.readBigUInt64LE(32));
   const phentsize = buf.readUInt16LE(54);
@@ -97,4 +125,93 @@ export const neededLibs = (file: string): string[] => {
 
     return buf.toString("latin1", start, buf.indexOf(0, start));
   });
+};
+
+/**
+ * The symbols an ELF64 little-endian file exports to the dynamic linker: each .dynsym entry that is
+ * defined in the file, global, weak or unique, and of default or protected visibility, as
+ * `nm -D --defined-only` lists them. Strip keeps .dynsym. Throws `${file} is not an ELF64 file`,
+ * `${file} has no .dynsym` (no section headers, or none of type SHT_DYNSYM), and a named error for
+ * a .dynsym, string table or symbol name that lies outside the file or its .dynstr.
+ */
+export const exportedSymbols = (file: string): string[] => {
+  const buf = readElf64(file);
+
+  const shoff = Number(buf.readBigUInt64LE(40));
+  const shentsize = buf.readUInt16LE(58);
+  const shnum = buf.readUInt16LE(60);
+
+  const section = (index: number): Section => {
+    const at = shoff + index * shentsize;
+
+    return {
+      type: buf.readUInt32LE(at + 4),
+      offset: Number(buf.readBigUInt64LE(at + 24)),
+      size: Number(buf.readBigUInt64LE(at + 32)),
+      link: buf.readUInt32LE(at + 40),
+    };
+  };
+
+  // A file with no section headers (sstrip, a packer) hides its exports from this reader, so it
+  // fails instead of reporting that the file exports nothing
+  const hasSectionHeaders =
+    shoff !== 0 && shentsize >= SHDR_SIZE && shoff + shnum * shentsize <= buf.length;
+
+  const dynsym = hasSectionHeaders
+    ? Array.from({ length: shnum }, (_, index) => section(index)).find(
+        (header) => header.type === SHT_DYNSYM
+      )
+    : undefined;
+
+  if (!dynsym) {
+    throw new Error(`${file} has no .dynsym`);
+  }
+
+  if (dynsym.offset + dynsym.size > buf.length) {
+    throw new Error(`${file} has a .dynsym outside the file`);
+  }
+
+  const dynstr = dynsym.link < shnum ? section(dynsym.link) : undefined;
+
+  if (dynstr?.type !== SHT_STRTAB || dynstr.offset + dynstr.size > buf.length) {
+    throw new Error(`${file} has a .dynsym whose sh_link ${dynsym.link} is not a string table`);
+  }
+
+  const symbols: string[] = [];
+
+  for (let at = dynsym.offset; at + SYM_SIZE <= dynsym.offset + dynsym.size; at += SYM_SIZE) {
+    if (isExported(buf, at)) {
+      symbols.push(stringAt(buf, dynstr, buf.readUInt32LE(at), file));
+    }
+  }
+
+  return symbols;
+};
+
+/** Whether the Elf64_Sym at `at` is named, defined, global, weak or unique, and visible. */
+const isExported = (buf: Buffer, at: number): boolean => {
+  const name = buf.readUInt32LE(at);
+  // st_info: binding in the high nibble; st_other: visibility in the low two bits
+  const binding = Math.floor(buf.readUInt8(at + 4) / 16);
+  const visibility = buf.readUInt8(at + 5) % 4;
+  const shndx = buf.readUInt16LE(at + 6);
+
+  return (
+    name !== 0 &&
+    shndx !== SHN_UNDEF &&
+    (binding === STB_GLOBAL || binding === STB_WEAK || binding === STB_GNU_UNIQUE) &&
+    (visibility === STV_DEFAULT || visibility === STV_PROTECTED)
+  );
+};
+
+/** The NUL-terminated string at `name` in a string table; throws when it runs past the table. */
+const stringAt = (buf: Buffer, strtab: Section, name: number, file: string): string => {
+  const start = strtab.offset + name;
+  const end = buf.indexOf(0, start);
+
+  if (name >= strtab.size || end === -1 || end >= strtab.offset + strtab.size) {
+    throw new Error(`${file} has a symbol name outside its .dynstr`);
+  }
+
+  return buf.toString("latin1", start, end);
 };
