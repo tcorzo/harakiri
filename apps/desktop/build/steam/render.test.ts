@@ -9,13 +9,12 @@ import { z } from "zod";
 
 import { ARTWORK, renderArtwork } from "./render";
 
+// oxlint-disable-next-line typescript/strict-void-return -- execFile has no promise form; promisify types it through Node's own __promisify__ overload
 const run = promisify(execFile);
 const here = import.meta.dirname;
 
 const probeSchema = z.object({
-  streams: z.tuple([
-    z.object({ width: z.number(), height: z.number(), pix_fmt: z.string() }),
-  ]),
+  streams: z.tuple([z.object({ width: z.number(), height: z.number(), pix_fmt: z.string() })]),
 });
 
 const decode = async (file: string) => {
@@ -30,10 +29,11 @@ const decode = async (file: string) => {
     "json",
     file,
   ]);
+
   const { stdout: raw } = await run(
     "ffmpeg",
     ["-v", "error", "-i", file, "-f", "rawvideo", "-pix_fmt", "rgba", "-"],
-    { encoding: "buffer", maxBuffer: 1 << 30 }
+    { encoding: "buffer", maxBuffer: 2 ** 30 }
   );
 
   return { probe: probeSchema.parse(JSON.parse(stdout)).streams[0], rgba: raw };
@@ -59,13 +59,20 @@ describe("the committed Steam artwork", () => {
     const fresh = mkdtempSync(path.join(tmpdir(), "harakiri-art-"));
     await renderArtwork(fresh);
 
-    for (const { file } of ARTWORK) {
-      const [committed, now] = await Promise.all([
-        decode(path.join(here, file)),
-        decode(path.join(fresh, file)),
-      ]);
-      expect(now.rgba.length, `${file}: run mise run steam:art`).toBe(committed.rgba.length);
-      expect(maxChannelDelta(committed.rgba, now.rgba), `${file}: run mise run steam:art`).toBeLessThanOrEqual(2);
+    const pairs = await Promise.all(
+      ARTWORK.map(async ({ file }) => ({
+        file,
+        committed: await decode(path.join(here, file)),
+        now: await decode(path.join(fresh, file)),
+      }))
+    );
+
+    for (const { file, committed, now } of pairs) {
+      expect(now.rgba).toHaveLength(committed.rgba.length);
+      expect(
+        maxChannelDelta(committed.rgba, now.rgba),
+        `${file}: run mise run steam:art`
+      ).toBeLessThanOrEqual(2);
     }
   });
 

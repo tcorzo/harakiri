@@ -6,7 +6,9 @@ export default defineConfig({
   printWidth: 100,
   proseWrap: "preserve",
   ignorePatterns: [
-    ...ultracite.ignorePatterns,
+    // apps/desktop/build holds electron-builder resources and the Steam art renderer's source;
+    // build output goes to out/ and dist/, which the preset already ignores.
+    ...(ultracite.ignorePatterns ?? []).filter((pattern) => pattern !== "**/build"),
     "packages/jellyfin/src/generated/**",
     "packages/jellyfin/openapi/**",
     "bun.lock",

@@ -12,15 +12,17 @@ local test = new Step {
 }
 
 steps {
+  // A commit that stages only ignored files (the generated Jellyfin client, routeTree.gen.ts) hands
+  // oxlint and oxfmt nothing to check; that is a pass, not an error.
   ["oxlint"] {
     glob = List("**/*.ts", "**/*.tsx")
-    check = "bun x oxlint --type-aware {{files}}"
-    fix = "bun x oxlint --type-aware --fix {{files}}"
+    check = "bun x oxlint --type-aware --no-error-on-unmatched-pattern {{files}}"
+    fix = "bun x oxlint --type-aware --no-error-on-unmatched-pattern --fix {{files}}"
   }
   ["oxfmt"] {
     glob = List("**/*.ts", "**/*.tsx", "**/*.json", "**/*.md", "**/*.css")
-    check = "bun x oxfmt --check {{files}}"
-    fix = "bun x oxfmt {{files}}"
+    check = "bun x oxfmt --check --no-error-on-unmatched-pattern {{files}}"
+    fix = "bun x oxfmt --no-error-on-unmatched-pattern {{files}}"
   }
   // A test that can skip belongs in a live, contract or FATE tier (vitest.shared.ts).
   ["lint-skips"] {
