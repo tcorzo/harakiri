@@ -61,7 +61,7 @@ You need [mise](https://mise.jdx.dev), which pins bun, node, hk and the HDR tool
 - `podman`, for the dev and test Jellyfin and the mpv build.
 - A read-write `/dev/kvm` (join the `kvm` group), for the microVM guest that runs e2e and the platform tests. Its first run downloads smolvm, a Fedora image and about 2 GB of packages into `.cache/vm`.
 
-`setup` also builds harakiri's mpv in podman. The first build takes minutes and pulls about 3 GB of images; the bundle it leaves in `.cache/mpv` is about 70 MB.
+`setup` also builds harakiri's mpv in podman. The first build takes minutes and pulls about 2 GB of images; the bundle it leaves in `.cache/mpv` is about 67 MB.
 
 ```sh
 mise trust && mise run setup   # deps, git hooks, harakiri's mpv, and a check of the media stack
