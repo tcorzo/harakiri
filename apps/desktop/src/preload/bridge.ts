@@ -5,6 +5,8 @@ import { z } from "zod";
 import {
   channels,
   DiscoveredServer,
+  LauncherAddResult,
+  LauncherStatus,
   PlayerEvent,
   PlayerProbe,
   Session,
@@ -71,6 +73,10 @@ export const createBridge = (ipc: BridgeIpc, options: BridgeOptions): HarakiriBr
       restart: async () => {
         await invoke(channels.updateRestart, z.undefined());
       },
+    },
+    launcher: {
+      status: async () => await invoke(channels.launcherStatus, LauncherStatus),
+      add: async () => await invoke(channels.launcherAdd, LauncherAddResult),
     },
     discover: async () => await invoke(channels.discover, z.array(DiscoveredServer)),
     player: {

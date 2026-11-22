@@ -11,6 +11,8 @@ export const env = createEnv({
     APPIMAGE: z.string().min(1).optional(),
     /** Set by the AppImage runtime to its mount point; an APPIMAGE is ours only if execPath is under it. */
     APPDIR: z.string().min(1).optional(),
+    /** The AppImage path the launcher shortcut points at; honoured only with HARAKIRI_E2E=1. */
+    HARAKIRI_E2E_LAUNCH_TARGET: z.string().min(1).optional(),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

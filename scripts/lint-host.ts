@@ -42,7 +42,7 @@ const RULES: Rule[] = [
 /** Where the rules apply. */
 const SCOPE = [/^apps\/desktop\/src\/.+\.tsx?$/u, /^packages\/[^/]+\/src\/.+\.tsx?$/u];
 
-/** Where they do not. The Add to Steam plan extends this list. */
+/** Where they do not. Launcher code (host/steam) is under host/, so it needs no entry here. */
 const EXEMPT = [
   /^apps\/desktop\/src\/main\/host\//u,
   /\.test\.tsx?$/u,
