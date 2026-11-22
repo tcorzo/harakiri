@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CHECKS, listsAll, versionAtLeast } from "./doctor";
+import { CHECKS, listsAll, succeeds, versionAtLeast } from "./doctor";
 import { compareVersions, parseVersion } from "./version";
 
 const exited = (stdout: string, code = 0) =>
@@ -58,10 +58,24 @@ describe("check judges", () => {
       detail: "ac3, eac3, dca",
     });
   });
+
+  it("passes a probe that exits 0 and names the fix when it exits non-zero", () => {
+    const kvm = succeeds("read-write", "not read-write: join the kvm group");
+
+    expect(kvm(exited(""))).toStrictEqual({ status: "ok", detail: "read-write" });
+    expect(kvm(exited("", 1))).toStrictEqual({
+      status: "missing",
+      detail: "not read-write: join the kvm group",
+    });
+    expect(kvm({ kind: "not-found", command: "sh" })).toStrictEqual({
+      status: "missing",
+      detail: "sh is not on PATH",
+    });
+  });
 });
 
 describe("the doctor check list", () => {
-  it("checks the harness tools only: no mpv, and podman is required", () => {
+  it("checks the harness tools and KVM only: no mpv, and podman and KVM are required", () => {
     expect(CHECKS.map((c) => c.label)).toStrictEqual([
       "ffmpeg filter libplacebo",
       "ffmpeg bitstream filter dovi_rpu",
@@ -72,7 +86,9 @@ describe("the doctor check list", () => {
       "podman",
       "dovi_tool",
       "hdr10plus_tool",
+      "/dev/kvm (e2e and test:platform)",
     ]);
     expect(CHECKS.find((c) => c.label === "podman")?.required).toBe(true);
+    expect(CHECKS.find((c) => c.label.startsWith("/dev/kvm"))?.required).toBe(true);
   });
 });

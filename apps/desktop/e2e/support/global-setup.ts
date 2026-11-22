@@ -4,6 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
+import { bundledMpv } from "@harakiri/mpv";
 import { z } from "zod";
 
 import { CATALOG } from "../../../../packages/harness/src/corpus/catalog";
@@ -56,6 +57,13 @@ const jellyfinSh = (command: string) => {
   run(`jellyfin.sh ${command}`, path.resolve(REPO, "dev/jellyfin/jellyfin.sh"), [command]);
 };
 
+/**
+ * Each request to the e2e Jellyfin gets this long. A server that accepts the connection and never
+ * answers would otherwise hang the setup with no message. A busy scan still answers in well under
+ * a second.
+ */
+const REQUEST_TIMEOUT_MS = 10_000;
+
 const AUTH =
   'MediaBrowser Client="harakiri-e2e-setup", Device="setup", DeviceId="harakiri-e2e-setup", Version="0"';
 
@@ -66,6 +74,7 @@ const get = async <Schema extends z.ZodType>(
 ): Promise<z.infer<Schema>> => {
   const response = await fetch(new URL(route, SERVER), {
     headers: { Authorization: `${AUTH}, Token="${token}"` },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 
   if (!response.ok) {
@@ -84,6 +93,8 @@ const waitForScan = async (expected: number, timeoutMs = 180_000): Promise<void>
       Username: E2E_CONTAINER_ENV.JELLYFIN_DEV_USER,
       Pw: E2E_CONTAINER_ENV.JELLYFIN_DEV_PASSWORD,
     }),
+    // Signing in hashes the password server-side, the slowest call here; it gets twice as long.
+    signal: AbortSignal.timeout(2 * REQUEST_TIMEOUT_MS),
   });
 
   if (!signIn.ok) {
@@ -172,8 +183,12 @@ const expectPrepared = async (): Promise<void> => {
  * from empty state. FATE samples are not fetched here (that is network); `mise run e2e` fetches
  * them first, and without them the TrueHD Atmos test fails naming `mise run media:fetch-fate`.
  * In the dev/vm guest it starts nothing, and only checks what the host half prepared.
+ * First of all, every spec plays with harakiri's mpv build, so a missing one fails the run at
+ * once, naming `mise run mpv:build`, before anything starts.
  */
 export default async function globalSetup(): Promise<void> {
+  bundledMpv();
+
   if (REAL_SERVER !== undefined && REAL_SERVER !== "") {
     return;
   }

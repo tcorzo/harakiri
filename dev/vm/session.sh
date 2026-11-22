@@ -21,6 +21,8 @@ exec dbus-run-session -- bash -c '
   stop_audio() {
     kill $(jobs -p) 2>/dev/null
     wait
+    # D-Bus activation mounts the document portal on $XDG_RUNTIME_DIR/doc (FUSE), which rm cannot remove.
+    fusermount3 -uz "$XDG_RUNTIME_DIR/doc" 2>/dev/null || true
     rm -rf "$XDG_RUNTIME_DIR"
   }
   # set-default-sink answers "Not supported" until WirePlumber has created the default metadata, so

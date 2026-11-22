@@ -1,6 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
 
 import { joinFacts } from "@harakiri/jellyfin";
+import { bundledMpv } from "@harakiri/mpv";
 
 import {
   expect,
@@ -193,6 +194,7 @@ test("a second play replaces the first: one mpv, and the first reports stopped",
   const now = await probeUntil(page, (p) => p.running && (p.timePos ?? 0) >= 61);
   expect(now.path).toContain(`/Videos/${second.id}/stream`);
   expect(mpvProcesses(userDataDir)).toHaveLength(1);
+  expect(mpvProcesses(userDataDir)[0]?.binary).toBe(bundledMpv());
 
   const stoppedFirst = await playerEventUntil(
     page,

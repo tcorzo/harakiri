@@ -12,7 +12,7 @@ import { promisify, inspect } from "node:util";
 
 import { ItemId } from "@harakiri/jellyfin";
 import type { BaseItemDto, PlaybackInfoResponse } from "@harakiri/jellyfin/generated";
-import { PRD_PASSTHROUGH } from "@harakiri/mpv";
+import { bundledMpv, PRD_PASSTHROUGH } from "@harakiri/mpv";
 import { configure, defaultTextFormatter, reset as resetLogging } from "@logtape/logtape";
 import type { LogRecord } from "@logtape/logtape";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -344,6 +344,7 @@ const play = async (
       extraArgs: ["--vo=null", "--ao=null"],
       audioOutput: { kind: "known", name: "test receiver", bitstream: [...PRD_PASSTHROUGH] },
       hdrSignalling: "colour-management",
+      mpvBinary: bundledMpv(),
     }
   );
 
@@ -441,6 +442,13 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
     expect(cmdline).toContain("--config-dir=");
     expect(cmdline).not.toContain(TOKEN);
     expect(cmdline).not.toContain("ApiKey");
+  });
+
+  it("the mpv that plays is harakiri's build", async () => {
+    const { playback } = await play(longClip, 30);
+    await until("playing", playback, (p) => p.running);
+
+    expect(mpvChild().cmdline.split("\0")[0]).toBe(bundledMpv());
   });
 
   it("the token reaches mpv over IPC: every stream and sidecar request carries it", async () => {

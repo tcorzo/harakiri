@@ -7,6 +7,7 @@ import { app, BrowserWindow, session } from "electron";
 
 import { appVersion } from "../shared/identity";
 import { env, isE2E } from "./env";
+import { softwareCompositing } from "./gpu";
 import { hostCapabilities, hostFacts } from "./host/index";
 import { registerIpc } from "./ipc";
 import { launcher } from "./launcher";
@@ -38,7 +39,7 @@ const isAppUrl = appUrlCheck(appUrl);
 // Waiting for ready-to-show instead hangs where Chromium composites in software (no GPU, or a
 // GPU process that will not start): it never paints a window that was never shown, so the
 // window stayed hidden and the renderer got no animation frames.
-const createWindow = (): void => {
+const createWindow = (): BrowserWindow => {
   const window = new BrowserWindow({
     width: 1920,
     height: 1080,
@@ -57,6 +58,8 @@ const createWindow = (): void => {
     void player.stop();
   });
   void window.loadURL(appUrl);
+
+  return window;
 };
 
 const focusExistingWindow = (): void => {
@@ -103,6 +106,24 @@ const logProcessTrouble = (): void => {
         lineNumber,
       });
     });
+  });
+};
+
+/**
+ * Warns once, when the first page has loaded, if Chromium composites in software. The window shows
+ * either way, so a GPU process that fell back is otherwise silent. The status is read after the
+ * load because Chromium fills it in only once the GPU process has reported.
+ */
+const warnOnSoftwareCompositing = (window: BrowserWindow): void => {
+  window.webContents.once("did-finish-load", () => {
+    const status = softwareCompositing(app.getGPUFeatureStatus());
+
+    if (status !== null) {
+      logger.warn(
+        "Chromium composites in software (gpu_compositing {status}): the UI may stutter",
+        { status }
+      );
+    }
   });
 };
 
@@ -176,7 +197,7 @@ const main = async (): Promise<void> => {
   started.updates = updates;
   installContentSecurityPolicy(session.defaultSession, isAppUrl, contentSecurityPolicy(appUrl));
   registerIpc(isAppUrl, updates);
-  createWindow();
+  warnOnSoftwareCompositing(createWindow());
   // The keyring probe can be slow or wait on a password prompt; it must never hold up the window.
   void logHost();
   void launcher.healAtStart();

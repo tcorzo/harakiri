@@ -8,6 +8,7 @@ import { setTimeout } from "node:timers/promises";
 import { ItemId, joinFacts } from "@harakiri/jellyfin";
 import { corpusEntry, loadCorpus, matchCorpus } from "@harakiri/jellyfin/corpus";
 import type { CorpusMatch } from "@harakiri/jellyfin/corpus";
+import { bundledMpv } from "@harakiri/mpv";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
@@ -31,6 +32,7 @@ const { play, probe, stop } = createPlayer({
   extraArgs: () => ["--vo=null", "--ao=null"],
   audioOutput: readAudioOutput,
   hdrSignalling: async () => await Promise.resolve("colour-management" as const),
+  mpvBinary: bundledMpv,
   preparePlayback,
   startPlayback,
 });

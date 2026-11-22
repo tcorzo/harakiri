@@ -13,6 +13,8 @@ export const env = createEnv({
     APPDIR: z.string().min(1).optional(),
     /** The AppImage path the launcher shortcut points at; honoured only with HARAKIRI_E2E=1. */
     HARAKIRI_E2E_LAUNCH_TARGET: z.string().min(1).optional(),
+    /** A developer's mpv instead of harakiri's build, e.g. to try mpv master. e2e never passes it. */
+    HARAKIRI_MPV: z.string().min(1).optional(),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

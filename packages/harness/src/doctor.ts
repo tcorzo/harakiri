@@ -63,6 +63,17 @@ export const listsAll =
       : { status: "missing", detail: `missing ${absent.join(", ")}` };
   };
 
+/** The probe tests a condition: exit 0 passes, any other exit fails with `why`. */
+export const succeeds =
+  (ok: string, why: string): Check["judge"] =>
+  (run) => {
+    if (run.kind !== "exited") {
+      return notRunnable(run);
+    }
+
+    return run.code === 0 ? { status: "ok", detail: ok } : { status: "missing", detail: why };
+  };
+
 const ffmpegRow = (name: string) => new RegExp(`^\\s*\\S+\\s+${name}\\s`, "mu");
 
 export const CHECKS: readonly Check[] = [
@@ -120,6 +131,16 @@ export const CHECKS: readonly Check[] = [
     required: true,
     probe: ["hdr10plus_tool", "--version"],
     judge: versionAtLeast(/hdr10plus_tool /u, null),
+  },
+  {
+    // The dev/vm guest is a KVM microVM; without KVM, e2e and test:platform fail only after the build.
+    label: "/dev/kvm (e2e and test:platform)",
+    required: true,
+    probe: ["sh", "-c", 'test -r "$1" && test -w "$1"', "kvm", "/dev/kvm"],
+    judge: succeeds(
+      "read-write",
+      "missing or not read-write for this user: add yourself to the kvm group (sudo usermod -aG kvm $USER, then log in again)"
+    ),
   },
 ];
 

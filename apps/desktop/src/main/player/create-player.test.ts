@@ -54,6 +54,7 @@ const wiring: PlayerWiring = {
     detail: "test",
   }),
   hdrSignalling: async () => await Promise.resolve("colour-management" as const),
+  mpvBinary: () => "/b/mpv",
   preparePlayback,
   startPlayback,
 };
@@ -117,6 +118,28 @@ describe("the player", () => {
     await player.play({ itemId }, send);
 
     expect(startPlayback.mock.calls[0]?.[2]).toMatchObject({ hdrSignalling: "swapchain-formats" });
+  });
+
+  it("play hands the wiring's mpv binary to the playback it starts", async () => {
+    await play({ itemId }, send);
+
+    expect(startPlayback.mock.calls[0]?.[2]).toMatchObject({ mpvBinary: "/b/mpv" });
+  });
+
+  it("a missing mpv build fails the play that needs it, not the handoff before it", async () => {
+    const missing =
+      "harakiri's mpv build 0123456789abcdef is missing (/b): run `mise run mpv:build`";
+
+    const player = createPlayer({
+      ...wiring,
+      mpvBinary: () => {
+        throw new Error(missing);
+      },
+    });
+
+    await expect(player.prepare({ itemId })).resolves.toMatchObject({ unreadable: false });
+    await expect(player.play({ itemId }, send)).rejects.toThrow(missing);
+    expect(startPlayback).not.toHaveBeenCalled();
   });
 
   it("both the player and the renderer identify as one client with the main device id", async () => {
