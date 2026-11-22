@@ -419,14 +419,49 @@ const run = async (mpv: MpvClient, context: RunContext): Promise<Playback> => {
     SubtitleStreamIndex: resolution.subtitleStreamIndex ?? null,
   });
 
+  // Jellyfin keeps the resume point of whichever report it handles last, and nothing guarantees
+  // it handles them in the order they were sent. Each report waits for the one before it to be
+  // answered, so a progress report still on its way when playback stops cannot land after the
+  // stop report and roll the resume point back.
+  let reports = Promise.resolve();
+
+  const inOrder = async <T>(what: string, call: () => Promise<T>): Promise<void> => {
+    const previous = reports;
+
+    reports = (async () => {
+      await previous;
+      await report(what, call);
+    })();
+    await reports;
+  };
+
+  // A slow server must not build a queue: at most one progress report waits behind the one on the
+  // wire, and a newer one replaces its body. Finishing drops it, so the stop report waits for one
+  // request at most.
+  let waitingProgress: ReturnType<typeof progressBody> | undefined;
+
   const reportProgress = () => {
-    if (started) {
-      void report(
-        "progress",
-        async () =>
-          await reportPlaybackProgress({ client, throwOnError: true, body: progressBody() })
-      );
+    // Only after the start report, which goes first; once finishing has begun the stop report is
+    // the last word, so a pause or seek mpv shows while it quits reports nothing.
+    if (!started || finished) {
+      return;
     }
+
+    const queued = waitingProgress !== undefined;
+    waitingProgress = progressBody();
+
+    if (queued) {
+      return;
+    }
+
+    void inOrder("progress", async () => {
+      const body = waitingProgress;
+      waitingProgress = undefined;
+
+      if (body !== undefined) {
+        await reportPlaybackProgress({ client, throwOnError: true, body });
+      }
+    });
   };
 
   // oxlint-disable-next-line eslint/prefer-const -- the closures below read it before the watcher exists; it is assigned once mpv's properties are observed
@@ -537,7 +572,12 @@ const run = async (mpv: MpvClient, context: RunContext): Promise<Playback> => {
       .with({ type: "pause" }, async ({ paused }) => {
         await mpv.setProperty("pause", paused);
       })
-      .with({ type: "seek" }, async ({ seconds }) => await mpv.command("seek", seconds, "relative"))
+      // `exact`: mpv's relative seeks snap to a keyframe by default, so a skip could land as far
+      // as a whole keyframe interval (often 10 s) from where it says.
+      .with(
+        { type: "seek" },
+        async ({ seconds }) => await mpv.command("seek", seconds, "relative+exact")
+      )
       .with({ type: "track" }, async ({ property, id }) => {
         if (property === "aid") {
           await beforeAudioTrack(id);
@@ -593,8 +633,10 @@ const run = async (mpv: MpvClient, context: RunContext): Promise<Playback> => {
         outcome.phase === "ended" && duration !== undefined ? duration : position
       );
 
+      waitingProgress = undefined;
+
       const reported = started
-        ? report(
+        ? inOrder(
             "stop",
             async () =>
               await reportPlaybackStopped({
@@ -756,17 +798,19 @@ const run = async (mpv: MpvClient, context: RunContext): Promise<Playback> => {
   await mpv.command("request_log_messages", "warn");
   await mpv.command("loadfile", resolution.url);
   await loaded;
+  // The start report is queued in the same step that lets progress be reported, so it goes first;
+  // a slow sidecar below must not let a progress report overtake it.
   started = true;
+
+  const startReported = inOrder(
+    "start",
+    async () => await reportPlaybackStart({ client, throwOnError: true, body: progressBody() })
+  );
+
   watch.start();
 
   await addSidecarSubtitles(mpv, resolution);
-
-  if (!finished) {
-    await report(
-      "start",
-      async () => await reportPlaybackStart({ client, throwOnError: true, body: progressBody() })
-    );
-  }
+  await startReported;
 
   emit();
   scheduleHide();

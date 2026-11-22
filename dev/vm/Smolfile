@@ -2,8 +2,10 @@
 # the mounts (absolute host paths) and the host loopback grant (SMOLVM_ALLOW_HOST_LOOPBACK=1 at start).
 # The image here is a placeholder. guest.sh passes --image "$GUEST_IMAGE" from versions.env, and CLI flags win.
 image = "fedora:44"
+# Measured on 2026-11-22: the guest's working set is 0.87-1.14 GB, and at 2048 MiB the e2e and the
+# platform tier pass with over 1 GB still available. Two vCPUs ran slower and flaked once.
 cpus = 4
-memory = 4096
+memory = 2048
 net = true
 cmd = ["sleep", "infinity"]
 stop_timeout = 10

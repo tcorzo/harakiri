@@ -6,8 +6,10 @@ import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer } from "node:http";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
+import { createConnection } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { createInterface } from "node:readline";
 import { setTimeout } from "node:timers/promises";
 import { promisify, inspect } from "node:util";
 
@@ -64,6 +66,11 @@ const serveFile = (req: IncomingMessage, res: ServerResponse, bytes: Buffer): vo
 
 const TcpAddress = z.object({ port: z.number() });
 
+const MpvMessage = z.object({ request_id: z.number().optional(), event: z.string().optional() });
+
+/** The one field of a start, progress or stop report the fake server keeps. */
+const PlaybackReport = z.object({ PositionTicks: z.number() });
+
 // Test-only self-signed pair for 127.0.0.1 (the one packages/mpv's TLS test serves), so no key is
 // generated or committed twice.
 const TLS_DIR = path.join(import.meta.dirname, "../../../../../packages/mpv/src/fixtures/tls");
@@ -77,8 +84,19 @@ class FakeJellyfin {
   runTimeTicks = 0;
   /** How long the stop report waits before the server answers it. */
   stopDelayMs = 0;
+  /** When the stop report reached the server. */
+  stopArrivedAt: number | undefined;
   /** When the server finished answering the stop report. */
   stopAnsweredAt: number | undefined;
+  /** How long a progress report waits before the server stores it and answers. */
+  progressDelayMs = 0;
+  /**
+   * The playback reports in the order the server stored them. Jellyfin keeps the resume point of
+   * whichever report it handles last, so the last entry is the resume point the owner returns to.
+   */
+  readonly stored: { readonly route: string; readonly positionTicks: number }[] = [];
+  /** How long the sidecar subtitle request waits before the server answers it. */
+  sidecarDelayMs = 0;
   /** The sidecar subtitle request is held open and never answered. */
   stallSidecar = false;
   /** The item request (the overlay's title) is held open and never answered. */
@@ -107,6 +125,33 @@ class FakeJellyfin {
     return this.requests.filter((r) => r.method === "POST" && r.url === route).map((r) => r.body);
   }
 
+  /**
+   * Resolves once every playback report the server received is stored and none arrived for
+   * 500 ms, so a report sent late has had its chance to land.
+   */
+  async settled(): Promise<void> {
+    // A report answered 401 is never stored, so only authorized ones count.
+    const reports = () =>
+      this.requests.filter((r) => r.authorized && r.url.startsWith("/Sessions/Playing"));
+
+    const deadline = Date.now() + 5000;
+    let seen = -1;
+
+    while (seen !== reports().length || this.stored.length !== seen) {
+      if (Date.now() > deadline) {
+        throw new Error(`${reports().length} reports received, ${this.stored.length} stored`);
+      }
+
+      seen = reports().length;
+      // oxlint-disable-next-line eslint/no-await-in-loop -- polling the fake server
+      await setTimeout(500);
+    }
+  }
+
+  private store(route: string, positionTicks: number): void {
+    this.stored.push({ route, positionTicks });
+  }
+
   private async handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
     req.setEncoding("utf-8");
     let text = "";
@@ -117,12 +162,8 @@ class FakeJellyfin {
 
     const url = req.url ?? "";
     const authorized = (req.headers.authorization ?? "").includes(`Token="${TOKEN}"`);
-    this.requests.push({
-      method: req.method ?? "",
-      url,
-      authorized,
-      body: text ? z.json().parse(JSON.parse(text)) : undefined,
-    });
+    const body = text ? z.json().parse(JSON.parse(text)) : undefined;
+    this.requests.push({ method: req.method ?? "", url, authorized, body });
 
     if (!authorized) {
       res.writeHead(401).end();
@@ -149,14 +190,21 @@ class FakeJellyfin {
     }
 
     if (route === "/Sessions/Playing/Stopped") {
+      this.stopArrivedAt = Date.now();
       await setTimeout(this.stopDelayMs);
+      this.store(route, PlaybackReport.parse(body).PositionTicks);
       this.stopAnsweredAt = Date.now();
       res.writeHead(204).end();
 
       return;
     }
 
+    if (route === "/Sessions/Playing/Progress") {
+      await setTimeout(this.progressDelayMs);
+    }
+
     if (route?.startsWith("/Sessions/Playing") === true) {
+      this.store(route, PlaybackReport.parse(body).PositionTicks);
       res.writeHead(204).end();
 
       return;
@@ -167,6 +215,7 @@ class FakeJellyfin {
     }
 
     if (route === SUBTITLE_PATH) {
+      await setTimeout(this.sidecarDelayMs);
       res
         .writeHead(200, { "Content-Type": "application/x-subrip" })
         .end("1\n00:00:00,000 --> 00:00:30,000\nSidecar\n");
@@ -235,6 +284,45 @@ const mpvChild = () => {
   throw new Error("no mpv child process");
 };
 
+/**
+ * Presses `key` in the running mpv as a second IPC client, so the press goes through the app's
+ * input.conf and `script-message harakiri <action>`, as a remote's does. With `untilEvent`, it
+ * returns once mpv sends that event to every client after the press, such as the
+ * `playback-restart` that ends a seek.
+ */
+const pressKey = async (key: string, untilEvent?: string): Promise<void> => {
+  const socketPath = /--input-ipc-server=(?<path>[^\0]+)/u.exec(mpvChild().cmdline)?.groups?.path;
+
+  if (socketPath === undefined) {
+    throw new Error("mpv has no --input-ipc-server");
+  }
+
+  const socket = createConnection(socketPath);
+  const requestId = 7;
+  let answered = false;
+
+  try {
+    await once(socket, "connect");
+    socket.write(`${JSON.stringify({ command: ["keypress", key], request_id: requestId })}\n`);
+
+    // mpv may send an event to every client first; the reply is the line with our request id.
+    for await (const line of createInterface({ input: socket })) {
+      const message = MpvMessage.safeParse(JSON.parse(line)).data;
+      answered ||= message?.request_id === requestId;
+
+      if (answered && (untilEvent === undefined || message?.event === untilEvent)) {
+        return;
+      }
+    }
+
+    throw new Error(
+      `mpv closed the socket before ${answered ? untilEvent : "answering"} keypress ${key}`
+    );
+  } finally {
+    socket.destroy();
+  }
+};
+
 /** Polls the playback every 100 ms until `check` holds, and fails with the last probe after 20 s. */
 const until = async (
   what: string,
@@ -265,7 +353,8 @@ const until = async (
 // oxlint-disable-next-line typescript/strict-void-return -- execFile has no promise form; promisify types it through Node's own __promisify__ overload
 const run = promisify(execFile);
 
-const synthesize = async (out: string, seconds: number) =>
+/** A 10 fps clip with a tone; `keyframeEvery` seconds apart, when given, are its only keyframes. */
+const synthesize = async (out: string, seconds: number, keyframeEvery?: number) =>
   await run("ffmpeg", [
     "-v",
     "error",
@@ -279,6 +368,9 @@ const synthesize = async (out: string, seconds: number) =>
     `sine=duration=${seconds}`,
     "-c:v",
     "mpeg4",
+    ...(keyframeEvery === undefined
+      ? []
+      : ["-g", String(keyframeEvery * 10), "-sc_threshold", "0"]),
     "-c:a",
     "flac",
     "-shortest",
@@ -288,6 +380,10 @@ const synthesize = async (out: string, seconds: number) =>
 let dir: string;
 let shortClip: string;
 let longClip: string;
+
+/** Keyframes 10 s apart, as many encodes have: a seek that snaps to one is off by seconds. */
+let sparseKeyframesClip: string;
+
 let jellyfin: FakeJellyfin;
 let current: Playback | undefined;
 const records: LogRecord[] = [];
@@ -433,7 +529,12 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
     dir = await mkdtemp(path.join(tmpdir(), "harakiri-playback-test-"));
     shortClip = path.join(dir, "short.mkv");
     longClip = path.join(dir, "long.mkv");
-    await Promise.all([synthesize(shortClip, 2), synthesize(longClip, 30)]);
+    sparseKeyframesClip = path.join(dir, "sparse-keyframes.mkv");
+    await Promise.all([
+      synthesize(shortClip, 2),
+      synthesize(longClip, 30),
+      synthesize(sparseKeyframesClip, 50, 10),
+    ]);
     await mkdir(path.join(dir, "hls"));
     // The clip cut the way a Jellyfin transcode serves it: a playlist and its MPEG-TS segments.
     await run("ffmpeg", [
@@ -527,6 +628,96 @@ describe("playback against a fake Jellyfin, with real mpv", () => {
       expect.objectContaining({ ItemId: ITEM, Failed: false }),
     ]);
   });
+
+  it("a progress report still on its way when playback stops is stored before the stop report, so the server keeps the stop's resume point", async () => {
+    const { events, playback } = await play(longClip, 30);
+    await until("playing past 1 s", playback, (p) => (p.timePos ?? 0) > 1);
+    const before = jellyfin.posted("/Sessions/Playing/Progress").length;
+    // Pausing reports progress at once, as a skip does; the server takes 1.5 s to store it.
+    jellyfin.progressDelayMs = 1500;
+    await pressKey("SPACE");
+    await until(
+      "the pause's progress report reaches the server",
+      playback,
+      () => jellyfin.posted("/Sessions/Playing/Progress").length > before
+    );
+
+    await playback.stop();
+    await jellyfin.settled();
+
+    const stopped = events.find((event) => event.phase === "stopped");
+    expect(stopped?.positionTicks).toBeGreaterThan(TICKS);
+    expect(jellyfin.stored.at(-1)).toStrictEqual({
+      route: "/Sessions/Playing/Stopped",
+      positionTicks: stopped?.positionTicks,
+    });
+  }, 30_000);
+
+  it("with a slow server, progress reports wait as one, and Back's stop report goes out once the one on the wire is answered", async () => {
+    const { events, playback } = await play(longClip, 30);
+    await until("playing past 1 s", playback, (p) => (p.timePos ?? 0) > 1);
+    const before = jellyfin.posted("/Sessions/Playing/Progress").length;
+    jellyfin.progressDelayMs = 1500;
+
+    // Three pause changes, each reporting progress, while the server takes 1.5 s per report.
+    /* oxlint-disable eslint/no-await-in-loop -- the presses are ordered */
+    for (const paused of [true, false, true]) {
+      await pressKey("SPACE");
+      await until(`pause ${String(paused)}`, playback, (p) => p.pause === paused);
+    }
+    /* oxlint-enable eslint/no-await-in-loop */
+
+    const stopAt = Date.now();
+    await playback.stop();
+    await jellyfin.settled();
+
+    const stopped = events.find((event) => event.phase === "stopped");
+    // Only the report already on the wire reached the server; the newest waiting one was dropped.
+    expect(jellyfin.posted("/Sessions/Playing/Progress")).toHaveLength(before + 1);
+    expect(jellyfin.stored.at(-1)).toStrictEqual({
+      route: "/Sessions/Playing/Stopped",
+      positionTicks: stopped?.positionTicks,
+    });
+    // The stop waited for that one report at most, not for one per pause.
+    expect((jellyfin.stopArrivedAt ?? Number.NaN) - stopAt).toBeLessThan(2000);
+  }, 30_000);
+
+  it("the start report is the first the server stores, even when mpv reports progress while a slow sidecar loads", async () => {
+    const { playback } = await play(longClip, 30, (server) => {
+      server.sidecarDelayMs = 1500;
+    });
+
+    await until("playing past 1 s", playback, (p) => (p.timePos ?? 0) > 1);
+    // A pause reports progress, so the run has at least one progress report to order.
+    await pressKey("SPACE");
+    await until("paused", playback, (p) => p.pause === true);
+
+    await playback.stop();
+    await jellyfin.settled();
+
+    const routes = jellyfin.stored.map((r) => r.route);
+    expect(routes[0]).toBe("/Sessions/Playing");
+    expect(routes.indexOf("/Sessions/Playing/Progress")).toBeGreaterThanOrEqual(1);
+  }, 30_000);
+
+  it("Right and Left skip exactly 30 s forward and 10 s back while paused, between keyframes 10 s apart", async () => {
+    const { playback } = await play(sparseKeyframesClip, 50);
+    await until("playing past 1 s", playback, (p) => (p.timePos ?? 0) > 1);
+    await pressKey("SPACE");
+    const paused = await until("paused", playback, (p) => p.pause === true);
+    const frozenAt = paused.timePos ?? Number.NaN;
+
+    // Each skip is read once mpv has finished it: while a seek runs, time-pos reads its target.
+    await pressKey("RIGHT", "playback-restart");
+    const forward = await playback.probe();
+    await pressKey("LEFT", "playback-restart");
+    const back = await playback.probe();
+
+    // A keyframe seek would land on 40 and then 30, the keyframes past and before each target.
+    expect(forward.timePos).toBeCloseTo(frozenAt + 30, 0);
+    expect(back.timePos).toBeCloseTo(frozenAt + 20, 0);
+    expect(back.pause).toBe(true);
+  }, 30_000);
 
   it("the token and the ApiKey sidecar never reach mpv's argv", async () => {
     const { playback } = await play(longClip, 30);

@@ -55,6 +55,7 @@ const Reply = z.object({
   request_id: z.number().optional(),
   error: z.string().optional(),
   data: z.json().optional(),
+  event: z.string().optional(),
 });
 
 export type JsonValue =
@@ -66,13 +67,14 @@ export type JsonValue =
   | { [key: string]: JsonValue };
 
 /**
- * Sends one command to the profile's running mpv over its own IPC socket, as a second client.
- * `keypress <KEY>` goes through the app's input.conf, so it exercises the same binding and
- * `script-message harakiri <action>` path a remote or gamepad press does.
+ * Sends `command` to the profile's running mpv over its own IPC socket, as a second client, and
+ * resolves with its reply or, with `untilEvent`, once mpv sends that event to every client after
+ * the reply.
  */
-export const mpvCommand = async (
+const send = async (
   userDataDir: string,
-  ...command: JsonValue[]
+  command: JsonValue[],
+  untilEvent?: string
 ): Promise<JsonValue | undefined> => {
   const [mpv, ...others] = mpvProcesses(userDataDir);
 
@@ -90,23 +92,38 @@ export const mpvCommand = async (
 
     // oxlint-disable-next-line promise/avoid-new -- wraps a line-event stream and a timer, which have no promise form
     const reply = new Promise<JsonValue | undefined>((resolve, reject) => {
+      const awaited = untilEvent === undefined ? "answer" : `send ${untilEvent} after`;
+
       const timer = setTimeout(() => {
-        reject(new Error(`mpv did not answer ${JSON.stringify(command)}`));
+        reject(new Error(`mpv did not ${awaited} ${JSON.stringify(command)}`));
       }, 5000);
+
+      let answer: { readonly data: JsonValue | undefined } | undefined;
 
       createInterface({ input: socket }).on("line", (line) => {
         const message = Reply.safeParse(JSON.parse(line));
 
-        if (!message.success || message.data.request_id !== requestId) {
+        if (!message.success) {
           return;
         }
 
-        clearTimeout(timer);
+        if (message.data.request_id === requestId) {
+          if (message.data.error !== "success") {
+            clearTimeout(timer);
+            reject(new Error(`mpv ${JSON.stringify(command)}: ${message.data.error}`));
 
-        if (message.data.error === "success") {
-          resolve(message.data.data);
-        } else {
-          reject(new Error(`mpv ${JSON.stringify(command)}: ${message.data.error}`));
+            return;
+          }
+
+          answer = { data: message.data.data };
+        }
+
+        if (
+          answer !== undefined &&
+          (untilEvent === undefined || message.data.event === untilEvent)
+        ) {
+          clearTimeout(timer);
+          resolve(answer.data);
         }
       });
     });
@@ -119,8 +136,20 @@ export const mpvCommand = async (
   }
 };
 
-export const pressKey = async (userDataDir: string, key: string) =>
-  await mpvCommand(userDataDir, "keypress", key);
+/** Sends one command to the profile's running mpv as a second client, and returns its reply. */
+export const mpvCommand = async (
+  userDataDir: string,
+  ...command: JsonValue[]
+): Promise<JsonValue | undefined> => await send(userDataDir, command);
+
+/**
+ * Presses `key` in the profile's mpv. `keypress <KEY>` goes through the app's input.conf, so it
+ * exercises the same binding and `script-message harakiri <action>` path a remote or gamepad
+ * press does. With `untilEvent`, it resolves once mpv sends that event after the press, such as
+ * the `playback-restart` that ends a seek.
+ */
+export const pressKey = async (userDataDir: string, key: string, untilEvent?: string) =>
+  await send(userDataDir, ["keypress", key], untilEvent);
 
 /**
  * Lavapipe's Vulkan device UUID. libplacebo skips software devices unless one is named, and the

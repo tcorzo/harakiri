@@ -68,6 +68,7 @@ Phase 7 changes `packages/mpv/src/gamepad.platform.test.ts` and `dev/vm/provisio
 ## Global Constraints
 
 - Every VM starts inside `scripts/bounded.sh vm 5G`, from `guest.sh` only. The guest has 4096 MiB. The slice cap stays 7 GB. In `mise run e2e`, the guest starts only after the host half has finished, and the `exec` that started it stops it.
+  - **Changed on 2026-11-22:** the guest has 2048 MiB and starts under `bounded.sh` with a 3G cap, still with 4 CPUs. Its working set measured 0.87-1.14 GB at every size. At 2048 MiB the guest e2e (49/49) and the platform tier (7/7) passed with over 1 GB still available. Two CPUs ran slower and flaked once.
 - VM state lives in `<repo>/.cache/vm` (gitignored), never in `/tmp`, which is a RAM-backed tmpfs on the dev box.
 - vitest always gets `--maxWorkers=2`, Playwright `--workers=1`. Tests never skip (`scripts/lint-skips.ts`). A platform test outside the guest throws and names `mise run test:platform`.
 - Nothing committed holds a host path, an owner domain or a library title (`scripts/lint-private.ts`). `guest.sh` computes host paths at run time.
