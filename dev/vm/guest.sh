@@ -111,6 +111,7 @@ down() {
 # path the guest sees.
 guest_path() {
   local var="$1" abs
+  [ -n "${!var}" ] || die "$var is set but empty. Unset it, or point it at a directory inside this checkout."
   abs="$(realpath -m -- "${!var}")"
   case "$abs" in
     "$REPO") echo /workspace ;;
