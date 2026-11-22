@@ -18,6 +18,8 @@ mise trust && mise run setup
 
 `setup` installs deps from the lockfile, registers hk hooks globally and verifies them, builds harakiri's mpv once (`mise run mpv:build`, cached in `.cache/mpv/<recipe-hash>`), and then runs `mise run doctor` to check the harness tools. Fedora system packages are outside mise: `weston` (>= 15), `kwin`, `mesa-vulkan-drivers`, `podman`, and the RPM Fusion `ffmpeg`, for the harness (Fedora's `ffmpeg-free` has no HEVC decoder).
 
+To run the app on your own mpv (a build of mpv master, say), set `HARAKIRI_MPV` to its path in `.env`; tests and e2e always play harakiri's build.
+
 `mise tasks` lists every command. `mise run check` is what CI gates on. `dev/jellyfin/COMMANDS.txt` starts the local dev Jellyfin on the generated corpus (`mise run media:gen`), or on your own library with `JELLYFIN_DEV_LIBRARY=own` in `.env`.
 
 ## Bound every heavy process

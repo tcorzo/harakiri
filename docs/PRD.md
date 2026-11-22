@@ -165,7 +165,7 @@ Everything committed runs and validates from a fresh clone on any machine: no NA
 
 ## Distribution and updates
 
-- harakiri ships as one Linux x64 AppImage, attached to each GitHub release of `tcorzo/harakiri`. Like a source checkout, it needs the system mpv (>= 0.41) on `PATH`.
+- harakiri ships as one Linux x64 AppImage, attached to each GitHub release of `tcorzo/harakiri`. It needs the system mpv (>= 0.41) on `PATH`; a source checkout builds its own mpv (`mise run mpv:build`).
 - release-please cuts releases: Conventional Commit titles on `main` keep a release PR open, merging it tags `vX.Y.Z`, and `.github/workflows/release.yml` builds `mise run package` and uploads the AppImage and `latest-linux.yml`.
 - A running AppImage checks the latest release at startup and every 6 hours (a failed check is retried after 15 minutes), downloads only while nothing plays (a download in progress stops within a minute of playback starting and resumes after it), and installs on the next quit after mpv has stopped. Settings shows the state and offers "Restart to update". The download is verified by the sha512 in `latest-linux.yml` only.
 - Not shipped: Flatpak, Snap, rpm, deb or pacman packages; a bundled mpv (issue #2); code or GPG signing; beta channels, rollback and staged rollouts.
