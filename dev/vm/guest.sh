@@ -28,13 +28,14 @@ usage() { die "usage: dev/vm/guest.sh up | down | exec [--cwd <repo-relative dir
 KVM="${HARAKIRI_KVM_DEVICE:-/dev/kvm}"
 [ -r "$KVM" ] && [ -w "$KVM" ] || die "$KVM is missing or not read-write for this user. The guest needs KVM: add yourself to the kvm group, or on a GitHub runner install the udev rule that makes /dev/kvm 0666."
 
-ID="$(printf '%s' "$REPO" | sha256sum | cut -c1-8)"
+BUN_DIR="$(cd "$REPO" && mise where bun)"
+NODE_DIR="$(cd "$REPO" && mise where node)"
+# The checkout id, which also names this checkout's e2e Jellyfin (packages/harness/src/checkout.ts).
+ID="$("$BUN_DIR/bin/bun" "$REPO/packages/harness/src/checkout-cli.ts" id)"
 NAME="harakiri-guest-$ID"
 SCOPE="vm-$ID"
 STATE="$REPO/.cache/vm"
 SMOLVM="$STATE/smolvm-$SMOLVM_VERSION-linux-x86_64/smolvm"
-BUN_DIR="$(cd "$REPO" && mise where bun)"
-NODE_DIR="$(cd "$REPO" && mise where node)"
 
 sv() { "$SMOLVM" --state-dir "$STATE" "$@"; }
 
@@ -142,8 +143,10 @@ cmd_exec() {
   esac
   [ -d "$REPO/$cwd" ] || die "--cwd $cwd is not a directory in the repo"
 
-  local pass=() var
-  for var in CI HARAKIRI_E2E_SERVER HARAKIRI_E2E_USER HARAKIRI_E2E_DISCOVERY_ADDRESS; do
+  # The repo is /workspace in the guest, so the guest learns which e2e Jellyfin is this
+  # checkout's from the host's checkout id.
+  local pass=(-e "HARAKIRI_CHECKOUT_ID=$ID") var
+  for var in CI HARAKIRI_E2E_SERVER HARAKIRI_E2E_USER HARAKIRI_E2E_DISCOVERY_ADDRESS HARAKIRI_E2E_PORT; do
     [ -n "${!var+set}" ] && pass+=(-e "$var=${!var}")
   done
   for var in HARAKIRI_CORPUS_DIR HARAKIRI_FATE_DIR; do

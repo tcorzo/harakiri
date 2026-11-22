@@ -152,8 +152,20 @@ dir = "{{config_root}}"
 run = "for s in 256 512; do magick -background none RSVG:docs/assets/readme/icon.svg -resize ${s}x${s} -strip PNG32:apps/desktop/build/icons/${s}x${s}.png; done"
 
 [tasks."e2e:down"]
-description = "Stop and remove the e2e Jellyfin container (harakiri-jellyfin-e2e), keeping its scan in .cache/jellyfin-e2e"
-run = "JELLYFIN_DEV_NAME=harakiri-jellyfin-e2e JELLYFIN_DEV_STATE=.cache/jellyfin-e2e dev/jellyfin/jellyfin.sh down"
+description = "Stop and remove this checkout's e2e Jellyfin container (harakiri-jellyfin-e2e-<checkout id>), keeping its scan in .cache/jellyfin-e2e"
+shell = "bash -euo pipefail -c"
+# Also removes the one shared harakiri-jellyfin-e2e that checkouts ran before each had its own. Its
+# state stays in whichever checkout's .cache/jellyfin-e2e made it. The name is resolved on its own
+# line, so a failure stops the task instead of passing an empty name, which jellyfin.sh would read
+# as the dev server's.
+run = """
+name="$(bun packages/harness/src/checkout-cli.ts e2e-name)"
+JELLYFIN_DEV_NAME="$name" JELLYFIN_DEV_STATE=.cache/jellyfin-e2e dev/jellyfin/jellyfin.sh down
+if podman container exists harakiri-jellyfin-e2e; then
+  podman stop -t 20 harakiri-jellyfin-e2e >/dev/null && podman rm harakiri-jellyfin-e2e >/dev/null
+  echo "harakiri-jellyfin-e2e (the shared e2e server of older checkouts) removed"
+fi
+"""
 
 [tasks."lint:private"]
 description = "Fail when a file holds workstation paths, owner domains or library titles (.private-denylist)"

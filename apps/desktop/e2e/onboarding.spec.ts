@@ -99,8 +99,8 @@ interface AddressCase {
   readonly message: (address: string) => string;
 }
 
-// The app's UDP probe to 127.0.0.3 does not reach the host from the smolvm guest (checked
-// 2026-11-21, smolvm 1.35.5), so these tests run on the host.
+// The app's UDP probe to the e2e server's loopback discovery address does not reach the host from
+// the smolvm guest (checked 2026-11-21, smolvm 1.35.5), so these tests run on the host.
 test.describe("with the server answering discovery on loopback", { tag: "@host" }, () => {
   // A unicast probe to the server's own loopback address keeps LAN servers out of the run (and
   // broadcast never reaches a rootless container).

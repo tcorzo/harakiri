@@ -1,6 +1,8 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { once } from "node:events";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { createServer } from "node:net";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
@@ -11,7 +13,7 @@ import { CATALOG } from "../../../../packages/harness/src/corpus/catalog";
 import { fateState } from "../../../../packages/harness/src/corpus/fate";
 import { MANIFEST, readManifest } from "../../../../packages/harness/src/corpus/generate";
 import { inGuest } from "../../../../packages/harness/src/guest";
-import { CORPUS_DIR, E2E_CONTAINER_ENV, REAL_SERVER, REPO } from "./backend";
+import { CORPUS_DIR, E2E_CONTAINER_ENV, E2E_SERVER, REAL_SERVER, REPO } from "./backend";
 
 const FATE_DIR = process.env.HARAKIRI_FATE_DIR ?? path.resolve(REPO, ".cache/fate");
 const STATE = E2E_CONTAINER_ENV.JELLYFIN_DEV_STATE;
@@ -176,6 +178,82 @@ const expectPrepared = async (): Promise<void> => {
   }
 };
 
+const Inspected = z.array(
+  z.object({
+    State: z.object({ Running: z.boolean() }),
+    HostConfig: z.object({
+      PortBindings: z.record(
+        z.string(),
+        z.array(z.object({ HostIp: z.string(), HostPort: z.string() })).nullable()
+      ),
+    }),
+  })
+);
+
+/** This checkout's e2e container as podman sees it, or undefined when there is none. */
+const inspectContainer = () => {
+  const result = spawnSync("podman", ["container", "inspect", E2E_SERVER.name], {
+    encoding: "utf-8",
+  });
+
+  return result.status === 0 ? Inspected.parse(JSON.parse(result.stdout))[0] : undefined;
+};
+
+/** Whether something on the host already listens on 127.0.0.1:<port>. */
+const portTaken = async (port: number): Promise<boolean> => {
+  const server = createServer();
+
+  try {
+    server.listen(port, "127.0.0.1");
+    // once() rejects when the server emits "error" first.
+    await once(server, "listening");
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "EADDRINUSE") {
+      return true;
+    }
+
+    throw error;
+  }
+
+  server.close();
+  await once(server, "close");
+
+  return false;
+};
+
+/**
+ * Makes sure `jellyfin.sh up` can start this checkout's container where the suite looks for it.
+ * A container whose state dir is gone, or that publishes another port or discovery address (say,
+ * HARAKIRI_E2E_PORT changed), is removed so `up` recreates it. A running one is kept. Otherwise,
+ * when another process holds the port, it fails naming the port and the way out, instead of
+ * podman's bare "address already in use".
+ */
+const claimPort = async (): Promise<void> => {
+  const container = inspectContainer();
+
+  if (container !== undefined) {
+    const http = container.HostConfig.PortBindings["8096/tcp"]?.[0];
+    const discovery = container.HostConfig.PortBindings["7359/udp"]?.[0];
+
+    if (
+      !existsSync(STATE) ||
+      http?.HostPort !== String(E2E_SERVER.port) ||
+      discovery?.HostIp !== E2E_SERVER.discoveryAddress
+    ) {
+      console.log("e2e: the e2e Jellyfin container does not match this checkout; recreating it");
+      jellyfinSh("down");
+    } else if (container.State.Running) {
+      return;
+    }
+  }
+
+  if (await portTaken(E2E_SERVER.port)) {
+    throw new Error(
+      `Port ${E2E_SERVER.port} on 127.0.0.1, where this checkout's e2e Jellyfin (${E2E_SERVER.name}) listens, is held by another process. Its port derives from the checkout's path. Stop that process (\`ss -ltnp 'sport = :${E2E_SERVER.port}'\` names it), or set HARAKIRI_E2E_PORT to a free port.`
+    );
+  }
+};
+
 /**
  * Before any test: generates the corpus when it is missing or older than the catalog, then makes
  * sure the e2e Jellyfin container is up, bootstrapped and done scanning it. A running container
@@ -229,6 +307,7 @@ export default async function globalSetup(): Promise<void> {
     jellyfinSh("reset");
   }
 
+  await claimPort();
   jellyfinSh("up");
   run("Bootstrapping the e2e Jellyfin", "bun", ["dev/jellyfin/bootstrap.ts"]);
   await waitForScan(readManifest(CORPUS_DIR).entries.length);

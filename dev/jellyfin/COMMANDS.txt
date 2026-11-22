@@ -57,6 +57,17 @@ dev/jellyfin/jellyfin.sh reset
 dev/jellyfin/jellyfin.sh status
 dev/jellyfin/jellyfin.sh logs 200
 
+# the e2e server: every checkout runs its own, which `mise run e2e` starts and leaves running.
+#   Name harakiri-jellyfin-e2e-<checkout id>, state .cache/jellyfin-e2e, port 20000-29999 on
+#   127.0.0.1, discovery on a 127.x.y.z of its own, all derived from the checkout's path:
+bun packages/harness/src/checkout-cli.ts e2e-name
+bun packages/harness/src/checkout-cli.ts e2e-port
+bun packages/harness/src/checkout-cli.ts e2e-discovery
+# its status
+name="$(bun packages/harness/src/checkout-cli.ts e2e-name)" && JELLYFIN_DEV_NAME="$name" dev/jellyfin/jellyfin.sh status
+# stop and remove it, keeping its scan (also removes the shared harakiri-jellyfin-e2e of older checkouts)
+mise run e2e:down
+
 # a second server alongside (another name, port and state dir), e.g. for a throwaway check
 JELLYFIN_DEV_NAME=jf-check JELLYFIN_DEV_PORT=8196 JELLYFIN_DEV_DISCOVERY_PORT=7459 \
   JELLYFIN_DEV_STATE=/tmp/jf-check JELLYFIN_DEV_MEMORY=2g dev/jellyfin/jellyfin.sh up

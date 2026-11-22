@@ -17,8 +17,8 @@ DIGEST=sha256:7da5184caa38c553f219f6772476540081f392a68049e2b68c923f6daf877f8e
 IMAGE="${JELLYFIN_IMAGE:-ghcr.io/jellyfin/jellyfin:12.4@$DIGEST}"
 PORT="${JELLYFIN_DEV_PORT:-8096}"
 DISCOVERY_PORT="${JELLYFIN_DEV_DISCOVERY_PORT:-7359}"
-# Any loopback address works: the e2e server answers discovery on 127.0.0.3:7359, beside a dev
-# server on 127.0.0.1:7359.
+# Any loopback address works: each checkout's e2e server answers discovery on a 127.x.y.z of its
+# own (packages/harness/src/checkout.ts), beside a dev server on 127.0.0.1:7359.
 DISCOVERY_ADDRESS="${JELLYFIN_DEV_DISCOVERY_ADDRESS:-127.0.0.1}"
 MEMORY="${JELLYFIN_DEV_MEMORY:-3g}"
 LIBRARY="${JELLYFIN_DEV_LIBRARY:-corpus}"
