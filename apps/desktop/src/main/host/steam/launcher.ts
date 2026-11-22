@@ -35,13 +35,17 @@ export const launcherScript = (target: string): string =>
 /** The Desktop Entry string-value escape. */
 const stringValue = (value: string): string => value.replaceAll("\\", "\\\\");
 
-// No `%`: in Exec it starts a field code, so a path with one is quoted and written as `%%`.
-const BARE_EXEC = /^[\w./+,=@-]+$/u;
+/**
+ * The Desktop Entry spec's reserved characters, which only a quoted Exec argument may hold, and
+ * `%`, which starts a field code, so a path with one is quoted and written as `%%`. Anything else,
+ * non-ASCII included, stays bare.
+ */
+const EXEC_RESERVED = /[ \t\n\r"'\\><~|&;$*?#()`%]/u;
 
 const execArgument = (value: string): string =>
-  BARE_EXEC.test(value)
-    ? value
-    : stringValue(`"${value.replaceAll("%", "%%").replaceAll(/[`"$\\]/gu, String.raw`\$&`)}"`);
+  EXEC_RESERVED.test(value)
+    ? stringValue(`"${value.replaceAll("%", "%%").replaceAll(/[`"$\\]/gu, String.raw`\$&`)}"`)
+    : value;
 
 export const desktopEntry = (files: LauncherFiles): string => {
   for (const value of [files.script, files.dir, files.icon]) {

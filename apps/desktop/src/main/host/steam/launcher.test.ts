@@ -90,6 +90,21 @@ describe(desktopEntry, () => {
     );
   });
 
+  it("Exec leaves a non-ASCII path bare", () => {
+    expect(desktopEntry(launcherFiles("/data/película:ß/ドラマ"))).toContain(
+      "Exec=/data/película:ß/ドラマ/steam/harakiri.sh\n"
+    );
+  });
+
+  it.each(["\t", "'", ">", "<", "~", "|", "&", ";", "*", "?", "#", "(", ")"])(
+    "Exec quotes a path with the reserved character %j",
+    (reserved) => {
+      expect(desktopEntry(launcherFiles(`/data/a${reserved}b`))).toContain(
+        `Exec="/data/a${reserved}b/steam/harakiri.sh"\n`
+      );
+    }
+  );
+
   it("Exec quotes a path with a space", () => {
     expect(desktopEntry(launcherFiles("/data/my harakiri"))).toContain(
       'Exec="/data/my harakiri/steam/harakiri.sh"\n'
