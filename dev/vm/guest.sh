@@ -94,8 +94,10 @@ up() {
   fi
   if [ "$started" = 1 ]; then
     # Once per boot: this call started the guest, fresh or already provisioned, and it is
-    # provisioned now. Root steps that every boot needs (the boot step, guest daemons) go here.
-    :
+    # provisioned now (the pad daemon needs python3-evdev). Root steps that every boot needs go here.
+    sv machine exec --name "$NAME" -- bash /workspace/dev/vm/boot.sh
+    sv machine exec --name "$NAME" -- test -S /run/harakiri/pad.sock ||
+      sv machine exec --name "$NAME" -d -- python3 /workspace/dev/vm/pad.py serve /run/harakiri/pad.sock
   fi
 }
 
