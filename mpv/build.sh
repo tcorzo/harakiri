@@ -15,7 +15,7 @@ set -a # manifest.json reads the versions from the environment
 set +a
 
 mkdir -p /build
-for url in "$NV_CODEC_HEADERS_URL" "$SDL2_URL" "$FFMPEG_URL" "$LIBPLACEBO_URL" "$MPV_URL"; do
+for url in "$NV_CODEC_HEADERS_URL" "$SDL2_URL" "$FFMPEG_URL" "$LIBPLACEBO_URL" "$CURL_URL" "$MPV_URL"; do
 	tar -xf "/src/$(basename "$url")" -C /build
 done
 
@@ -57,7 +57,28 @@ meson setup /build/libplacebo-build "/build/libplacebo-v$LIBPLACEBO_VERSION" \
 	-Dd3d11=disabled -Dunwind=disabled -Dxxhash=disabled -Ddemos=false -Dtests=false
 ninja -C /build/libplacebo-build -j"$jobs" install
 
-# 5. mpv: --auto-features=disabled, so every feature mpv needs is named here, and every other one
+# 5. libcurl: what mpv reads http, https and ftp through. Fedora 44's 8.18.0 keeps an easy handle
+#    paused when mpv adds it again after a seek (curl #20641). Only the features Fedora's
+#    libcurl-minimal has: http, https, ftp, ftps and file over OpenSSL, HTTP/2 (nghttp2), IDN
+#    (libidn2), GSS-API (krb5) and zlib. Every dependency is named, and every other protocol is off.
+#    The CA bundle is the path Fedora's libcurl reads; manifest.json records it for the host check.
+cmake -S "/build/curl-$CURL_VERSION" -B /build/curl-build -G Ninja \
+	-DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$prefix" \
+	-DBUILD_SHARED_LIBS=ON -DBUILD_STATIC_LIBS=OFF -DBUILD_CURL_EXE=OFF -DBUILD_TESTING=OFF \
+	-DBUILD_EXAMPLES=OFF -DBUILD_LIBCURL_DOCS=OFF -DBUILD_MISC_DOCS=OFF -DENABLE_CURL_MANUAL=OFF \
+	-DCURL_USE_OPENSSL=ON -DUSE_NGHTTP2=ON -DUSE_LIBIDN2=ON -DCURL_USE_GSSAPI=ON -DCURL_ZLIB=ON \
+	-DCURL_BROTLI=OFF -DCURL_ZSTD=OFF -DCURL_USE_LIBPSL=OFF -DCURL_USE_LIBSSH2=OFF \
+	-DCURL_USE_LIBSSH=OFF -DCURL_USE_GSASL=OFF -DCURL_USE_LIBUV=OFF -DCURL_USE_LIBBACKTRACE=OFF \
+	-DUSE_NGTCP2=OFF -DUSE_QUICHE=OFF -DUSE_ECH=OFF -DUSE_HTTPSRR=OFF -DENABLE_ARES=OFF \
+	-DENABLE_THREADED_RESOLVER=ON -DCURL_ENABLE_NTLM=OFF \
+	-DCURL_DISABLE_LDAP=ON -DCURL_DISABLE_LDAPS=ON -DCURL_DISABLE_DICT=ON -DCURL_DISABLE_GOPHER=ON \
+	-DCURL_DISABLE_IMAP=ON -DCURL_DISABLE_POP3=ON -DCURL_DISABLE_SMTP=ON -DCURL_DISABLE_MQTT=ON \
+	-DCURL_DISABLE_RTSP=ON -DCURL_DISABLE_TELNET=ON -DCURL_DISABLE_TFTP=ON -DCURL_DISABLE_IPFS=ON \
+	-DCURL_DISABLE_WEBSOCKETS=ON \
+	-DCURL_CA_BUNDLE=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem -DCURL_CA_PATH=none
+ninja -C /build/curl-build -j"$jobs" install
+
+# 6. mpv: --auto-features=disabled, so every feature mpv needs is named here, and every other one
 #    (DVD, Blu-ray, JavaScript, libarchive, JACK, ...) stays off. Lua is required: e2e loads
 #    hold-load.lua. In mpv 0.42.0, Vulkan hwdec interop has no option (it comes with vulkan), and
 #    the shaderc option is Windows-only: Vulkan compiles its shaders through libplacebo's shaderc.
@@ -129,7 +150,7 @@ done
 strip --strip-unneeded /out/mpv /out/lib/*
 
 # The CA bundle path this libcurl was built to read, which the host must provide
-python3 - "$(curl-config --ca)" > /out/manifest.json <<'PY'
+python3 - "$("$prefix/bin/curl-config" --ca)" > /out/manifest.json <<'PY'
 import json, os, sys
 print(json.dumps({
     "mpv": os.environ["MPV_VERSION"],
@@ -137,6 +158,7 @@ print(json.dumps({
     "ffmpeg": os.environ["FFMPEG_VERSION"],
     "sdl2": os.environ["SDL2_VERSION"],
     "nvCodecHeaders": os.environ["NV_CODEC_HEADERS_VERSION"],
+    "curl": os.environ["CURL_VERSION"],
     "caBundle": sys.argv[1],
 }, indent=2))
 PY

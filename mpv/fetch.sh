@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # shellcheck source-path=SCRIPTDIR
-# Downloads the five source tarballs that mpv/versions.env pins into <dest>, and checks each sha256.
+# Downloads the six source tarballs that mpv/versions.env pins into <dest>, and checks each sha256.
 # A file that is already there with the right sha256 is kept. usage: mpv/fetch.sh <dest>
 set -euo pipefail
 dest="${1:?usage: mpv/fetch.sh <dest>}"
@@ -10,7 +10,7 @@ mkdir -p "$dest"
 
 sha256_of() { sha256sum "$1" | cut -d' ' -f1; }
 
-for name in MPV LIBPLACEBO FFMPEG SDL2 NV_CODEC_HEADERS; do
+for name in MPV LIBPLACEBO FFMPEG SDL2 NV_CODEC_HEADERS CURL; do
 	url_var="${name}_URL" sha_var="${name}_SHA256"
 	url="${!url_var}" want="${!sha_var}"
 	file="$dest/$(basename "$url")"

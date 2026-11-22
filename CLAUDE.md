@@ -127,7 +127,7 @@ Chosen on 2026-10-30 after a researched ledger. Versions are pinned in `mise.tom
 | toolchain             | mise: bun 1.4.4, node 26.13.0, hk 2.10.0, dovi_tool 2.3.4, hdr10plus_tool 1.7.2                                                                          | exact pins, one onboarding command                                   |
 | shell                 | electron 45.1.0                                                                                                                                          | TS main process, mature Chromium input                               |
 | dev build / packaging | electron-vite 6.0.0, electron-builder 26.18.0                                                                                                            | dev server; AppImage                                                 |
-| video                 | harakiri's mpv build (`mpv/`): mpv 0.42.0 + libplacebo 7.387.0 + FFmpeg 9.0.2 + SDL2 2.32.10; RPM Fusion ffmpeg 8.1.3 for the harness                    | playback, HDR, passthrough                                           |
+| video                 | harakiri's mpv build (`mpv/`): mpv 0.42.0 + libplacebo 7.387.0 + FFmpeg 9.0.2 + SDL2 2.32.10 + curl 8.23.0; RPM Fusion ffmpeg 8.1.3 for the harness      | playback, HDR, passthrough                                           |
 | mpv control           | hand-rolled JSON IPC client (`packages/mpv`)                                                                                                             | every npm client is stale                                            |
 | player controls       | hand-rolled `osd-overlay` ASS from the main process                                                                                                      | Wayland cannot stack a web window over mpv                           |
 | Jellyfin client       | @hey-api/openapi-ts 0.99.0 + ky 2.2.0, from a pinned 12.4.0 spec                                                                                         | generated typed client, zod and Query plugins                        |
@@ -164,6 +164,7 @@ Chosen on 2026-10-30 after a researched ledger. Versions are pinned in `mise.tom
 - Bun fullstack dev server: TanStack Router's plugin does not support Bun's bundler.
 - @electron-forge 8.0.1: more maintainers, kept as the packaging fallback.
 - Fedora `ffmpeg-free`: no HEVC, H.264 or VC-1 decoders.
+- Fedora 44's libcurl 8.18.0 in the mpv bundle: it keeps a paused handle paused when mpv adds it again (curl #20641), so seeks over HTTP stall. The recipe builds curl 8.23.0.
 - System mpv for dev and tests: Fedora's build hid #13 (`sdl2-gamepad`), so dev, tests and e2e run harakiri's own build (Q12).
 - FFmpeg's spdif demuxer for verification: no TrueHD or DTS-HD support. PipeWire null sink: accepts plain PCM only.
 - VKMS virtual display for HDR: no EDID or HDR_OUTPUT_METADATA support. Faking HDR on KWin virtual: its output always reports SDR.
