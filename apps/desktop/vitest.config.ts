@@ -16,7 +16,7 @@ export default defineConfig({
   test: {
     name: "desktop",
     environment: "happy-dom",
-    include: ["src/**/*.test.{ts,tsx}"],
+    include: ["src/**/*.test.{ts,tsx}", "build/**/*.test.ts"],
     // hermeticExclude from vitest.shared.ts, spelled out: tsconfig.node.json keeps this file's
     // imports inside apps/desktop.
     exclude: [

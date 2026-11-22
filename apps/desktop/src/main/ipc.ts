@@ -5,6 +5,7 @@ import type { z } from "zod";
 import { channels, NewSession, PlayRequest } from "../shared/bridge";
 import { discoverServers } from "./discovery";
 import { env, isE2E } from "./env";
+import { launcher } from "./launcher";
 import { forgetPrepared, play, prepare, probe, stop } from "./player/index";
 import { fromAppOnly } from "./security";
 import type { AppUrlCheck } from "./security";
@@ -74,6 +75,8 @@ export const registerIpc = (
       }
     });
   });
+  handle(channels.launcherStatus, async () => await launcher.status());
+  handle(channels.launcherAdd, async () => await launcher.add());
   handle(channels.stop, async () => {
     await stop();
   });

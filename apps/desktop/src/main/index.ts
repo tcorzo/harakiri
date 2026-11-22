@@ -9,6 +9,7 @@ import { appVersion } from "../shared/identity";
 import { env, isE2E } from "./env";
 import { hostCapabilities, hostFacts } from "./host/index";
 import { registerIpc } from "./ipc";
+import { launcher } from "./launcher";
 import { holdQuitUntilStopped, killOnExit, removeStaleMpvDirs } from "./lifecycle";
 import * as player from "./player/index";
 import { openRunLog } from "./run-log";
@@ -178,6 +179,7 @@ const main = async (): Promise<void> => {
   createWindow();
   // The keyring probe can be slow or wait on a password prompt; it must never hold up the window.
   void logHost();
+  void launcher.healAtStart();
 };
 
 // Not awaited: Electron emits `ready` only after the main module's top-level await settles, so

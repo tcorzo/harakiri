@@ -46,6 +46,7 @@ describe(createBridge, () => {
     expect(Object.keys(createBridge(ipc, { e2e: false, warn })).toSorted()).toStrictEqual([
       "deviceId",
       "discover",
+      "launcher",
       "player",
       "session",
       "updates",
@@ -53,6 +54,7 @@ describe(createBridge, () => {
     expect(Object.keys(createBridge(ipc, { e2e: true, warn })).toSorted()).toStrictEqual([
       "deviceId",
       "discover",
+      "launcher",
       "player",
       "session",
       "test",
@@ -195,5 +197,31 @@ describe(createBridge, () => {
     await expect(createBridge(bad.ipc, { e2e: false, warn }).updates.status()).rejects.toThrow(
       /version/u
     );
+  });
+
+  it("parses the launcher status and add result, and rejects a status without a name", async () => {
+    const status = fakeIpc({
+      channel: channels.launcherStatus,
+      value: { state: "offered", name: "Steam" },
+    });
+
+    await expect(
+      createBridge(status.ipc, { e2e: false, warn }).launcher.status()
+    ).resolves.toStrictEqual({ state: "offered", name: "Steam" });
+
+    const bad = fakeIpc({ channel: channels.launcherStatus, value: { state: "offered" } });
+    await expect(createBridge(bad.ipc, { e2e: false, warn }).launcher.status()).rejects.toThrow(
+      /name/u
+    );
+
+    const add = fakeIpc({
+      channel: channels.launcherAdd,
+      value: { state: "failed", reason: "x" },
+    });
+
+    await expect(createBridge(add.ipc, { e2e: false, warn }).launcher.add()).resolves.toStrictEqual(
+      { state: "failed", reason: "x" }
+    );
+    expect(add.invoked).toContainEqual([channels.launcherAdd]);
   });
 });

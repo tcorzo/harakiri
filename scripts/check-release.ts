@@ -183,6 +183,14 @@ try {
       : `${iconName}.png is not one of apps/desktop/build/icons`
   );
 
+  const steamFiles = ["portrait.png", "wide.png", "hero.png", "logo.png", "icon.png"];
+  const missingArt = steamFiles.filter((f) => !existsSync(path.join(resources, "steam", f)));
+
+  check(
+    "Steam artwork packed",
+    missingArt.length ? `resources/steam is missing ${missingArt.join(", ")}` : undefined
+  );
+
   const feed = parseYaml(readFileSync(path.join(resources, "app-update.yml"), "utf-8"));
 
   const feedProblems = [

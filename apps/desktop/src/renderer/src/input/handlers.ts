@@ -4,14 +4,30 @@ import { useEffect, useEffectEvent } from "react";
 type Handled = "back" | "menu" | "playPause";
 
 /**
- * The last-mounted screen that claims an action answers it; the hub falls back when none does.
- * React runs a child's effects before its parent's, so "last mounted" is not "innermost": a sheet
- * opened over a page mounts after it and wins, which is the case these stacks exist for.
+ * Who a claim belongs to. A screen claims as a `page`. Something drawn over it that holds focus
+ * until the owner answers it claims as an `overlay`, and answers before every page claim.
  */
-const stacks: Record<Handled, (() => void)[]> = { back: [], menu: [], playPause: [] };
+export type ClaimLayer = "page" | "overlay";
+
+interface Claim<T> {
+  readonly run: T;
+  readonly layer: ClaimLayer;
+}
+
+/**
+ * The last-mounted claim answers, an overlay's before any page's; the hub falls back when none
+ * does. React runs a child's effects before its parent's, so "last mounted" is not "innermost":
+ * a sheet opened over a page mounts after it and wins, which is the case these stacks exist for.
+ * Something that can appear in its page's own first render (a card drawn from cached data)
+ * registers before its page does, so it claims as an overlay instead.
+ */
+const top = <T>(claims: readonly Claim<T>[]): T | undefined =>
+  (claims.findLast((claim) => claim.layer === "overlay") ?? claims.at(-1))?.run;
+
+const stacks: Record<Handled, Claim<() => void>[]> = { back: [], menu: [], playPause: [] };
 
 export const dispatch = (action: Handled): boolean => {
-  const handler = stacks[action].at(-1);
+  const handler = top(stacks[action]);
 
   if (handler === undefined) {
     return false;
@@ -22,11 +38,18 @@ export const dispatch = (action: Handled): boolean => {
   return true;
 };
 
-export const useActionHandler = (action: Handled, handler: () => void): void => {
+export const useActionHandler = (
+  action: Handled,
+  handler: () => void,
+  layer: ClaimLayer = "page"
+): void => {
   const onAction = useEffectEvent(handler);
   useEffect(() => {
-    const entry = (): void => {
-      onAction();
+    const entry: Claim<() => void> = {
+      run: () => {
+        onAction();
+      },
+      layer,
     };
 
     stacks[action].push(entry);
@@ -35,26 +58,25 @@ export const useActionHandler = (action: Handled, handler: () => void): void => 
       const stack = stacks[action];
       stack.splice(stack.lastIndexOf(entry), 1);
     };
-  }, [action]);
+  }, [action, layer]);
 };
 
 /** Returns true when it moved focus itself, so the spatial search must not run. */
 type Guard = (direction: Direction) => boolean;
 
-const guards: Guard[] = [];
+const guards: Claim<Guard>[] = [];
 
-/** Lets the last-mounted guard take a d-pad move the spatial search would get wrong. */
-export const guardNavigation = (direction: Direction): boolean =>
-  guards.at(-1)?.(direction) ?? false;
+/** Lets the top guard, chosen as the action stacks choose, take a move the spatial search would get wrong. */
+export const guardNavigation = (direction: Direction): boolean => top(guards)?.(direction) ?? false;
 
-export const useNavigationGuard = (guard: Guard): void => {
+export const useNavigationGuard = (guard: Guard, layer: ClaimLayer = "page"): void => {
   const onMove = useEffectEvent(guard);
   useEffect(() => {
-    const entry: Guard = (direction) => onMove(direction);
+    const entry: Claim<Guard> = { run: (direction) => onMove(direction), layer };
     guards.push(entry);
 
     return () => {
       guards.splice(guards.lastIndexOf(entry), 1);
     };
-  }, []);
+  }, [layer]);
 };

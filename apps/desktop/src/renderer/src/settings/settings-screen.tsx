@@ -6,10 +6,40 @@ import { useEffect } from "react";
 import { appVersion } from "../../../shared/identity";
 import { forgetSession } from "../data/forget";
 import { useSignedIn } from "../data/session";
+import {
+  addOutcomeLine,
+  addResultOf,
+  isProblem,
+  launcherStatusQuery,
+  useAddingToLauncher,
+  useAddToLauncher,
+} from "../launcher/queries";
 import { ListAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
 import { SectionTab } from "../ui/marks";
 import { versionLine } from "./version-line";
+
+/**
+ * The launcher action's detail: what it does, that it is waiting, or what went wrong. A problem
+ * leads with the problem square, which turns ink with the line when the line inverts on focus.
+ */
+const LauncherDetail = ({
+  line,
+  problem,
+}: {
+  readonly line: string;
+  readonly problem: boolean;
+}) => (
+  <span aria-live="polite" className={problem ? "text-paper group-focus-visible:text-ink" : ""}>
+    {problem ? (
+      <span
+        aria-hidden="true"
+        className="bg-alert group-focus-visible:bg-ink mr-3 inline-block size-[0.75em]"
+      />
+    ) : null}
+    {line}
+  </span>
+);
 
 export const SettingsScreen = () => {
   const { session } = useSignedIn();
@@ -30,6 +60,12 @@ export const SettingsScreen = () => {
     queryFn: async () => await window.harakiri.session.storage(),
     staleTime: Infinity,
   });
+
+  // Offered here whether or not the library's card was put off with Not now.
+  const { data: launcher } = useQuery(launcherStatusQuery);
+  const add = useAddToLauncher();
+  const adding = useAddingToLauncher();
+  const addResult = addResultOf(add);
 
   const { ref, focusKey } = useFocusable<object, HTMLElement>({
     focusKey: "settings",
@@ -84,6 +120,12 @@ export const SettingsScreen = () => {
             <dd className="m-0" aria-live="polite">
               {versionLine(appVersion, updates.data)}
             </dd>
+            {launcher?.state === "added" ? (
+              <>
+                <dt className="text-paper-dim stretch-condensed">{launcher.name}</dt>
+                <dd className="m-0">harakiri is in your library</dd>
+              </>
+            ) : null}
           </dl>
           <div className="flex flex-col">
             <ListAction
@@ -101,6 +143,35 @@ export const SettingsScreen = () => {
                 void leave(false);
               }}
             />
+            {launcher?.state === "offered" ? (
+              <ListAction
+                focusKey="settings-launcher-add"
+                label={`Add to ${launcher.name}`}
+                detail={
+                  <LauncherDetail
+                    line={
+                      addOutcomeLine(launcher.name, addResult, adding) ??
+                      `Adds harakiri to your ${launcher.name} library, with its art`
+                    }
+                    problem={isProblem(addResult, adding)}
+                  />
+                }
+                onPress={() => {
+                  if (adding) {
+                    return;
+                  }
+
+                  add.mutate(undefined, {
+                    // Runs once the status has been read again and this line has gone.
+                    onSuccess: (added) => {
+                      if (added.state === "added") {
+                        focusFirst("settings-sign-out");
+                      }
+                    },
+                  });
+                }}
+              />
+            ) : null}
             {updates.data?.state === "ready" ? (
               <ListAction
                 focusKey="settings-restart"

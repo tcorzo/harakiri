@@ -29,7 +29,9 @@ export default defineConfig({
     antiSlop,
   ],
   ignorePatterns: [
-    ...core.ignorePatterns,
+    // apps/desktop/build holds electron-builder resources and the Steam art renderer's source, so
+    // the preset's `**/build` would hide real code from lint. Build output goes to out/ and dist/.
+    ...(core.ignorePatterns ?? []).filter((pattern) => pattern !== "**/build"),
     "**/out/**",
     "**/dist/**",
     "**/.tsbuild/**",

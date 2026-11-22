@@ -20,6 +20,8 @@ export const channels = {
   deviceId: "device:id",
   updateStatus: "updates:status",
   updateRestart: "updates:restart",
+  launcherStatus: "launcher:status",
+  launcherAdd: "launcher:add",
   discover: "server:discover",
   prepare: "player:prepare",
   play: "player:play",
@@ -191,6 +193,23 @@ export const UpdateStatus = z.discriminatedUnion("state", [
 
 export type UpdateStatus = z.infer<typeof UpdateStatus>;
 
+/** Whether harakiri can be added to the game launcher, or already is; `name` is the launcher's. */
+export const LauncherStatus = z.discriminatedUnion("state", [
+  z.object({ state: z.literal("unavailable") }),
+  z.object({ state: z.literal("offered"), name: z.string() }),
+  z.object({ state: z.literal("added"), name: z.string() }),
+]);
+
+export const LauncherAddResult = z.discriminatedUnion("state", [
+  z.object({ state: z.literal("added") }),
+  z.object({ state: z.literal("timedOut") }),
+  z.object({ state: z.literal("failed"), reason: z.string() }),
+]);
+
+export type LauncherStatus = z.infer<typeof LauncherStatus>;
+
+export type LauncherAddResult = z.infer<typeof LauncherAddResult>;
+
 /** What the preload exposes on `window.harakiri`. Every value crossing IPC is parsed with the schemas above. */
 export interface HarakiriBridge {
   /**
@@ -210,6 +229,11 @@ export interface HarakiriBridge {
     readonly status: () => Promise<UpdateStatus>;
     /** Quits and installs the downloaded update; does nothing unless one is ready. */
     readonly restart: () => Promise<void>;
+  };
+  readonly launcher: {
+    readonly status: () => Promise<LauncherStatus>;
+    /** Resolves when the launcher lists harakiri, after 30 s, or on failure. */
+    readonly add: () => Promise<LauncherAddResult>;
   };
   readonly player: {
     /**

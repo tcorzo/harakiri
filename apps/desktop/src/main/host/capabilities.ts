@@ -1,6 +1,7 @@
 import type { HdrSignalling } from "@harakiri/fidelity";
 
-import type { EnvFacts, HostFacts } from "./facts";
+import type { EnvFacts, HostFacts, SteamFacts } from "./facts";
+import { shortcutFor } from "./steam/shortcuts-vdf";
 
 /** Where a secret such as the access token can be kept: an OS keyring, or a 0600 file. */
 export type SecretStore = "keyring" | "file";
@@ -30,6 +31,20 @@ export const hdrSignallingOf = (facts: EnvFacts): HdrSignalling =>
   (facts.waylandDisplay === undefined || facts.waylandDisplay === facts.gamescopeDisplay)
     ? "swapchain-formats"
     : "colour-management";
+
+/** Whether Steam is here, and whether harakiri is already one of its shortcuts. */
+export type SteamLibrary = "absent" | "present" | "has-harakiri";
+
+/** absent: no root or no users. has-harakiri: some user has a shortcut that runs `script`. */
+export const steamLibraryOf = (steam: SteamFacts, script: string): SteamLibrary => {
+  if (steam.root === undefined || steam.users.length === 0) {
+    return "absent";
+  }
+
+  return steam.users.some((user) => shortcutFor(user.shortcuts, script) !== undefined)
+    ? "has-harakiri"
+    : "present";
+};
 
 export const capabilitiesOf = (facts: HostFacts): HostCapabilities => ({
   secretStore: secretStoreOf(facts),
