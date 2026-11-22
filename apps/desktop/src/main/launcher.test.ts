@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -127,6 +128,39 @@ describe(createLauncher, () => {
 
     await expect(launcher.add()).resolves.toMatchObject({ state: "failed" });
     await expect(launcher.add()).resolves.toStrictEqual({ state: "added" });
+  });
+
+  it("add refuses without a launcher install, and writes and opens nothing", async () => {
+    const opened: string[] = [];
+
+    await expect(
+      build(async (url) => {
+        opened.push(url);
+        await idle();
+      }).add()
+    ).resolves.toStrictEqual({ state: "failed", reason: "no Steam library was found" });
+    expect(opened).toStrictEqual([]);
+    expect(existsSync(launcherFiles(userData).dir)).toBe(false);
+  });
+
+  it("add refuses without an AppImage, and opens nothing", async () => {
+    fakeSteamRoot(home, { "222": [] });
+
+    const opened: string[] = [];
+
+    await expect(
+      build(
+        async (url) => {
+          opened.push(url);
+          await idle();
+        },
+        { target: null }
+      ).add()
+    ).resolves.toStrictEqual({
+      state: "failed",
+      reason: "harakiri is not running from its AppImage",
+    });
+    expect(opened).toStrictEqual([]);
   });
 
   it("status carries the launcher's name", async () => {

@@ -51,6 +51,10 @@ export interface HealReport {
 
 const NOT_APPIMAGE = "harakiri is not running from its AppImage";
 
+/** Why the state is "unavailable", for a press that reaches the add anyway. */
+export const unavailableReason = (place: LauncherPlace): string =>
+  place.target === undefined ? NOT_APPIMAGE : "no Steam library was found";
+
 /** unavailable: no target or steamLibraryOf is "absent"; added: "has-harakiri"; offered: "present". */
 export const steamLauncherState = (steam: SteamFacts, place: LauncherPlace): LauncherState =>
   place.target === undefined

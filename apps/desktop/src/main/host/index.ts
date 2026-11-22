@@ -7,7 +7,13 @@ import type { HostCapabilities } from "./capabilities";
 import { readSteamFacts } from "./facts";
 import type { HostFacts, SteamFacts } from "./facts";
 import { createHost } from "./host";
-import { addToSteam, healSteamLauncher, STEAM_TMP, steamLauncherState } from "./steam/add";
+import {
+  addToSteam,
+  healSteamLauncher,
+  STEAM_TMP,
+  steamLauncherState,
+  unavailableReason,
+} from "./steam/add";
 import type { AddResult, HealReport, LauncherPlace, LauncherState } from "./steam/add";
 import { launcherFiles } from "./steam/launcher";
 
@@ -59,6 +65,10 @@ const readSteam = async (): Promise<SteamFacts> => await readSteamFacts(process.
 /** Whether harakiri can be added to the launcher, or already is. Reads the disk on every call. */
 export const launcherState = async (where: LauncherWhere): Promise<LauncherState> =>
   steamLauncherState(await readSteam(), placeOf(where));
+
+/** Why harakiri cannot be added here, when `launcherState` says "unavailable". */
+export const launcherUnavailableReason = (where: LauncherWhere): string =>
+  unavailableReason(placeOf(where));
 
 /** Asks the launcher to add harakiri and waits until it lists it. Never rejects. */
 export const addToLauncher = async (
