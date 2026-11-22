@@ -68,13 +68,13 @@ mise run package               # the same AppImage a release ships, into apps/de
 
 ### Everyday commands
 
-| Command              | What it does                                                                                      |
-| -------------------- | ------------------------------------------------------------------------------------------------- |
-| `mise run check`     | Everything CI gates on: lints, types, unit and harness tests. No server, no network.              |
-| `mise run e2e`       | Builds the app and drives it with Playwright inside a nested, invisible KWin.                     |
-| `mise run doctor`    | Checks the harness tools: ffmpeg, the headless compositors, podman, dovi_tool and hdr10plus_tool. |
-| `mise run test:fate` | Proves DTS-HD MA, DTS:X and TrueHD Atmos passthrough on FFmpeg's FATE samples.                    |
-| `mise tasks`         | Lists the rest.                                                                                   |
+| Command              | What it does                                                                                                               |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `mise run check`     | Everything CI gates on: lints, types, unit and harness tests. No server, no network.                                       |
+| `mise run e2e`       | Builds the app and drives it with Playwright inside a nested, invisible KWin.                                              |
+| `mise run doctor`    | Checks the harness tools: ffmpeg, the headless compositors, podman, dovi_tool, hdr10plus_tool and a read-write `/dev/kvm`. |
+| `mise run test:fate` | Proves DTS-HD MA, DTS:X and TrueHD Atmos passthrough on FFmpeg's FATE samples.                                             |
+| `mise tasks`         | Lists the rest.                                                                                                            |
 
 > [!TIP]
 > Heavy processes run in their own memory-capped systemd scope through [`scripts/bounded.sh`](scripts/bounded.sh), and `mise run watchdog` stops the largest one before the machine runs out of memory. The `mise` tasks already do this.
