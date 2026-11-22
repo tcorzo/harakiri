@@ -163,6 +163,25 @@ hk util check-conventional-commit "$msg" || {
 }
 """
 
+# podman's build containers run outside the bounded scope (in app.slice), so --memory caps them.
+[tasks."mpv:build"]
+description = "Build harakiri's mpv (mpv 0.42.0, libplacebo 7.387.0, FFmpeg 9.0.2, SDL2 2.32.10) into .cache/mpv/<recipe-hash>; a no-op when that build exists"
+shell = "bash -euo pipefail -c"
+run = """
+out="$(bun packages/mpv/src/bundle-dir.ts)"
+if [ -x "$out/mpv" ]; then echo "mpv build present: $out"; exit 0; fi
+command -v podman >/dev/null || { echo 'mpv:build needs podman (dnf install podman)' >&2; exit 1; }
+mpv/fetch.sh .cache/mpv/src
+set -a; . mpv/versions.env; set +a
+rm -rf "$out.partial"
+scripts/bounded.sh mpv-build 6G -- podman build --memory 5g --memory-swap 5g \
+  --build-arg BASE_IMAGE="$BASE_IMAGE" --build-arg JOBS="${HARAKIRI_MPV_JOBS:-4}" \
+  -v "$PWD/.cache/mpv/src:/src:ro,Z" -f mpv/Containerfile -o "type=local,dest=$out.partial" mpv
+mv "$out.partial" "$out"
+find .cache/mpv -mindepth 1 -maxdepth 1 -type d ! -name src ! -name "$(basename "$out")" -exec rm -rf {} +
+echo "mpv build ready: $out"
+"""
+
 [tasks.check]
 description = "Everything CI gates on"
 depends = ["lint", "fmt:check", "lint:skips", "lint:private", "lint:host", "typecheck", "test"]
