@@ -3,16 +3,20 @@ import react from "@vitejs/plugin-react";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 
+// Playwright launches a headed browser and its Inspector whenever PWDEBUG is set (mise loads .env),
+// which would open windows on the desktop and hang the pre-push run. These tests are always headless.
+delete process.env.PWDEBUG;
+
 /**
  * Renderer component tests in a real headless Chromium, for what needs layout: d-pad focus moves
  * by element geometry, and sizes and positions come from the real stylesheet. Only
- * `*.browser.test.tsx` runs here; every other renderer test stays in happy-dom (vitest.config.ts).
+ * `*.browser.test.{ts,tsx}` runs here; vitest.config.ts excludes the same glob from happy-dom.
  */
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   test: {
     name: "desktop-browser",
-    include: ["src/renderer/**/*.browser.test.tsx"],
+    include: ["**/*.browser.test.{ts,tsx}"],
     setupFiles: ["src/renderer/src/test/browser-setup.ts"],
     globalSetup: ["vitest.browser.global.ts"],
     browser: {
