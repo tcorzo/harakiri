@@ -66,7 +66,7 @@ running() { sv machine exec --name "$NAME" --timeout 5s -- true >/dev/null 2>&1;
 
 # The guest reaches the host's loopback over TCP only with this grant, which machine create rejects.
 start() {
-  SMOLVM_ALLOW_HOST_LOOPBACK=1 "$REPO/scripts/bounded.sh" "$SCOPE" 5G -- \
+  SMOLVM_ALLOW_HOST_LOOPBACK=1 "$REPO/scripts/bounded.sh" "$SCOPE" 3G -- \
     "$SMOLVM" --state-dir "$STATE" machine start --name "$NAME" 9>&-
 }
 

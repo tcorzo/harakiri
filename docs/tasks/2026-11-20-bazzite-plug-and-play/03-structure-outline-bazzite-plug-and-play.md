@@ -161,7 +161,7 @@ Per Q11, platform bugs are reproduced in a declared guest, not on the dev box. T
 
 ### Change Outline
 
-The guest is a `fedora:44` smolvm machine with KWin, lavapipe, PipeWire with the fake `iec958_null` sink, and a uinput pad. Its state is off `/tmp`, it has 4 GiB, and it runs under `scripts/bounded.sh`.
+The guest is a `fedora:44` smolvm machine with KWin, lavapipe, PipeWire with the fake `iec958_null` sink, and a uinput pad. Its state is off `/tmp`, it has 4 GiB (2 GiB since 2026-11-22, when its working set measured 0.87-1.14 GB), and it runs under `scripts/bounded.sh`.
 
 ```diff
  dev/vm/
