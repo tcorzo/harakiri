@@ -23,3 +23,5 @@ Issues #16 and #18 are being worked on separately in parallel sessions; leave th
 - #17 fix(doctor): setup fails for player-only installs (weston required)
 
 Out of scope: #16 (mise.lock min_version), #18 (AppImage icon and desktopName), #19 (renderer preload warnings).
+
+Follow-up after this epic (owner agreed 2026-11-21): set up the test runner's browser mode in `apps/desktop`, so UI work can render a real component in headless Chromium. `@vitest/browser-playwright` is installed and CLAUDE.md promises "browser-mode focus tests", but no config uses it. The Phase 10 card agent had to render its markup into a scratch page to see it.
