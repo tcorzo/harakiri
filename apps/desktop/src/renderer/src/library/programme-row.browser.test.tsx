@@ -1,4 +1,3 @@
-import { defaultRepeat } from "@harakiri/input";
 import { ServerUrl } from "@harakiri/jellyfin";
 import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-navigation";
 import { delay, noop } from "es-toolkit";
@@ -29,9 +28,10 @@ const films = (prefix: string, count: number): readonly Entry[] =>
 
 const resume = films("a", 4);
 const programme = films("b", 16);
+const longProgramme = films("c", 48);
 
 /** Two rows of the library, the way LibraryScreen stacks them, driven through the input hub. */
-const Programme = () => {
+const Programme = ({ entries = programme }: { readonly entries?: readonly Entry[] }) => {
   useInputHub();
 
   const { ref, focusKey } = useFocusable<object, HTMLElement>({
@@ -57,7 +57,7 @@ const Programme = () => {
         <ProgrammeRow
           sectionId="films"
           sectionName="Films"
-          entries={programme}
+          entries={entries}
           Card={PosterCard}
           pitchRem={15.5}
           heightRem={26}
@@ -73,14 +73,10 @@ const Programme = () => {
 
 const card = (name: string) => page.getByRole("button", { name });
 
-/**
- * Presses a key, waits for focus to land where it should, then waits out a held pad's repeat, as
- * the owner's input never comes faster: the next press acts on a row that has had a frame to scroll.
- */
+/** Presses a key and waits for focus to land where it should; the next press follows at once. */
 const press = async (key: string, lands: string): Promise<void> => {
   await userEvent.keyboard(`{${key}}`);
   await expect.element(card(lands)).toHaveFocus();
-  await delay(defaultRepeat.intervalMs);
 };
 
 describe("programme rows on a real layout", () => {
@@ -105,6 +101,25 @@ describe("programme rows on a real layout", () => {
 
     // The row's last card has nothing to its right, so focus stays on it.
     await press("ArrowRight", "Film 16");
+  });
+
+  it("a held key's autorepeat walks a long row card by card, dropping no press", async () => {
+    await render(<Programme entries={longProgramme} />);
+    focusFirst(cardKey("films", longProgramme[0]?.id ?? ""));
+    await expect.element(card("Film 1")).toHaveFocus();
+
+    // A held keyboard key, or a remote that presents as one, repeats about every 33 ms.
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+
+    /* oxlint-disable eslint/no-await-in-loop -- autorepeat is a timed sequence of presses */
+    for (let repeat = 1; repeat < 40; repeat += 1) {
+      await delay(33);
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", repeat: true }));
+    }
+    /* oxlint-enable eslint/no-await-in-loop */
+
+    // Forty presses from the first card.
+    await expect.element(card("Film 41")).toHaveFocus();
   });
 
   it("Down drops from a card to the row below, and Up returns to the card it left", async () => {
