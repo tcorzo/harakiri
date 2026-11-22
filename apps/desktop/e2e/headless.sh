@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Runs the Playwright e2e inside a nested virtual KWin so no window reaches the user's desktop.
+# `mise run e2e` runs it twice: on the host with --project=host (the @host discovery specs), then
+# inside the dev/vm guest with --project=guest, through guest.sh exec. Arguments go to Playwright.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

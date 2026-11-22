@@ -9,6 +9,7 @@ import { z } from "zod";
 import { CATALOG } from "../../../../packages/harness/src/corpus/catalog";
 import { fateState } from "../../../../packages/harness/src/corpus/fate";
 import { MANIFEST, readManifest } from "../../../../packages/harness/src/corpus/generate";
+import { inGuest } from "../../../../packages/harness/src/guest";
 import { CORPUS_DIR, E2E_CONTAINER_ENV, REAL_SERVER, REPO } from "./backend";
 
 const FATE_DIR = process.env.HARAKIRI_FATE_DIR ?? path.resolve(REPO, ".cache/fate");
@@ -122,15 +123,64 @@ const waitForScan = async (expected: number, timeoutMs = 180_000): Promise<void>
   throw new Error(`The e2e Jellyfin did not finish scanning the corpus: ${last}`);
 };
 
+const fingerprintOf = (corpusDir: string): string =>
+  createHash("sha256")
+    .update(readFileSync(path.resolve(corpusDir, MANIFEST)))
+    .digest("hex");
+
+/** Why the e2e Jellyfin cannot serve this corpus as it is, or null when it can. */
+const unprepared = async (): Promise<string | null> => {
+  if (!existsSync(SCANNED)) {
+    return "no scan recorded";
+  }
+
+  try {
+    if (readFileSync(SCANNED, "utf-8").trim() !== fingerprintOf(CORPUS_DIR)) {
+      return "scanned another corpus";
+    }
+
+    await waitForScan(readManifest(CORPUS_DIR).entries.length, 10_000);
+  } catch (error) {
+    // fetch() says only "fetch failed"; the refused connection is its cause.
+    return error instanceof Error && error.cause instanceof Error
+      ? `${error.message}: ${error.cause.message}`
+      : String(error instanceof Error ? error.message : error);
+  }
+
+  return null;
+};
+
+/**
+ * In the dev/vm guest: the host half of `mise run e2e` has already started the container and
+ * scanned the corpus, and the guest has no podman. It only checks that the server is ready, and
+ * fails at once when it is not, instead of after a Playwright timeout.
+ */
+const expectPrepared = async (): Promise<void> => {
+  const reason = await unprepared();
+
+  if (reason !== null) {
+    throw new Error(
+      `The e2e Jellyfin at ${SERVER} is not ready for this corpus (${reason}). \`mise run e2e\` prepares it on the host before the guest runs.`
+    );
+  }
+};
+
 /**
  * Before any test: generates the corpus when it is missing or older than the catalog, then makes
  * sure the e2e Jellyfin container is up, bootstrapped and done scanning it. A running container
  * whose last scan matches the corpus manifest is reused as it is; a changed corpus recreates it
  * from empty state. FATE samples are not fetched here (that is network); `mise run e2e` fetches
  * them first, and without them the TrueHD Atmos test fails naming `mise run media:fetch-fate`.
+ * In the dev/vm guest it starts nothing, and only checks what the host half prepared.
  */
 export default async function globalSetup(): Promise<void> {
   if (REAL_SERVER !== undefined && REAL_SERVER !== "") {
+    return;
+  }
+
+  if (inGuest()) {
+    await expectPrepared();
+
     return;
   }
 
@@ -156,8 +206,7 @@ export default async function globalSetup(): Promise<void> {
     ]);
   }
 
-  const manifest = readFileSync(path.resolve(CORPUS_DIR, MANIFEST));
-  const fingerprint = createHash("sha256").update(manifest).digest("hex");
+  const fingerprint = fingerprintOf(CORPUS_DIR);
   const scanned = existsSync(SCANNED) ? readFileSync(SCANNED, "utf-8").trim() : undefined;
 
   if (scanned !== fingerprint && existsSync(STATE)) {
