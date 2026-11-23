@@ -56,7 +56,7 @@ jobs:
   package:
     needs: release-please
     if: ${{ !cancelled() && (needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch') }}
-    runs-on: ubuntu-24.04 # podman builds harakiri's mpv; the bundle's glibc floor is its Fedora 44 base
+    runs-on: ubuntu-24.04 # podman builds harakiri's mpv and runs it; its glibc floor is its Fedora 44 base
     permissions:
       contents: write
     env:
@@ -113,7 +113,12 @@ jobs:
           path: .cache/mpv-source/srpms
           key: mpv-srpms-${{ steps.recipe.outputs.hash }}
       - run: mise run package
+      # This runner's glibc (2.39) is older than the bundle's Fedora 44 floor, so package:check runs
+      # the shipped mpv in a Fedora 44 image with the host libs it needs, with no network.
+      - run: mise run package:check-image
       - run: mise run package:check "${TAG#v}"
+        env:
+          HARAKIRI_MPV_CHECK_IMAGE: localhost/harakiri-mpv-check
       - run: mise run mpv:source
       - if: steps.srpm-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { exportedSymbols, neededLibs } from "./elf";
 import {
+  hostNeeds,
   isHostLib,
   isShaderCompilerSymbol,
   readHostLibs,
@@ -210,6 +211,22 @@ describe("host libs", () => {
     it("skips comments and blank lines", () => {
       writeFileSync(path.join(tmp, "host-libs.txt"), "# x\n\nlibfoo.so.1\n");
       expect(readHostLibs(tmp)).toStrictEqual(["libfoo.so.1"]);
+    });
+  });
+
+  describe(hostNeeds, () => {
+    it("lists each host lib that mpv or lib/ needs, once", () => {
+      copyFileSync(process.execPath, path.join(tmp, "mpv"));
+      mkdirSync(path.join(tmp, "lib"));
+      copyFileSync(process.execPath, path.join(tmp, "lib", "libfoo.so.1"));
+      expect(hostNeeds(tmp, ["libc.so.6", "libnothing.so.1"])).toStrictEqual(["libc.so.6"]);
+    });
+
+    it("does not list a host lib that lib/ holds", () => {
+      copyFileSync(process.execPath, path.join(tmp, "mpv"));
+      mkdirSync(path.join(tmp, "lib"));
+      copyFileSync(process.execPath, path.join(tmp, "lib", "libc.so.6"));
+      expect(hostNeeds(tmp, ["libc.so.6"])).toStrictEqual([]);
     });
   });
 

@@ -71,23 +71,89 @@ const sameFiles = (shipped: string, built: string): string[] => {
   ];
 };
 
+/** How a check starts the shipped mpv. */
+export interface MpvInvocation {
+  readonly file: string;
+  readonly args: readonly string[];
+  /** The environment of `file`; undefined inherits this process's (podman needs it). */
+  readonly env: Readonly<Record<string, string>> | undefined;
+}
+
+/** Where the shipped bundle is mounted, read-only, in the check image. */
+const IMAGE_BUNDLE = "/opt/harakiri-mpv";
+
+/**
+ * The image `HARAKIRI_MPV_CHECK_IMAGE` names in `env`, or undefined when it is unset or empty.
+ * The release job sets it: its runner's glibc is older than the bundle's Fedora 44 floor.
+ */
+export const mpvCheckImage = (env: Readonly<Record<string, string | undefined>>) => {
+  const image = env.HARAKIRI_MPV_CHECK_IMAGE?.trim() ?? "";
+
+  return image === "" ? undefined : image;
+};
+
+/**
+ * `<shipped>/mpv --no-config <args>` with an empty environment: no inherited library path, no
+ * config. With an `image` (`mise run package:check-image` builds one), mpv runs in podman on that
+ * image instead, with no network and the bundle mounted read-only, and gets the image's
+ * environment.
+ */
+export const mpvInvocation = (
+  shipped: string,
+  args: readonly string[],
+  image: string | undefined
+): MpvInvocation =>
+  image === undefined
+    ? { file: path.join(shipped, "mpv"), args: ["--no-config", ...args], env: {} }
+    : {
+        file: "podman",
+        args: [
+          "run",
+          "--rm",
+          "--pull=never",
+          "--network=none",
+          "--memory=1g",
+          `--volume=${shipped}:${IMAGE_BUNDLE}:ro,Z`,
+          image,
+          `${IMAGE_BUNDLE}/mpv`,
+          "--no-config",
+          ...args,
+        ],
+        env: undefined,
+      };
+
 type Run = { ok: true; output: string } | { ok: false; problem: string };
 
-/** `env -i <shipped>/mpv --no-config <args>`: no inherited library path, no config. */
-const runMpv = (shipped: string, args: readonly string[]): Run => {
+/** What execFileSync throws: its message, and with `encoding` set, the child's stderr. */
+const ExecFailure = z.object({ message: z.string(), stderr: z.string().catch("") });
+
+type ExecFailure = z.infer<typeof ExecFailure>;
+
+/** The first line of a failed run's stderr (the loader's error, say), else of its error. */
+const whyFailed = (failure: ExecFailure): string =>
+  [failure.stderr, failure.message]
+    .flatMap((text) => text.split("\n"))
+    .map((line) => line.trim())
+    .find((line) => line !== "") ?? "";
+
+/** Runs the shipped mpv as `mpvInvocation` says. */
+const runMpv = (shipped: string, args: readonly string[], image: string | undefined): Run => {
+  const { file, args: argv, env } = mpvInvocation(shipped, args, image);
+
   try {
     return {
       ok: true,
-      output: execFileSync(path.join(shipped, "mpv"), ["--no-config", ...args], {
+      output: execFileSync(file, argv, {
         encoding: "utf-8",
-        env: {},
+        env,
+        maxBuffer: 2 ** 24,
         stdio: ["ignore", "pipe", "pipe"],
       }),
     };
   } catch (error) {
-    const why = error instanceof Error ? (error.message.split("\n")[0] ?? "") : String(error);
+    const failure = ExecFailure.catch({ message: String(error), stderr: "" }).parse(error);
 
-    return { ok: false, problem: `mpv ${args.join(" ")} failed: ${why}` };
+    return { ok: false, problem: `mpv ${args.join(" ")} failed: ${whyFailed(failure)}` };
   }
 };
 
@@ -101,36 +167,41 @@ const problemOf = (run: Run, holds: (output: string) => boolean, problem: string
 };
 
 /** Each of `names` that no line of `mpv <args>`'s output starts with, as `<args> lists no <name>`. */
-const lists = (shipped: string, args: readonly string[], names: readonly string[]): string[] => {
-  const run = runMpv(shipped, args);
+const escapeRegExp = (text: string): string => text.replaceAll(/[$()*+.?[\\\]^{|}]/gu, "\\$&");
+
+const lists = (
+  shipped: string,
+  args: readonly string[],
+  names: readonly string[],
+  image: string | undefined
+): string[] => {
+  const run = runMpv(shipped, args, image);
 
   if (!run.ok) {
     return [run.problem];
   }
 
   return names.flatMap((name) =>
-    new RegExp(`^\\s*${name}\\s`, "mu").test(run.output)
+    new RegExp(`^\\s*${escapeRegExp(name)}\\s`, "mu").test(run.output)
       ? []
       : [`${args.join(" ")} lists no ${name}`]
   );
 };
 
-const escapeRegExp = (text: string): string => text.replaceAll(/[$()*+.?[\\\]^{|}]/gu, "\\$&");
-
 /** mpv --version prints the built manifest's mpv version, and -v names SDL2 gamepad input. */
-const runs = (shipped: string, built: string): string[] => {
+const runs = (shipped: string, built: string, image: string | undefined): string[] => {
   const { mpv } = ManifestVersion.parse(
     JSON.parse(readFileSync(path.join(built, "manifest.json"), "utf-8"))
   );
 
   return [
     ...problemOf(
-      runMpv(shipped, ["--version"]),
+      runMpv(shipped, ["--version"], image),
       (output) => new RegExp(`^mpv v${escapeRegExp(mpv)} `, "mu").test(output),
       `--version does not print mpv v${mpv}`
     ),
     ...problemOf(
-      runMpv(shipped, ["-v", "--version"]),
+      runMpv(shipped, ["-v", "--version"], image),
       (output) =>
         (/Configuration: (?<flags>.*)$/mu.exec(output)?.groups?.flags ?? "").includes(
           "-Dsdl2-gamepad=enabled"
@@ -151,11 +222,16 @@ const guarded = (name: string, problems: () => readonly string[]): MpvBundleChec
 
 /**
  * The checks on the mpv bundle an AppImage ships in `resources/mpv/` (`shipped`), against the
- * recipe's build in `.cache/mpv/<recipe-hash>/` (`built`). mpv runs with an empty environment.
+ * recipe's build in `.cache/mpv/<recipe-hash>/` (`built`). mpv runs with an empty environment,
+ * or in the `image` podman runs (see `mpvInvocation`).
  * Never throws: a missing `shipped` fails every check, and a missing `built` fails the two that
  * compare against it, each naming `mise run mpv:build`.
  */
-export const mpvBundleChecks = (shipped: string, built: string): MpvBundleCheck[] => {
+export const mpvBundleChecks = (
+  shipped: string,
+  built: string,
+  image?: string
+): MpvBundleCheck[] => {
   const notShipped = existsSync(shipped) ? [] : ["resources/mpv: not in the AppImage"];
 
   const notBuilt = existsSync(built)
@@ -174,11 +250,11 @@ export const mpvBundleChecks = (shipped: string, built: string): MpvBundleCheck[
 
   return [
     check("mpv is this recipe's build", true, () => sameFiles(shipped, built)),
-    check("mpv runs", true, () => runs(shipped, built)),
+    check("mpv runs", true, () => runs(shipped, built, image)),
     check("mpv decoders", false, () => [
-      ...lists(shipped, ["--vd=help"], ["hevc", "h264", "vc1", "av1"]),
-      ...lists(shipped, ["--ad=help"], ["truehd", "eac3", "dca"]),
-      ...lists(shipped, ["--list-options"], ["--input-gamepad"]),
+      ...lists(shipped, ["--vd=help"], ["hevc", "h264", "vc1", "av1"], image),
+      ...lists(shipped, ["--ad=help"], ["truehd", "eac3", "dca"], image),
+      ...lists(shipped, ["--list-options"], ["--input-gamepad"], image),
     ]),
     check("mpv host libs", false, () =>
       unbundledNeeds(shipped, readHostLibs(path.join(repoRootFrom(import.meta.dirname), "mpv")))

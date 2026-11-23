@@ -11,6 +11,8 @@
  *   bun scripts/check-release.ts [version]   version defaults to apps/desktop/package.json's
  *
  * HARAKIRI_DIST overrides the dist directory (used to prove the check fails on a tampered copy).
+ * HARAKIRI_MPV_CHECK_IMAGE runs the shipped mpv in podman on that image (`mise run
+ * package:check-image` builds it) instead of on this host; the release job's runner sets it.
  * Prints `ok: <check>` or `FAIL: <check>: <why>` per check and exits 1 on any failure.
  */
 import { execFileSync } from "node:child_process";
@@ -22,7 +24,7 @@ import path from "node:path";
 
 import desktopPackage from "../apps/desktop/package.json" with { type: "json" };
 import { bundleDirIn } from "../packages/mpv/src/bundle";
-import { mpvBundleChecks } from "../packages/mpv/src/release-check";
+import { mpvBundleChecks, mpvCheckImage } from "../packages/mpv/src/release-check";
 
 const root = path.resolve(import.meta.dirname, "..");
 const dist = process.env.HARAKIRI_DIST ?? path.join(root, "apps/desktop/dist");
@@ -212,9 +214,11 @@ try {
   check("feed", feedProblems.length ? feedProblems.join("; ") : undefined);
 
   // The AppImage's own copy, checked against the current recipe's build; never .cache/mpv alone.
+  // HARAKIRI_MPV_CHECK_IMAGE runs mpv in that image, for a host older than the bundle's floor.
   for (const { name, problems } of mpvBundleChecks(
     path.join(resources, "mpv"),
-    bundleDirIn(root)
+    bundleDirIn(root),
+    mpvCheckImage(process.env)
   )) {
     check(name, problems.join("; "));
   }

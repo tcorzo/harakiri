@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { bundledMpv } from "./bundle";
-import { mpvBundleChecks, mpvBundleProblems } from "./release-check";
+import { mpvBundleChecks, mpvBundleProblems, mpvCheckImage, mpvInvocation } from "./release-check";
 
 // The real build in .cache/mpv/<recipe-hash>. With none, bundledMpv() throws naming `mise run mpv:build`.
 // The tests only read it: each one checks a copy in its own temp dir.
@@ -28,6 +28,47 @@ const shippedCopy = (): string => {
 
   return shipped;
 };
+
+describe("how the checks start the shipped mpv", () => {
+  it("runs it directly, with an empty environment, when HARAKIRI_MPV_CHECK_IMAGE is unset", () => {
+    expect(
+      mpvInvocation("/tmp/x/resources/mpv", ["--version"], mpvCheckImage({ HOME: "/h" }))
+    ).toStrictEqual({
+      file: "/tmp/x/resources/mpv/mpv",
+      args: ["--no-config", "--version"],
+      env: {},
+    });
+  });
+
+  it("runs it directly when HARAKIRI_MPV_CHECK_IMAGE is empty", () => {
+    expect(mpvCheckImage({ HARAKIRI_MPV_CHECK_IMAGE: " " })).toBeUndefined();
+  });
+
+  it("runs it in podman on the image, with no network and the bundle read-only, when HARAKIRI_MPV_CHECK_IMAGE is set", () => {
+    expect(
+      mpvInvocation(
+        "/tmp/x/resources/mpv",
+        ["--vd=help"],
+        mpvCheckImage({ HARAKIRI_MPV_CHECK_IMAGE: "localhost/harakiri-mpv-check" })
+      )
+    ).toStrictEqual({
+      file: "podman",
+      args: [
+        "run",
+        "--rm",
+        "--pull=never",
+        "--network=none",
+        "--memory=1g",
+        "--volume=/tmp/x/resources/mpv:/opt/harakiri-mpv:ro,Z",
+        "localhost/harakiri-mpv-check",
+        "/opt/harakiri-mpv/mpv",
+        "--no-config",
+        "--vd=help",
+      ],
+      env: undefined,
+    });
+  });
+});
 
 describe("the mpv an AppImage ships", () => {
   afterAll(() => {
@@ -63,6 +104,29 @@ describe("the mpv an AppImage ships", () => {
     symlinkSync("lib", path.join(shipped, "share"));
 
     expect(mpvBundleProblems(shipped, built())).toContain("share: not a regular file");
+  });
+
+  it("names the loader's error when mpv cannot start", () => {
+    const shipped = shippedCopy();
+
+    const loaderError =
+      "/opt/harakiri-mpv/mpv: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.43' not found (required by /opt/harakiri-mpv/lib/libcurl.so.4)";
+
+    // A stand-in that fails as the loader does, on stderr with status 127.
+    writeFileSync(path.join(shipped, "mpv-error.txt"), `${loaderError}\n`);
+    rmSync(path.join(shipped, "mpv"));
+    writeFileSync(
+      path.join(shipped, "mpv"),
+      '#!/bin/sh\nread -r line < "$0-error.txt"\necho "$line" >&2\nexit 127\n',
+      { mode: 0o755 }
+    );
+
+    const runs = mpvBundleChecks(shipped, built()).find((check) => check.name === "mpv runs");
+
+    expect(runs?.problems).toStrictEqual([
+      `mpv --version failed: ${loaderError}`,
+      `mpv -v --version failed: ${loaderError}`,
+    ]);
   });
 
   it("fails every check, without throwing, when the AppImage has no resources/mpv", () => {
