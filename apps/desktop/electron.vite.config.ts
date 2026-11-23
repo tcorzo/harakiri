@@ -7,6 +7,8 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "electron-vite";
 import { z } from "zod";
 
+import { impeccableLive } from "./dev/impeccable-live";
+
 const renderer = path.resolve(import.meta.dirname, "src/renderer/src");
 
 const { version, dependencies } = z
@@ -54,6 +56,8 @@ export default defineConfig({
       }),
       react(),
       tailwindcss(),
+      // Dev server only: impeccable's live widget while `mise run live` runs.
+      impeccableLive({ appRoot: import.meta.dirname }),
     ],
   },
 });

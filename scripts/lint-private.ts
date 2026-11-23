@@ -29,6 +29,10 @@ const GENERIC: Rule[] = [
   { name: "home directory", pattern: new RegExp(["", "home", "[^/\\s\"'`]+"].join("/"), "u") },
   { name: "agent scratchpad path", pattern: new RegExp(["", "tmp", "claude-"].join("/"), "u") },
   { name: "owner domain", pattern: new RegExp(["tcorzo", "dev"].join("\\."), "iu") },
+  {
+    name: "impeccable live session token",
+    pattern: new RegExp(["live", "js\\?token=[0-9a-f]{8}-"].join("\\."), "iu"),
+  },
 ];
 
 const DENYLIST = ".private-denylist";

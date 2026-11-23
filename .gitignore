@@ -12,6 +12,7 @@ apps/desktop/e2e/screenshots/
 *.log
 .cache/
 apps/desktop/.impeccable/hook.cache.json
+apps/desktop/.impeccable/live/
 .private-denylist
 # Browser tests: failure screenshots (.vitest/attachments) and page.screenshot() output.
 .vitest/
