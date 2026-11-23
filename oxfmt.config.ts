@@ -13,6 +13,9 @@ export default defineConfig({
     "packages/jellyfin/openapi/**",
     "bun.lock",
     "mise.lock",
+    // release-please writes these on every release; formatting them would fight it.
+    "CHANGELOG.md",
+    ".release-please-manifest.json",
     "**/.impeccable/**",
     "**/routeTree.gen.ts",
   ],
