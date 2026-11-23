@@ -19,16 +19,22 @@ const workspacePackages = Object.keys(dependencies).filter((name) => name.starts
 // (src/shared/identity.ts).
 const define = { HARAKIRI_APP_VERSION: JSON.stringify(version) };
 
+// Each output lists the licenses of the npm code it bundles (out/<target>/licenses.md), so the
+// AppImage carries them in app.asar.
+const license = { fileName: "licenses.md" };
+
 export default defineConfig({
   main: {
     define,
     build: {
+      license,
       // Workspace packages ship raw TypeScript, so they must be bundled rather than required at runtime.
       externalizeDeps: { exclude: workspacePackages },
     },
   },
   preload: {
     build: {
+      license,
       // Sandboxed preloads cannot load ESM or require npm modules, so ship one CommonJS bundle.
       externalizeDeps: false,
       rolldownOptions: { output: { format: "cjs", entryFileNames: "[name].cjs" } },
@@ -36,6 +42,7 @@ export default defineConfig({
   },
   renderer: {
     define,
+    build: { license },
     plugins: [
       tanstackRouter({
         target: "react",

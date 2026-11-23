@@ -14,6 +14,14 @@ extraResources:
   - from: build/steam
     to: steam
     filter: ["*.png"]
+  # harakiri's mpv build, which the app plays with (resources/mpv/mpv). `mise run package` stages
+  # the current recipe's .cache/mpv/<recipe-hash>/ here.
+  - from: ../../.cache/package/mpv
+    to: mpv
+# harakiri's own license, next to Electron's LICENSE.electron.txt and LICENSES.chromium.html.
+extraFiles:
+  - from: ../../LICENSE
+    to: LICENSE
 # Writes latest-linux.yml and embeds resources/app-update.yml. Uploading is release.yml's job (--publish never).
 publish:
   provider: github

@@ -5,6 +5,8 @@
     "outDir": "${configDir}/.tsbuild/tools",
     "tsBuildInfoFile": "${configDir}/.tsbuild/tools.tsbuildinfo"
   },
+  // scripts/check-release.ts runs packages/mpv's release checks.
+  "references": [{ "path": "./packages/mpv" }],
   "include": [
     "scripts",
     "dev",

@@ -153,10 +153,21 @@ if [ "$host" != 0 ] || [ "$guest" != 0 ]; then
 fi
 """
 
+# Stages the current recipe's mpv build in .cache/package/mpv, which electron-builder packs as
+# resources/mpv. electron-builder's YAML cannot name .cache/mpv/<recipe-hash> itself.
 [tasks.package]
-description = "Build the Linux AppImage and its update metadata into apps/desktop/dist"
-dir = "{{config_root}}/apps/desktop"
-run = "../../scripts/bounded.sh package 4G -- bun run package"
+description = "Build the Linux AppImage, with harakiri's mpv in resources/mpv, and its update metadata into apps/desktop/dist"
+depends = ["mpv:build"]
+dir = "{{config_root}}"
+shell = "bash -euo pipefail -c"
+run = """
+bundle="$(bun packages/mpv/src/bundle-dir.ts)"
+rm -rf .cache/package/mpv
+mkdir -p .cache/package
+cp -a "$bundle" .cache/package/mpv
+cd apps/desktop
+../../scripts/bounded.sh package 4G -- bun run package
+"""
 
 [tasks."package:icons"]
 description = "Render the AppImage icons in apps/desktop/build/icons from docs/assets/readme/icon.svg (needs ImageMagick with librsvg)"
@@ -237,5 +248,5 @@ description = "Stop the dev/vm guest, keeping its provisioned disk in .cache/vm"
 run = "dev/vm/guest.sh down"
 
 [tasks."package:check"]
-description = "Check apps/desktop/dist: latest-linux.yml matches the AppImage and the version, the feed is public GitHub, runtime deps are packed"
+description = "Check apps/desktop/dist: latest-linux.yml matches the AppImage and the version, the feed is public GitHub, runtime deps are packed, and the bundled mpv"
 run = "bun scripts/check-release.ts"

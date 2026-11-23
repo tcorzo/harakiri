@@ -4,6 +4,9 @@
  * AppImage (version, path, sha512, size), the embedded app-update.yml must point at the public
  * GitHub feed with no token, every package the main bundle imports must be packed in app.asar, and
  * the desktop entry must carry package.json's desktopName and harakiri's icon, not Electron's.
+ * resources/mpv must be the current recipe's mpv build, byte for byte, and run with an empty
+ * environment; the AppImage must carry harakiri's, Electron's and Chromium's licenses, and the
+ * licenses of the npm code each bundle in app.asar holds.
  *
  *   bun scripts/check-release.ts [version]   version defaults to apps/desktop/package.json's
  *
@@ -18,6 +21,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import desktopPackage from "../apps/desktop/package.json" with { type: "json" };
+import { bundleDirIn } from "../packages/mpv/src/bundle";
+import { mpvBundleChecks } from "../packages/mpv/src/release-check";
 
 const root = path.resolve(import.meta.dirname, "..");
 const dist = process.env.HARAKIRI_DIST ?? path.join(root, "apps/desktop/dist");
@@ -152,6 +157,8 @@ try {
   // The root icon is a symlink into the hicolor theme.
   execFileSync(file, ["--appimage-extract", "*.png"], { cwd: tmp, stdio: "ignore" });
   execFileSync(file, ["--appimage-extract", "usr/share/icons/*"], { cwd: tmp, stdio: "ignore" });
+  // harakiri's LICENSE, Electron's LICENSE.electron.txt and Chromium's LICENSES.chromium.html.
+  execFileSync(file, ["--appimage-extract", "LICENSE*"], { cwd: tmp, stdio: "ignore" });
   const appDir = path.join(tmp, "squashfs-root");
   const resources = path.join(appDir, "resources");
 
@@ -204,10 +211,61 @@ try {
 
   check("feed", feedProblems.length ? feedProblems.join("; ") : undefined);
 
-  const asar = execFileSync(
-    "bun",
-    ["x", "--package", "@electron/asar@3.4.1", "asar", "list", path.join(resources, "app.asar")],
-    { encoding: "utf-8", maxBuffer: 2 ** 28 }
+  // The AppImage's own copy, checked against the current recipe's build; never .cache/mpv alone.
+  for (const { name, problems } of mpvBundleChecks(
+    path.join(resources, "mpv"),
+    bundleDirIn(root)
+  )) {
+    check(name, problems.join("; "));
+  }
+
+  const asarCli = (...args: string[]) =>
+    execFileSync("bun", ["x", "--package", "@electron/asar@3.4.1", "asar", ...args], {
+      cwd: tmp,
+      encoding: "utf-8",
+      maxBuffer: 2 ** 28,
+    });
+
+  const appAsar = path.join(resources, "app.asar");
+  const asar = asarCli("list", appAsar);
+  const asarEntries = new Set(asar.split("\n").map((line) => line.trim()));
+
+  const ownLicense = path.join(appDir, "LICENSE");
+
+  const bundleLicenses = ["renderer", "main", "preload"].map(
+    (target) => `out/${target}/licenses.md`
+  );
+
+  const missingBundleLicenses = bundleLicenses.filter((rel) => !asarEntries.has(`/${rel}`));
+
+  /** An entry of app.asar's text; extract-file writes it under its basename into tmp. */
+  const asarText = (rel: string): string => {
+    asarCli("extract-file", appAsar, rel);
+
+    return readFileSync(path.join(tmp, path.basename(rel)), "utf-8");
+  };
+
+  const rendererLicenses = missingBundleLicenses.includes("out/renderer/licenses.md")
+    ? ""
+    : asarText("out/renderer/licenses.md");
+
+  check(
+    "licenses",
+    [
+      !existsSync(ownLicense) && "the AppImage root has no LICENSE",
+      existsSync(ownLicense) &&
+        sha256(ownLicense) !== sha256(path.join(root, "LICENSE")) &&
+        "the AppImage's LICENSE is not the repo's",
+      ...["LICENSE.electron.txt", "LICENSES.chromium.html"].map(
+        (name) => !existsSync(path.join(appDir, name)) && `the AppImage root has no ${name}`
+      ),
+      missingBundleLicenses.length > 0 && `app.asar holds no ${missingBundleLicenses.join(", ")}`,
+      rendererLicenses !== "" &&
+        !/^## react - /mu.test(rendererLicenses) &&
+        "out/renderer/licenses.md does not name react",
+    ]
+      .filter(Boolean)
+      .join("; ")
   );
 
   const needed = new Set<string>();
