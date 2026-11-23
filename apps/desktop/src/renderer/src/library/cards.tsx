@@ -3,11 +3,10 @@ import { useFocusable } from "@noriginmedia/norigin-spatial-navigation";
 
 import { episodeCode, imageUrl, minutesLeft } from "../data/entry";
 import type { Entry, ImageRef } from "../data/entry";
-import { catalogueLabel, remPx, SeenMark } from "../ui/marks";
+import { remPx, SeenMark } from "../ui/marks";
 
 export interface CardProps {
   readonly entry: Entry;
-  readonly number: number | null;
   readonly server: ServerUrl;
   readonly focusKey: string;
   readonly onFocus: () => void;
@@ -40,14 +39,13 @@ const Picture = ({
   );
 };
 
-const spokenName = (entry: Entry, number: number | null): string => {
+const spokenName = (entry: Entry): string => {
   const code = episodeCode(entry);
 
   const parts = [
     entry.series !== null && entry.kind === "Episode"
       ? `${entry.series.name}, ${code ?? ""}, ${entry.title}`
       : entry.title,
-    number === null ? null : catalogueLabel(number),
     entry.played ? "seen" : null,
   ];
 
@@ -55,7 +53,7 @@ const spokenName = (entry: Entry, number: number | null): string => {
 };
 
 /** A landscape still with the progress rule: Continue Watching and Next Up. */
-export const StillCard = ({ entry, number, server, focusKey, onFocus, onPress }: CardProps) => {
+export const StillCard = ({ entry, server, focusKey, onFocus, onPress }: CardProps) => {
   const { ref } = useFocusable<object, HTMLButtonElement>({ focusKey, onFocus });
   const left = minutesLeft(entry);
   const code = episodeCode(entry);
@@ -64,7 +62,7 @@ export const StillCard = ({ entry, number, server, focusKey, onFocus, onPress }:
     <button
       ref={ref}
       type="button"
-      aria-label={spokenName(entry, number)}
+      aria-label={spokenName(entry)}
       onClick={onPress}
       className="group flex w-[24rem] flex-col gap-3 text-left"
     >
@@ -85,7 +83,6 @@ export const StillCard = ({ entry, number, server, focusKey, onFocus, onPress }:
         )}
       </span>
       <span className="text-caption text-paper-dim stretch-condensed flex items-baseline gap-3 font-[600]">
-        {number === null ? null : <span>{catalogueLabel(number)}</span>}
         {code === null ? null : <span>{code}</span>}
         {left === null ? null : <span className="ml-auto">{left} min left</span>}
       </span>
@@ -96,15 +93,15 @@ export const StillCard = ({ entry, number, server, focusKey, onFocus, onPress }:
   );
 };
 
-/** A poster with its catalogue number: the programme sections. */
-export const PosterCard = ({ entry, number, server, focusKey, onFocus, onPress }: CardProps) => {
+/** A poster with its title and seen tick: the programme sections. */
+export const PosterCard = ({ entry, server, focusKey, onFocus, onPress }: CardProps) => {
   const { ref } = useFocusable<object, HTMLButtonElement>({ focusKey, onFocus });
 
   return (
     <button
       ref={ref}
       type="button"
-      aria-label={spokenName(entry, number)}
+      aria-label={spokenName(entry)}
       onClick={onPress}
       className="group flex w-[13.5rem] flex-col gap-3 text-left"
     >
@@ -116,12 +113,11 @@ export const PosterCard = ({ entry, number, server, focusKey, onFocus, onPress }
           className="block aspect-[2/3] w-full"
         />
       </span>
-      <span className="text-caption text-paper-dim stretch-condensed flex items-center gap-2 font-[600]">
-        {number === null ? null : <span>{catalogueLabel(number)}</span>}
-        {entry.played ? <SeenMark className="text-paper" /> : null}
-      </span>
-      <span className="text-body stretch-semicondensed -mt-2 truncate font-[640]">
-        {entry.title}
+      <span className="flex items-center gap-2">
+        <span className="text-body stretch-semicondensed min-w-0 truncate font-[640]">
+          {entry.title}
+        </span>
+        {entry.played ? <SeenMark className="text-paper shrink-0" /> : null}
       </span>
     </button>
   );

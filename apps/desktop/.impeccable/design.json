@@ -19,17 +19,17 @@
     },
     "typographyMeta": {
       "marquee": { "displayName": "Marquee", "purpose": "A film's name when it has no logo, empty-state headlines, and the handoff title. Wide and heavy." },
-      "title": { "displayName": "Title", "purpose": "Page titles and the compact hero title. At weight 300 condensed it sets the margin catalogue number; at 460 condensed the handoff signal slug." },
+      "title": { "displayName": "Title", "purpose": "Page titles and the compact hero title. At 460 condensed it sets the handoff signal slug." },
       "heading": { "displayName": "Heading", "purpose": "Wordmark, Play, list choices and handoff sub-lines." },
-      "notes": { "displayName": "Notes", "purpose": "The condensed programme note line with tabular figures, and list details." },
+      "notes": { "displayName": "Notes", "purpose": "List details and the handoff's programme lines. Note badges use the badge size (1.25rem, 560, condensed)." },
       "body": { "displayName": "Body", "purpose": "Overviews (max 60ch), quiet actions and card titles." },
-      "caption": { "displayName": "Caption", "purpose": "Catalogue labels, title counts, minutes left, server name." },
+      "caption": { "displayName": "Caption", "purpose": "Episode codes, title counts, minutes left, server name." },
       "label": { "displayName": "Label", "purpose": "Uppercase tracked condensed word naming the value beside or below it: signal state words, station names, credit terms, field labels. Never decorative above a heading." }
     },
     "shadows": [
       { "name": "logo-lift", "value": "drop-shadow(0 0.25rem 1.5rem var(--color-shade))", "purpose": "Keeps a film logo legible over a bright backdrop. Logos only." },
       { "name": "sheet-edge", "value": "-1.5rem 0 4rem var(--color-shade)", "purpose": "Separates the track side sheet from the page. Side sheet only." },
-      { "name": "ink-field-hero", "value": "linear-gradient(to top, var(--color-ink) 0%, var(--color-ink) 40%, color-mix(in oklch, var(--color-ink) 88%, transparent) 50%, color-mix(in oklch, var(--color-ink) 45%, transparent) 60%, transparent 68%), linear-gradient(to right, color-mix(in oklch, var(--color-ink) 82%, transparent) 0%, transparent 58%), linear-gradient(to bottom, color-mix(in oklch, var(--color-ink) 70%, transparent) 0%, transparent 16%)", "purpose": "The lighter ink field while the hero holds focus, so the owner's artwork reads on a TV (PRODUCT principle 5). Deliberate adaptation." },
+      {"name": "ink-field-hero", "value": "linear-gradient(to top, var(--color-ink) 0%, var(--color-ink) 14%, color-mix(in oklch, var(--color-ink) 78%, transparent) 26%, color-mix(in oklch, var(--color-ink) 38%, transparent) 38%, transparent 50%), linear-gradient(to right, color-mix(in oklch, var(--color-ink) 60%, transparent) 0%, transparent 48%), linear-gradient(to bottom, color-mix(in oklch, var(--color-ink) 60%, transparent) 0%, transparent 14%)", "purpose": "The light, low ink field while the hero holds the full screen, so the owner's artwork carries the first view (PRODUCT principle 5). Deliberate adaptation."},
       { "name": "ink-field-rows", "value": "linear-gradient(to top, var(--color-ink) 0%, var(--color-ink) 35%, color-mix(in oklch, var(--color-ink) 85%, transparent) 50%, color-mix(in oklch, var(--color-ink) 45%, transparent) 72%, color-mix(in oklch, var(--color-ink) 15%, transparent) 100%), linear-gradient(to right, color-mix(in oklch, var(--color-ink) 85%, transparent) 0%, transparent 60%), linear-gradient(to bottom, color-mix(in oklch, var(--color-ink) 70%, transparent) 0%, transparent 16%)", "purpose": "The deeper ink field once focus moves into the programme rows." }
     ],
     "motion": [
@@ -38,7 +38,7 @@
       { "name": "focus", "value": "transform 260ms ease-curtain, outline-color 160ms linear", "purpose": "The focus mark: paper ring plus scale to 1.06." },
       { "name": "relight", "value": "900ms ease-curtain, from opacity 0 and brightness 0.55", "purpose": "Backdrop cross-fade when the featured or focused film changes." },
       { "name": "row-transition", "value": "500ms opacity", "purpose": "Rows passed fade out; waiting rows dim pictures to 50%." },
-      { "name": "hero-hold", "value": "20000ms idle, 800ms settle", "purpose": "The hero advances only after 20 s with no input; never under reduced motion." },
+      { "name": "hero-hold", "value": "20000ms idle, 800ms settle", "purpose": "The hero advances only after 20 s with no input; never under reduced motion. One paper rule across the content width, between the hero and the first row, fills over the hold; no preview of the next film." },
       { "name": "handoff", "value": "house 1200ms, slug 3000ms", "purpose": "Stations House, Programme, Picture, in that order." },
       { "name": "reduced-motion", "value": "all transition and animation durations 0ms", "purpose": "prefers-reduced-motion: reduce removes all motion." }
     ],
@@ -83,24 +83,24 @@
       "name": "Poster Card",
       "kind": "card",
       "refersTo": "poster-card",
-      "description": "A square-cornered poster with its catalogue number and seen tick; focus rings and scales the picture.",
-      "html": "<button class=\"ds-poster\"><span class=\"ds-poster-pic\"></span><span class=\"ds-poster-meta\">No. 074 <svg viewBox=\"0 0 28 22\" aria-hidden=\"true\"><path d=\"M2.5 12.8c2.4 1.4 4.6 3.6 6.4 6.6C13 11.2 18.6 5.4 25.6 2.4\"/></svg></span><span class=\"ds-poster-title\">Harakiri</span></button>",
+      "description": "A square-cornered poster with its title and seen tick; focus rings and scales the picture.",
+      "html": "<button class=\"ds-poster\"><span class=\"ds-poster-pic\"></span><span class=\"ds-poster-meta\"><svg viewBox=\"0 0 28 22\" aria-hidden=\"true\"><path d=\"M2.5 12.8c2.4 1.4 4.6 3.6 6.4 6.6C13 11.2 18.6 5.4 25.6 2.4\"/></svg></span><span class=\"ds-poster-title\">Harakiri</span></button>",
       "css": ".ds-poster { display: flex; flex-direction: column; gap: 0.75rem; width: 13.5rem; padding: 0; background: none; border: 0; color: oklch(0.955 0.01 85); text-align: left; font-family: 'Archivo Variable', Archivo, sans-serif; } .ds-poster-pic { display: block; aspect-ratio: 2 / 3; width: 100%; background: oklch(0.18 0.011 40); outline: 0.1875rem solid transparent; outline-offset: 0.375rem; transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1), outline-color 160ms linear; } .ds-poster:hover .ds-poster-pic, .ds-poster:focus-visible .ds-poster-pic { outline-color: oklch(0.955 0.01 85); transform: scale(1.06); } .ds-poster-meta { display: flex; align-items: center; gap: 0.5rem; font-size: 1.5rem; font-weight: 600; font-stretch: 72%; color: oklch(0.8 0.016 70); font-variant-numeric: tabular-nums; } .ds-poster-meta svg { height: 0.85em; width: auto; fill: none; stroke: oklch(0.955 0.01 85); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; } .ds-poster-title { margin-top: -0.5rem; font-size: 1.5rem; font-weight: 640; font-stretch: 86%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-poster:focus { outline: none; }"
     },
     {
-      "name": "Programme Notes",
+      "name": "Note Badges",
       "kind": "custom",
       "refersTo": "notes",
-      "description": "One condensed line of facts; signal state carried by square shape plus word.",
-      "html": "<p class=\"ds-notes\"><span>2023</span><span class=\"ds-dot\">·</span><span>124 min</span><span class=\"ds-dot\">·</span><span>4K Dolby Vision <span class=\"ds-state\"><svg viewBox=\"0 0 12 12\"><rect x=\"1\" y=\"1\" width=\"10\" height=\"10\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\"/><path d=\"M1 11 11 1v10Z\" fill=\"currentColor\"/></svg>mapped</span></span><span class=\"ds-dot\">·</span><span>TrueHD Atmos 7.1 <span class=\"ds-state\"><svg viewBox=\"0 0 12 12\"><rect x=\"0.2\" y=\"0.2\" width=\"11.6\" height=\"11.6\" fill=\"currentColor\"/></svg>native</span></span></p>",
-      "css": ".ds-notes { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1.25rem; margin: 0; color: oklch(0.955 0.01 85); font-family: 'Archivo Variable', Archivo, sans-serif; font-size: 1.625rem; line-height: 1.25; font-weight: 540; font-stretch: 72%; font-variant-numeric: tabular-nums; } .ds-dot { color: oklch(0.66 0.02 65); } .ds-state { display: inline-flex; align-items: center; gap: 0.375rem; margin-left: 0.5rem; font-size: 1.375rem; font-weight: 620; letter-spacing: 0.06em; text-transform: uppercase; font-stretch: 86%; color: oklch(0.8 0.016 70); } .ds-state svg { width: 0.8em; height: 0.8em; }"
+      "description": "Quiet badges under a title: year, runtime, picture, sound, seen. Raised Ink at 55%, Dim Paper at the badge size; formats with a logo show it as a text-colour mask; a changed fact leads with its square mark in a hairline cell.",
+      "html": "<p class=\"ds-badges\"><span>2003</span><span>263 min</span><span><i class=\"ds-mark\"></i>4K Dolby Vision</span><span>Dolby TrueHD · Dolby Atmos 7.1</span><span>✓</span></p>",
+      "css": ".ds-badges { display: flex; flex-wrap: wrap; gap: 0.375rem; margin: 0; color: oklch(0.8 0.016 70); font-family: 'Archivo Variable', Archivo, sans-serif; font-size: 1.25rem; font-weight: 560; font-variation-settings: 'wdth' 72; font-feature-settings: 'tnum' 1; } .ds-badges > span { display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0.6rem; background: color-mix(in oklch, oklch(0.18 0.011 40) 55%, transparent); } .ds-mark { display: inline-block; width: 0.8em; height: 0.8em; border: 1.6px solid currentColor; background: linear-gradient(135deg, transparent 50%, currentColor 50%); margin-right: 0.5rem; }"
     },
     {
       "name": "Margin Column",
       "kind": "custom",
       "refersTo": "margin-band",
-      "description": "Catalogue number, seen annotation and the vertical section band, read top to bottom.",
-      "html": "<div class=\"ds-margin\"><p class=\"ds-no\"><span class=\"ds-no-pre\">No.</span><span class=\"ds-no-num\">066</span></p><div class=\"ds-vband\"><span>Tonight</span></div></div>",
+      "description": "Settings and onboarding only: the vertical section band in the left margin. The library hero and title pages have no margin column.",
+      "html": "<div class=\"ds-margin\"><div class=\"ds-vband\"><span>Tonight</span></div></div>",
       "css": ".ds-margin { display: flex; flex-direction: column; align-items: flex-start; gap: 1rem; width: 7.5rem; height: 26rem; font-family: 'Archivo Variable', Archivo, sans-serif; color: oklch(0.955 0.01 85); } .ds-no { margin: 0; display: flex; align-items: baseline; gap: 0.25rem; line-height: 1; font-variant-numeric: tabular-nums; } .ds-no-pre { font-size: 1.5rem; font-weight: 560; font-stretch: 72%; color: oklch(0.8 0.016 70); } .ds-no-num { font-size: 4rem; font-weight: 300; font-stretch: 72%; } .ds-vband { display: flex; flex: none; min-height: 10rem; width: 3.5rem; align-items: flex-end; justify-content: center; padding: 1rem 0; background: oklch(0.44 0.17 25); } .ds-vband span { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-size: 1.5rem; font-weight: 760; font-stretch: 118%; }"
     },
     {
@@ -114,15 +114,14 @@
   ],
   "narrative": {
     "northStar": "The Screening Programme",
-    "overview": "Every screen is set like a page of a printed programme seen from the couch. The owner's own artwork is the ground: backdrops run full bleed and a deep warm near-black ink field rises over the lower part of the frame to carry the type. On that ink, one variable grotesk family does all the work by changing width: titles go wide and heavy, technical notes go condensed with tabular figures, and catalogue numbers sit in a left margin above a short red section tab. Nothing is rounded, nothing floats on a card, and one red does all the colour work: it marks the section you are in and it fills the action that starts the film. Play is the only red block that carries a line of type.\n\nThe system is built for ten feet and a d-pad. The root size tracks the screen height (1rem is 100vh / 67.5, so 16px at 1080p and 32px at 4K), every layout sits inside a 5% overscan-safe frame, and every focusable thing shows focus by two cues at once. Motion is slow and theatrical (long eased re-lights, a dimming house before playback) and disappears entirely under reduced motion.\n\nDensity is low and deliberate. A screen carries one title, one line of programme notes, a few actions, and the top of the next row. Technical facts are stated plainly with their real signal state, never dressed as badges.",
+    "overview": "Every screen is set like a page of a printed programme seen from the couch. The owner's own artwork is the ground: backdrops run full bleed and a deep warm near-black ink field rises over the lower part of the frame to carry the type. On that ink, one variable grotesk family does all the work by changing width: titles go wide and heavy, technical notes go condensed with tabular figures, and quiet badges, with each format's own logo, carry the facts under a title. Nothing is rounded, nothing floats on a card, and one red does all the colour work: it marks the section you are in and it fills the action that starts the film. Play is the only red block that carries a line of type.\n\nThe system is built for ten feet and a d-pad. The root size tracks the screen height (1rem is 100vh / 67.5, so 16px at 1080p and 32px at 4K), every layout sits inside a 5% overscan-safe frame, and every focusable thing shows focus by two cues at once. Motion is slow and theatrical (long eased re-lights, a dimming house before playback) and disappears entirely under reduced motion.\n\nDensity is low and deliberate. A screen carries one title, one line of programme notes, a few actions, and the top of the next row. Technical facts are stated plainly with their real signal state, never dressed as badges.",
     "keyCharacteristics": [
       "Artwork as the ground, a warm near-black ink field as the reading surface.",
       "One variable family, hierarchy carried by width (62 to 125 axis) as much as weight.",
       "Square geometry throughout; hairline rules instead of containers.",
       "One accent, Harakiri Red, a dark arterial red: it fills Play and Resume and marks sections with short tabs. Play is the only red block that carries horizontal type.",
       "Problems carry a small Torch Amber square and words, never red, so an error is never read as the brand.",
-      "Focus is a paper outline plus scale, or a full paper inversion, never colour alone.",
-      "Catalogue numbers (\"No. 074\") give every film and series a stable identity."
+      "Focus is a paper outline plus scale, or a full paper inversion, never colour alone."
     ],
     "rules": [
       { "name": "The One Red Rule", "body": "Harakiri Red is the only saturated surface in the product; Torch Amber appears only as a small problem mark. The red has two jobs. It names where you are: the margin's section tab, the short tab before each row and sheet head, the Welcome band, the selected season's underline, and text selection. It starts the film: the Play and Resume fill, and the player's state tile, Play in miniature. No other control, badge, focus state, fact or illustration may use it.", "section": "colors" },
@@ -131,14 +130,12 @@
       { "name": "The Paper On Ink Rule", "body": "Type is paper on ink at three strengths (paper, dim, faint). Hue is never used to rank text.", "section": "colors" },
       { "name": "The Width Carries Rank Rule", "body": "Wide means a name, condensed means a fact. Titles and section names set wide (118 to 125%); notes, numbers and captions set condensed (72%); running copy sits at 86 to 100%.", "section": "typography" },
       { "name": "The Tabular Rule", "body": "Figures are tabular across the whole product, set on the body. Do not switch to proportional figures for display.", "section": "typography" },
-      { "name": "The Catalogue Number Rule", "body": "Every film and series carries a number in accession order (date added, then sort name), written \"No.\" plus three digits (\"No. 074\"). An episode carries its series' number. The number never changes when the library is re-sorted.", "section": "typography" },
       { "name": "The Ink Field Rule", "body": "Type over artwork always sits on the graded ink field. Never place type on a raw backdrop, and never use a hard stop: the ramp is eased so bright skies fade into ink without a horizon line.", "section": "elevation" }
     ],
     "dos": [
       "Do size everything in rem so it scales with screen height (1rem is 100vh / 67.5), and keep content inside the 5vw by 5vh safe frame.",
       "Do show focus with two cues: the paper outline with scale, or a full paper inversion. Never only a colour change.",
       "Do set names wide (118 to 125%) and facts condensed (72%) with tabular figures.",
-      "Do give every film and series its catalogue number, \"No.\" plus three digits, in accession order.",
       "Do mark signal state by shape plus word: solid square native, half square mapped, outline square decoded.",
       "Do put type over artwork only on the eased ink field.",
       "Do dim only the pictures of inactive rows; keep their type at full contrast.",
@@ -146,7 +143,7 @@
       "Do respect reduced motion: no auto-advancing hero, no transitions."
     ],
     "donts": [
-      "Don't use Harakiri Red for anything but the margin's section tab, the tab before row and sheet heads, the Welcome band, the selected season's underline, text selection, the Play and Resume fill, and the player's state tile.",
+      "Don't use Harakiri Red for anything but the section tab on Settings and onboarding, the tab before row and sheet heads, the Welcome band, the selected season's underline, text selection, the Play and Resume fill, and the player's state tile.",
       "Don't set a line of type on a red block other than Play and Resume, make a tab or band focusable, or show focus by changing the red; focus on red is the paper ring and scale.",
       "Don't run the margin band the full height of the screen; it is a tab as tall as its section name. Only Welcome runs it full height.",
       "Don't round corners or put titles on floating cards.",

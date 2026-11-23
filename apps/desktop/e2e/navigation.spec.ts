@@ -75,10 +75,7 @@ test("the arrow keys walk the hero, the rows and the title pages, and focus is n
   const { page } = await launch();
 
   const hero = heroTitle(await openLibrary(page));
-  await press(page, "ArrowRight", `Programme notes for ${hero}`);
-  const next = await press(page, "ArrowRight", /^Next screening: \S/u);
-  expect(next.name).not.toBe(`Next screening: ${hero}`);
-  await press(page, "ArrowLeft", `Programme notes for ${hero}`);
+  await press(page, "ArrowRight", `Details for ${hero}`);
   await press(page, "ArrowLeft", heroPlay);
 
   // Continue Watching: the seeded item, with the time left the server's resume point gives.
@@ -112,9 +109,9 @@ test("the arrow keys walk the hero, the rows and the title pages, and focus is n
   await press(page, "Escape", cardName(spokenTitle(picked)));
   expect(await focusRoute(page)).toBe("/library");
 
-  // Back from the rows returns to tonight's screening, then its programme notes open the film.
+  // Back from the rows returns to tonight's screening, then Details opens the film.
   expect(heroTitle(await press(page, "Escape", heroPlay))).toBe(hero);
-  await press(page, "ArrowRight", `Programme notes for ${hero}`);
+  await press(page, "ArrowRight", `Details for ${hero}`);
   await page.keyboard.press("Enter");
   await expect(main(page, hero)).toBeVisible();
   await expectFocus(page, new RegExp(`^(?:Play|Resume) ${escapeRegExp(hero)}$`, "u"));
@@ -146,7 +143,7 @@ test("the gamepad walks the same way: d-pad, stick, A, B, and a held d-pad repea
   // The left stick past its threshold is a direction too.
   await setAxis(page, 0, 0.9);
   await setAxis(page, 0, 0);
-  await expectFocus(page, `Programme notes for ${hero}`);
+  await expectFocus(page, `Details for ${hero}`);
   await tap(page, "left");
   await expectFocus(page, heroPlay);
 
@@ -273,42 +270,32 @@ const pauseClock = async (page: Page): Promise<void> => {
   await page.clock.pauseAt(now + 100);
 };
 
-const nextTitle = async (page: Page) =>
-  (
-    (await page.getByRole("button", { name: /^Next screening: /u }).getAttribute("aria-label")) ??
-    ""
-  ).replace(/^Next screening: /u, "");
-
 test.describe("the hero cycle", () => {
-  test("after 20 quiet seconds the film Next promised takes the screen, and a press in its first 800 ms is ignored", async ({
+  test("after 20 quiet seconds the next featured film takes the screen, and a press in its first 800 ms is ignored", async ({
     launch,
   }) => {
     const { page } = await launch();
     const first = await withClock(page);
-    const second = await nextTitle(page);
-    expect(second).not.toBe(first);
-    await expect(page.getByRole("button", { name: `Next screening: ${second}` })).toContainText(
-      "Next in 20 quiet seconds"
-    );
 
     // With the clock stopped, a press starts the hold at a known instant and only runFor moves
     // time on, however long the real steps below take.
     await pauseClock(page);
-    await press(page, "ArrowRight", `Programme notes for ${first}`);
+    await press(page, "ArrowRight", `Details for ${first}`);
     await press(page, "ArrowLeft", heroPlay);
     await page.clock.runFor(19_000);
     expect(heroTitle(await expectFocus(page, heroPlay))).toBe(first);
     // The film changes at 20 s; the clock stops 500 ms later, inside the 800 ms settle.
     await page.clock.runFor(1500);
 
-    const advanced = await expectFocus(
-      page,
-      new RegExp(`^(?:Play|Resume) ${escapeRegExp(second)}$`, "u")
+    const advanced = await until(
+      "the hero advances after 20 quiet seconds",
+      async () => await expectFocus(page, heroPlay),
+      (focused) => heroTitle(focused) !== first,
+      3000
     );
 
     expect(advanced.route).toBe("/library");
-    const third = await nextTitle(page);
-    expect(third).not.toBe(second);
+    const second = heroTitle(advanced);
 
     // A press this soon was aimed at the film that just left.
     await page.keyboard.press("Enter");
@@ -327,10 +314,9 @@ test.describe("the hero cycle", () => {
   test("any press restarts the 20 s hold", async ({ launch }) => {
     const { page } = await launch();
     const first = await withClock(page);
-    const second = await nextTitle(page);
 
     await page.clock.fastForward(15_000);
-    await press(page, "ArrowRight", `Programme notes for ${first}`);
+    await press(page, "ArrowRight", `Details for ${first}`);
     await press(page, "ArrowLeft", heroPlay);
     await page.clock.fastForward(15_000);
     expect(heroTitle(await expectFocus(page, heroPlay))).toBe(first);
@@ -338,38 +324,26 @@ test.describe("the hero cycle", () => {
     await until(
       "the hero advances 20 s after the last press",
       async () => heroTitle(await expectFocus(page, heroPlay)),
-      (title) => title === second,
+      (title) => title !== first,
       3000
     );
   });
 
-  test("reduced motion never advances on its own; Next still moves on", async ({ launch }) => {
+  test("reduced motion never advances on its own", async ({ launch }) => {
     const { page } = await launch();
     await page.emulateMedia({ reducedMotion: "reduce" });
     const first = await withClock(page);
-    const second = await nextTitle(page);
-    const nextButton = page.getByRole("button", { name: `Next screening: ${second}` });
-    await expect(nextButton).toContainText("Next screening");
-    await expect(nextButton).not.toContainText("quiet seconds");
 
     await page.clock.fastForward(60_000);
     await page.waitForTimeout(300);
     expect(heroTitle(await expectFocus(page, heroPlay))).toBe(first);
-
-    await press(page, "ArrowRight", `Programme notes for ${first}`);
-    await press(page, "ArrowRight", `Next screening: ${second}`);
-    await page.keyboard.press("Enter");
-    await expectFocus(page, /^Next screening: /u);
-    await page.keyboard.press("ArrowLeft");
-    await page.keyboard.press("ArrowLeft");
-    expect(heroTitle(await expectFocus(page, heroPlay))).toBe(second);
   });
 
   test("Play answers a press right after moving back onto it", async ({ launch }) => {
     const { page } = await launch();
     const first = await withClock(page);
     await page.clock.fastForward(2000);
-    await press(page, "ArrowRight", `Programme notes for ${first}`);
+    await press(page, "ArrowRight", `Details for ${first}`);
     await press(page, "ArrowLeft", heroPlay);
     await page.keyboard.press("Enter");
     await expect(main(page, `Screening ${first}`)).toBeVisible();

@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { noop } from "es-toolkit";
 
 import {
-  catalogueQuery,
   continueQuery,
   featuredQuery,
   programmeQuery,
@@ -19,10 +18,7 @@ export const Route = createFileRoute("/_signedIn/library")({
     void queryClient.query(recentQuery(signedIn)).catch(noop);
     void queryClient.query(programmeQuery(signedIn)).catch(noop);
 
-    return await Promise.all([
-      queryClient.query({ ...featuredQuery(signedIn), staleTime: "static" }),
-      queryClient.query({ ...catalogueQuery(signedIn), staleTime: "static" }),
-    ]);
+    return await queryClient.query({ ...featuredQuery(signedIn), staleTime: "static" });
   },
   component: LibraryScreen,
 });

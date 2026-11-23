@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 import { imageUrl, programmeNotes } from "../data/entry";
 import type { Entry, ImageRef } from "../data/entry";
-import { ProgrammeNotes, SectionTab, SeenMark } from "../ui/marks";
+import { ProgrammeNotes } from "../ui/marks";
 
 export const backdropUrl = (server: ServerUrl, image: ImageRef): string =>
   imageUrl(server, image, Math.min(3840, window.screen.width * (window.devicePixelRatio || 1)));
@@ -37,48 +37,20 @@ export const Backdrop = ({ url }: { readonly url: string | null }) => {
   );
 };
 
-/** The programme-ink field that owns the lower two thirds and the margin side of the frame. */
+/** The programme-ink field under the type: deep over rows and title pages, light and low on the hero. */
 export const InkField = ({ deep }: { readonly deep: boolean }) => (
   <div
     aria-hidden="true"
     className="ease-curtain absolute inset-0 transition-opacity duration-700"
     style={{
       // An eased ramp rather than a hard stop, so a bright backdrop fades into the ink instead of
-      // ending on a horizon line; the thin top band keeps the wordmark and Settings legible.
+      // ending on a horizon line; the thin top band keeps the wordmark and Settings legible. The
+      // hero's light field ends low, so the artwork carries the first view.
       background: deep
         ? "linear-gradient(to top, var(--color-ink) 0%, var(--color-ink) 35%, color-mix(in oklch, var(--color-ink) 85%, transparent) 50%, color-mix(in oklch, var(--color-ink) 45%, transparent) 72%, color-mix(in oklch, var(--color-ink) 15%, transparent) 100%), linear-gradient(to right, color-mix(in oklch, var(--color-ink) 85%, transparent) 0%, transparent 60%), linear-gradient(to bottom, color-mix(in oklch, var(--color-ink) 70%, transparent) 0%, transparent 16%)"
-        : "linear-gradient(to top, var(--color-ink) 0%, var(--color-ink) 40%, color-mix(in oklch, var(--color-ink) 88%, transparent) 50%, color-mix(in oklch, var(--color-ink) 45%, transparent) 60%, transparent 68%), linear-gradient(to right, color-mix(in oklch, var(--color-ink) 82%, transparent) 0%, transparent 58%), linear-gradient(to bottom, color-mix(in oklch, var(--color-ink) 70%, transparent) 0%, transparent 16%)",
+        : "linear-gradient(to top, var(--color-ink) 0%, var(--color-ink) 14%, color-mix(in oklch, var(--color-ink) 78%, transparent) 26%, color-mix(in oklch, var(--color-ink) 38%, transparent) 38%, transparent 50%), linear-gradient(to right, color-mix(in oklch, var(--color-ink) 60%, transparent) 0%, transparent 48%), linear-gradient(to bottom, color-mix(in oklch, var(--color-ink) 60%, transparent) 0%, transparent 14%)",
     }}
   />
-);
-
-/** The left margin: catalogue number, the seen annotation and the section band, read top to bottom. */
-export const Margin = ({
-  number,
-  seen,
-  section,
-}: {
-  readonly number: number | null;
-  readonly seen: boolean;
-  readonly section: string;
-}) => (
-  <div className="w-margin flex shrink-0 flex-col items-start gap-4 self-stretch">
-    {number === null ? null : (
-      <p className="m-0 flex items-baseline gap-1 leading-none">
-        <span className="text-body text-paper-dim stretch-condensed font-[560]">No.</span>
-        <span className="text-title stretch-condensed font-[300]">
-          {String(number).padStart(3, "0")}
-        </span>
-      </p>
-    )}
-    {seen ? (
-      <span className="text-caption text-paper stretch-condensed flex items-center gap-2 font-[620]">
-        <SeenMark />
-        Seen
-      </span>
-    ) : null}
-    <SectionTab>{section}</SectionTab>
-  </div>
 );
 
 /** The title as the programme sets it: the film's own logo, or its name wide and heavy. */
@@ -133,7 +105,7 @@ export const EntryNotes = ({
     {entry.kind === "Episode" ? (
       <p className="text-body text-paper stretch-semicondensed font-[620]">{entry.title}</p>
     ) : null}
-    <ProgrammeNotes facts={programmeNotes(entry)} />
+    <ProgrammeNotes facts={programmeNotes(entry)} seen={entry.played} />
     {children}
   </div>
 );

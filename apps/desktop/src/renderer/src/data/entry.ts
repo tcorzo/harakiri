@@ -1,5 +1,5 @@
 import { classifyFidelity, imageUrl as serverImageUrl, ItemId } from "@harakiri/jellyfin";
-import type { Fidelity, ServerUrl } from "@harakiri/jellyfin";
+import type { Fidelity, PictureClass, ServerUrl, SoundFormat } from "@harakiri/jellyfin";
 import type { BaseItemDto, ImageType } from "@harakiri/jellyfin/generated";
 
 import type { SignalState } from "../../../shared/bridge";
@@ -9,9 +9,25 @@ import type { SignalState } from "../../../shared/bridge";
  * carries a state (mapped, decoded); a native fact is stated bare, so the notes never read as a spec sheet.
  */
 export interface NoteFact {
+  /** The whole fact in words: its key, and what assistive tech reads. */
   readonly text: string;
   readonly state?: Exclude<SignalState, "native">;
+  /** How the fact is drawn: the format's own logo where it has one, words for the rest. */
+  readonly parts?: readonly NotePart[];
 }
+
+/** A picture or sound format drawn as its own logo. */
+export type FormatLogo =
+  | "dolby-vision"
+  | "hdr10"
+  | "hdr10-plus"
+  | "dolby-atmos"
+  | "dolby-truehd"
+  | "dolby-digital-plus"
+  | "dolby-digital"
+  | "dts";
+
+export type NotePart = { readonly text: string } | { readonly logo: FormatLogo };
 
 /** The note state for a delivery: native facts carry none. */
 export const markedState = (state: SignalState): NoteFact["state"] =>
@@ -130,10 +146,68 @@ export const toEntry = (item: BaseItemDto): Entry => {
   };
 };
 
-const fact = (text: string, delivery: SignalState): NoteFact => {
-  const state = markedState(delivery);
+/** The picture ranges and sound formats drawn as their own logos; the rest stay words. */
+const rangeLogos: Record<PictureClass["range"], readonly NotePart[] | null> = {
+  "Dolby Vision": [{ logo: "dolby-vision" }],
+  HDR10: [{ logo: "hdr10" }],
+  "HDR10+": [{ logo: "hdr10-plus" }],
+  HLG: null,
+  SDR: null,
+};
 
-  return state === undefined ? { text } : { text, state };
+// DTS-HD names its tier in words beside the DTS logo: its own stacked logo cannot be read this small.
+const soundLogos: Record<SoundFormat, readonly NotePart[] | null> = {
+  "TrueHD Atmos": [{ logo: "dolby-truehd" }, { logo: "dolby-atmos" }],
+  TrueHD: [{ logo: "dolby-truehd" }],
+  "DTS:X": null,
+  "DTS-HD MA": [{ logo: "dts" }, { text: "HD MA" }],
+  "DTS-HD HRA": [{ logo: "dts" }, { text: "HD HRA" }],
+  DTS: [{ logo: "dts" }],
+  "E-AC3 Atmos": [{ logo: "dolby-digital-plus" }, { logo: "dolby-atmos" }],
+  "E-AC3": [{ logo: "dolby-digital-plus" }],
+  AC3: [{ logo: "dolby-digital" }],
+  PCM: null,
+  FLAC: null,
+  Opus: null,
+  AAC: null,
+  Other: null,
+};
+
+/** The logos for a segment, or its words when it has none. */
+const drawn = (logos: readonly NotePart[] | null, words: string): readonly NotePart[] =>
+  logos ?? [{ text: words }];
+
+/** Drops missing segments and joins neighbouring words into one part. */
+const partsOf = (segments: readonly (NotePart | null)[]): NotePart[] => {
+  const parts: NotePart[] = [];
+
+  for (const part of segments) {
+    if (part === null) {
+      continue;
+    }
+
+    const last = parts.at(-1);
+
+    if ("text" in part && last !== undefined && "text" in last) {
+      parts[parts.length - 1] = { text: `${last.text} ${part.text}` };
+    } else {
+      parts.push(part);
+    }
+  }
+
+  return parts;
+};
+
+const fact = (
+  words: readonly (string | null)[],
+  delivery: SignalState,
+  segments: readonly (NotePart | null)[]
+): NoteFact => {
+  const state = markedState(delivery);
+  const text = words.filter((word) => word !== null).join(" ");
+  const parts = partsOf(segments);
+
+  return state === undefined ? { text, parts } : { text, state, parts };
 };
 
 /** The programme note line: year · runtime · picture · sound; mapped and decoded facts carry their state. */
@@ -154,16 +228,19 @@ export const programmeNotes = (
   if (fidelity !== null) {
     const { picture, sound } = fidelity;
     facts.push(
-      fact(
-        [picture.resolution, picture.range].filter((part) => part !== null).join(" "),
-        picture.delivery
-      )
+      fact([picture.resolution, picture.range], picture.delivery, [
+        picture.resolution === null ? null : { text: picture.resolution },
+        ...drawn(rangeLogos[picture.range], picture.range),
+      ])
     );
 
     if (sound !== null) {
       const format = sound.format === "Other" ? sound.codec.toUpperCase() : sound.format;
       facts.push(
-        fact([format, sound.channels].filter((part) => part !== null).join(" "), sound.delivery)
+        fact([format, sound.channels], sound.delivery, [
+          ...drawn(soundLogos[sound.format], format),
+          sound.channels === null ? null : { text: sound.channels },
+        ])
       );
     }
   }

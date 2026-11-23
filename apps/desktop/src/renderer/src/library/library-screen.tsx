@@ -13,10 +13,8 @@ import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import type { ComponentType, ReactNode } from "react";
 import { preload } from "react-dom";
 
-import { imageUrl } from "../data/entry";
 import type { Entry } from "../data/entry";
 import {
-  catalogueQuery,
   continueQuery,
   featuredQuery,
   programmeQuery,
@@ -31,15 +29,14 @@ import { useActionHandler, useNavigationGuard } from "../input/handlers";
 import { LauncherCard, launcherAddKey } from "../launcher/launcher-card";
 import { PlayAction, QuietAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
-import { catalogueLabel, remPx } from "../ui/marks";
+import { SettingsMark } from "../ui/marks";
 import { PosterCard, StillCard } from "./cards";
 import type { CardProps } from "./cards";
 import { heroHoldMs, upNext, useHeroCycle } from "./hero-cycle";
 import { cardKey, restoreKeys, tonight, useLit } from "./lit";
 import type { Section } from "./lit";
 import { FailedRow, ProgrammeRow, retryKey } from "./programme-row";
-import { numberFor } from "./sections";
-import { Backdrop, backdropUrl, EntryNotes, InkField, Margin, TitleMark } from "./stage";
+import { Backdrop, backdropUrl, EntryNotes, InkField, TitleMark } from "./stage";
 
 const noItem = ItemId.parse("00000000000000000000000000000000");
 
@@ -61,8 +58,14 @@ const rowChromeRem = 3 + 1.25 + 3 + 3;
 /** Where the focused row's top edge rests once focus leaves the hero (rem from the top). */
 const rowAnchorRem = 31;
 
-/** How much of the first row shows under the hero. */
-const peekRem = 9.5;
+/** Where the hero block's bottom edge sits once focus is in the rows (rem from the bottom). */
+const heroBottomRem = 12.5;
+
+/**
+ * How far the hero block drops while it holds the stage. The rows wait out of sight below the
+ * screen then, so the block rests low and leaves the hold rule and the scroll cue under it.
+ */
+const heroRestDropRem = 4.5;
 
 type PlannedRow =
   | ({
@@ -186,15 +189,13 @@ const ProgrammeView = ({
   const ctx = useSignedIn();
   const onPressEntry = useOpenEntry();
   const queryClient = useQueryClient();
-  const { data: numbers } = useSuspenseQuery(catalogueQuery(ctx));
   const activeId = useLit((s) => s.section.id);
   const travelling = useLit((s) => s.travelling);
   const found = rows.findIndex((row) => row.section.id === activeId) + 1;
   // With no featured film there is no stage to rest on, so the first row leads.
   const active = found === 0 && !hero ? 1 : found;
 
-  const offset =
-    active === 0 ? `calc(100vh - ${peekRem}rem)` : `${rowAnchorRem - rowTop(rows, active)}rem`;
+  const offset = active === 0 ? "100vh" : `${rowAnchorRem - rowTop(rows, active)}rem`;
 
   const onFocusEntry = useCallback(
     (entry: Entry, section: Section): void => {
@@ -261,7 +262,7 @@ const ProgrammeView = ({
     <div
       // A held d-pad moves a row every 120 ms, faster than the 700 ms glide, so while it travels the
       // rows jump with focus and the glide returns once it rests (the relight ends the travel).
-      className={`ease-curtain absolute inset-x-0 top-0 flex flex-col gap-12 pl-[calc(var(--spacing-safe-x)+var(--spacing-margin)+2.5rem)] ${
+      className={`ease-curtain pl-safe-x absolute inset-x-0 top-0 flex flex-col gap-12 ${
         travelling ? "" : "transition-transform duration-700"
       }`}
       style={{ transform: `translateY(${offset})` }}
@@ -289,7 +290,6 @@ const ProgrammeView = ({
               pitchRem={row.pitchRem}
               heightRem={row.heightRem}
               server={server}
-              numbers={numbers}
               onFocusEntry={onFocusEntry}
               onPressEntry={onPressEntry}
             />
@@ -302,58 +302,44 @@ const ProgrammeView = ({
 
 const Programme = memo(ProgrammeView);
 
-const UpNext = ({
-  entry,
-  number,
-  since,
-  auto,
-  focusable,
-  server,
-  onPress,
-}: {
-  readonly entry: Entry;
-  readonly number: number | null;
-  readonly since: number;
-  readonly auto: boolean;
-  readonly focusable: boolean;
-  readonly server: ServerUrl;
-  readonly onPress: () => void;
-}) => {
-  const { ref } = useFocusable<object, HTMLButtonElement>({ focusKey: "hero-next", focusable });
-
-  return (
-    <button
-      ref={ref}
-      type="button"
-      aria-label={`Next screening: ${entry.title}`}
-      tabIndex={focusable ? undefined : -1}
-      onClick={onPress}
-      className="group focus-mark flex w-[22rem] flex-col gap-3 text-left"
-    >
-      {entry.still === null ? null : (
-        <img
-          alt=""
-          src={imageUrl(server, entry.still, 22 * remPx())}
-          className="aspect-video w-full object-cover opacity-80 group-focus-visible:opacity-100"
+/**
+ * How long tonight's screening holds before the next featured film takes the stage: a paper rule
+ * across the content width, in the gap between the hero and the first row, that fills over the
+ * quiet hold and starts again on any press.
+ */
+const HoldRule = ({ since, auto }: { readonly since: number; readonly auto: boolean }) => (
+  <div
+    aria-hidden="true"
+    className="absolute -bottom-6 left-0 w-[calc(100vw-2*var(--spacing-safe-x))]"
+  >
+    <span className="bg-ink-line block h-[0.1875rem]">
+      {auto ? (
+        <span
+          key={since}
+          className="animate-hold bg-paper block h-full origin-left"
+          style={{ animationDuration: `${heroHoldMs}ms` }}
         />
-      )}
-      <span className="text-body stretch-semicondensed truncate font-[700]">{entry.title}</span>
-      <span className="text-caption text-paper-dim stretch-condensed flex items-baseline justify-between gap-4 font-[560] whitespace-nowrap">
-        <span>{auto ? `Next in ${heroHoldMs / 1000} quiet seconds` : "Next screening"}</span>
-        {number === null ? null : <span>{catalogueLabel(number)}</span>}
-      </span>
-      <span aria-hidden="true" className="bg-ink-line block h-[0.1875rem] w-full">
-        {auto ? (
-          <span
-            key={since}
-            className="animate-hold bg-paper block h-full origin-left"
-            style={{ animationDuration: `${heroHoldMs}ms` }}
-          />
-        ) : null}
-      </span>
-    </button>
-  );
-};
+      ) : null}
+    </span>
+  </div>
+);
+
+/**
+ * While the hero holds the full screen, the rows wait out of sight; one thin arrow, drifting
+ * slowly, says there is more below. Down on the d-pad reaches it, so the cue never takes focus.
+ */
+const ScrollCue = ({ shown }: { readonly shown: boolean }) => (
+  <div
+    aria-hidden="true"
+    className={`bottom-safe-y text-paper-dim absolute left-1/2 -translate-x-1/2 transition-opacity duration-500 ${
+      shown ? "opacity-100" : "opacity-0"
+    }`}
+  >
+    <svg viewBox="0 0 24 24" className="animate-drift block size-8 fill-none stroke-current">
+      <path d="M5 9l7 7 7-7" strokeWidth="1.5" />
+    </svg>
+  </div>
+);
 
 const SettingsLink = () => {
   const navigate = useNavigate();
@@ -368,9 +354,9 @@ const SettingsLink = () => {
         void navigate({ to: "/settings" });
       }}
       // Full paper, not dim: it sits on the thin top wash, over whatever the backdrop's sky is.
-      className="focus-mark text-body text-paper stretch-semicondensed focus-visible:bg-paper focus-visible:text-ink px-4 py-2 font-[600]"
+      className="focus-mark text-paper focus-visible:bg-paper focus-visible:text-ink flex size-[3.5rem] items-center justify-center"
     >
-      Settings
+      <SettingsMark className="size-[2.25rem]" />
     </button>
   );
 };
@@ -412,7 +398,6 @@ export const LibraryScreen = () => {
   const light = useLit((s) => s.light);
   const featuredIds = useMemo(() => featured.map((film) => film.id), [featured]);
   const cycle = useHeroCycle(featuredIds, section.id === tonight.id);
-  const handleNext = cycle.next;
   const hero = featured[cycle.index] ?? null;
   const holding = section.id === tonight.id && hero !== null;
   const nextIndex = upNext(cycle.index, featured.length);
@@ -426,7 +411,6 @@ export const LibraryScreen = () => {
   });
 
   const shown = detail.data?.entry ?? lit;
-  const { data: numbers } = useSuspenseQuery(catalogueQuery(ctx));
 
   const { ref, focusKey } = useFocusable<object, HTMLElement>({
     focusKey: "library",
@@ -484,8 +468,6 @@ export const LibraryScreen = () => {
     light(hero, tonight);
   };
 
-  const number = shown === null ? null : numberFor(numbers, shown);
-
   const heroPanel = (): ReactNode => {
     if (shown === null) {
       return null;
@@ -494,16 +476,16 @@ export const LibraryScreen = () => {
     return (
       <section
         aria-label={holding ? "Tonight's screening" : shown.title}
-        className="left-safe-x ease-curtain absolute flex items-stretch gap-10 transition-transform duration-700"
+        className="left-safe-x ease-curtain absolute flex transition-transform duration-700"
         style={{
-          bottom: `${peekRem + 3}rem`,
-          // Lifts the block so its last visible line rests just above the focused row.
+          bottom: `${heroBottomRem}rem`,
+          // Holding, the block rests low over the full-screen stage; in the rows it lifts so its last
+          // visible line rests just above the focused row.
           transform: holding
-            ? "none"
-            : `translateY(calc(${rowAnchorRem + 4.25 + peekRem + 3}rem - 100vh))`,
+            ? `translateY(${heroRestDropRem}rem)`
+            : `translateY(calc(${rowAnchorRem + 4.25 + heroBottomRem}rem - 100vh))`,
         }}
       >
-        <Margin number={number} seen={shown.played} section={section.name} />
         <div className="flex max-w-[46vw] flex-col justify-end gap-7">
           <TitleMark entry={shown} server={server} compact={!holding} />
           <EntryNotes entry={shown}>
@@ -525,43 +507,21 @@ export const LibraryScreen = () => {
                 {hero.progress === null ? "Play" : "Resume"}
               </PlayAction>
               <QuietAction
-                focusKey="hero-programme"
-                label={`Programme notes for ${hero.title}`}
+                focusKey="hero-details"
+                label={`Details for ${hero.title}`}
                 focusable={holding}
                 onFocus={lightHero}
                 onPress={() => {
                   openEntry(hero);
                 }}
               >
-                Programme
+                Details
               </QuietAction>
+              {next === null ? null : <HoldRule since={cycle.since} auto={cycle.auto} />}
             </div>
           )}
         </div>
       </section>
-    );
-  };
-
-  const upNextPanel = (): ReactNode => {
-    if (next === null) {
-      return null;
-    }
-
-    return (
-      <div
-        className={`right-safe-x absolute transition-opacity duration-500 ${holding ? "opacity-100" : "opacity-0"}`}
-        style={{ bottom: `${peekRem + 3}rem` }}
-      >
-        <UpNext
-          entry={next}
-          number={numberFor(numbers, next)}
-          since={cycle.since}
-          auto={cycle.auto}
-          focusable={holding}
-          server={server}
-          onPress={handleNext}
-        />
-      </div>
     );
   };
 
@@ -589,7 +549,9 @@ export const LibraryScreen = () => {
 
         {heroPanel()}
 
-        {upNextPanel()}
+        {hero === null || rows === null || rows[0] === undefined ? null : (
+          <ScrollCue shown={holding} />
+        )}
 
         {rows === null ? null : <Programme server={server} rows={rows} hero={hero !== null} />}
       </main>

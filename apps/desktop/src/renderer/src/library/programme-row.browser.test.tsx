@@ -15,7 +15,6 @@ import { cardKey } from "./lit";
 import { ProgrammeRow } from "./programme-row";
 
 const server = ServerUrl.parse("http://jellyfin.invalid");
-const numbers: ReadonlyMap<string, number> = new Map();
 
 const films = (prefix: string, count: number): readonly Entry[] =>
   Array.from({ length: count }, (_, at) =>
@@ -50,7 +49,6 @@ const Programme = ({ entries = programme }: { readonly entries?: readonly Entry[
           pitchRem={26}
           heightRem={19.5}
           server={server}
-          numbers={numbers}
           onFocusEntry={noop}
           onPressEntry={noop}
         />
@@ -62,7 +60,6 @@ const Programme = ({ entries = programme }: { readonly entries?: readonly Entry[
           pitchRem={15.5}
           heightRem={26}
           server={server}
-          numbers={numbers}
           onFocusEntry={noop}
           onPressEntry={noop}
         />

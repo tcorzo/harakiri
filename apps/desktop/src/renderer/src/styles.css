@@ -44,6 +44,7 @@
 
   --animate-relight: relight 900ms var(--ease-curtain) both;
   --animate-hold: hold linear both;
+  --animate-drift: drift 2.4s var(--ease-curtain) infinite;
 
   @keyframes relight {
     from {
@@ -57,6 +58,15 @@
     }
     to {
       transform: scaleX(1);
+    }
+  }
+  @keyframes drift {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(0.375rem);
     }
   }
 }
