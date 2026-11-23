@@ -42,7 +42,7 @@ Basically, I got fed up with not being able to just sit down with a meal and _wa
 
 ### Install the AppImage
 
-Each [GitHub release](https://github.com/tcorzo/harakiri/releases) ships one Linux x64 AppImage, and it is all you install. It carries harakiri's own mpv build, with its FFmpeg and libraries, so it needs no system mpv or ffmpeg.
+Each [GitHub release](https://github.com/tcorzo/harakiri/releases) ships one Linux x64 AppImage, and it is all you install. It carries harakiri's own mpv build, with its FFmpeg and libraries, so it needs no system mpv or ffmpeg. It is built and checked for Bazzite (Fedora 44 or newer), and needs glibc 2.43 or newer and the host's `libssl.so.3`.
 
 ```sh
 chmod +x harakiri-x86_64.AppImage

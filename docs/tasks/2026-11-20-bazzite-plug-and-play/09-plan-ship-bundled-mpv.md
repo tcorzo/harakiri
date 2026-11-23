@@ -31,6 +31,7 @@ sha: ae6a0e0
 3. License texts, notices and corresponding source follow established prior art (`docs/research/08-shipping-third-party-licenses.md`), not a scheme of our own.
 4. The certificate path stops being Fedora's. See the first decision below: it is met without a new host capability. The owner approved this revision on 2026-11-22.
 5. The glibc and libstdc++ floor stays the Fedora 44 build base. Bazzite, Fedora and Arch are supported; older Ubuntu LTS is not.
+   - Superseded by the owner's rulings of 2026-11-23: Bazzite is the only target, and Arch is neither supported nor checked; OpenSSL stays the host's (Bazzite's `openssl3-libs` provides `libssl.so.3`); curl against the host's GnuTLS is documented in CLAUDE.md as the way out.
 
 ## Decisions this plan makes beyond the outline
 
@@ -60,6 +61,7 @@ sha: ae6a0e0
 1. **A Steam-launched AppImage, with Steam runtime libraries in `LD_LIBRARY_PATH`.** mpv must still load its own `lib/`. Task 4 pins this with a decoy library dir.
 2. **A host whose OpenSSL is older than the one the build compiled against.** The loader must resolve every `OPENSSL_3.x` symbol version the bundle needs (today's libcurl needs up to `OPENSSL_3.2.0`). Task 6 runs `ldd` on the Bazzite and Arch images, which names a missing version.
 3. **https on a distro that is not Fedora.** The bundle must trust what that distro trusts, with no Fedora path anywhere in it. Task 1 proves the fallback on the host's OpenSSL, and Task 6 checks it on Arch.
+   - Superseded by the owner's rulings of 2026-11-23: Bazzite is the only target, and Arch is neither supported nor checked; OpenSSL stays the host's (Bazzite's `openssl3-libs` provides `libssl.so.3`); curl against the host's GnuTLS is documented in CLAUDE.md as the way out. Task 6 checks Bazzite only, and proves curl verifies a server against the image's trust store.
 4. **A bundle that drifts from its licenses.** A new library in `lib/` with no license text must fail the build and the check, not ship. Task 2 pins it.
 5. **An AppImage built from a stale bundle.** The staged bundle must be the current recipe hash, or `package` fails. Task 3 pins it.
 
@@ -406,6 +408,8 @@ Pushing the branch and dispatching both happen only once the owner says go.
 
 ### Task 6: `package:check-hosts` runs the shipped bundle on the Bazzite and Arch images
 
+> Superseded in part by the owner's rulings of 2026-11-23: Bazzite is the only target, and Arch is neither supported nor checked; OpenSSL stays the host's (Bazzite's `openssl3-libs` provides `libssl.so.3`); curl against the host's GnuTLS is documented in CLAUDE.md as the way out. The script checks `ghcr.io/ublue-os/bazzite:stable` only.
+
 **Files:**
 
 - Create: `scripts/check-hosts.sh`
@@ -432,6 +436,8 @@ Run it with `HOST_IMAGES=docker.io/library/ubuntu:24.04`, the override the scrip
 - [ ] **Step 3: Commit**
 
 `test(release): check the shipped mpv on the Bazzite and Arch images`
+
+(Arch was dropped afterwards; see the note under this task's heading.)
 
 ---
 
