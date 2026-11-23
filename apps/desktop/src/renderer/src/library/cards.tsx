@@ -52,11 +52,45 @@ const spokenName = (entry: Entry): string => {
   return parts.filter((part) => part !== null).join(", ");
 };
 
+/**
+ * Only a card that stands for one episode carries text: its code, its series and the time left. A film
+ * or a series is its picture alone, and its name is spoken, not printed.
+ */
+export const hasCardText = (entry: Entry): boolean => entry.kind === "Episode";
+
+/** The seen tick on a card with no text, set in the picture's corner on a shade. */
+const SeenCorner = () => (
+  <span
+    aria-hidden="true"
+    className="bg-shade text-paper absolute right-2 bottom-2 grid size-8 place-items-center"
+  >
+    <SeenMark />
+  </span>
+);
+
+/** An episode's code, series and time left, under its picture. */
+const EpisodeText = ({ entry }: { readonly entry: Entry }) => {
+  const left = minutesLeft(entry);
+  const code = episodeCode(entry);
+
+  return (
+    <>
+      <span className="text-caption text-paper-dim stretch-condensed flex items-baseline gap-3 font-[600]">
+        {code === null ? null : <span>{code}</span>}
+        {left === null ? null : <span className="ml-auto">{left} min left</span>}
+        {entry.played ? <SeenMark className="text-paper ml-auto shrink-0" /> : null}
+      </span>
+      <span className="text-body stretch-semicondensed group-focus-visible:text-paper truncate font-[680]">
+        {entry.series === null ? entry.title : entry.series.name}
+      </span>
+    </>
+  );
+};
+
 /** A landscape still with the progress rule: Continue Watching and Next Up. */
 export const StillCard = ({ entry, server, focusKey, onFocus, onPress }: CardProps) => {
   const { ref } = useFocusable<object, HTMLButtonElement>({ focusKey, onFocus });
-  const left = minutesLeft(entry);
-  const code = episodeCode(entry);
+  const text = hasCardText(entry);
 
   return (
     <button
@@ -81,21 +115,17 @@ export const StillCard = ({ entry, server, focusKey, onFocus, onPress }: CardPro
             />
           </span>
         )}
+        {!text && entry.played ? <SeenCorner /> : null}
       </span>
-      <span className="text-caption text-paper-dim stretch-condensed flex items-baseline gap-3 font-[600]">
-        {code === null ? null : <span>{code}</span>}
-        {left === null ? null : <span className="ml-auto">{left} min left</span>}
-      </span>
-      <span className="text-body stretch-semicondensed group-focus-visible:text-paper truncate font-[680]">
-        {entry.kind === "Episode" && entry.series !== null ? entry.series.name : entry.title}
-      </span>
+      {text ? <EpisodeText entry={entry} /> : null}
     </button>
   );
 };
 
-/** A poster with its title and seen tick: the programme sections. */
+/** A poster: the programme sections. */
 export const PosterCard = ({ entry, server, focusKey, onFocus, onPress }: CardProps) => {
   const { ref } = useFocusable<object, HTMLButtonElement>({ focusKey, onFocus });
+  const text = hasCardText(entry);
 
   return (
     <button
@@ -105,20 +135,16 @@ export const PosterCard = ({ entry, server, focusKey, onFocus, onPress }: CardPr
       onClick={onPress}
       className="group flex w-[13.5rem] flex-col gap-3 text-left"
     >
-      <span className="focus-mark group-focus-visible:outline-paper block group-focus-visible:scale-[1.06]">
+      <span className="focus-mark group-focus-visible:outline-paper relative block group-focus-visible:scale-[1.06]">
         <Picture
           server={server}
           image={entry.poster}
           widthRem={13.5}
           className="block aspect-[2/3] w-full"
         />
+        {!text && entry.played ? <SeenCorner /> : null}
       </span>
-      <span className="flex items-center gap-2">
-        <span className="text-body stretch-semicondensed min-w-0 truncate font-[640]">
-          {entry.title}
-        </span>
-        {entry.played ? <SeenMark className="text-paper shrink-0" /> : null}
-      </span>
+      {text ? <EpisodeText entry={entry} /> : null}
     </button>
   );
 };

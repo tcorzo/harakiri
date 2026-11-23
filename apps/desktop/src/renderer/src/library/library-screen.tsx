@@ -31,7 +31,7 @@ import { PlayAction, QuietAction } from "../ui/actions";
 import { CraneMark } from "../ui/brand";
 import { focusFirst } from "../ui/focus";
 import { SettingsMark } from "../ui/marks";
-import { PosterCard, StillCard } from "./cards";
+import { hasCardText, PosterCard, StillCard } from "./cards";
 import type { CardProps } from "./cards";
 import { heroHoldMs, upNext, useHeroCycle } from "./hero-cycle";
 import { cardKey, restoreKeys, tonight, useLit } from "./lit";
@@ -48,8 +48,25 @@ interface RowLayout {
   readonly heightRem: number;
 }
 
-const still: RowLayout = { Card: StillCard, pitchRem: 26, heightRem: 19.5 };
-const poster: RowLayout = { Card: PosterCard, pitchRem: 15.5, heightRem: 26 };
+/**
+ * A row's height: its pictures, plus the episode text under them when any card in it is an episode.
+ * Each picture height leaves room for the focused card's scale.
+ */
+interface CardSizes {
+  readonly Card: ComponentType<CardProps>;
+  readonly pitchRem: number;
+  readonly pictureRem: number;
+  readonly textRem: number;
+}
+
+const still: CardSizes = { Card: StillCard, pitchRem: 26, pictureRem: 14, textRem: 5.5 };
+const poster: CardSizes = { Card: PosterCard, pitchRem: 15.5, pictureRem: 21, textRem: 5.5 };
+
+const layoutFor = (sizes: CardSizes, entries: readonly Entry[]): RowLayout => ({
+  Card: sizes.Card,
+  pitchRem: sizes.pitchRem,
+  heightRem: sizes.pictureRem + (entries.some(hasCardText) ? sizes.textRem : 0),
+});
 
 /** A failed section holds one line and its retry action. */
 const failedHeightRem = 4.5;
@@ -132,12 +149,12 @@ const useProgramme = (): readonly PlannedRow[] | null => {
       readonly data: readonly Entry[] | undefined;
       readonly refetch: () => Promise<QueryObserverResult>;
     },
-    layout: RowLayout
+    sizes: CardSizes
   ): void => {
     if (query.data === undefined) {
       rows.push(failed(section, query.refetch));
     } else if (query.data.length > 0) {
-      rows.push({ kind: "entries", section, entries: query.data, ...layout });
+      rows.push({ kind: "entries", section, entries: query.data, ...layoutFor(sizes, query.data) });
     }
   };
 
@@ -154,7 +171,7 @@ const useProgramme = (): readonly PlannedRow[] | null => {
           kind: "entries",
           section: { id: section.id, name: section.title },
           entries: section.entries,
-          ...poster,
+          ...layoutFor(poster, section.entries),
         });
       }
     }

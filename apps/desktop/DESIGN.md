@@ -200,8 +200,8 @@ A warm near-black night palette with warm paper type and one dark arterial red t
 - **Heading** (700 to 820, 2.25rem, 1.1, width 118 to 125%): the wordmark, Play, list choices, handoff sub-lines.
 - **Notes** (540, 1.625rem, 1.25, width 72%): list details and the handoff's programme lines.
 - **Badge** (560, 1.25rem, 1.3, width 72%): the note badges under a title (year, runtime, picture, sound, seen).
-- **Body** (420 default, 560 to 680 on card names and problem sentences, 1.5rem, 1.45): overviews (max 60ch, two lines in the hero), quiet actions, card titles at width 86%, section heads (760, width 118%).
-- **Caption** (560 to 620, 1.5rem, 1.3, width 72%): episode codes under stills, title counts, minutes left, server name.
+- **Body** (420 default, 560 to 680 on card names and problem sentences, 1.5rem, 1.45): overviews (max 60ch, two lines in the hero), quiet actions, the series name on episode cards at width 86%, section heads (760, width 118%).
+- **Caption** (560 to 620, 1.5rem, 1.3, width 72%): episode codes and minutes left under episode cards, title counts.
 - **Label** (620, 1.5rem or 1.375rem, letter-spacing 0.06 to 0.12em, uppercase, width 72 to 86%): the word beside a signal-state mark, handoff station names, credit terms ("Directed", "With"), and field labels. A label always names the value beside or below it.
 
 ### Named Rules
@@ -252,8 +252,9 @@ Three actions and no more. Square, 4.5rem tall, all sharing the focus mark.
 
 ### Cards
 
-- **Poster** (13.5rem, 2:3): the picture, then the title truncated at body size with the seen tick after it.
-- **Still** (24rem, 16:9): the picture with a paper progress rule along its bottom edge on a 70% ink track, then a caption row (episode code, minutes left), then the name.
+- **Poster** (13.5rem, 2:3): the picture alone for a film or a series, its name spoken rather than printed; a seen tick sits in the picture's bottom-right corner on a shade square (2rem). An episode adds the episode text below.
+- **Card text** belongs to episodes only: a caption row (episode code, minutes left, the seen tick) and then the series name. A row with no episode in it shrinks to its pictures.
+- **Still** (24rem, 16:9): the picture with a paper progress rule along its bottom edge on a 70% ink track; an episode adds the episode text below, a film shows nothing under its picture.
 - **Corner Style:** square. **Background:** Raised Ink placeholder until the artwork loads. **Border:** none. Focus puts the ring and scale on the picture only.
 
 ### Inputs / Fields
