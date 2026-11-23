@@ -51,7 +51,7 @@ run = "bun x oxfmt --check"
 
 [tasks.typecheck]
 description = "Typecheck every workspace"
-run = "scripts/bounded.sh typecheck 2G -- bun x tsc -b"
+run = "scripts/bounded.sh typecheck 4G -- bun x tsc -b"
 
 [tasks.test]
 description = "Run unit and harness tests that need no network or display"
