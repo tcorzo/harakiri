@@ -37,6 +37,14 @@ depends = ["mpv:build"]
 dir = "{{config_root}}/apps/desktop"
 run = "../../scripts/bounded.sh dev 4G -- bun run dev"
 
+[tasks.live]
+description = "Start impeccable's live helper: while it runs, the dev app (mise run dev) shows the live widget"
+run = "bash scripts/impeccable-live.sh start"
+
+[tasks."live:stop"]
+description = "Stop impeccable's live helper; the dev app drops the live widget"
+run = "bash scripts/impeccable-live.sh stop"
+
 [tasks.lint]
 description = "Lint with oxlint (type-aware)"
 run = "bun x oxlint --type-aware"
