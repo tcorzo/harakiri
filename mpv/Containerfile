@@ -26,7 +26,7 @@ RUN dnf -y --disablerepo='*' --enablerepo=fedora --setopt=install_weak_deps=Fals
       pipewire-devel pulseaudio-libs-devel alsa-lib-devel systemd-devel \
     && dnf clean all
 
-COPY build.sh host-libs.txt versions.env /recipe/
+COPY build.sh host-libs.txt licenses-README.txt versions.env /recipe/
 ARG JOBS
 RUN JOBS="${JOBS}" /recipe/build.sh
 
