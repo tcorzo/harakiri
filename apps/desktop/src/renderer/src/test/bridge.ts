@@ -16,6 +16,9 @@ export const unstubbedBridge: HarakiriBridge = {
     storage: unstubbed("session.storage"),
   },
   discover: unstubbed("discover"),
+  app: {
+    quit: unstubbed("app.quit"),
+  },
   updates: {
     status: unstubbed("updates.status"),
     restart: unstubbed("updates.restart"),

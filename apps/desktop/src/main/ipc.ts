@@ -20,7 +20,8 @@ type HandlerResult = ReturnType<Parameters<typeof ipcMain.handle>[1]>;
  */
 export const registerIpc = (
   isAppUrl: AppUrlCheck,
-  updates: Pick<Updates, "status" | "restart">
+  updates: Pick<Updates, "status" | "restart">,
+  quit: () => void
 ): void => {
   const handle = (channel: string, handler: (event: IpcMainInvokeEvent) => HandlerResult): void => {
     ipcMain.handle(channel, fromAppOnly(isAppUrl, handler));
@@ -44,6 +45,9 @@ export const registerIpc = (
   handle(channels.updateStatus, () => updates.status());
   handle(channels.updateRestart, () => {
     updates.restart();
+  });
+  handle(channels.appQuit, () => {
+    quit();
   });
 
   handle(channels.sessionGet, async () => await loadSession());

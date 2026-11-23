@@ -56,6 +56,12 @@ export const browserBridge: HarakiriBridge = {
     storage: async () => await Promise.resolve("file" as const),
   },
   discover: async () => await Promise.resolve([]),
+  // A script cannot close a tab the owner opened, so there is nothing to quit.
+  app: {
+    quit: async () => {
+      await Promise.resolve();
+    },
+  },
   updates: {
     status: async () => await Promise.resolve({ state: "unsupported" }),
     restart: async () => {
