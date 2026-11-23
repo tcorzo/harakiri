@@ -269,3 +269,7 @@ run = "dev/vm/guest.sh down"
 [tasks."package:check"]
 description = "Check apps/desktop/dist: latest-linux.yml matches the AppImage and the version, the feed is public GitHub, runtime deps are packed, and the bundled mpv"
 run = "bun scripts/check-release.ts"
+
+[tasks."package:check-hosts"]
+description = "Opt-in: run the AppImage's mpv bundle on the Bazzite and Arch images in podman (HOST_IMAGES overrides them; the Bazzite image is several GB)"
+run = "scripts/bounded.sh hosts 3G -- scripts/check-hosts.sh"
