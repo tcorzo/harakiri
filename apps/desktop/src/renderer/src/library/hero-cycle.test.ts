@@ -29,13 +29,13 @@ describe("hero cycle", () => {
     vi.unstubAllGlobals();
   });
 
-  it("the hold is 20 seconds and the tick before it changes nothing", () => {
+  it("the hold is 8 seconds and the tick before it changes nothing", () => {
     const start = { index: 0, since: 0, changedAt: 0 };
-    expect(heroCycle(start, { type: "tick", now: 19_999, count: 5, auto: true })).toBe(start);
-    expect(heroCycle(start, { type: "tick", now: 20_000, count: 5, auto: true })).toStrictEqual({
+    expect(heroCycle(start, { type: "tick", now: 7999, count: 5, auto: true })).toBe(start);
+    expect(heroCycle(start, { type: "tick", now: 8000, count: 5, auto: true })).toStrictEqual({
       index: 1,
-      since: 20_000,
-      changedAt: 20_000,
+      since: 8000,
+      changedAt: 8000,
     });
   });
 
@@ -43,12 +43,12 @@ describe("hero cycle", () => {
     expect(
       heroCycle(
         { index: 4, since: 0, changedAt: 0 },
-        { type: "tick", now: 20_000, count: 5, auto: true }
+        { type: "tick", now: 8000, count: 5, auto: true }
       )
     ).toStrictEqual({
       index: 0,
-      since: 20_000,
-      changedAt: 20_000,
+      since: 8000,
+      changedAt: 8000,
     });
     expect(
       heroCycle({ index: 2, since: 0, changedAt: 0 }, { type: "next", now: 50, count: 3 })
@@ -132,7 +132,7 @@ describe("hero cycle", () => {
     expect(result.current.index).toBe(1);
   });
 
-  it("any press restarts the hold, so the film never changes while the owner is active", () => {
+  it("moving between the hero's actions leaves the hold running", () => {
     stubReducedMotion(false);
     const { result } = renderHook(() => useHeroCycle(films(3), true));
     act(() => {
@@ -140,13 +140,43 @@ describe("hero cycle", () => {
       touch();
     });
     act(() => {
-      vi.advanceTimersByTime(heroHoldMs - 1);
+      vi.advanceTimersByTime(999);
     });
     expect(result.current.index).toBe(0);
     act(() => {
       vi.advanceTimersByTime(1);
     });
     expect(result.current.index).toBe(1);
+  });
+
+  it("choosing a film shows it at once and starts its own hold", () => {
+    stubReducedMotion(false);
+    const { result } = renderHook(() => useHeroCycle(films(4), true));
+    act(() => {
+      vi.advanceTimersByTime(5000);
+      result.current.select(2);
+    });
+    expect(result.current.index).toBe(2);
+    // Chosen, not changed on its own: Play right after it plays.
+    expect(result.current.settled()).toBe(true);
+    act(() => {
+      vi.advanceTimersByTime(heroHoldMs - 1);
+    });
+    expect(result.current.index).toBe(2);
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(result.current.index).toBe(3);
+  });
+
+  it("choosing the film already on stage keeps its hold where it was", () => {
+    const start = { index: 1, since: 100, changedAt: 0 };
+    expect(heroCycle(start, { type: "select", now: 5000, index: 1, count: 3 })).toBe(start);
+    expect(heroCycle(start, { type: "select", now: 5000, index: 3, count: 3 })).toStrictEqual({
+      index: 0,
+      since: 5000,
+      changedAt: 0,
+    });
   });
 
   it("the Play gate follows the last film change, not the last press", () => {
@@ -157,7 +187,7 @@ describe("hero cycle", () => {
 
     expect(settled(changed, 10_000 + heroSettleMs - 1)).toBe(false);
     expect(settled(changed, 10_000 + heroSettleMs)).toBe(true);
-    // A press restarts the hold but is no film change, so Play right after it still plays.
+    // Coming back to the stage restarts the hold but is no film change, so Play right after it plays.
     const pressed = heroCycle(changed, { type: "restart", now: 30_000 });
     expect(pressed).toStrictEqual({ index: 1, since: 30_000, changedAt: 10_000 });
     expect(settled(pressed, 30_001)).toBe(true);
@@ -213,7 +243,7 @@ describe("hero cycle", () => {
   it("a timer that fires a moment before the hold is up still advances the film", () => {
     stubReducedMotion(false);
     const { result } = renderHook(() => useHeroCycle(films(3), true));
-    // Timers run on their own clock: shifting Date back makes the 20 s timer fire 5 ms early.
+    // Timers run on their own clock: shifting Date back makes the 8 s timer fire 5 ms early.
     vi.setSystemTime(Date.now() - 5);
     act(() => {
       vi.advanceTimersByTime(heroHoldMs);

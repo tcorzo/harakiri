@@ -10,6 +10,8 @@ interface ActionProps {
   readonly children?: ReactNode;
   /** False while the action is hidden, so the d-pad never lands on something the owner cannot see. */
   readonly focusable?: boolean;
+  /** Reduced sits under a title that should lead, such as the library hero's. */
+  readonly size?: "full" | "reduced";
 }
 
 const useAction = ({ focusKey, onFocus, focusable }: ActionProps) =>
@@ -36,7 +38,11 @@ export const PlayAction = (props: ActionProps) => {
       aria-label={props.label}
       tabIndex={props.focusable === false ? -1 : undefined}
       onClick={props.onPress}
-      className="focus-mark bg-play text-heading text-play-ink stretch-wide flex h-[4.5rem] shrink-0 items-center gap-4 px-8 font-[780]"
+      className={`focus-mark bg-play text-play-ink stretch-wide flex shrink-0 items-center gap-4 font-[780] ${
+        props.size === "reduced"
+          ? "h-[3.6rem] px-[1.6rem] text-[1.8rem]"
+          : "text-heading h-[4.5rem] px-8"
+      }`}
     >
       <PlayGlyph />
       <span>{props.children ?? props.label}</span>
@@ -55,7 +61,11 @@ export const QuietAction = (props: ActionProps) => {
       aria-label={props.label}
       tabIndex={props.focusable === false ? -1 : undefined}
       onClick={props.onPress}
-      className="focus-mark hairline text-body text-paper stretch-semicondensed focus-visible:border-paper focus-visible:bg-paper focus-visible:text-ink flex h-[4.5rem] shrink-0 items-center gap-3 border-2 px-7 font-[560]"
+      className={`focus-mark hairline text-paper stretch-semicondensed focus-visible:border-paper focus-visible:bg-paper focus-visible:text-ink flex shrink-0 items-center gap-3 border-2 font-[560] ${
+        props.size === "reduced"
+          ? "h-[3.6rem] px-[1.6rem] text-[1.275rem]"
+          : "text-body h-[4.5rem] px-7"
+      }`}
     >
       {props.children ?? props.label}
     </button>

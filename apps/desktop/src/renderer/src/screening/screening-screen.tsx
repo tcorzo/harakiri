@@ -10,15 +10,14 @@ import type { PlayerEvent, PlayRequest, SignalFact, SignalReport } from "../../.
 import { episodeCode, markedState } from "../data/entry";
 import type { Entry } from "../data/entry";
 import { classifyFailure } from "../data/errors";
-import { catalogueQuery, nextEpisodeQuery, refetchWhenReported, titleQuery } from "../data/queries";
+import { nextEpisodeQuery, refetchWhenReported, titleQuery } from "../data/queries";
 import { useSignedIn } from "../data/session";
 import { useActionHandler } from "../input/handlers";
 import { inputMode } from "../input/mode";
-import { numberFor } from "../library/sections";
 import { backdropUrl } from "../library/stage";
 import { PlayAction, QuietAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
-import { catalogueLabel, Notice, StateMark } from "../ui/marks";
+import { Notice, StateMark } from "../ui/marks";
 import { handoffTiming, stationOf, stations } from "./stations";
 import type { Station } from "./stations";
 
@@ -175,7 +174,6 @@ export const ScreeningScreen = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data } = useSuspenseQuery(titleQuery(ctx, id));
-  const { data: numbers } = useSuspenseQuery(catalogueQuery(ctx));
   const { entry, item } = data;
   const sourceId = item.MediaSources?.[0]?.Id;
 
@@ -205,7 +203,6 @@ export const ScreeningScreen = () => {
   const [outcome, setOutcome] = useState<Outcome>({ kind: "running" });
   const mounted = useRef(true);
   const station = stationOf(elapsed, event);
-  const number = numberFor(numbers, entry);
 
   const { ref, focusKey } = useFocusable<object, HTMLElement>({
     focusKey: "screening",
@@ -489,16 +486,7 @@ export const ScreeningScreen = () => {
               transform: elapsed === "house" ? "translateY(1.5rem)" : "none",
             }}
           >
-            <div className="flex items-baseline gap-8">
-              {number === null ? null : (
-                <span className="text-heading text-paper-dim stretch-condensed shrink-0 font-[300] whitespace-nowrap">
-                  {catalogueLabel(number)}
-                </span>
-              )}
-              <h1 className="text-marquee stretch-extra-wide m-0 font-[820] text-balance">
-                {name}
-              </h1>
-            </div>
+            <h1 className="text-marquee stretch-extra-wide m-0 font-[820] text-balance">{name}</h1>
             {entry.kind === "Episode" ? (
               <p className="text-heading stretch-semicondensed m-0 font-[620]">
                 {code} {entry.title}

@@ -17,6 +17,8 @@ export interface Place {
 interface LitState {
   /** The entry the whole field is lit for: backdrop, title, notes and margin follow it together. */
   readonly entry: Entry | null;
+  /** The section the entry was lit in. A section entered since has not lit its own card yet. */
+  readonly litFor: string | null;
   readonly section: Section;
   readonly place: Place | null;
   /** When the section last changed, and whether it changed again within a repeat of that. */
@@ -46,6 +48,7 @@ export const travelMs = 450;
 
 export const useLit = create<LitState>()((set) => ({
   entry: null,
+  litFor: null,
   section: tonight,
   place: null,
   heroId: null,
@@ -65,8 +68,8 @@ export const useLit = create<LitState>()((set) => ({
   light: (entry, section) => {
     set((state) =>
       state.section.id === section.id
-        ? { entry, travelling: false }
-        : { entry, section, movedAt: Date.now(), travelling: false }
+        ? { entry, litFor: section.id, travelling: false }
+        : { entry, litFor: section.id, section, movedAt: Date.now(), travelling: false }
     );
   },
   remember: (place) => {
@@ -78,6 +81,7 @@ export const useLit = create<LitState>()((set) => ({
   forget: () => {
     set({
       entry: null,
+      litFor: null,
       section: tonight,
       place: null,
       heroId: null,

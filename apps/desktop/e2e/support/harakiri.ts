@@ -240,7 +240,7 @@ export { expect } from "@playwright/test";
 export const escapeRegExp = (text: string): string =>
   text.replaceAll(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 
-/** A card's accessible name: the spoken title, then optionally its catalogue number and "seen". */
+/** A card's accessible name: the spoken title, then optionally "seen". */
 export const cardName = (title: string): RegExp =>
   new RegExp(`^${escapeRegExp(title)}(?:, |$)`, "u");
 

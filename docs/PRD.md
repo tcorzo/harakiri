@@ -75,7 +75,7 @@ Acceptance:
 
 The library screen follows the direction contract: a festival programme for one.
 
-- **Hero.** A full-bleed backdrop of a featured film with its logo or wide title, its programme notes, and Play focused. The hero advances slowly through several films. Focus re-lights the whole field.
+- **Hero.** A full-bleed backdrop of a featured film with its logo or wide title, its programme notes, and Play focused. The hero advances through several films on a short hold, and a bar of one segment per film shows the hold and lets the d-pad choose a film. Focus re-lights the whole field.
 - **Continue Watching** follows the hero, with progress shown.
 - **Programme sections** follow: Next Up for series, Recently Added, and sections drawn from the library such as genres or collections.
 - **Title page.** A film page has programme notes, synopsis, cast, Play, and Resume when partly watched. Audio and subtitle choice live here or in the player. A series page leads to seasons and then episodes.

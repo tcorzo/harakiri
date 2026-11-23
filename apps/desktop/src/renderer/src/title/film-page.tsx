@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 
 import { episodeCode, minutesLeft, programmeNotes } from "../data/entry";
 import type { Entry } from "../data/entry";
-import { Backdrop, backdropUrl, InkField, Margin, TitleMark } from "../library/stage";
+import { Backdrop, backdropUrl, InkField, TitleMark } from "../library/stage";
 import { PlayAction, QuietAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
 import { ProgrammeNotes } from "../ui/marks";
@@ -156,12 +156,10 @@ type Picking = "none" | "audio" | "subtitle";
 export const FilmPage = ({
   entry,
   item,
-  number,
   server,
 }: {
   readonly entry: Entry;
   readonly item: BaseItemDto;
-  readonly number: number | null;
   readonly server: ServerUrl;
 }) => {
   const navigate = useNavigate();
@@ -308,11 +306,6 @@ export const FilmPage = ({
         <Backdrop url={entry.backdrop === null ? null : backdropUrl(server, entry.backdrop)} />
         <InkField deep />
         <div className="inset-x-safe-x bottom-safe-y absolute top-[calc(var(--spacing-safe-y)+5rem)] flex gap-10">
-          <Margin
-            number={number}
-            seen={entry.played}
-            section={entry.kind === "Episode" ? "Episode" : "Programme"}
-          />
           <div className="flex min-w-0 flex-1 flex-col justify-end gap-8">
             <div className="flex flex-col gap-4">
               <TitleMark entry={entry} server={server} compact={false} />
@@ -322,7 +315,7 @@ export const FilmPage = ({
                   {entry.title}
                 </p>
               ) : null}
-              <ProgrammeNotes facts={programmeNotes(entry, fidelity)} />
+              <ProgrammeNotes facts={programmeNotes(entry, fidelity)} seen={entry.played} />
             </div>
             <div className="flex flex-wrap items-center gap-6">
               {playActions()}

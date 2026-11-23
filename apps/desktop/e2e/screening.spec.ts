@@ -15,7 +15,7 @@ import {
   waitForNoMpv,
 } from "./support/harakiri";
 import { minutesLeft, spokenTitle, TICKS_PER_SECOND } from "./support/jellyfin";
-import { leadContinueWatching, main, openFirstResumed } from "./support/library";
+import { expectResumeShown, leadContinueWatching, main, openFirstResumed } from "./support/library";
 import { mpvProcesses, pressKey } from "./support/mpv";
 
 interface StationSeen {
@@ -161,7 +161,7 @@ test("Play from the title page: House, Programme, Picture, then mpv plays the it
     .first();
 
   await expect(first).toHaveAccessibleName(cardName(spokenTitle(saved)));
-  await expect(first).toContainText(`${leftAfter} min left`);
+  await expectResumeShown(first, saved);
   const [leading] = await jellyfin.resumeIds();
   expect(leading).toBe(item.id);
 });

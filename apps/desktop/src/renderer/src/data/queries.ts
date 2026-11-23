@@ -10,7 +10,7 @@ import {
   sectionsQuery,
 } from "@harakiri/jellyfin";
 import type { ItemId, ProgrammeSection } from "@harakiri/jellyfin";
-import { getEpisodes, getItems } from "@harakiri/jellyfin/generated";
+import { getEpisodes } from "@harakiri/jellyfin/generated";
 import type { BaseItemDto } from "@harakiri/jellyfin/generated";
 import { queryOptions } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
@@ -87,8 +87,8 @@ export const nextEpisodeQuery = (ctx: SignedIn, seriesId: ItemId, episodeId: Ite
 
 /**
  * What a finished screening changed on the server: the item's resume point and played mark, the
- * rows built from them, and for an episode its series' counts. The hero, the catalogue and the
- * genre sections stay as they are, so the library the owner returns to has not reshuffled.
+ * rows built from them, and for an episode its series' counts. The hero and the genre sections
+ * stay as they are, so the library the owner returns to has not reshuffled.
  */
 export const playedKeys = (ctx: SignedIn, entry: Entry): readonly (readonly unknown[])[] => {
   const root = libraryRootKey(ctx);
@@ -136,32 +136,3 @@ export const refetchWhenReported = (
     }
   });
 };
-
-/**
- * Every film and series id in accession order: the catalogue numbers. A title keeps its number
- * while the library only grows, because new arrivals are appended; removing a title renumbers the
- * ones added after it.
- */
-export const catalogueQuery = (ctx: SignedIn) =>
-  queryOptions({
-    queryKey: [...libraryRootKey(ctx), "catalogue"],
-    staleTime: 5 * 60_000,
-    queryFn: async ({ signal }): Promise<ReadonlyMap<string, number>> => {
-      const { data } = await getItems({
-        client: ctx.client,
-        signal,
-        throwOnError: true,
-        query: {
-          userId: ctx.userId,
-          recursive: true,
-          includeItemTypes: ["Movie", "Series"],
-          sortBy: ["DateCreated", "SortName"],
-          sortOrder: ["Ascending"],
-          enableImages: false,
-          enableUserData: false,
-        },
-      });
-
-      return new Map((data.Items ?? []).map((raw, i) => [raw.Id ?? "", i + 1]));
-    },
-  });

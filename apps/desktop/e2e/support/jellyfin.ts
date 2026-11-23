@@ -161,7 +161,7 @@ const TICKS_PER_MINUTE = 60 * TICKS_PER_SECOND;
 
 const pad2 = (n: number | null | undefined) => String(n ?? 0).padStart(2, "0");
 
-/** How a card or title names an item before its catalogue number: "Series, S01 E02, Episode" or the title. */
+/** How a card or title names an item: "Series, S01 E02, Episode" or the title. */
 export const spokenTitle = (item: ShownItem): string =>
   item.Type === "Episode" && item.SeriesName !== undefined && item.SeriesName !== null
     ? `${item.SeriesName}, S${pad2(item.ParentIndexNumber)} E${pad2(item.IndexNumber)}, ${item.Name}`

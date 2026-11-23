@@ -12,7 +12,6 @@ import type { CardProps } from "./cards";
 import { useReducedMotion } from "./hero-cycle";
 import { cardKey, rowKey, useLit } from "./lit";
 import type { Section } from "./lit";
-import { numberFor } from "./sections";
 
 export interface ProgrammeRowProps {
   readonly sectionId: string;
@@ -23,7 +22,6 @@ export interface ProgrammeRowProps {
   readonly pitchRem: number;
   readonly heightRem: number;
   readonly server: ServerUrl;
-  readonly numbers: ReadonlyMap<string, number>;
   readonly onFocusEntry: (entry: Entry, section: Section) => void;
   readonly onPressEntry: (entry: Entry) => void;
 }
@@ -65,7 +63,6 @@ const ProgrammeRowView = ({
   pitchRem,
   heightRem,
   server,
-  numbers,
   onFocusEntry,
   onPressEntry,
 }: ProgrammeRowProps) => {
@@ -138,7 +135,6 @@ const ProgrammeRowView = ({
                 >
                   <Card
                     entry={entry}
-                    number={numberFor(numbers, entry)}
                     server={server}
                     focusKey={cardKey(sectionId, entry.id)}
                     onFocus={() => {

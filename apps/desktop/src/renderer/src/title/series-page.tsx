@@ -9,7 +9,7 @@ import { episodeCode, programmeNotes } from "../data/entry";
 import type { Entry } from "../data/entry";
 import { episodesQuery, seasonsQuery } from "../data/queries";
 import { useSignedIn } from "../data/session";
-import { Backdrop, backdropUrl, InkField, Margin, TitleMark } from "../library/stage";
+import { Backdrop, backdropUrl, InkField, TitleMark } from "../library/stage";
 import { PlayAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
 import { ProgrammeNotes, SeenMark } from "../ui/marks";
@@ -125,11 +125,9 @@ export const initialSeason = (seriesId: ItemId, seasons: readonly Entry[]): numb
 
 export const SeriesPage = ({
   series,
-  number,
   server,
 }: {
   readonly series: Entry;
-  readonly number: number | null;
   readonly server: ServerUrl;
 }) => {
   const ctx = useSignedIn();
@@ -201,10 +199,9 @@ export const SeriesPage = ({
         <Backdrop url={series.backdrop === null ? null : backdropUrl(server, series.backdrop)} />
         <InkField deep />
         <div className="inset-x-safe-x bottom-safe-y absolute top-[calc(var(--spacing-safe-y)+5rem)] flex gap-10">
-          <Margin number={number} seen={series.played} section="Series" />
           <div className="flex w-[44rem] shrink-0 flex-col justify-end gap-8">
             <TitleMark entry={series} server={server} compact={false} />
-            <ProgrammeNotes facts={programmeNotes(series)} />
+            <ProgrammeNotes facts={programmeNotes(series)} seen={series.played} />
             <p className="text-body text-paper-dim m-0 line-clamp-6 max-w-[62ch]">
               {series.overview ?? "No synopsis on the server."}
             </p>
