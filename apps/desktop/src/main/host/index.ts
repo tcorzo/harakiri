@@ -4,6 +4,7 @@ import type { HdrSignalling } from "@harakiri/fidelity";
 import { safeStorage } from "electron";
 
 import type { HostCapabilities } from "./capabilities";
+import { mpvChildEnv } from "./child-env";
 import { readEnvFacts, readSteamFacts } from "./facts";
 import type { HostFacts, SteamFacts } from "./facts";
 import { createHost } from "./host";
@@ -20,6 +21,13 @@ import type { LauncherHints } from "./steam/hints";
 import { launcherFiles } from "./steam/launcher";
 
 export type { AddResult, HealReport, LauncherState } from "./steam/add";
+
+/** The env for harakiri's own mpv, without the loader's library path. */
+export { bundledMpvEnv } from "./child-env";
+
+/** The env for this play's mpv: the whole environment for `HARAKIRI_MPV`, else `bundledMpvEnv`. */
+export const mpvEnvironment = (override: string | undefined): Record<string, string> =>
+  mpvChildEnv(override, process.env);
 
 /** Where the launcher icon and library art are; the caller passes Electron's values. */
 export { artworkDir } from "./steam/artwork";

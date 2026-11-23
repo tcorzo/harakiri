@@ -26,6 +26,8 @@ export interface PlayerWiring {
   readonly hdrSignalling: () => Promise<HdrSignalling>;
   /** The mpv executable; asked per play, so a missing build fails that play and not the app. */
   readonly mpvBinary: () => string;
+  /** The environment mpv starts with; asked per play, next to `mpvBinary`. */
+  readonly mpvEnv: () => Readonly<Record<string, string>>;
   readonly preparePlayback: (
     request: PlayRequest,
     deps: Pick<PlaybackDeps, "session" | "identity">
@@ -80,7 +82,7 @@ export const createPlayer = (wiring: PlayerWiring) => {
   };
 
   const deps = async (): Promise<
-    Omit<PlaybackDeps, "audioOutput" | "hdrSignalling" | "mpvBinary">
+    Omit<PlaybackDeps, "audioOutput" | "hdrSignalling" | "mpvBinary" | "mpvEnv">
   > => {
     const session = await wiring.loadSession();
 
@@ -169,6 +171,7 @@ export const createPlayer = (wiring: PlayerWiring) => {
     await serialized(async () => {
       // Before the stop: a missing build fails this play and leaves the film playing alone.
       const mpvBinary = wiring.mpvBinary();
+      const mpvEnv = wiring.mpvEnv();
       await current?.stop();
 
       const [base, audioOutput, hdrSignalling] = await Promise.all([
@@ -177,7 +180,7 @@ export const createPlayer = (wiring: PlayerWiring) => {
         wiring.hdrSignalling(),
       ]);
 
-      const playbackDeps = { ...base, audioOutput, hdrSignalling, mpvBinary };
+      const playbackDeps = { ...base, audioOutput, hdrSignalling, mpvBinary, mpvEnv };
       const prepared = await takePrepared(request, playbackDeps.session);
       const playback = await wiring.startPlayback(request, send, playbackDeps, prepared);
       current = playback;

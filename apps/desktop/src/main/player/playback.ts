@@ -88,6 +88,8 @@ export interface PlaybackDeps {
   readonly hdrSignalling: HdrSignalling;
   /** The mpv executable: harakiri's build, or HARAKIRI_MPV. */
   readonly mpvBinary: string;
+  /** mpv's environment: the host's, without the loader's library path unless HARAKIRI_MPV is set. */
+  readonly mpvEnv: Readonly<Record<string, string>>;
   /** How long an IPC request waits for mpv's answer before mpv counts as dead; the client's 10 s when unset. */
   readonly requestTimeoutMs?: number;
 }
@@ -324,6 +326,7 @@ export const startPlayback = async (
     logger.info("Starting mpv {binary}", { binary: deps.mpvBinary });
     mpv = await spawnMpv({
       binary: deps.mpvBinary,
+      env: deps.mpvEnv,
       requestTimeoutMs: deps.requestTimeoutMs,
       config: { dir: deps.configDir },
       args: mpvArgs(resolution, entry.title, request, deps, fidelityView(fidelity)),

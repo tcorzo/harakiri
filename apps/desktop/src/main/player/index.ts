@@ -1,7 +1,7 @@
 import { app } from "electron";
 
-import { isE2E } from "../env";
-import { hostSignalling } from "../host";
+import { env, isE2E } from "../env";
+import { hostSignalling, mpvEnvironment } from "../host";
 import { loadSession } from "../session";
 import { AudioOutputJson, readAudioOutput } from "./audio-output";
 import { createPlayer } from "./create-player";
@@ -29,6 +29,7 @@ export const { prepare, forgetPrepared, play, stop, probe, isPlaying, mpvPid } =
   // From the environment alone, so a play never waits on the keyring probe.
   hdrSignalling: async () => await Promise.resolve(hostSignalling()),
   mpvBinary,
+  mpvEnv: () => mpvEnvironment(env.HARAKIRI_MPV),
   preparePlayback,
   startPlayback,
 });
