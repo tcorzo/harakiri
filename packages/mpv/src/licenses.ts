@@ -96,7 +96,8 @@ const duplicates = <T>(
 
 /**
  * One line per problem: a missing or empty licenses/README or licenses/COPYING.GPLv3, a bundle
- * file no component provides or two components provide, a name two components have, a component
+ * file no component provides or two components provide, a file a component claims that the bundle
+ * lacks, a name two components have, a component
  * with no non-empty license file in licenses/<name>/, an entry of licenses/ that is a file, and a
  * licenses/ dir no component names. Empty when the bundle is complete. Throws when manifest.json
  * is missing or its `components` is malformed.
@@ -118,6 +119,11 @@ export const licenseGaps = (bundleDir: string): string[] => {
     ...BUNDLE_LICENSES.flatMap((name) => bundleLicenseGap(licenses, name)),
     ...bundleFiles(bundleDir).flatMap((rel) =>
       provided.has(rel) ? [] : [`${rel}: no component provides it`]
+    ),
+    ...components.flatMap((component) =>
+      component.files
+        .filter((rel) => !isFile(path.join(bundleDir, rel)))
+        .map((rel) => `${rel}: claimed by ${component.name}, not in the bundle`)
     ),
     ...[...duplicates(components, (component) => component.files)].map(
       ([rel, holders]) =>

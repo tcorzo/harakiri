@@ -78,6 +78,14 @@ describe(licenseGaps, () => {
     expect(licenseGaps(bundle)).toStrictEqual(["lib/libbar.so.2: no component provides it"]);
   });
 
+  it("names a file a component claims that the bundle lacks", () => {
+    writeCompleteBundle();
+    rmSync(path.join(bundle, "lib/libfoo.so.1"));
+    expect(licenseGaps(bundle)).toStrictEqual([
+      "lib/libfoo.so.1: claimed by foo, not in the bundle",
+    ]);
+  });
+
   it("names a component whose licenses/ dir is missing", () => {
     writeCompleteBundle();
     rmSync(path.join(bundle, "licenses/foo"), { recursive: true });
