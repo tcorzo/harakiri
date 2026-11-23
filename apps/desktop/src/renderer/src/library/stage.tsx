@@ -54,15 +54,27 @@ export const InkField = ({ deep }: { readonly deep: boolean }) => (
 );
 
 /** The title as the programme sets it: the film's own logo, or its name wide and heavy. */
+/** The title logo's URL, sized for the stage (larger while the hero holds it) or for a page. */
+export const titleLogoUrl = (server: ServerUrl, logo: ImageRef, staged: boolean): string =>
+  imageUrl(
+    server,
+    logo,
+    (staged ? 0.43 : 0.33) * window.innerWidth * (window.devicePixelRatio || 1)
+  );
+
 export const TitleMark = ({
   entry,
   server,
   compact,
+  hero = false,
 }: {
   readonly entry: Entry;
   readonly server: ServerUrl;
   readonly compact: boolean;
+  /** The library hero: centred on the stage, and larger than a page title while it holds it. */
+  readonly hero?: boolean;
 }) => {
+  const staged = hero && !compact;
   const name = entry.kind === "Episode" && entry.series !== null ? entry.series.name : entry.title;
 
   if (entry.logo !== null) {
@@ -70,14 +82,10 @@ export const TitleMark = ({
       <h1 className="m-0">
         <img
           alt={name}
-          src={imageUrl(
-            server,
-            entry.logo,
-            0.33 * window.innerWidth * (window.devicePixelRatio || 1)
-          )}
-          className={`block w-auto max-w-[33vw] object-contain object-left-bottom drop-shadow-[0_0.25rem_1.5rem_var(--color-shade)] ${
-            compact ? "max-h-[8rem]" : "max-h-[13rem]"
-          }`}
+          src={titleLogoUrl(server, entry.logo, staged)}
+          className={`block w-auto object-contain drop-shadow-[0_0.25rem_1.5rem_var(--color-shade)] ${
+            hero ? "object-bottom" : "object-left-bottom"
+          } ${staged ? "max-h-[17rem] max-w-[43vw]" : `max-w-[33vw] ${compact ? "max-h-[8rem]" : "max-h-[13rem]"}`}`}
         />
       </h1>
     );
@@ -85,8 +93,10 @@ export const TitleMark = ({
 
   return (
     <h1
-      className={`stretch-extra-wide m-0 max-w-[38vw] font-[820] text-balance ${
-        compact ? "text-title" : "text-marquee"
+      className={`stretch-extra-wide m-0 font-[820] text-balance ${
+        staged
+          ? "max-w-[60vw] text-[7.15rem]/[0.94]"
+          : `max-w-[38vw] ${compact ? "text-title" : "text-marquee"}`
       }`}
     >
       {name}
@@ -96,16 +106,22 @@ export const TitleMark = ({
 
 export const EntryNotes = ({
   entry,
+  centred = false,
   children,
 }: {
   readonly entry: Entry;
+  readonly centred?: boolean;
   readonly children?: ReactNode;
 }) => (
-  <div className="flex flex-col gap-3">
+  <div className={`flex flex-col gap-3 ${centred ? "items-center" : ""}`}>
     {entry.kind === "Episode" ? (
       <p className="text-body text-paper stretch-semicondensed font-[620]">{entry.title}</p>
     ) : null}
-    <ProgrammeNotes facts={programmeNotes(entry)} seen={entry.played} />
+    <ProgrammeNotes
+      facts={programmeNotes(entry)}
+      seen={entry.played}
+      className={centred ? "justify-center" : ""}
+    />
     {children}
   </div>
 );

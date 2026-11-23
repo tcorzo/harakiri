@@ -214,9 +214,9 @@ A warm near-black night palette with warm paper type and one dark arterial red t
 
 The root size is 100vh / 67.5, so every rem scales with the screen height and a 4K TV gets exactly double the 1080p layout. All content sits inside an overscan-safe frame of 5vw horizontally and 5vh vertically; only artwork and the ink field run to the edge.
 
-The library hero, the film page and the series page have no margin column: content sits on the left safe edge, its block capped near 46vw on the library hero. The film logo is capped at a third of the screen width. Settings and onboarding keep a left margin column (7.5rem) with a 3.5rem Harakiri Red section tab, the section name set rotated and reading upward; the tab is as tall as its name and at least 10rem, and only Welcome runs the band the full height of the screen.
+The library hero, the film page and the series page have no margin column. The library hero stands on one centred axis while it holds the stage: its film logo up to 17rem tall and 43% of the screen width (a text title at 7.15rem), the notes centred under it, then Play and Details at their reduced size (3.6rem tall), so the title leads and the actions follow. Everywhere else content sits on the left safe edge, and the film logo is capped at a third of the screen width. Settings and onboarding keep a left margin column (7.5rem) with a 3.5rem Harakiri Red section tab, the section name set rotated and reading upward; the tab is as tall as its name and at least 10rem, and only Welcome runs the band the full height of the screen.
 
-The library is a stage plus programme rows. On arrival the hero holds the whole screen: the rows wait out of sight below, and a single thin arrow centred at the bottom edge, drifting slowly, says there is more. The hero block rests low, its hold rule just under the actions. When focus moves into the rows the block lifts and compacts, the ink field deepens, and the rows scroll vertically one section at a time. Rows already passed fade out; rows waiting below dim their pictures to half opacity while their type keeps full contrast. Cards in a row are spaced 2rem apart and the row leaves 1.5rem of lead so the first card's ring and scale never clip.
+The library is a stage plus programme rows. On arrival the hero holds the whole screen: the rows wait out of sight below, and a single thin arrow centred at the bottom edge, drifting slowly, says there is more. The hero block rests low, its hold rule just under the actions. When focus moves into the rows the block lifts, the ink field deepens, and the rows scroll vertically one section at a time. In the rows the block is left-aligned and compact: the focused card's logo, notes and two-line overview. The rows move under a fixed horizon just above the focused row, feathered over 3rem, and nothing in them paints above it: a passed row fades out in 150ms as it slides under, so even a quickly tapped or held d-pad never draws a row across the banner, and a row coming back down rises from behind the horizon and fades in over 500ms. Rows waiting below dim their pictures to half opacity while their type keeps full contrast. Cards in a row are spaced 2rem apart and the row leaves 1.5rem of lead so the first card's ring and scale never clip.
 
 Lists (settings, track choice) are full-width lines divided by hairlines, not grids of tiles. Settings facts use a two-column definition grid (12rem terms).
 
@@ -264,7 +264,7 @@ Three actions and no more. Square, 4.5rem tall, all sharing the focus mark.
 
 ### Navigation
 
-The wordmark "harakiri" (heading, 820, width 125%) sits top left with the server name in dim caption beside it; Settings is a cog mark with square teeth (2.25rem in a 3.5rem square, named "Settings" for assistive tech) top right, in full Paper so it holds over a bright sky; on focus the square inverts to paper with an ink cog and takes the ring and scale. Back is the gamepad B button; there is no on-screen back control.
+The crane from the app icon (`CraneMark`, 3.25rem tall, transparent: Paper stroke, Harakiri Red dot, named "harakiri" for assistive tech) sits alone top left; Settings is a cog mark with square teeth (2.25rem in a 3.5rem square, named "Settings" for assistive tech) top right, in full Paper so it holds over a bright sky; on focus the square inverts to paper with an ink cog and takes the ring and scale. Back is the gamepad B button; there is no on-screen back control.
 
 ### Note Badges (signature)
 
@@ -277,6 +277,8 @@ Rows and the track sheet head each section with paper type led by a short red ta
 ### Hero Stage
 
 The featured film holds the stage with Play focused. It advances to the next featured film only after 20 seconds with no input at all, restarting the wait on any press; a press within 800ms of a change is ignored. Under reduced motion it never advances on its own. The hold is shown by one rule and nothing else: a 0.1875rem paper fill on an Ink Rule track, running the full safe width under the hero's actions, restarting on any press. There is no preview of the next film. The quiet action beside Play reads "Details" and opens the title page. Backdrops cross-fade with a 900ms re-light (from 55% brightness) rather than cutting to black.
+
+The block over the stage only changes while nobody sees it. Leaving the stage, it fades out in 100ms as it lifts, and comes back over 420ms on the curtain ease only once the focused card is lit, its full title has landed and its logo has decoded (at most 600ms of waiting), so the hero's title never shows in the rows' layout. Returning to the stage runs the same dip the other way, and a new card or the next featured film does too. Fresher data for the title on show (badges arriving) fills in place.
 
 ### Screening Handoff (signature)
 
