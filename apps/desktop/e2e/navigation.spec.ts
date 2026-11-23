@@ -12,9 +12,15 @@ import {
   until,
 } from "./support/harakiri";
 import type { FocusedControl } from "./support/harakiri";
-import { minutesLeft, spokenTitle } from "./support/jellyfin";
+import { spokenTitle } from "./support/jellyfin";
 import type { ShownItem } from "./support/jellyfin";
-import { heroPlay, leadContinueWatching, main, openLibrary } from "./support/library";
+import {
+  expectResumeShown,
+  heroPlay,
+  leadContinueWatching,
+  main,
+  openLibrary,
+} from "./support/library";
 
 /** The film on tonight's screening, read off its focused Play or Resume. */
 const heroTitle = (focus: FocusedControl): string => {
@@ -81,11 +87,10 @@ test("the arrow keys walk the hero, the rows and the title pages, and focus is n
   // Continue Watching: the seeded item, with the time left the server's resume point gives.
   const resumed = await press(page, "ArrowDown", cardName(spokenTitle(shown)));
   expect(resumed.section).toBe("Continue Watching");
-  const left = minutesLeft(shown);
-  expect(left).not.toBeNull();
-  await expect(
-    page.getByRole("button", { name: cardName(spokenTitle(shown)) }).first()
-  ).toContainText(`${left} min left`);
+  await expectResumeShown(
+    page.getByRole("button", { name: cardName(spokenTitle(shown)) }).first(),
+    shown
+  );
 
   // Down through every row in between, to Recently Added, which opens on the newest title.
   const recent = await downTo(page, "Recently Added", async () => {
@@ -228,10 +233,25 @@ test("holding Down keeps the focused card on screen at every step", async ({ lau
 
   await setButton(page, "down", false);
 
-  // Focus lost to nothing counts as off screen too.
-  const off = seen.filter(
-    (f) => f === null || (f.section !== "Tonight's screening" && !f.inViewport)
-  );
+  // The rows wait below the screen while the stage holds, so the first row glides in under its
+  // focused card: that card may start below the edge, until it first arrives. From then on, focus
+  // never leaves the screen. Focus lost to nothing counts as off screen too.
+  const stage = "Tonight's screening";
+  const firstRow = seen.find((f) => f !== null && f.section !== stage)?.section;
+  const off: (FocusedControl | null)[] = [];
+  let arrived = false;
+
+  for (const f of seen) {
+    if (f?.section === stage) {
+      continue;
+    }
+
+    if (f?.inViewport === true) {
+      arrived = true;
+    } else if (arrived || f === null || f.section !== firstRow) {
+      off.push(f);
+    }
+  }
 
   expect(off).toEqual([]);
   // The hold travelled: focus went down through more than one row.

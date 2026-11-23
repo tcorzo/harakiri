@@ -1,8 +1,8 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
-import { cardName, expect, expectFocus } from "./harakiri";
+import { cardName, escapeRegExp, expect, expectFocus } from "./harakiri";
 import type { FocusedControl } from "./harakiri";
-import { ITEMS, spokenTitle } from "./jellyfin";
+import { ITEMS, minutesLeft, spokenTitle } from "./jellyfin";
 import type { Jellyfin, PickedItem, ShownItem } from "./jellyfin";
 
 export const heroPlay = /^(?<verb>Play|Resume) (?<title>.+)$/u;
@@ -53,4 +53,28 @@ export const openFirstResumed = async (page: Page, shown: ShownItem): Promise<vo
   await expect(main(page, shown.Name)).toBeVisible();
   const focus = await expectFocus(page, `Resume ${shown.Name}`, 10_000);
   expect(focus.route).toBe(`/title/${shown.Id}`);
+};
+
+/**
+ * A card shows how far its item was watched: the rule along the picture's foot is as long as the
+ * server's resume point says, and only an episode card prints the time left; a film card prints
+ * nothing at all.
+ */
+export const expectResumeShown = async (card: Locator, shown: ShownItem): Promise<void> => {
+  const left = minutesLeft(shown);
+  expect(left).not.toBeNull();
+
+  const played = (shown.UserData?.PlayedPercentage ?? 0) / 100;
+  const rule = card.locator('[style*="scaleX"]');
+  await expect(rule).toHaveCount(1);
+
+  const scale = await rule.evaluate((node) =>
+    Number(/scaleX\((?<x>[\d.]+)\)/u.exec(node.getAttribute("style") ?? "")?.groups?.x)
+  );
+
+  expect(scale).toBeCloseTo(played, 3);
+
+  await expect(card).toHaveText(
+    shown.Type === "Episode" ? new RegExp(`${escapeRegExp(String(left))} min left`, "u") : /^$/u
+  );
 };
