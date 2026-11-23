@@ -30,13 +30,15 @@ libva-x11.so.2
 libvdpau.so.1
 # What the host's Mesa drivers link (Vulkan drivers, libgallium, libLLVM). A copy in lib/ would be
 # loaded first, and the host's drivers would bind to it instead of their own.
-# libxml2 is not here: only the bundle's Fedora 44 fontconfig needs libxml2.so.2, which a host
-# whose Mesa links libxml2.so.16 (Arch) does not have. The two sonames cannot clash, and on a
-# Fedora 44 host the bundled copy is Fedora's own build.
+# libxml2 is not here: only the bundle's Fedora 44 fontconfig needs libxml2.so.2, and a host
+# whose Mesa links libxml2.so.16 (Bazzite, Fedora 45: its libLLVM) does not have .so.2. The two
+# sonames cannot clash. On a Fedora 44 host, Mesa's libLLVM binds the bundled libxml2.so.2; that
+# loads because the soname and symbol version nodes match.
 libz.so.1
 libdisplay-info.so.3
 # OpenSSL: the distro patches it, and its OPENSSLDIR names the distro's trust store, which libcurl
 # reads through X509_STORE_set_default_paths. A bundled copy would trust a path the host lacks.
+# Fedora 45 and Bazzite ship OpenSSL 4 and get libssl.so.3 from the openssl3-libs compat package.
 libssl.so.3
 libcrypto.so.3
 # PipeWire and the sound stack
