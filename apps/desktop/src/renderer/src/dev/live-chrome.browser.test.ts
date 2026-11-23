@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { enhanceLiveChrome, savedOffset, watchLiveChrome } from "./live-chrome";
+import { enhanceLiveChrome, guardAppFocus, savedOffset, watchLiveChrome } from "./live-chrome";
 
 const byId = (root: ParentNode, id: string): HTMLElement => {
   const found = root.querySelector(`#${id}`);
@@ -63,6 +63,20 @@ const ends = (bar: HTMLElement): readonly [string | undefined, string | undefine
   bar.firstElementChild?.id,
   bar.lastElementChild?.id,
 ];
+
+/** impeccable's steer box in its bar, and one of the app's own focusable cards. */
+const mountSteer = () => {
+  const bar = document.createElement("div");
+  bar.id = "impeccable-live-global-bar";
+  const steer = document.createElement("input");
+  steer.id = "impeccable-live-page-chat-input";
+  bar.append(steer);
+  const card = document.createElement("button");
+  card.textContent = "A card";
+  document.body.append(bar, card);
+
+  return { bar, steer, card };
+};
 
 describe("harakiri's live chrome", () => {
   beforeEach(() => {
@@ -146,5 +160,40 @@ describe("harakiri's live chrome", () => {
     enhanceLiveChrome(document);
     expect(getComputedStyle(next.highlight).visibility).toBe("hidden");
     expect(byId(next.shadow, "harakiri-live-outline").getAttribute("aria-pressed")).toBe("false");
+  });
+
+  describe("the focus guard", () => {
+    afterEach(() => {
+      document.querySelector("#impeccable-live-global-bar")?.remove();
+      document.querySelector("button")?.remove();
+    });
+
+    it("hands focus back to the app when impeccable takes it unasked, and pauses impeccable", () => {
+      const stop = guardAppFocus(document);
+      const { steer, card } = mountSteer();
+      const pauses: string[] = [];
+      document.addEventListener("mousedown", (event) => {
+        pauses.push(event.target instanceof Element ? event.target.tagName : "?");
+      });
+
+      card.focus();
+      steer.focus();
+
+      expect(document.activeElement).toBe(card);
+      expect(pauses).toStrictEqual(["HTML"]);
+      stop();
+    });
+
+    it("leaves the steer box focused when the user pressed on impeccable's bar", () => {
+      const stop = guardAppFocus(document);
+      const { steer, card } = mountSteer();
+
+      card.focus();
+      steer.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      steer.focus();
+
+      expect(document.activeElement).toBe(steer);
+      stop();
+    });
   });
 });

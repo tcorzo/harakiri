@@ -69,7 +69,9 @@ export const impeccableLive = ({ appRoot }: { readonly appRoot: string }): Plugi
     apply: "serve",
 
     configureServer(server) {
-      server.watcher.add(serverFile);
+      // Watch the tracked .impeccable folder, not the file: the watcher drops a watched file once
+      // live:stop deletes it, and would never see the next live start create it again.
+      server.watcher.add(path.dirname(path.dirname(serverFile)));
 
       const reload = (file: string): void => {
         if (path.resolve(file) === serverFile) {
