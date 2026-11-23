@@ -23,7 +23,8 @@ chmod +x "$tmp/app.AppImage"
 bundle="$tmp/squashfs-root/resources/mpv"
 [ -x "$bundle/mpv" ] || { echo "FAIL: $appimage carries no resources/mpv/mpv" >&2; exit 1; }
 
-# Runs inside the image, with the bundle at /bundle (read-only). Prints one FAIL line per problem.
+# Runs inside the image as root, with the bundle at /bundle (read-only). Prints one FAIL line per
+# problem. It changes the container's own trust store, which --rm throws away.
 probe="$tmp/probe.sh"
 cat >"$probe" <<'PROBE'
 #!/bin/sh
@@ -44,15 +45,16 @@ done
 
 /bundle/mpv --no-config --version >/dev/null 2>/tmp/version.err || bad "mpv --version failed: $(cat /tmp/version.err)"
 
-# curl is built with no CA path of its own: it must fall back to this image's OpenSSL defaults.
-# Nothing is reachable over the network, so a TLS server with a throwaway self-signed certificate
-# listens on this container's loopback. curl loads its trust store before the handshake, so the
-# fallback line proves the image's OpenSSL supplied the store; the verification failure that
-# follows (the certificate is self-signed) is expected. A bare connection to a closed port would
-# fail before curl loads the store and prove nothing.
+# curl is built with no CA path of its own: it must fall back to this image's OpenSSL defaults,
+# and through them trust what the image trusts. Nothing is reachable over the network, so a TLS
+# server with a throwaway certificate listens on this container's loopback, and the certificate is
+# added to the image's trust store the way an administrator would (the anchors dir, then
+# update-ca-trust). curl must load the store through the fallback and verify the server with it.
 cd /tmp
 openssl req -x509 -newkey rsa:2048 -nodes -keyout key.pem -out cert.pem -subj /CN=127.0.0.1 \
-	-days 1 >/dev/null 2>&1 || bad "openssl could not make a test certificate"
+	-addext subjectAltName=IP:127.0.0.1 -days 1 >/dev/null 2>&1 || bad "openssl could not make a test certificate"
+cp cert.pem /etc/pki/ca-trust/source/anchors/harakiri-check-hosts.pem &&
+	update-ca-trust extract || bad "could not add the test certificate to the trust store"
 openssl s_server -accept 127.0.0.1:4433 -cert cert.pem -key key.pem -www >/dev/null 2>&1 &
 server=$!
 # Wait for the listener (up to 10 s) instead of a fixed sleep.
@@ -63,24 +65,8 @@ done
 /bundle/mpv --no-config --msg-level=curl=trace https://127.0.0.1:4433/ >/tmp/curl.log 2>&1 </dev/null || true
 kill "$server" 2>/dev/null || true
 grep -F 'OpenSSL default paths (fallback)' /tmp/curl.log >/dev/null || bad "curl did not log 'OpenSSL default paths (fallback)'"
-if grep -F 'error setting certificate' /tmp/curl.log >/dev/null; then
-	bad "curl logged 'error setting certificate'"
-fi
-
-# The store the OpenSSL that libcurl loads points at holds certificates. The openssl CLI can be a
-# different major version (Bazzite's is 4), so read OPENSSLDIR from the libcrypto.so.3 that ldd
-# resolves for the bundle's libcurl; the string is compiled into the library.
-libcrypto="$(ldd /bundle/lib/libcurl.so.4 2>/dev/null | awk '$1 == "libcrypto.so.3" { print $3 }')"
-dir=""
-[ -n "$libcrypto" ] && dir="$(grep -a -o 'OPENSSLDIR: "[^"]*"' "$libcrypto" | head -n 1 | sed 's/^OPENSSLDIR: "\(.*\)"$/\1/')"
-if [ -z "$dir" ]; then
-	bad "no OPENSSLDIR in the libcrypto.so.3 that libcurl loads ($libcrypto)"
-elif [ -n "$(find -L "$dir/certs" -type f -size +0c 2>/dev/null | head -n 1)" ] ||
-	[ -s "$dir/cert.pem" ]; then
-	:
-else
-	bad "the trust store under $dir (certs/ or cert.pem) is empty"
-fi
+grep -F 'SSL certificate verified via OpenSSL' /tmp/curl.log >/dev/null ||
+	bad "curl did not verify the server against the image's trust store: $(grep -iE 'certificate|ssl' /tmp/curl.log | tail -n 3)"
 exit "$fail"
 PROBE
 chmod +x "$probe"
