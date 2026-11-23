@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { z } from "zod";
@@ -17,34 +17,57 @@ export interface MpvBundleCheck {
 
 const ManifestVersion = z.object({ mpv: z.string() });
 
-/** Every file under dir, as `/`-separated paths relative to it, sorted. */
-const filesUnder = (dir: string): string[] =>
-  readdirSync(dir, { recursive: true, withFileTypes: true })
-    .filter((entry) => !entry.isDirectory())
-    .map((entry) =>
-      path.relative(dir, path.join(entry.parentPath, entry.name)).split(path.sep).join("/")
-    )
-    .toSorted((a, b) => (a < b ? -1 : Number(a > b)));
+interface Tree {
+  /** The regular files, as `/`-separated paths relative to the tree's root, sorted. */
+  readonly files: string[];
+  /** Each entry that is neither a directory nor a regular file (a symlink, say), as `<rel>: not a regular file`. */
+  readonly problems: string[];
+}
+
+const relativeTo = (dir: string, entry: { parentPath: string; name: string }): string =>
+  path.relative(dir, path.join(entry.parentPath, entry.name)).split(path.sep).join("/");
+
+/** The regular files under dir. A symlink is never followed: it is a problem, not a file. */
+const treeOf = (dir: string): Tree => {
+  const entries = readdirSync(dir, { recursive: true, withFileTypes: true }).filter(
+    (entry) => !entry.isDirectory()
+  );
+
+  return {
+    files: entries
+      .flatMap((entry) => (entry.isFile() ? [relativeTo(dir, entry)] : []))
+      .toSorted((a, b) => (a < b ? -1 : Number(a > b))),
+    problems: entries.flatMap((entry) =>
+      entry.isFile() ? [] : [`${relativeTo(dir, entry)}: not a regular file`]
+    ),
+  };
+};
 
 const sha256 = (file: string): string =>
   createHash("sha256").update(readFileSync(file)).digest("hex");
 
-/** The first file of `built` that `shipped` lacks or holds other bytes of, and the first file only `shipped` has. */
+/**
+ * The first file of `built` that `shipped` lacks or holds other bytes of, the first file only
+ * `shipped` has, and every entry of either tree that is not a regular file.
+ */
 const sameFiles = (shipped: string, built: string): string[] => {
-  const shippedFiles = new Set(filesUnder(shipped));
-  const builtFiles = filesUnder(built);
-  const builtSet = new Set(builtFiles);
+  const shippedTree = treeOf(shipped);
+  const builtTree = treeOf(built);
+  const shippedFiles = new Set(shippedTree.files);
+  const builtFiles = new Set(builtTree.files);
 
-  const differs = builtFiles.find(
+  const differs = builtTree.files.find(
     (rel) =>
       !shippedFiles.has(rel) || sha256(path.join(shipped, rel)) !== sha256(path.join(built, rel))
   );
 
-  const extra = [...shippedFiles].find((rel) => !builtSet.has(rel));
+  const extra = shippedTree.files.find((rel) => !builtFiles.has(rel));
 
   return [
     ...(differs === undefined ? [] : [`${differs}: differs from the recipe's build`]),
     ...(extra === undefined ? [] : [`${extra}: not in the recipe's build`]),
+    ...shippedTree.problems,
+    ...builtTree.problems.map((problem) => `the recipe's build: ${problem}`),
   ];
 };
 
@@ -86,11 +109,9 @@ const lists = (shipped: string, args: readonly string[], names: readonly string[
   }
 
   return names.flatMap((name) =>
-    problemOf(
-      run,
-      (output) => new RegExp(`^\\s*${name}\\s`, "mu").test(output),
-      `${args.join(" ")} lists no ${name}`
-    )
+    new RegExp(`^\\s*${name}\\s`, "mu").test(run.output)
+      ? []
+      : [`${args.join(" ")} lists no ${name}`]
   );
 };
 
@@ -119,30 +140,52 @@ const runs = (shipped: string, built: string): string[] => {
   ];
 };
 
+/** The check's problems; a check that throws (a file it reads is missing, say) fails with the error. */
+const guarded = (name: string, problems: () => readonly string[]): MpvBundleCheck => {
+  try {
+    return { name, problems: problems() };
+  } catch (error) {
+    return { name, problems: [error instanceof Error ? error.message : String(error)] };
+  }
+};
+
 /**
  * The checks on the mpv bundle an AppImage ships in `resources/mpv/` (`shipped`), against the
  * recipe's build in `.cache/mpv/<recipe-hash>/` (`built`). mpv runs with an empty environment.
+ * Never throws: a missing `shipped` fails every check, and a missing `built` fails the two that
+ * compare against it, each naming `mise run mpv:build`.
  */
-export const mpvBundleChecks = (shipped: string, built: string): MpvBundleCheck[] => [
-  { name: "mpv is this recipe's build", problems: sameFiles(shipped, built) },
-  { name: "mpv runs", problems: runs(shipped, built) },
-  {
-    name: "mpv decoders",
-    problems: [
+export const mpvBundleChecks = (shipped: string, built: string): MpvBundleCheck[] => {
+  const notShipped = existsSync(shipped) ? [] : ["resources/mpv: not in the AppImage"];
+
+  const notBuilt = existsSync(built)
+    ? []
+    : [`${path.basename(built)}: no build of the current recipe; run \`mise run mpv:build\``];
+
+  const check = (
+    name: string,
+    needsBuilt: boolean,
+    problems: () => readonly string[]
+  ): MpvBundleCheck => {
+    const missing = [...notShipped, ...(needsBuilt ? notBuilt : [])];
+
+    return missing.length > 0 ? { name, problems: missing } : guarded(name, problems);
+  };
+
+  return [
+    check("mpv is this recipe's build", true, () => sameFiles(shipped, built)),
+    check("mpv runs", true, () => runs(shipped, built)),
+    check("mpv decoders", false, () => [
       ...lists(shipped, ["--vd=help"], ["hevc", "h264", "vc1", "av1"]),
       ...lists(shipped, ["--ad=help"], ["truehd", "eac3", "dca"]),
       ...lists(shipped, ["--list-options"], ["--input-gamepad"]),
-    ],
-  },
-  {
-    name: "mpv host libs",
-    problems: unbundledNeeds(
-      shipped,
-      readHostLibs(path.join(repoRootFrom(import.meta.dirname), "mpv"))
+    ]),
+    check("mpv host libs", false, () =>
+      unbundledNeeds(shipped, readHostLibs(path.join(repoRootFrom(import.meta.dirname), "mpv")))
     ),
-  },
-  { name: "mpv licenses", problems: licenseGaps(shipped) },
-];
+    check("mpv licenses", false, () => licenseGaps(shipped)),
+  ];
+};
 
 /** Every problem of every check in `mpvBundleChecks`; empty when the shipped bundle is the build. */
 export const mpvBundleProblems = (shipped: string, built: string): string[] =>

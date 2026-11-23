@@ -245,8 +245,9 @@ try {
     return readFileSync(path.join(tmp, path.basename(rel)), "utf-8");
   };
 
+  // undefined when app.asar lacks it, which missingBundleLicenses already reports.
   const rendererLicenses = missingBundleLicenses.includes("out/renderer/licenses.md")
-    ? ""
+    ? undefined
     : asarText("out/renderer/licenses.md");
 
   check(
@@ -260,7 +261,7 @@ try {
         (name) => !existsSync(path.join(appDir, name)) && `the AppImage root has no ${name}`
       ),
       missingBundleLicenses.length > 0 && `app.asar holds no ${missingBundleLicenses.join(", ")}`,
-      rendererLicenses !== "" &&
+      rendererLicenses !== undefined &&
         !/^## react - /mu.test(rendererLicenses) &&
         "out/renderer/licenses.md does not name react",
     ]
