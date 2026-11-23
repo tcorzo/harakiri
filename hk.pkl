@@ -3,7 +3,7 @@ import "package://github.com/jdx/hk/releases/download/v2.10.0/hk@2.10.0#/Builtin
 
 local typecheck = new Step {
   glob = List("**/*.ts", "**/*.tsx", "**/tsconfig*.json")
-  check = "scripts/bounded.sh typecheck 2G -- bun x tsc -b"
+  check = "scripts/bounded.sh typecheck 4G -- bun x tsc -b"
 }
 
 local test = new Step {
