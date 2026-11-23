@@ -270,6 +270,23 @@ describe("harakiri's mpv build", () => {
       expect(version).toBe("Version 3, 29 June 2007");
     });
 
+    it("has the licenses of SDL's bundled hidapi and the notice of each NVIDIA codec header", () => {
+      // -DSDL_HIDAPI=ON compiles SDL's own hidapi into libSDL2
+      expect(readdirSync(bundleFile("licenses/sdl2/src/hidapi")).toSorted()).toStrictEqual([
+        "LICENSE-bsd.txt",
+        "LICENSE-gpl3.txt",
+        "LICENSE-orig.txt",
+        "LICENSE.txt",
+      ]);
+      expect(readdirSync(bundleFile("licenses/nv-codec-headers")).toSorted()).toStrictEqual([
+        "dynlink_cuda.h.notice",
+        "dynlink_cuviddec.h.notice",
+        "dynlink_loader.h.notice",
+        "dynlink_nvcuvid.h.notice",
+        "nvEncodeAPI.h.notice",
+      ]);
+    });
+
     it("takes every copied library from a Fedora 44 SRPM", () => {
       // A Fedora release tag is .fc44, or .fc44.<n> for a rebuild within the release (pcre2's 1.fc44.1)
       const srpms = readManifest().components.flatMap((c) =>

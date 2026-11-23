@@ -49,17 +49,50 @@ export const Components: z.ZodType<readonly Component[]> = z
 // manifest.json also holds each built component's version; only `components` is read here
 const Manifest = z.object({ components: Components });
 
+const isDir = (file: string): boolean => existsSync(file) && statSync(file).isDirectory();
+
 const isFile = (file: string): boolean => existsSync(file) && statSync(file).isFile();
 
-const holdsAFile = (dir: string): boolean =>
-  existsSync(dir) &&
-  readdirSync(dir, { recursive: true, withFileTypes: true }).some((entry) => entry.isFile());
+/** Whether `dir` is a directory that holds, at any depth, a file with at least one byte */
+const holdsALicenseFile = (dir: string): boolean =>
+  isDir(dir) &&
+  readdirSync(dir, { recursive: true, withFileTypes: true }).some(
+    (entry) => entry.isFile() && statSync(path.join(entry.parentPath, entry.name)).size > 0
+  );
 
 /** The license texts every bundle carries at the top of licenses/ */
 const BUNDLE_LICENSES = ["README", "COPYING.GPLv3"];
 
+const bundleLicenseGap = (licenses: string, name: string): string[] => {
+  const file = path.join(licenses, name);
+
+  if (!isFile(file)) {
+    return [`licenses/${name}: missing`];
+  }
+
+  return statSync(file).size === 0 ? [`licenses/${name}: empty`] : [];
+};
+
+/** Each value that `keys` holds more than once, with every item that holds it, in order */
+const duplicates = <T>(
+  items: readonly T[],
+  keys: (item: T) => readonly string[]
+): Map<string, T[]> => {
+  const byKey = new Map<string, T[]>();
+
+  for (const item of items) {
+    for (const key of keys(item)) {
+      byKey.set(key, [...(byKey.get(key) ?? []), item]);
+    }
+  }
+
+  return new Map([...byKey].filter(([, holders]) => holders.length > 1));
+};
+
 /**
- * One line per problem: a bundle file no component provides, a component with no license file, a
+ * One line per problem: a missing or empty licenses/README or licenses/COPYING.GPLv3, a bundle
+ * file no component provides or two components provide, a name two components have, a component
+ * with no non-empty license file in licenses/<name>/, an entry of licenses/ that is a file, and a
  * licenses/ dir no component names. Empty when the bundle is complete. Throws when manifest.json
  * is missing or its `components` is malformed.
  */
@@ -72,24 +105,39 @@ export const licenseGaps = (bundleDir: string): string[] => {
   const provided = new Set(components.flatMap((component) => component.files));
   const named = new Set(components.map((component) => component.name));
 
-  const dirs = existsSync(licenses)
-    ? readdirSync(licenses, { withFileTypes: true }).flatMap((entry) =>
-        entry.isDirectory() ? [entry.name] : []
+  const entries = isDir(licenses)
+    ? readdirSync(licenses, { withFileTypes: true }).toSorted((a, b) =>
+        a.name < b.name ? -1 : Number(a.name > b.name)
       )
     : [];
 
   return [
-    ...BUNDLE_LICENSES.flatMap((name) =>
-      isFile(path.join(licenses, name)) ? [] : [`licenses/${name}: missing`]
-    ),
+    ...BUNDLE_LICENSES.flatMap((name) => bundleLicenseGap(licenses, name)),
     ...bundleFiles(bundleDir).flatMap((rel) =>
       provided.has(rel) ? [] : [`${rel}: no component provides it`]
     ),
-    ...components.flatMap(({ name }) =>
-      holdsAFile(path.join(licenses, name)) ? [] : [`${name}: no license file in licenses/${name}/`]
+    ...[...duplicates(components, (component) => component.files)].map(
+      ([rel, holders]) =>
+        `${rel}: provided by ${holders.length} components, ${holders.map((holder) => holder.name).join(" and ")}`
     ),
-    ...dirs.flatMap((dir) =>
-      named.has(dir) ? [] : [`licenses/${dir}/: no component named ${dir}`]
+    ...[...duplicates(components, (component) => [component.name])].map(
+      ([name, holders]) => `${name}: the name of ${holders.length} components`
     ),
+    ...[...named].flatMap((name) =>
+      holdsALicenseFile(path.join(licenses, name))
+        ? []
+        : [`${name}: no license file in licenses/${name}/`]
+    ),
+    ...entries.flatMap((entry) => {
+      if (!entry.isDirectory()) {
+        return BUNDLE_LICENSES.includes(entry.name)
+          ? []
+          : [`licenses/${entry.name}: a file, not a directory`];
+      }
+
+      return named.has(entry.name)
+        ? []
+        : [`licenses/${entry.name}/: no component named ${entry.name}`];
+    }),
   ];
 };

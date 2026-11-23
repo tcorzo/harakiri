@@ -104,9 +104,53 @@ describe(licenseGaps, () => {
     expect(licenseGaps(bundle)).toStrictEqual([`licenses/${name}: missing`]);
   });
 
+  it.each(["README", "COPYING.GPLv3"])("names licenses/%s when it is empty", (name) => {
+    writeCompleteBundle();
+    write(`licenses/${name}`, "");
+    expect(licenseGaps(bundle)).toStrictEqual([`licenses/${name}: empty`]);
+  });
+
+  it("does not count an empty file as a component's license file", () => {
+    writeCompleteBundle();
+    write("licenses/foo/COPYING", "");
+    expect(licenseGaps(bundle)).toStrictEqual(["foo: no license file in licenses/foo/"]);
+  });
+
+  it("names a component whose licenses/ entry is a file, not a directory", () => {
+    writeCompleteBundle();
+    rmSync(path.join(bundle, "licenses/foo"), { recursive: true });
+    write("licenses/foo");
+    expect(licenseGaps(bundle)).toStrictEqual([
+      "foo: no license file in licenses/foo/",
+      "licenses/foo: a file, not a directory",
+    ]);
+  });
+
+  it("names a component name that two components have", () => {
+    writeCompleteBundle();
+    writeManifest([...COMPONENTS, { ...MPV, files: [] }]);
+    expect(licenseGaps(bundle)).toStrictEqual(["mpv: the name of 2 components"]);
+  });
+
+  it("names a file that two components provide", () => {
+    writeCompleteBundle();
+    writeManifest(
+      COMPONENTS.map((component) =>
+        component.name === "foo-headers" ? { ...component, files: ["lib/libfoo.so.1"] } : component
+      )
+    );
+    expect(licenseGaps(bundle)).toStrictEqual([
+      "lib/libfoo.so.1: provided by 2 components, foo and foo-headers",
+    ]);
+  });
+
   it("rejects a manifest whose component names a path, not a directory", () => {
     writeCompleteBundle();
     writeManifest([{ ...MPV, name: "../mpv" }]);
-    expect(() => licenseGaps(bundle)).toThrow(/name/u);
+    expect(() => licenseGaps(bundle)).toThrow(
+      expect.objectContaining({
+        issues: [expect.objectContaining({ path: ["components", 0, "name"] })],
+      })
+    );
   });
 });

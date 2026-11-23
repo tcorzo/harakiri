@@ -260,7 +260,7 @@ command_line() { # each argument as the shell reads it, quoted only when it has 
 # No license text is written here: licenses/README is mpv/licenses-README.txt, and
 # licenses/COPYING.GPLv3, the license the bundle is conveyed under, is FFmpeg's.
 python3 - "$prefix" <<'PY'
-import json, os, shutil, subprocess, sys
+import glob, json, os, shutil, subprocess, sys
 from fnmatch import fnmatch
 
 prefix = sys.argv[1]
@@ -278,7 +278,10 @@ BUILT = {
                 "lib/libavutil.so.*", "lib/libswresample.so.*", "lib/libswscale.so.*"],
                ["LICENSE.md", "COPYING.GPLv2", "COPYING.GPLv3", "COPYING.LGPLv2.1",
                 "COPYING.LGPLv3"]),
-    "sdl2": ("SDL2", "SDL2-{}", "Zlib", ["lib/libSDL2-2.0.so.*"], ["LICENSE.txt"]),
+    # -DSDL_HIDAPI=ON compiles SDL's own copy of hidapi into libSDL2, with its four license files
+    "sdl2": ("SDL2", "SDL2-{}", "Zlib", ["lib/libSDL2-2.0.so.*"],
+             ["LICENSE.txt", "src/hidapi/LICENSE.txt", "src/hidapi/LICENSE-bsd.txt",
+              "src/hidapi/LICENSE-gpl3.txt", "src/hidapi/LICENSE-orig.txt"]),
     # Its tarball has no license file: each header opens with the notice that applies to it,
     # which NOTICES below copies.
     "nv-codec-headers": ("NV_CODEC_HEADERS", "nv-codec-headers-{}", "MIT", [], []),
@@ -296,13 +299,10 @@ BUILT = {
                       ["LICENSE", "LICENSES/MIT.txt"]),
 }
 
-# The headers whose opening comment, the notice that applies to that header only, is the
-# component's license file: licenses/<component>/<header name>.notice
-NOTICES = {
-    "nv-codec-headers": ["include/ffnvcodec/dynlink_cuda.h", "include/ffnvcodec/dynlink_cuviddec.h",
-                         "include/ffnvcodec/dynlink_loader.h", "include/ffnvcodec/dynlink_nvcuvid.h",
-                         "include/ffnvcodec/nvEncodeAPI.h"],
-}
+# The headers (a glob in the component's tree) whose opening comment, the notice that applies to
+# that header only, is the component's license file: licenses/<component>/<header name>.notice.
+# A header that opens with no comment fails the build.
+NOTICES = {"nv-codec-headers": "include/ffnvcodec/*.h"}
 
 # A package that marks no %license file: the package of the same SRPM that marks its license files.
 # pcre2 requires pcre2-syntax at its own version-release, and only pcre2-syntax marks pcre2's
@@ -342,7 +342,7 @@ built_files = {name: [] for name in BUILT}
 rpm_files = {}
 for rel, src in sorted(origins.items()):
     if src.startswith(prefix + "/"):
-        owners = [name for name, spec in BUILT.items() if any(fnmatch(rel, glob) for glob in spec[3])]
+        owners = [name for name, spec in BUILT.items() if any(fnmatch(rel, pattern) for pattern in spec[3])]
         if len(owners) != 1:
             fail(f"{rel} is built here ({src}), and BUILT names {len(owners)} components for it: {owners}")
         built_files[owners[0]].append(rel)
@@ -354,17 +354,22 @@ for rel, src in sorted(origins.items()):
 
 components = []
 for name, (var, tree, license, provides, texts) in BUILT.items():
-    for glob in provides:
-        if not any(fnmatch(rel, glob) for rel in built_files[name]):
-            fail(f"BUILT says {name} provides {glob}, which is not in the bundle")
+    for pattern in provides:
+        if not any(fnmatch(rel, pattern) for rel in built_files[name]):
+            fail(f"BUILT says {name} provides {pattern}, which is not in the bundle")
     root = f"/build/{tree.format(env[var + '_VERSION'])}"
     for text in texts:
         copy(f"{root}/{text}", f"/out/licenses/{name}/{text}")
-    for header in NOTICES.get(name, []):
-        content = open(f"{root}/{header}").read()
+    headers = sorted(glob.glob(f"{root}/{NOTICES[name]}")) if name in NOTICES else []
+    if name in NOTICES and not headers:
+        fail(f"NOTICES names {root}/{NOTICES[name]}, which matches no header")
+    for header in headers:
+        content = open(header).read()
         if not content.startswith("/*") or "*/" not in content:
-            fail(f"{root}/{header} does not open with a comment")
+            fail(f"{header} does not open with a comment")
         dest = f"/out/licenses/{name}/{os.path.basename(header)}.notice"
+        if os.path.exists(dest):
+            fail(f"{dest} would hold two notices")
         os.makedirs(os.path.dirname(dest), exist_ok=True)
         with open(dest, "w") as out:
             out.write(content[: content.index("*/") + 2] + "\n")
