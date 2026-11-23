@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Runs the AppImage's shipped mpv bundle on the distros harakiri supports, in podman with no
-# network. usage: HOST_IMAGES="<image> ..." scripts/check-hosts.sh [apps/desktop/dist/*.AppImage]
+# Runs the AppImage's shipped mpv bundle on the Bazzite image, in podman with no network. Arch is
+# not checked by default: it ships only OpenSSL 4 and libxml2.so.16, and the owner targets Bazzite.
+# usage: HOST_IMAGES="<image> ..." scripts/check-hosts.sh [apps/desktop/dist/*.AppImage]
 # The images are taken by tag on purpose: the check is about the hosts users run today.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-images="${HOST_IMAGES:-ghcr.io/ublue-os/bazzite:stable docker.io/library/archlinux:latest}"
+images="${HOST_IMAGES:-ghcr.io/ublue-os/bazzite:stable}"
 appimage="${1:-apps/desktop/dist/harakiri-x86_64.AppImage}"
 [ -f "$appimage" ] || { echo "FAIL: $appimage not found, run mise run package" >&2; exit 1; }
 command -v podman >/dev/null || { echo "FAIL: podman not found" >&2; exit 1; }
@@ -72,28 +73,12 @@ exit "$fail"
 PROBE
 chmod +x "$probe"
 
-# The Arch image is a bare container with none of the desktop's libraries, which mpv/host-libs.txt
-# leaves to the host. A derived image installs what a desktop install has (not libxml2-legacy:
-# the host must provide what host-libs.txt names). The build needs the network; the run does not.
-with_desktop_libs() {
-	local tag="localhost/harakiri-check-hosts-arch"
-	podman build --quiet --memory 2g -t "$tag" -f - . >/dev/null <<CONTAINERFILE
-FROM $1
-RUN pacman -Syu --noconfirm --needed alsa-lib pipewire libpulse vulkan-icd-loader mesa libglvnd \\
-    libdrm libva libvdpau libx11 libxext libxrandr libxss libxpresent libxinerama libxrender \\
-    libxfixes libxau libxdmcp libxcb wayland libxkbcommon libxml2 libdisplay-info
-CONTAINERFILE
-	echo "$tag"
-}
-
 status=0
 for image in $images; do
 	echo "== $image"
-	run_image="$image"
-	case "$image" in *archlinux*) run_image="$(with_desktop_libs "$image")" ;; esac
 	if out="$(podman run --rm --memory 1g --network none \
 		-v "$bundle:/bundle:ro,Z" -v "$probe:/probe.sh:ro,Z" \
-		"$run_image" /bin/sh /probe.sh 2>&1)"; then
+		"$image" /bin/sh /probe.sh 2>&1)"; then
 		echo "ok: $image"
 	else
 		echo "FAIL: $image"

@@ -234,6 +234,7 @@ describe("harakiri's mpv build", () => {
         "graphite2",
         "harfbuzz",
         "lcms2",
+        "libXpresent",
         "libass",
         "libbrotli",
         "libdav1d",
@@ -243,6 +244,7 @@ describe("harakiri's mpv build", () => {
         "libpng",
         "libunibreak",
         "libunistring",
+        "libxml2",
         "luajit",
         "mpv",
         "nv-codec-headers",
@@ -294,7 +296,7 @@ describe("harakiri's mpv build", () => {
       );
 
       expect(srpms.filter((srpm) => !/\.fc44(?:\.\d+)?\.src\.rpm$/u.test(srpm))).toStrictEqual([]);
-      expect(srpms).toHaveLength(21);
+      expect(srpms).toHaveLength(23);
     });
 
     it("lists one SOURCES.txt line per component, in the manifest's order", () => {

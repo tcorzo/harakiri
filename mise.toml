@@ -271,5 +271,5 @@ description = "Check apps/desktop/dist: latest-linux.yml matches the AppImage an
 run = "bun scripts/check-release.ts"
 
 [tasks."package:check-hosts"]
-description = "Opt-in: run the AppImage's mpv bundle on the Bazzite and Arch images in podman (HOST_IMAGES overrides them; the Bazzite image is several GB)"
+description = "Opt-in: run the AppImage's mpv bundle on the Bazzite image in podman (HOST_IMAGES overrides it; the image is several GB)"
 run = "scripts/bounded.sh hosts 3G -- scripts/check-hosts.sh"
