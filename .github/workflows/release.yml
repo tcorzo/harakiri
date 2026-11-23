@@ -6,8 +6,12 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing release tag to rebuild and re-upload, e.g. v0.2.0"
+        description: "Existing release tag to rebuild and re-upload, e.g. v0.2.0 (a dry run ignores it)"
         required: true
+      dry-run:
+        description: "Build and check the dispatched ref, and upload the assets as a workflow artifact instead of to the release"
+        type: boolean
+        default: false
 
 concurrency:
   group: release
@@ -52,26 +56,78 @@ jobs:
   package:
     needs: release-please
     if: ${{ !cancelled() && (needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch') }}
-    runs-on: ubuntu-24.04 # pinned: an older glibc keeps the AppImage portable
+    runs-on: ubuntu-24.04 # podman builds harakiri's mpv; the bundle's glibc floor is its Fedora 44 base
     permissions:
       contents: write
     env:
       TAG: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
+      DRY_RUN: ${{ inputs.dry-run == true }}
     steps:
-      - shell: bash
+      - if: env.DRY_RUN != 'true'
+        shell: bash
         run: '[[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a release tag: $TAG" >&2; exit 1; }'
       - uses: actions/checkout@v4
         with:
-          ref: ${{ env.TAG }}
+          # A dry run builds the dispatched ref, a release its tag.
+          ref: ${{ env.DRY_RUN == 'true' && github.sha || env.TAG }}
           # bun install runs package scripts; the upload step gets GH_TOKEN through env instead.
           persist-credentials: false
       - uses: jdx/mise-action@v4
         with:
           install_args: bun node
+      # A dry run has no tag: it checks package.json's version as the tag.
+      - if: env.DRY_RUN == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v$(node -p 'require("./apps/desktop/package.json").version')"
+          [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a release version: $tag" >&2; exit 1; }
+          echo "TAG=$tag" >> "$GITHUB_ENV"
       - run: bun install --frozen-lockfile
       - run: mise run lint && mise run lint:skips && mise run lint:private && mise run typecheck
+      - id: recipe
+        shell: bash
+        run: echo "hash=$(basename "$(bun packages/mpv/src/bundle-dir.ts)")" >> "$GITHUB_OUTPUT"
+      # A hit restores the bundle and its tarballs, and mpv:build does nothing.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            .cache/mpv/${{ steps.recipe.outputs.hash }}
+            .cache/mpv/src
+          key: mpv-${{ steps.recipe.outputs.hash }}
+      - run: mise run mpv:build
       - run: mise run package
       - run: mise run package:check "${TAG#v}"
-      - run: gh release upload "$TAG" apps/desktop/dist/harakiri-x86_64.AppImage apps/desktop/dist/latest-linux.yml --clobber
+      - run: mise run mpv:source
+      - if: env.DRY_RUN == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-dry-run
+          if-no-files-found: error
+          path: |
+            apps/desktop/dist/harakiri-x86_64.AppImage
+            apps/desktop/dist/latest-linux.yml
+            apps/desktop/dist/harakiri-mpv-source.tar
+            apps/desktop/dist/SHA256SUMS
+      - if: env.DRY_RUN != 'true'
+        working-directory: apps/desktop/dist
+        run: gh release upload "$TAG" harakiri-x86_64.AppImage latest-linux.yml harakiri-mpv-source.tar SHA256SUMS --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+      # GPLv3 §6(d): clear directions next to the AppImage to its corresponding source. Added once.
+      - if: env.DRY_RUN != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2016 # the backquotes are Markdown
+          line='The bundled mpv is GPLv3; its corresponding source is `harakiri-mpv-source.tar` on this release.'
+          notes="$RUNNER_TEMP/notes.md"
+          gh release view "$TAG" --json body --jq .body > "$notes"
+          if grep -qxF -- "$line" "$notes"; then
+            echo "the release notes already point to the source"
+            exit 0
+          fi
+          printf '\n%s\n' "$line" >> "$notes"
+          gh release edit "$TAG" --notes-file "$notes"
         env:
           GH_TOKEN: ${{ github.token }}

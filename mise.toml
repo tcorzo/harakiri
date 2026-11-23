@@ -234,6 +234,25 @@ find .cache/mpv -mindepth 1 -maxdepth 1 -type d ! -name src ! -name "$(basename 
 echo "mpv build ready: $out"
 """
 
+# A release uploads apps/desktop/dist's four assets: the AppImage, latest-linux.yml, the source tar
+# and SHA256SUMS, which lists the other three that are there.
+[tasks."mpv:source"]
+description = "Build apps/desktop/dist/harakiri-mpv-source.tar, the corresponding source of harakiri's mpv (the recipe, its tarballs and its Fedora source RPMs; podman and the network fetch what .cache lacks), check it, and update apps/desktop/dist/SHA256SUMS"
+depends = ["mpv:build"]
+dir = "{{config_root}}"
+shell = "bash -euo pipefail -c"
+run = """
+bundle="$(bun packages/mpv/src/bundle-dir.ts)"
+scripts/bounded.sh mpv-source 2G -- mpv/source.sh "$bundle" apps/desktop/dist/harakiri-mpv-source.tar
+cd apps/desktop/dist
+assets=()
+for asset in harakiri-x86_64.AppImage latest-linux.yml harakiri-mpv-source.tar; do
+  [ ! -f "$asset" ] || assets+=("$asset")
+done
+sha256sum "${assets[@]}" > SHA256SUMS
+cat SHA256SUMS
+"""
+
 [tasks.check]
 description = "Everything CI gates on"
 depends = ["lint", "fmt:check", "lint:skips", "lint:private", "lint:host", "typecheck", "test"]

@@ -73,8 +73,9 @@ All web UI goes through the impeccable loop: load the `impeccable` skill, run it
 
 ## Releases
 
-- release-please keeps a release PR open on `main`. Merging it tags `vX.Y.Z`, and `.github/workflows/release.yml` uploads `harakiri-x86_64.AppImage` and `latest-linux.yml` to that release. Never edit the version in `apps/desktop/package.json` or `CHANGELOG.md` by hand.
-- `mise run package` builds the same AppImage locally, and `mise run package:check` verifies it. `gh workflow run release.yml -f tag=vX.Y.Z` rebuilds and re-uploads an existing release.
+- release-please keeps a release PR open on `main`. Merging it tags `vX.Y.Z`, and `.github/workflows/release.yml` builds harakiri's mpv (restored from the Actions cache by recipe hash when it can), the AppImage and the mpv source, and uploads `harakiri-x86_64.AppImage`, `latest-linux.yml`, `harakiri-mpv-source.tar` and `SHA256SUMS` to that release. It adds one line to the release notes that points to the source, once. Never edit the version in `apps/desktop/package.json` or `CHANGELOG.md` by hand.
+- `mise run package` builds the same AppImage locally, and `mise run package:check` verifies it. `mise run mpv:source` builds `harakiri-mpv-source.tar` (the `mpv/` recipe, its pinned tarballs, and the Fedora 44 source RPMs that `mpv/source.sh` downloads in podman), checks it, and writes `SHA256SUMS`. `gh workflow run release.yml -f tag=vX.Y.Z` rebuilds and re-uploads an existing release.
+- `gh workflow run release.yml --ref <branch> -f tag=v0.0.0 -f dry-run=true` is a dry run: it builds and checks the branch, takes the version from `package.json`, and uploads the four files as a workflow artifact instead of to a release. Dry-run a change to the release job before it reaches `main`.
 
 ## How work is verified
 

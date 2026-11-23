@@ -49,6 +49,11 @@ export const Components: z.ZodType<readonly Component[]> = z
 // manifest.json also holds each built component's version; only `components` is read here
 const Manifest = z.object({ components: Components });
 
+/** manifest.json's `components` in `bundleDir`. Throws when it is missing or malformed. */
+export const bundleComponents = (bundleDir: string): readonly Component[] =>
+  Manifest.parse(JSON.parse(readFileSync(path.join(bundleDir, "manifest.json"), "utf-8")))
+    .components;
+
 const isDir = (file: string): boolean => existsSync(file) && statSync(file).isDirectory();
 
 const isFile = (file: string): boolean => existsSync(file) && statSync(file).isFile();
@@ -97,9 +102,7 @@ const duplicates = <T>(
  * is missing or its `components` is malformed.
  */
 export const licenseGaps = (bundleDir: string): string[] => {
-  const { components } = Manifest.parse(
-    JSON.parse(readFileSync(path.join(bundleDir, "manifest.json"), "utf-8"))
-  );
+  const components = bundleComponents(bundleDir);
 
   const licenses = path.join(bundleDir, "licenses");
   const provided = new Set(components.flatMap((component) => component.files));

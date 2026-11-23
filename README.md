@@ -12,7 +12,7 @@
 
 [![Platform: Fedora · KDE · Wayland](https://img.shields.io/badge/platform-Fedora%20%C2%B7%20KDE%20%C2%B7%20Wayland-1a1312?style=flat-square&labelColor=0a0605)](#getting-started)
 [![Jellyfin 10.11 · 12.4](https://img.shields.io/badge/jellyfin-10.11%20%C2%B7%2012.4-1a1312?style=flat-square&labelColor=0a0605)](https://jellyfin.org)
-[![mpv 0.41 · gpu-next · Vulkan](https://img.shields.io/badge/mpv-0.41%20%C2%B7%20gpu--next%20%C2%B7%20Vulkan-1a1312?style=flat-square&labelColor=0a0605)](https://mpv.io)
+[![mpv 0.42 · gpu-next · Vulkan](https://img.shields.io/badge/mpv-0.42%20%C2%B7%20gpu--next%20%C2%B7%20Vulkan-1a1312?style=flat-square&labelColor=0a0605)](https://mpv.io)
 [![Status: MVP](https://img.shields.io/badge/status-MVP-9b0f1b?style=flat-square&labelColor=0a0605)](docs/PRD.md#mvp-scope)
 
 [Why](#why-another-jellyfin-client) • [Showcase](#showcase) • [Getting started](#getting-started) • [Proving fidelity](#how-harakiri-proves-fidelity) • [Layout](#project-layout)
@@ -42,10 +42,7 @@ Basically, I got fed up with not being able to just sit down with a meal and _wa
 
 ### Install the AppImage
 
-Each [GitHub release](https://github.com/tcorzo/harakiri/releases) ships one Linux x64 AppImage. Until harakiri bundles its own mpv, it uses the system mpv, so install `mpv` 0.41 or newer and `ffmpeg` from RPM Fusion first.
-
-> [!WARNING]
-> Fedora's own `ffmpeg-free` has no HEVC, H.264 or VC-1 decoder. Install the RPM Fusion `ffmpeg`, or most of a real library will not play.
+Each [GitHub release](https://github.com/tcorzo/harakiri/releases) ships one Linux x64 AppImage, and it is all you install. It carries harakiri's own mpv build, with its FFmpeg and libraries, so it needs no system mpv or ffmpeg.
 
 ```sh
 chmod +x harakiri-x86_64.AppImage
@@ -119,4 +116,6 @@ No part of the harness needs an HDR TV or an AV receiver.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+harakiri is MIT. See [LICENSE](LICENSE).
+
+The AppImage also carries mpv, FFmpeg and the libraries they load, in `resources/mpv/`. mpv is a separate program that harakiri starts and talks to over IPC, and that bundle is conveyed under the GPL, version 3. Its license files are in `resources/mpv/licenses/`, and its complete source (the recipe, every source tarball and every Fedora source RPM it was built from) is `harakiri-mpv-source.tar` on each release.

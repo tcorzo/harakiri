@@ -165,10 +165,11 @@ Everything committed runs and validates from a fresh clone on any machine: no NA
 
 ## Distribution and updates
 
-- harakiri ships as one Linux x64 AppImage, attached to each GitHub release of `tcorzo/harakiri`. It needs the system mpv (>= 0.41) on `PATH`; a source checkout builds its own mpv (`mise run mpv:build`).
-- release-please cuts releases: Conventional Commit titles on `main` keep a release PR open, merging it tags `vX.Y.Z`, and `.github/workflows/release.yml` builds `mise run package` and uploads the AppImage and `latest-linux.yml`.
+- harakiri ships as one Linux x64 AppImage, attached to each GitHub release of `tcorzo/harakiri`. It carries harakiri's own mpv build in `resources/mpv` (mpv, FFmpeg and the libraries they load, with every license file) and never needs a system mpv. A source checkout builds the same bundle (`mise run mpv:build`).
+- The bundled mpv is conveyed under GPLv3, and harakiri stays MIT: mpv is a separate program that harakiri talks to over IPC. Each release also carries `harakiri-mpv-source.tar`, the bundle's complete corresponding source (the `mpv/` recipe at the tag, every pinned source tarball and the Fedora 44 source RPM of every library copied from Fedora), and its notes point to it.
+- release-please cuts releases: Conventional Commit titles on `main` keep a release PR open, merging it tags `vX.Y.Z`, and `.github/workflows/release.yml` builds the mpv bundle (cached by recipe hash), `mise run package` and `mise run mpv:source`, checks the AppImage, and uploads the AppImage, `latest-linux.yml`, `harakiri-mpv-source.tar` and `SHA256SUMS`.
 - A running AppImage checks the latest release at startup and every 6 hours (a failed check is retried after 15 minutes), downloads only while nothing plays (a download in progress stops within a minute of playback starting and resumes after it), and installs on the next quit after mpv has stopped. Settings shows the state and offers "Restart to update". The download is verified by the sha512 in `latest-linux.yml` only.
-- Not shipped: Flatpak, Snap, rpm, deb or pacman packages; a bundled mpv (issue #2); code or GPG signing; beta channels, rollback and staged rollouts.
+- Not shipped: Flatpak, Snap, rpm, deb or pacman packages; code or GPG signing; beta channels, rollback and staged rollouts.
 
 ## Out of scope for the MVP
 
