@@ -10,6 +10,12 @@ import { startSpatialNavigation } from "./ui/spatial";
 
 import "./styles.css";
 
+// A plain browser tab on the dev server has no preload; production builds drop this branch and the chunk.
+if (import.meta.env.DEV && !("harakiri" in window)) {
+  const { installBrowserBridge } = await import("./dev/browser-bridge");
+  installBrowserBridge();
+}
+
 startSpatialNavigation();
 
 const queryClient = new QueryClient({
