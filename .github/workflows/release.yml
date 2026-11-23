@@ -88,17 +88,38 @@ jobs:
       - id: recipe
         shell: bash
         run: echo "hash=$(basename "$(bun packages/mpv/src/bundle-dir.ts)")" >> "$GITHUB_OUTPUT"
-      # A hit restores the bundle and its tarballs, and mpv:build does nothing.
-      - uses: actions/cache@v4
+      # The bundle and its tarballs are saved as soon as mpv:build makes them, so a later failure
+      # keeps a cold build. A hit makes mpv:build a no-op.
+      - id: mpv-cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             .cache/mpv/${{ steps.recipe.outputs.hash }}
             .cache/mpv/src
           key: mpv-${{ steps.recipe.outputs.hash }}
       - run: mise run mpv:build
+      - if: steps.mpv-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .cache/mpv/${{ steps.recipe.outputs.hash }}
+            .cache/mpv/src
+          key: mpv-${{ steps.recipe.outputs.hash }}
+      # The source RPMs follow from the manifest, so the recipe hash keys them too. They are a cache
+      # of their own: mpv:source downloads them after the bundle's cache is saved.
+      - id: srpm-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/mpv-source/srpms
+          key: mpv-srpms-${{ steps.recipe.outputs.hash }}
       - run: mise run package
       - run: mise run package:check "${TAG#v}"
       - run: mise run mpv:source
+      - if: steps.srpm-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/mpv-source/srpms
+          key: mpv-srpms-${{ steps.recipe.outputs.hash }}
       - if: env.DRY_RUN == 'true'
         uses: actions/upload-artifact@v4
         with:
@@ -109,9 +130,13 @@ jobs:
             apps/desktop/dist/latest-linux.yml
             apps/desktop/dist/harakiri-mpv-source.tar
             apps/desktop/dist/SHA256SUMS
+      # The source goes up first and the updater feed last, so a partial failure never offers an
+      # update whose source is not on the release.
       - if: env.DRY_RUN != 'true'
         working-directory: apps/desktop/dist
-        run: gh release upload "$TAG" harakiri-x86_64.AppImage latest-linux.yml harakiri-mpv-source.tar SHA256SUMS --clobber
+        run: |
+          gh release upload "$TAG" harakiri-mpv-source.tar SHA256SUMS --clobber
+          gh release upload "$TAG" harakiri-x86_64.AppImage --clobber
         env:
           GH_TOKEN: ${{ github.token }}
       # GPLv3 §6(d): clear directions next to the AppImage to its corresponding source. Added once.
@@ -129,5 +154,10 @@ jobs:
           fi
           printf '\n%s\n' "$line" >> "$notes"
           gh release edit "$TAG" --notes-file "$notes"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - if: env.DRY_RUN != 'true'
+        working-directory: apps/desktop/dist
+        run: gh release upload "$TAG" latest-linux.yml --clobber
         env:
           GH_TOKEN: ${{ github.token }}
