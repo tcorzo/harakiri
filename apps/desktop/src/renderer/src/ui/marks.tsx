@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
 
-import dolbyAtmos from "../assets/formats/dolby-atmos.svg";
-import dolbyDigitalPlus from "../assets/formats/dolby-digital-plus.svg";
-import dolbyDigital from "../assets/formats/dolby-digital.svg";
-import dolbyTruehd from "../assets/formats/dolby-truehd.svg";
-import dolbyVision from "../assets/formats/dolby-vision.svg";
-import dts from "../assets/formats/dts.svg";
-import hdr10Plus from "../assets/formats/hdr10-plus.svg";
-import hdr10 from "../assets/formats/hdr10.svg";
+import dolbyAtmos from "../assets/formats/dolby-atmos.svg?inline";
+import dolbyDigitalPlus from "../assets/formats/dolby-digital-plus.svg?inline";
+import dolbyDigital from "../assets/formats/dolby-digital.svg?inline";
+import dolbyTruehd from "../assets/formats/dolby-truehd.svg?inline";
+import dolbyVision from "../assets/formats/dolby-vision.svg?inline";
+import dts from "../assets/formats/dts.svg?inline";
+import hdr10Plus from "../assets/formats/hdr10-plus.svg?inline";
+import hdr10 from "../assets/formats/hdr10.svg?inline";
 import type { FormatLogo, NoteFact, NotePart } from "../data/entry";
 
 type MarkedState = NonNullable<NoteFact["state"]>;
