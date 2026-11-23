@@ -514,6 +514,7 @@ const play = async (
       audioOutput: { kind: "known", name: "test receiver", bitstream: [...PRD_PASSTHROUGH] },
       hdrSignalling: "colour-management",
       mpvBinary: bundledMpv(),
+      mpvEnv: { PATH: process.env.PATH ?? "" },
       requestTimeoutMs,
     }
   );

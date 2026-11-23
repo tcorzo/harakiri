@@ -73,8 +73,12 @@ All web UI goes through the impeccable loop: load the `impeccable` skill, run it
 
 ## Releases
 
-- release-please keeps a release PR open on `main`. Merging it tags `vX.Y.Z`, and `.github/workflows/release.yml` uploads `harakiri-x86_64.AppImage` and `latest-linux.yml` to that release. Never edit the version in `apps/desktop/package.json` or `CHANGELOG.md` by hand.
-- `mise run package` builds the same AppImage locally, and `mise run package:check` verifies it. `gh workflow run release.yml -f tag=vX.Y.Z` rebuilds and re-uploads an existing release.
+- release-please keeps a release PR open on `main`. Merging it tags `vX.Y.Z`, and `.github/workflows/release.yml` builds harakiri's mpv (restored from the Actions cache by recipe hash when it can), the AppImage and the mpv source, and uploads `harakiri-x86_64.AppImage`, `latest-linux.yml`, `harakiri-mpv-source.tar` and `SHA256SUMS` to that release. It adds one line to the release notes that points to the source, once. Never edit the version in `apps/desktop/package.json` or `CHANGELOG.md` by hand.
+- `mise run package` builds the same AppImage locally, and `mise run package:check` verifies it. The release runner's glibc is older than the bundle's floor, so there `package:check` runs the shipped mpv in podman on the Fedora 44 image that `mise run package:check-image` builds, which `HARAKIRI_MPV_CHECK_IMAGE` names; set it to run the checks the same way locally. `mise run mpv:source` builds `harakiri-mpv-source.tar` (the `mpv/` recipe, its pinned tarballs, and the Fedora 44 source RPMs that `mpv/source.sh` downloads in podman), checks it, and writes `SHA256SUMS`. `gh workflow run release.yml -f tag=vX.Y.Z` rebuilds and re-uploads an existing release.
+- `mise run package:check-hosts` runs the AppImage's mpv bundle on the Bazzite image in podman (ldd, `mpv --version`, curl's trust store). It is opt-in, not in `check` or CI, because the Bazzite image is several GB: run it before the first release that ships the bundle and after a recipe change. `HOST_IMAGES` overrides the image. Arch is not checked: it ships only OpenSSL 4 (no `libssl.so.3`), and the owner targets Bazzite.
+  - Risk: Bazzite (Fedora 45) ships OpenSSL 4, and the bundle's libcurl needs `libssl.so.3` and `libcrypto.so.3` from the `openssl3-libs` compat package, which nothing on the image requires. If a Bazzite update drops it, mpv will not start; `package:check-hosts` shows it.
+  - Way out: build curl against the host's GnuTLS (`libgnutls.so.30`, the same soname for over ten years) with `CURL_USE_GNUTLS=ON CURL_CA_NATIVE=ON`. curl 8.23 then calls `gnutls_certificate_set_x509_system_trust`, so the distro still patches TLS and still supplies the trust store.
+- `gh workflow run release.yml --ref <branch> -f tag=v0.0.0 -f dry-run=true` is a dry run: it builds and checks the branch, takes the version from `package.json`, and uploads the four files as a workflow artifact instead of to a release. Dry-run a change to the release job before it reaches `main`.
 
 ## How work is verified
 
@@ -172,6 +176,7 @@ Chosen on 2026-10-30 after a researched ledger. Versions are pinned in `mise.tom
 - @electron-forge 8.0.1: more maintainers, kept as the packaging fallback.
 - Fedora `ffmpeg-free`: no HEVC, H.264 or VC-1 decoders.
 - Fedora 44's libcurl 8.18.0 in the mpv bundle: it keeps a paused handle paused when mpv adds it again (curl #20641), so seeks over HTTP stall. The recipe builds curl 8.23.0.
+- A CA path compiled into the bundle's libcurl, and a host capability listing distro CA paths: each distro keeps its trust store elsewhere. The bundle takes OpenSSL from the host (its `OPENSSLDIR` is the distro's) and libcurl asks it with `CURL_CA_FALLBACK=ON`; `SSL_CERT_FILE` and `SSL_CERT_DIR` still apply.
 - Fedora 44's libshaderc and libSPIRV-Tools in the mpv bundle: the host's Mesa drivers link `libSPIRV-Tools.so` (unversioned soname, C++ API) and would bind to the bundle's copy, so a host SPIRV-Tools update could break Vulkan and the GL fallback. Taking them from the host instead ties libplacebo to whatever shaderc the host has. The recipe links shaderc statically into libplacebo with its symbols hidden (`bundle.test.ts` checks).
 - System mpv for dev and tests: Fedora's build hid #13 (`sdl2-gamepad`), so dev, tests and e2e run harakiri's own build (Q12).
 - FFmpeg's spdif demuxer for verification: no TrueHD or DTS-HD support. PipeWire null sink: accepts plain PCM only.

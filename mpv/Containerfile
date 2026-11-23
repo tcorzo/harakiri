@@ -6,8 +6,8 @@ FROM ${BASE_IMAGE} AS build
 # The release repo only, never `updates`: that repo never changes, so it and the base image digest
 # pin the whole toolchain.
 # libcurl is built from source (build.sh) and libcurl-devel is not installed, so pkg-config finds
-# only that one. openssl, nghttp2, libidn2 and krb5 give it TLS, HTTP/2, IDN and GSS-API, the
-# features Fedora's libcurl-minimal has. libdisplay-info-devel: mpv's drm feature needs it.
+# only that one. openssl, nghttp2 and libidn2 give it TLS, HTTP/2 and IDN. No krb5: curl is built
+# without GSS-API, so the bundle ships no Kerberos. libdisplay-info-devel: mpv's drm feature needs it.
 # libXfixes-devel: Xpresent.h includes Xfixes.h, and libXpresent-devel does not require it.
 # shaderc, glslang, SPIRV-Tools and SPIRV-Headers are built from source too (build.sh), and no
 # -devel package of theirs is installed; python3 generates SPIRV-Tools' grammar tables.
@@ -18,7 +18,7 @@ RUN dnf -y --disablerepo='*' --enablerepo=fedora --setopt=install_weak_deps=Fals
       zlib-ng-compat-devel bzip2-devel xz-devel \
       libass-devel freetype-devel fribidi-devel harfbuzz-devel fontconfig-devel \
       luajit-devel uchardet-devel zimg-devel \
-      openssl-devel libnghttp2-devel libidn2-devel krb5-devel \
+      openssl-devel libnghttp2-devel libidn2-devel \
       libva-devel libvdpau-devel libdrm-devel libdisplay-info-devel mesa-libgbm-devel \
       mesa-libEGL-devel libglvnd-devel \
       wayland-devel wayland-protocols-devel libxkbcommon-devel \
@@ -26,7 +26,7 @@ RUN dnf -y --disablerepo='*' --enablerepo=fedora --setopt=install_weak_deps=Fals
       pipewire-devel pulseaudio-libs-devel alsa-lib-devel systemd-devel \
     && dnf clean all
 
-COPY build.sh host-libs.txt versions.env /recipe/
+COPY build.sh host-libs.txt licenses-README.txt versions.env /recipe/
 ARG JOBS
 RUN JOBS="${JOBS}" /recipe/build.sh
 

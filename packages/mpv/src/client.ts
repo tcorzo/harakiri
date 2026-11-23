@@ -46,6 +46,8 @@ export interface MpvSpawnOptions {
   readonly binary: string;
   /** Extra mpv arguments, e.g. from `buildPlaybackArgs`. Never a secret: argv is world-readable. */
   readonly args?: readonly string[];
+  /** mpv's whole environment. Unset, mpv inherits this process's. */
+  readonly env?: Readonly<Record<string, string>>;
   readonly socketTimeoutMs?: number;
   /** Default 10 s. See `MpvClient.command`. */
   readonly requestTimeoutMs?: number;
@@ -337,7 +339,7 @@ export const spawnMpv = async (options: MpvSpawnOptions): Promise<MpvClient> => 
       ...(options.args ?? []),
       `--input-ipc-server=${socketPath}`,
     ],
-    { stdio: ["ignore", "pipe", "pipe"] }
+    { stdio: ["ignore", "pipe", "pipe"], env: options.env }
   );
 
   // Off a terminal, mpv writes its log messages to stdout, not stderr.

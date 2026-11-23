@@ -33,6 +33,7 @@ const { play, probe, stop } = createPlayer({
   audioOutput: readAudioOutput,
   hdrSignalling: async () => await Promise.resolve("colour-management" as const),
   mpvBinary: bundledMpv,
+  mpvEnv: () => ({ PATH: process.env.PATH ?? "" }),
   preparePlayback,
   startPlayback,
 });

@@ -27,12 +27,21 @@ let server: Server;
 let url: string;
 
 /** Plays `url` for a second with the bundled mpv; resolves with the exit code and everything mpv logged. */
-const play = async (...args: string[]): Promise<{ code: number; log: string }> => {
+const play = async (
+  env: Record<string, string>,
+  ...args: string[]
+): Promise<{ code: number; log: string }> => {
+  // the host's own environment, minus the variables that would point OpenSSL at a trust store
+  const { SSL_CERT_FILE: _file, SSL_CERT_DIR: _dir, ...inherited } = process.env;
+
   // --ytdl=no: on a failed load mpv's ytdl hook would try the URL again through yt-dlp
   const argv = ["--no-config", "--ytdl=no", "--vo=null", "--ao=null", "--length=1", ...args, url];
 
   try {
-    const { stdout, stderr } = await run(bundledMpv(), argv, { timeout: 20_000 });
+    const { stdout, stderr } = await run(bundledMpv(), argv, {
+      timeout: 20_000,
+      env: { ...inherited, ...env },
+    });
 
     return { code: 0, log: stdout + stderr };
   } catch (error) {
@@ -43,14 +52,6 @@ const play = async (...args: string[]): Promise<{ code: number; log: string }> =
     return { code: failed.code, log: failed.stdout + failed.stderr };
   }
 };
-
-/** The CA bundle the build says its libcurl reads by default (mpv/build.sh, CURL_CA_BUNDLE). */
-const caBundle = (): string =>
-  z
-    .object({ caBundle: z.string() })
-    .parse(
-      JSON.parse(readFileSync(path.join(path.dirname(bundledMpv()), "manifest.json"), "utf-8"))
-    ).caBundle;
 
 describe("harakiri's mpv reading https through libcurl", () => {
   beforeAll(async () => {
@@ -95,20 +96,24 @@ describe("harakiri's mpv reading https through libcurl", () => {
     await rm(dir, { recursive: true, force: true });
   });
 
-  it("refuses a certificate its CA bundle does not trust, reading the bundle the build names", async () => {
-    const { code, log } = await play("--msg-level=curl=trace");
+  it("refuses a certificate the host does not trust, asking the host's OpenSSL for its trust store", async () => {
+    const { code, log } = await play({}, "--msg-level=curl=trace");
 
     expect(code).not.toBe(0);
     expect(log).toContain("[curl] TLS certificate verification failed.");
-    // libcurl's verbose handshake names the trust store it loaded: the build's CA bundle, and no
-    // CA dir (CURL_CA_PATH=none, so no CApath line)
-    expect(log).toContain(`CAfile: ${caBundle()}`);
-    expect(log).not.toContain("CApath:");
-    expect(log).not.toContain("Exiting... (End of file)");
+    expect(log).toContain("OpenSSL default paths (fallback)");
+    expect(log).not.toContain("CAfile:");
+  });
+
+  it("trusts what the host's OpenSSL is told to trust (SSL_CERT_FILE), with no --tls-ca-file", async () => {
+    const { code, log } = await play({ SSL_CERT_FILE: CERT });
+
+    expect(log).toContain("Exiting... (End of file)");
+    expect(code).toBe(0);
   });
 
   it("plays the same URL once that certificate is trusted, so verification really ran", async () => {
-    const { code, log } = await play(`--tls-ca-file=${CERT}`);
+    const { code, log } = await play({}, `--tls-ca-file=${CERT}`);
 
     expect(log).toContain("Exiting... (End of file)");
     expect(code).toBe(0);

@@ -107,7 +107,7 @@ Acceptance:
 ## Fidelity rules
 
 - **Picture.** mpv runs with `vo=gpu-next`, Vulkan, and `target-colorspace-hint`. Dolby Vision is delivered to the display as HDR10: libplacebo applies the RPU, and mpv outputs PQ. A native Dolby Vision signal over HDMI is out of scope. HDR10+ dynamic metadata is applied by libplacebo. KDE does not advertise HLG, so HLG would reach the compositor as PQ (the library has none).
-- **Dolby Vision 7 enhancement layer.** mpv 0.41 plays the base layer plus RPU. The full enhancement layer needs mpv master with libplacebo 7.387 or newer. Those 21 files are marked degraded until harakiri ships its own mpv build.
+- **Dolby Vision 7 enhancement layer.** mpv 0.41 plays the base layer plus RPU. The full enhancement layer needs mpv master with libplacebo 7.387 or newer. harakiri now ships its own mpv build (mpv 0.42.0, libplacebo 7.387.0), but those 21 files stay marked degraded until the player applies and reports the enhancement layer.
 - **Sound.** mpv bitstreams AC3, E-AC3 (including Atmos), TrueHD (including Atmos), DTS, DTS-HD MA, and DTS:X with `--audio-spdif=ac3,eac3,dts-hd,truehd`. Atmos and DTS:X live inside the bitstream, so a byte-identical bitstream carries them. Each play bitstreams only the codecs the default PipeWire sink lists as IEC 61937 formats.
 - **Reliable playback over best quality.** Every play aims for its best signal and steps down when the output path cannot carry it, so something always plays. `packages/fidelity` decides each step, and the player applies it to mpv while playing. Each step is a downgrade with a reason and a sentence the UI can show.
   - Sound: bitstream, then decoded PCM, then no sound with the picture carrying on. An output that does not list a codec gets it decoded. A bitstream that stops playing, which mpv's PipeWire output signals only by warnings, steps down to decoding mid-play. A DTS-HD track is decoded rather than cut to its lossy DTS core.
@@ -165,10 +165,11 @@ Everything committed runs and validates from a fresh clone on any machine: no NA
 
 ## Distribution and updates
 
-- harakiri ships as one Linux x64 AppImage, attached to each GitHub release of `tcorzo/harakiri`. It needs the system mpv (>= 0.41) on `PATH`; a source checkout builds its own mpv (`mise run mpv:build`).
-- release-please cuts releases: Conventional Commit titles on `main` keep a release PR open, merging it tags `vX.Y.Z`, and `.github/workflows/release.yml` builds `mise run package` and uploads the AppImage and `latest-linux.yml`.
+- harakiri ships as one Linux x64 AppImage, attached to each GitHub release of `tcorzo/harakiri`. It carries harakiri's own mpv build in `resources/mpv` (mpv, FFmpeg and the libraries they load, with every license file) and never needs a system mpv. A source checkout builds the same bundle (`mise run mpv:build`).
+- The bundled mpv is conveyed under GPLv3, and harakiri stays MIT: mpv is a separate program that harakiri talks to over IPC. Each release also carries `harakiri-mpv-source.tar`, the bundle's complete corresponding source (the `mpv/` recipe at the tag, every pinned source tarball and the Fedora 44 source RPM of every library copied from Fedora), and its notes point to it.
+- release-please cuts releases: Conventional Commit titles on `main` keep a release PR open, merging it tags `vX.Y.Z`, and `.github/workflows/release.yml` builds the mpv bundle (cached by recipe hash), `mise run package` and `mise run mpv:source`, checks the AppImage, and uploads the AppImage, `latest-linux.yml`, `harakiri-mpv-source.tar` and `SHA256SUMS`.
 - A running AppImage checks the latest release at startup and every 6 hours (a failed check is retried after 15 minutes), downloads only while nothing plays (a download in progress stops within a minute of playback starting and resumes after it), and installs on the next quit after mpv has stopped. Settings shows the state and offers "Restart to update". The download is verified by the sha512 in `latest-linux.yml` only.
-- Not shipped: Flatpak, Snap, rpm, deb or pacman packages; a bundled mpv (issue #2); code or GPG signing; beta channels, rollback and staged rollouts.
+- Not shipped: Flatpak, Snap, rpm, deb or pacman packages; code or GPG signing; beta channels, rollback and staged rollouts.
 
 ## Out of scope for the MVP
 

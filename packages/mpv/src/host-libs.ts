@@ -47,6 +47,21 @@ export const unbundledNeeds = (bundleDir: string, patterns: readonly string[]): 
   );
 };
 
+/** Each host lib that `mpv` or a file in `lib/` needs and lib/ does not hold, once, sorted. */
+export const hostNeeds = (bundleDir: string, patterns: readonly string[]): string[] => {
+  const bundled = new Set(bundledLibs(bundleDir));
+
+  return [
+    ...new Set(
+      bundleFiles(bundleDir).flatMap((rel) =>
+        neededLibs(path.join(bundleDir, rel)).filter(
+          (soname) => !bundled.has(soname) && isHostLib(soname, patterns)
+        )
+      )
+    ),
+  ].toSorted((a, b) => (a < b ? -1 : Number(a > b)));
+};
+
 // shaderc, glslang and SPIRV-Tools: their C APIs (glslang has two, glslang_* and the older Sh*),
 // and the C++ namespaces and free functions a mangled name spells.
 const SHADER_COMPILER_C_API = /^(?:shaderc_|glslang_|spv[A-Z_]|Sh[A-Z][a-z])/u;

@@ -153,10 +153,21 @@ if [ "$host" != 0 ] || [ "$guest" != 0 ]; then
 fi
 """
 
+# Stages the current recipe's mpv build in .cache/package/mpv, which electron-builder packs as
+# resources/mpv. electron-builder's YAML cannot name .cache/mpv/<recipe-hash> itself.
 [tasks.package]
-description = "Build the Linux AppImage and its update metadata into apps/desktop/dist"
-dir = "{{config_root}}/apps/desktop"
-run = "../../scripts/bounded.sh package 4G -- bun run package"
+description = "Build the Linux AppImage, with harakiri's mpv in resources/mpv, and its update metadata into apps/desktop/dist"
+depends = ["mpv:build"]
+dir = "{{config_root}}"
+shell = "bash -euo pipefail -c"
+run = """
+bundle="$(bun packages/mpv/src/bundle-dir.ts)"
+rm -rf .cache/package/mpv
+mkdir -p .cache/package
+cp -a "$bundle" .cache/package/mpv
+cd apps/desktop
+../../scripts/bounded.sh package 4G -- bun run package
+"""
 
 [tasks."package:icons"]
 description = "Render the AppImage icons in apps/desktop/build/icons from docs/assets/readme/icon.svg (needs ImageMagick with librsvg)"
@@ -223,6 +234,25 @@ find .cache/mpv -mindepth 1 -maxdepth 1 -type d ! -name src ! -name "$(basename 
 echo "mpv build ready: $out"
 """
 
+# A release uploads apps/desktop/dist's four assets: the AppImage, latest-linux.yml, the source tar
+# and SHA256SUMS, which lists the other three that are there.
+[tasks."mpv:source"]
+description = "Build apps/desktop/dist/harakiri-mpv-source.tar, the corresponding source of harakiri's mpv (the recipe, its tarballs and its Fedora source RPMs; podman and the network fetch what .cache lacks), check it, and update apps/desktop/dist/SHA256SUMS"
+depends = ["mpv:build"]
+dir = "{{config_root}}"
+shell = "bash -euo pipefail -c"
+run = """
+bundle="$(bun packages/mpv/src/bundle-dir.ts)"
+scripts/bounded.sh mpv-source 2G -- mpv/source.sh "$bundle" apps/desktop/dist/harakiri-mpv-source.tar
+cd apps/desktop/dist
+assets=()
+for asset in harakiri-x86_64.AppImage latest-linux.yml harakiri-mpv-source.tar; do
+  [ ! -f "$asset" ] || assets+=("$asset")
+done
+sha256sum "${assets[@]}" > SHA256SUMS
+cat SHA256SUMS
+"""
+
 [tasks.check]
 description = "Everything CI gates on"
 depends = ["lint", "fmt:check", "lint:skips", "lint:private", "lint:host", "typecheck", "test"]
@@ -237,5 +267,36 @@ description = "Stop the dev/vm guest, keeping its provisioned disk in .cache/vm"
 run = "dev/vm/guest.sh down"
 
 [tasks."package:check"]
-description = "Check apps/desktop/dist: latest-linux.yml matches the AppImage and the version, the feed is public GitHub, runtime deps are packed"
+description = "Check apps/desktop/dist: latest-linux.yml matches the AppImage and the version, the feed is public GitHub, runtime deps are packed, and the bundled mpv"
 run = "bun scripts/check-release.ts"
+
+# The release job's runner (ubuntu-24.04, glibc 2.39) is older than the bundle's Fedora 44 floor,
+# so it cannot run the shipped mpv. package:check runs it in this image when
+# HARAKIRI_MPV_CHECK_IMAGE names it: the build's own base image, plus the package that provides
+# each host lib the bundle needs, from the same frozen release repo the build installs from.
+[tasks."package:check-image"]
+description = "Build localhost/harakiri-mpv-check, the Fedora 44 image package:check runs the shipped mpv in when HARAKIRI_MPV_CHECK_IMAGE names it (the release job does)"
+depends = ["mpv:build"]
+dir = "{{config_root}}"
+shell = "bash -euo pipefail -c"
+run = """
+command -v podman >/dev/null || { echo 'package:check-image needs podman (dnf install podman)' >&2; exit 1; }
+set -a; . mpv/versions.env; set +a
+mapfile -t provides < <(bun packages/mpv/src/host-needs-cli.ts)
+[ -n "${provides[0]:-}" ] || { echo 'the mpv build needs no host lib: is it built?' >&2; exit 1; }
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+{
+  echo "FROM $BASE_IMAGE"
+  printf '%s' "RUN dnf -y --disablerepo='*' --enablerepo=fedora --setopt=install_weak_deps=False install"
+  printf " '%s'" "${provides[@]}"
+  echo ' && dnf clean all'
+} > "$tmp/Containerfile"
+scripts/bounded.sh check-image 3G -- podman build --memory 2g --memory-swap 2g \
+  -t localhost/harakiri-mpv-check -f "$tmp/Containerfile" "$tmp"
+echo "mpv check image ready: localhost/harakiri-mpv-check"
+"""
+
+[tasks."package:check-hosts"]
+description = "Opt-in: run the AppImage's mpv bundle on the Bazzite image in podman (HOST_IMAGES overrides it; the image is several GB)"
+run = "scripts/bounded.sh hosts 3G -- scripts/check-hosts.sh"

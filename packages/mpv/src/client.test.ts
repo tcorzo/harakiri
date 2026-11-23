@@ -107,6 +107,32 @@ describe("mpv IPC client", () => {
       );
     });
 
+    it("runs mpv with the env it is given, so a decoy library path cannot replace the bundle's own", async () => {
+      // decoy/libavcodec.so.63 is a 4-byte file: the loader fails on it if it is ever searched
+      const decoy = await mkdtemp(path.join(tmpdir(), "harakiri-decoy-"));
+      await writeFile(path.join(decoy, "libavcodec.so.63"), "nope");
+
+      try {
+        // The control: the decoy really is searched.
+        await expect(
+          spawnMpv({ config: "none", binary: bundledMpv(), env: { LD_LIBRARY_PATH: decoy } })
+        ).rejects.toThrow(/libavcodec\.so\.63/u);
+
+        // bundledMpvEnv is a desktop function: the same scrub, inline.
+        const mpv = await spawnMpv({
+          config: "none",
+          binary: bundledMpv(),
+          args: headless,
+          env: { PATH: process.env.PATH ?? "" },
+        });
+
+        clients.push(mpv);
+        await expect(mpv.getProperty("mpv-version", z.string())).resolves.toBe("mpv v0.42.0");
+      } finally {
+        await rm(decoy, { recursive: true, force: true });
+      }
+    });
+
     it("reports the duration of a loaded clip", async () => {
       const client = await start();
 

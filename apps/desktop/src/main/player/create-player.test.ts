@@ -55,6 +55,7 @@ const wiring: PlayerWiring = {
   }),
   hdrSignalling: async () => await Promise.resolve("colour-management" as const),
   mpvBinary: () => "/b/mpv",
+  mpvEnv: () => ({ HOME: "/h" }),
   preparePlayback,
   startPlayback,
 };
@@ -124,6 +125,12 @@ describe("the player", () => {
     await play({ itemId }, send);
 
     expect(startPlayback.mock.calls[0]?.[2]).toMatchObject({ mpvBinary: "/b/mpv" });
+  });
+
+  it("play spawns with exactly the env the wiring gives", async () => {
+    await play({ itemId }, send);
+
+    expect(startPlayback.mock.calls[0]?.[2].mpvEnv).toStrictEqual({ HOME: "/h" });
   });
 
   it("a missing mpv build fails the play that needs it, not the handoff before it", async () => {
