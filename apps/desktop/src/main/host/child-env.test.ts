@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { bundledMpvEnv, mpvChildEnv } from "./child-env";
+import { bundledMpvEnv, hostToolEnv, mpvChildEnv } from "./child-env";
 
 describe(bundledMpvEnv, () => {
   it("drops the loader's library path and preload, and keeps the rest", () => {
@@ -16,6 +16,20 @@ describe(bundledMpvEnv, () => {
 
   it("drops undefined values", () => {
     expect(bundledMpvEnv({ HOME: "/h", DISPLAY: undefined })).toStrictEqual({ HOME: "/h" });
+  });
+});
+
+describe(hostToolEnv, () => {
+  it("drops the loader's library path and preload, and keeps what pactl needs to reach the server", () => {
+    expect(
+      hostToolEnv({
+        LD_LIBRARY_PATH: "/tmp/.mount_harakiri/usr/lib:/steam-runtime/lib",
+        LD_PRELOAD: "/steam/gameoverlayrenderer.so",
+        PATH: "/usr/bin",
+        XDG_RUNTIME_DIR: "/run/user/1000",
+        PULSE_SERVER: undefined,
+      })
+    ).toStrictEqual({ PATH: "/usr/bin", XDG_RUNTIME_DIR: "/run/user/1000" });
   });
 });
 

@@ -16,6 +16,15 @@ export const bundledMpvEnv = (env: Readonly<Record<string, string | undefined>>)
   );
 
 /**
+ * The environment for a tool of the host's own that harakiri runs (`pactl`, say): `env` without
+ * the loader's search overrides, as for `bundledMpvEnv`. Under an AppImage or Steam,
+ * `LD_LIBRARY_PATH` can hand the host's `pactl` an older `libpulse` that fails, and the sink would
+ * read as unknown. Undefined values are dropped.
+ */
+export const hostToolEnv = (env: Readonly<Record<string, string | undefined>>) =>
+  bundledMpvEnv(env);
+
+/**
  * The env for the mpv a play runs: the developer's own mpv (`HARAKIRI_MPV` set) gets the
  * environment as it is, with the libraries it was built to find; harakiri's build gets
  * `bundledMpvEnv`.

@@ -4,7 +4,7 @@ import type { HdrSignalling } from "@harakiri/fidelity";
 import { safeStorage } from "electron";
 
 import type { HostCapabilities } from "./capabilities";
-import { mpvChildEnv } from "./child-env";
+import { hostToolEnv, mpvChildEnv } from "./child-env";
 import { readEnvFacts, readSteamFacts } from "./facts";
 import type { HostFacts, SteamFacts } from "./facts";
 import { createHost } from "./host";
@@ -28,6 +28,9 @@ export { bundledMpvEnv } from "./child-env";
 /** The env for this play's mpv: the whole environment for `HARAKIRI_MPV`, else `bundledMpvEnv`. */
 export const mpvEnvironment = (override: string | undefined): Record<string, string> =>
   mpvChildEnv(override, process.env);
+
+/** The env for a host tool (`pactl`): this process's, without the loader's library path. */
+export const hostToolEnvironment = (): Record<string, string> => hostToolEnv(process.env);
 
 /** Where the launcher icon and library art are; the caller passes Electron's values. */
 export { artworkDir } from "./steam/artwork";

@@ -5,6 +5,8 @@ import type { AudioOutput, BitstreamCodec } from "@harakiri/fidelity";
 import { getLogger } from "@logtape/logtape";
 import { z } from "zod";
 
+import { hostToolEnvironment } from "../host";
+
 const logger = getLogger(["harakiri", "player", "audio"]);
 
 /** The bitstream formats PipeWire's pulse layer lists for a sink, as mpv's `--audio-spdif` tokens. */
@@ -72,7 +74,10 @@ export const AudioOutputJson = z.discriminatedUnion("kind", [
 const run = promisify(execFile);
 
 const pactl = async <T>(schema: z.ZodType<T>, ...args: string[]): Promise<T> => {
-  const { stdout } = await run("pactl", ["--format=json", ...args], { timeout: 2000 });
+  const { stdout } = await run("pactl", ["--format=json", ...args], {
+    env: hostToolEnvironment(),
+    timeout: 2000,
+  });
 
   return schema.parse(JSON.parse(stdout));
 };
