@@ -38,7 +38,7 @@
       { "name": "focus", "value": "transform 260ms ease-curtain, outline-color 160ms linear", "purpose": "The focus mark: paper ring plus scale to 1.06." },
       { "name": "relight", "value": "900ms ease-curtain, from opacity 0 and brightness 0.55", "purpose": "Backdrop cross-fade when the featured or focused film changes." },
       { "name": "row-transition", "value": "500ms opacity", "purpose": "Rows passed fade out; waiting rows dim pictures to 50%." },
-      { "name": "hero-hold", "value": "20000ms idle, 800ms settle", "purpose": "The hero advances only after 20 s with no input; never under reduced motion. One paper rule across the content width, between the hero and the first row, fills over the hold; no preview of the next film." },
+      { "name": "hero-hold", "value": "8000ms per film, 800ms settle", "purpose": "Each featured film holds the stage for 8 s; moving between the actions never restarts it; never advances under reduced motion. The hero bar, one focusable segment per film as wide as Play and Details, fills over the hold; Left and Right on it choose the film." },
       { "name": "handoff", "value": "house 1200ms, slug 3000ms", "purpose": "Stations House, Programme, Picture, in that order." },
       { "name": "reduced-motion", "value": "all transition and animation durations 0ms", "purpose": "prefers-reduced-motion: reduce removes all motion." }
     ],
@@ -149,7 +149,7 @@
       "Don't round corners or put titles on floating cards.",
       "Don't use colour alone to carry focus, state or errors.",
       "Don't use red for errors or warnings; problems carry the Torch Amber square and words.",
-      "Don't advance the hero while the owner is pressing, or at all under reduced motion.",
+      "Don't restart the hero's hold on a move between Play and Details, or advance it at all under reduced motion.",
       "Don't add shadows beyond the logo lift and the sheet edge.",
       "Don't set an uppercase tracked label above a heading as decoration; labels only name the value beside or below them.",
       "Don't use the film the product is named after, or its imagery, as decoration.",

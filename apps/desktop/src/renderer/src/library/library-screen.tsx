@@ -33,7 +33,8 @@ import { focusFirst } from "../ui/focus";
 import { SettingsMark } from "../ui/marks";
 import { hasCardText, PosterCard, StillCard } from "./cards";
 import type { CardProps } from "./cards";
-import { heroHoldMs, upNext, useHeroCycle } from "./hero-cycle";
+import { HeroBar, heroFilmKey, isHeroFilmKey } from "./hero-bar";
+import { upNext, useHeroCycle } from "./hero-cycle";
 import { cardKey, restoreKeys, tonight, useLit } from "./lit";
 import type { Section } from "./lit";
 import { useStageFace } from "./presented-face";
@@ -248,26 +249,7 @@ const ProgrammeView = ({
     [ctx, queryClient, server]
   );
 
-  // Up from the first row returns to the stage, which the spatial search cannot see while it is hidden.
   const first = rows[0]?.section.id;
-  useNavigationGuard((direction) => {
-    if (direction !== "up" || !hero || first === undefined) {
-      return false;
-    }
-
-    // Typed as a string, but null while nothing has focus.
-    const key: string | null = getCurrentFocusKey();
-
-    if (key === null) {
-      return false;
-    }
-
-    if (!key.startsWith(cardKey(first, "")) && key !== retryKey(first)) {
-      return false;
-    }
-
-    return focusFirst("hero-play");
-  });
 
   // Returning from a title page lands back on the card the owner left, found by id.
   const restored = useRef(false);
@@ -340,35 +322,13 @@ const ProgrammeView = ({
 const Programme = memo(ProgrammeView);
 
 /**
- * How long tonight's screening holds before the next featured film takes the stage: a paper rule
- * across the content width, in the gap between the hero and the first row, that fills over the
- * quiet hold and starts again on any press.
- */
-const HoldRule = ({ since, auto }: { readonly since: number; readonly auto: boolean }) => (
-  <div
-    aria-hidden="true"
-    className="absolute -bottom-6 left-0 w-[calc(100vw-2*var(--spacing-safe-x))]"
-  >
-    <span className="bg-ink-line block h-[0.1875rem]">
-      {auto ? (
-        <span
-          key={since}
-          className="animate-hold bg-paper block h-full origin-left"
-          style={{ animationDuration: `${heroHoldMs}ms` }}
-        />
-      ) : null}
-    </span>
-  </div>
-);
-
-/**
  * While the hero holds the full screen, the rows wait out of sight; one thin arrow, drifting
  * slowly, says there is more below. Down on the d-pad reaches it, so the cue never takes focus.
  */
 const ScrollCue = ({ shown }: { readonly shown: boolean }) => (
   <div
     aria-hidden="true"
-    className={`bottom-safe-y text-paper-dim absolute left-1/2 -translate-x-1/2 transition-opacity duration-500 ${
+    className={`text-paper-dim absolute bottom-[calc(var(--spacing-safe-y)/2)] left-1/2 -translate-x-1/2 transition-opacity duration-500 ${
       shown ? "opacity-100" : "opacity-0"
     }`}
   >
@@ -415,6 +375,75 @@ const EmptyLibrary = () => {
       </div>
     </main>
   );
+};
+
+interface Stage {
+  readonly hero: boolean;
+  /** The focus key of the film on stage in the bar; null when there is no bar. */
+  readonly film: string | null;
+  readonly firstRow: string | undefined;
+}
+
+const isActionKey = (key: string): boolean => key === "hero-play" || key === "hero-details";
+
+/**
+ * The moves on the stage the spatial search would get wrong, made by hand: Down from the actions to
+ * the film on stage in the bar, Up from the bar to Play, and Up from the first row back to the bar
+ * (or Play, with a single featured film). True when it moved focus itself.
+ */
+const stageMove = (direction: string, key: string | null, stage: Stage): boolean => {
+  if (key === null || !stage.hero) {
+    return false;
+  }
+
+  if (direction === "down" && isActionKey(key) && stage.film !== null) {
+    return focusFirst(stage.film);
+  }
+
+  if (direction === "up" && isHeroFilmKey(key)) {
+    return focusFirst("hero-play");
+  }
+
+  const { firstRow } = stage;
+
+  const inFirstRow =
+    firstRow !== undefined && (key.startsWith(cardKey(firstRow, "")) || key === retryKey(firstRow));
+
+  if (direction === "up" && inFirstRow) {
+    return stage.film === null ? focusFirst("hero-play") : focusFirst(stage.film, "hero-play");
+  }
+
+  return false;
+};
+
+/**
+ * The stage reads top to bottom: actions, then the film bar, then the rows. The spatial search
+ * cannot see the rows while they wait below, and would land on whichever segment is nearest. When
+ * the next film takes the stage while the owner is on the bar, focus moves along with it.
+ */
+const useStageNavigation = (
+  hero: boolean,
+  films: number,
+  current: number,
+  rows: readonly PlannedRow[] | null
+): void => {
+  const stage: Stage = {
+    hero,
+    film: films > 1 ? heroFilmKey(current) : null,
+    firstRow: rows?.[0]?.section.id,
+  };
+
+  useNavigationGuard((direction) => {
+    const key: string | null = getCurrentFocusKey();
+
+    return stageMove(direction, key, stage);
+  });
+
+  useEffect(() => {
+    if (stage.film !== null && isHeroFilmKey(getCurrentFocusKey())) {
+      focusFirst(stage.film);
+    }
+  }, [stage.film]);
 };
 
 const preloadBackdrop = (server: ServerUrl, entry: Entry | null): void => {
@@ -480,6 +509,8 @@ export const LibraryScreen = () => {
 
   preloadBackdrop(server, next);
 
+  useStageNavigation(hero !== null, featured.length, cycle.index, rows);
+
   if (hero === null && rows !== null && rows.length === 0) {
     return <EmptyLibrary />;
   }
@@ -507,6 +538,19 @@ export const LibraryScreen = () => {
     light(hero, tonight);
   };
 
+  const chooseFilm = (index: number): void => {
+    const film = featured[index];
+
+    if (film === undefined) {
+      return;
+    }
+
+    cycle.select(index);
+    window.clearTimeout(relightTimer);
+    useLit.setState({ place: null });
+    light(film, tonight);
+  };
+
   const heroPanel = (): ReactNode => {
     if (shown === null) {
       return null;
@@ -526,15 +570,20 @@ export const LibraryScreen = () => {
         }}
       >
         <div
-          // The block changes only while it is out: it leaves fast, and returns on the curtain ease.
-          className={`flex w-[calc(100vw-2*var(--spacing-safe-x))] flex-col gap-7 transition-opacity ${
-            visible
-              ? "ease-curtain opacity-100 duration-[420ms]"
-              : "opacity-0 duration-100 ease-out"
-          } ${staged ? "items-center text-center" : "items-start text-left"}`}
+          className={`flex w-[calc(100vw-2*var(--spacing-safe-x))] flex-col gap-7 ${
+            staged ? "items-center text-center" : "items-start text-left"
+          }`}
         >
           {face === null ? null : (
-            <>
+            <div
+              // The title and notes change only while they are out: they leave fast, and return on the
+              // curtain ease. The actions and the film bar below stay put through a change of film.
+              className={`flex flex-col gap-7 transition-opacity ${
+                visible
+                  ? "ease-curtain opacity-100 duration-[420ms]"
+                  : "opacity-0 duration-100 ease-out"
+              } ${staged ? "items-center" : "items-start"}`}
+            >
               <TitleMark
                 entry={face.entry}
                 server={server}
@@ -548,11 +597,18 @@ export const LibraryScreen = () => {
                   </p>
                 )}
               </EntryNotes>
-            </>
+            </div>
           )}
           {hero === null ? null : (
-            // Mounted even in the rows, so Up and Back can focus Play before the block returns.
-            <div className={`flex items-center gap-6 ${staged ? "opacity-100" : "opacity-0"}`}>
+            // Mounted even in the rows, so Up and Back can focus Play before the block returns. They
+            // leave with the title when focus goes down to the rows, and return once the stage is set.
+            <div
+              className={`relative flex items-center gap-6 transition-opacity ${
+                holding && staged
+                  ? "ease-curtain opacity-100 duration-[420ms]"
+                  : "opacity-0 duration-100 ease-out"
+              }`}
+            >
               <PlayAction
                 focusKey="hero-play"
                 label={hero.progress === null ? `Play ${hero.title}` : `Resume ${hero.title}`}
@@ -575,7 +631,16 @@ export const LibraryScreen = () => {
               >
                 Details
               </QuietAction>
-              {next === null ? null : <HoldRule since={cycle.since} auto={cycle.auto} />}
+              {next === null ? null : (
+                <HeroBar
+                  films={featured}
+                  current={cycle.index}
+                  since={cycle.since}
+                  auto={cycle.auto}
+                  focusable={holding}
+                  onChoose={chooseFilm}
+                />
+              )}
             </div>
           )}
         </div>

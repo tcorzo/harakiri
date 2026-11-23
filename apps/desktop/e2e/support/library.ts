@@ -44,9 +44,30 @@ export const leadContinueWatching = async (
   return { item, shown: await jellyfin.item(item.id) };
 };
 
-/** From the library: Down to the first Continue Watching card, then Enter, landing on Resume. */
+/** A segment of the hero bar: named by its film, unlike the actions above it. */
+export const filmSegment = /^(?!Play |Resume |Details for ).+$/u;
+
+/**
+ * From the hero's actions, one `move` down lands on the film on stage in the hero bar, still in
+ * tonight's screening; the rows are the move after it.
+ */
+export const toFilmBar = async (
+  page: Page,
+  move: () => Promise<void> = async () => {
+    await page.keyboard.press("ArrowDown");
+  }
+): Promise<FocusedControl> => {
+  await move();
+  const focus = await expectFocus(page, filmSegment);
+  expect(focus.section).toBe("Tonight's screening");
+
+  return focus;
+};
+
+/** From the library: Down through the hero bar to the first Continue Watching card, then Enter, landing on Resume. */
 export const openFirstResumed = async (page: Page, shown: ShownItem): Promise<void> => {
   await openLibrary(page);
+  await toFilmBar(page);
   await page.keyboard.press("ArrowDown");
   await expectFocus(page, cardName(spokenTitle(shown)));
   await page.keyboard.press("Enter");

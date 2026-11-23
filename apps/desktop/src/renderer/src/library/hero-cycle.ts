@@ -1,32 +1,44 @@
 import { noop } from "es-toolkit";
 import { useEffect, useReducer, useSyncExternalStore } from "react";
-import { useStore } from "zustand";
 
-import { activity } from "../input/activity";
 import { useLit } from "./lit";
 
-/** How long the hero waits, with no input at all, before the next featured film takes the screen. */
-export const heroHoldMs = 20_000;
+/** How long each featured film holds the stage before the next one takes it. */
+export const heroHoldMs = 8000;
 
 /** A press this soon after the film changed was aimed at the previous one. */
 export const heroSettleMs = 800;
 
 export interface HeroCycle {
   readonly index: number;
-  /** When the current film began its hold; restarts whenever the hold is interrupted. */
+  /** When the current film began its hold: when it took the stage, or when the stage was entered. */
   readonly since: number;
-  /** When the film on stage last changed. Only a change moves it; a press or a restart never does. */
+  /** When the film on stage last changed on its own. A film the owner chose, or a restart, never moves it. */
   readonly changedAt: number;
 }
 
 export type HeroEvent =
   | { readonly type: "tick"; readonly now: number; readonly count: number; readonly auto: boolean }
   | { readonly type: "next"; readonly now: number; readonly count: number }
+  | {
+      readonly type: "select";
+      readonly now: number;
+      readonly index: number;
+      readonly count: number;
+    }
   | { readonly type: "restart"; readonly now: number };
 
 export const heroCycle = (state: HeroCycle, event: HeroEvent): HeroCycle => {
   if (event.type === "restart") {
     return { ...state, since: event.now };
+  }
+
+  // A film the owner chose starts its own hold. It does not count as a change for the settle: the
+  // owner knows which film is on stage, so a press right after is meant for it.
+  if (event.type === "select") {
+    const index = ((event.index % event.count) + event.count) % event.count;
+
+    return index === state.index ? state : { ...state, index, since: event.now };
   }
 
   const due = event.type === "next" || (event.auto && event.now - state.since >= heroHoldMs);
@@ -60,9 +72,9 @@ export const useReducedMotion = (): boolean =>
   useSyncExternalStore(subscribeReducedMotion, () => window.matchMedia(reducedMotionQuery).matches);
 
 /**
- * Advances the featured film once the hero has held focus with no input for a whole hold, so the
- * film never changes while the owner is reading or reaching for select. Reduced motion never
- * advances on its own; the owner moves on with Next.
+ * Advances the featured film once it has held the stage for a whole hold. Moving between the hero's
+ * actions leaves the hold running; choosing a film or coming back to the stage starts it again.
+ * Reduced motion never advances on its own; the owner moves through the films with the hero bar.
  */
 export const useHeroCycle = (ids: readonly string[], holding: boolean) => {
   const count = ids.length;
@@ -80,17 +92,15 @@ export const useHeroCycle = (ids: readonly string[], holding: boolean) => {
   const index = count === 0 ? 0 : state.index % count;
   const heroId = ids[index] ?? null;
 
-  const lastInput = useStore(activity, (s) => s.at);
-
   useEffect(() => {
     useLit.getState().setHeroId(heroId);
   }, [heroId]);
 
   useEffect(() => {
     if (holding) {
-      send({ type: "restart", now: Math.max(Date.now(), lastInput) });
+      send({ type: "restart", now: Date.now() });
     }
-  }, [holding, lastInput]);
+  }, [holding]);
 
   useEffect(() => {
     if (!auto || count < 2) {
@@ -127,6 +137,11 @@ export const useHeroCycle = (ids: readonly string[], holding: boolean) => {
     auto,
     next: () => {
       send({ type: "next", now: Date.now(), count });
+    },
+    select: (chosen: number) => {
+      if (count > 0) {
+        send({ type: "select", now: Date.now(), index: chosen, count });
+      }
     },
     settled: () => settled(state, Date.now()),
   };

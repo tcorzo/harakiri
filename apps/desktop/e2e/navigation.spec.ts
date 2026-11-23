@@ -19,7 +19,9 @@ import {
   heroPlay,
   leadContinueWatching,
   main,
+  filmSegment,
   openLibrary,
+  toFilmBar,
 } from "./support/library";
 
 /** The film on tonight's screening, read off its focused Play or Resume. */
@@ -84,7 +86,10 @@ test("the arrow keys walk the hero, the rows and the title pages, and focus is n
   await press(page, "ArrowRight", `Details for ${hero}`);
   await press(page, "ArrowLeft", heroPlay);
 
-  // Continue Watching: the seeded item, with the time left the server's resume point gives.
+  // Down from Play lands on the film on stage in the hero bar, then on Continue Watching: the seeded
+  // item, with the time left the server's resume point gives.
+  const onBar = await toFilmBar(page);
+  expect(onBar.name).toBe(hero);
   const resumed = await press(page, "ArrowDown", cardName(spokenTitle(shown)));
   expect(resumed.section).toBe("Continue Watching");
   await expectResumeShown(
@@ -135,6 +140,9 @@ test("the gamepad walks the same way: d-pad, stick, A, B, and a held d-pad repea
   const hero = heroTitle(await openLibrary(page));
   await plugPad(page);
 
+  await toFilmBar(page, async () => {
+    await tap(page, "down");
+  });
   await tap(page, "down");
   await expectFocus(page, cardName(spokenTitle(shown)));
   await tap(page, "a");
@@ -184,7 +192,7 @@ test("the gamepad walks the same way: d-pad, stick, A, B, and a held d-pad repea
   expect(await focusRoute(page, cardName(spokenTitle(reached)))).toBe("/library");
 });
 
-test("Up from the first row returns to tonight's screening", async ({
+test("Up from the first row returns to the film on stage in the hero bar, then to Play", async ({
   launch,
   jellyfin,
   preserveUserData,
@@ -192,10 +200,41 @@ test("Up from the first row returns to tonight's screening", async ({
   const { shown } = await leadContinueWatching(jellyfin, preserveUserData);
   const { page } = await launch();
   const hero = heroTitle(await openLibrary(page));
+  await toFilmBar(page);
   await press(page, "ArrowDown", cardName(spokenTitle(shown)));
   // Once the row has lit (180 ms) the hero actions fade out, yet stay focusable.
   await page.waitForTimeout(400);
+  const bar = await press(page, "ArrowUp", hero);
+  expect(bar.section).toBe("Tonight's screening");
   expect(heroTitle(await press(page, "ArrowUp", heroPlay))).toBe(hero);
+});
+
+test("Left and Right along the hero bar put each featured film on stage, and Play plays it", async ({
+  launch,
+}) => {
+  const { page } = await launch();
+  const hero = heroTitle(await openLibrary(page));
+  await toFilmBar(page);
+
+  const second = await press(page, "ArrowRight", filmSegment);
+  expect(second.name).not.toBe(hero);
+  await expect(
+    page.getByRole("button", {
+      name: new RegExp(`^(?:Play|Resume) ${escapeRegExp(second.name)}$`, "u"),
+    })
+  ).toHaveCount(1);
+  const third = await press(page, "ArrowRight", filmSegment);
+  expect(third.name).not.toBe(second.name);
+  const back = await press(page, "ArrowLeft", filmSegment);
+  expect(back.name).toBe(second.name);
+
+  // Up returns to Play, now for the chosen film, and a press right away plays it.
+  expect(heroTitle(await press(page, "ArrowUp", heroPlay))).toBe(second.name);
+  await page.keyboard.press("Enter");
+  await expect(main(page, `Screening ${second.name}`)).toBeVisible();
+  // Cancel during the House station, before any mpv starts.
+  await page.keyboard.press("Escape");
+  await openLibrary(page);
 });
 
 test("Back from a row answers even when the row was entered a moment ago", async ({
@@ -207,6 +246,9 @@ test("Back from a row answers even when the row was entered a moment ago", async
   const { page } = await launch();
   const hero = heroTitle(await openLibrary(page));
   await plugPad(page);
+  await toFilmBar(page, async () => {
+    await tap(page, "down");
+  });
   await tap(page, "down");
   await expectFocus(page, cardName(spokenTitle(shown)));
   await tap(page, "a");
@@ -266,6 +308,7 @@ test("a key held down on a card opens its title page once and plays nothing", as
   const { shown } = await leadContinueWatching(jellyfin, preserveUserData);
   const { page } = await launch();
   await openLibrary(page);
+  await toFilmBar(page);
   await press(page, "ArrowDown", cardName(spokenTitle(shown)));
   await page.keyboard.down("Enter");
   await expectFocus(page, `Resume ${shown.Name}`, 10_000);
@@ -291,60 +334,62 @@ const pauseClock = async (page: Page): Promise<void> => {
 };
 
 test.describe("the hero cycle", () => {
-  test("after 20 quiet seconds the next featured film takes the screen, and a press in its first 800 ms is ignored", async ({
+  test("8 s after a film takes the stage the next one does, and a press in its first 800 ms is ignored", async ({
     launch,
   }) => {
     const { page } = await launch();
-    const first = await withClock(page);
+    await withClock(page);
 
-    // With the clock stopped, a press starts the hold at a known instant and only runFor moves
-    // time on, however long the real steps below take.
+    // With the clock stopped, choosing a film on the bar starts its hold at a known instant, and
+    // only runFor moves time on, however long the real steps below take.
     await pauseClock(page);
-    await press(page, "ArrowRight", `Details for ${first}`);
+    await toFilmBar(page);
+    const { name: chosen } = await press(page, "ArrowRight", filmSegment);
+    // Moving between the actions leaves the hold running.
+    expect(heroTitle(await press(page, "ArrowUp", heroPlay))).toBe(chosen);
+    await press(page, "ArrowRight", `Details for ${chosen}`);
     await press(page, "ArrowLeft", heroPlay);
-    await page.clock.runFor(19_000);
-    expect(heroTitle(await expectFocus(page, heroPlay))).toBe(first);
-    // The film changes at 20 s; the clock stops 500 ms later, inside the 800 ms settle.
+    await page.clock.runFor(7000);
+    expect(heroTitle(await expectFocus(page, heroPlay))).toBe(chosen);
+    // The film changes at 8 s; the clock stops 500 ms later, inside the 800 ms settle.
     await page.clock.runFor(1500);
 
     const advanced = await until(
-      "the hero advances after 20 quiet seconds",
+      "the hero advances 8 s after the film was chosen",
       async () => await expectFocus(page, heroPlay),
-      (focused) => heroTitle(focused) !== first,
+      (focused) => heroTitle(focused) !== chosen,
       3000
     );
 
     expect(advanced.route).toBe("/library");
-    const second = heroTitle(advanced);
+    const next = heroTitle(advanced);
 
     // A press this soon was aimed at the film that just left.
     await page.keyboard.press("Enter");
     await page.waitForTimeout(300);
     expect(await focusRoute(page, heroPlay)).toBe("/library");
-    expect(heroTitle(await expectFocus(page, heroPlay))).toBe(second);
+    expect(heroTitle(await expectFocus(page, heroPlay))).toBe(next);
 
     await page.clock.runFor(1000);
     await page.keyboard.press("Enter");
-    await expect(main(page, `Screening ${second}`)).toBeVisible();
+    await expect(main(page, `Screening ${next}`)).toBeVisible();
     // Cancel during the House station, before any mpv starts.
     await page.keyboard.press("Escape");
     await openLibrary(page);
   });
 
-  test("any press restarts the 20 s hold", async ({ launch }) => {
+  test("on the hero bar, focus moves along with the film that takes the stage", async ({
+    launch,
+  }) => {
     const { page } = await launch();
     const first = await withClock(page);
-
-    await page.clock.fastForward(15_000);
-    await press(page, "ArrowRight", `Details for ${first}`);
-    await press(page, "ArrowLeft", heroPlay);
-    await page.clock.fastForward(15_000);
-    expect(heroTitle(await expectFocus(page, heroPlay))).toBe(first);
-    await page.clock.fastForward(6000);
+    const onBar = await toFilmBar(page);
+    expect(onBar.name).toBe(first);
+    await page.clock.fastForward(9000);
     await until(
-      "the hero advances 20 s after the last press",
-      async () => heroTitle(await expectFocus(page, heroPlay)),
-      (title) => title !== first,
+      "focus follows the next film along the bar",
+      async () => await expectFocus(page, filmSegment),
+      (focused) => focused.name !== first,
       3000
     );
   });
@@ -362,7 +407,8 @@ test.describe("the hero cycle", () => {
   test("Play answers a press right after moving back onto it", async ({ launch }) => {
     const { page } = await launch();
     const first = await withClock(page);
-    await page.clock.fastForward(2000);
+    // Stopped, so the 8 s hold cannot change the film under the press.
+    await pauseClock(page);
     await press(page, "ArrowRight", `Details for ${first}`);
     await press(page, "ArrowLeft", heroPlay);
     await page.keyboard.press("Enter");
@@ -376,10 +422,11 @@ test.describe("the hero cycle", () => {
   }) => {
     const { page } = await launch();
     const first = await withClock(page);
-    await page.clock.fastForward(21_000);
-    const second = heroTitle(await expectFocus(page, heroPlay));
+    await pauseClock(page);
+    await toFilmBar(page);
+    const { name: second } = await press(page, "ArrowRight", filmSegment);
     expect(second).not.toBe(first);
-    await page.clock.fastForward(1000);
+    expect(heroTitle(await press(page, "ArrowUp", heroPlay))).toBe(second);
     await page.keyboard.press("Enter");
     await expect(main(page, `Screening ${second}`)).toBeVisible();
     await page.keyboard.press("Escape");
