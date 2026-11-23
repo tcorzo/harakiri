@@ -13,7 +13,7 @@
 [![Platform: Fedora · KDE · Wayland](https://img.shields.io/badge/platform-Fedora%20%C2%B7%20KDE%20%C2%B7%20Wayland-1a1312?style=flat-square&labelColor=0a0605)](#getting-started)
 [![Jellyfin 10.11 · 12.4](https://img.shields.io/badge/jellyfin-10.11%20%C2%B7%2012.4-1a1312?style=flat-square&labelColor=0a0605)](https://jellyfin.org)
 [![mpv 0.42 · gpu-next · Vulkan](https://img.shields.io/badge/mpv-0.42%20%C2%B7%20gpu--next%20%C2%B7%20Vulkan-1a1312?style=flat-square&labelColor=0a0605)](https://mpv.io)
-[![Status: MVP](https://img.shields.io/badge/status-MVP-9b0f1b?style=flat-square&labelColor=0a0605)](docs/PRD.md#mvp-scope)
+[![Status: alpha](https://img.shields.io/badge/status-alpha-9b0f1b?style=flat-square&labelColor=0a0605)](#install-the-appimage)
 
 [Why](#why-another-jellyfin-client) • [Showcase](#showcase) • [Getting started](#getting-started) • [Proving fidelity](#how-harakiri-proves-fidelity) • [Layout](#project-layout)
 
@@ -41,6 +41,9 @@ Basically, I got fed up with not being able to just sit down with a meal and _wa
 ## Getting started
 
 ### Install the AppImage
+
+> [!WARNING]
+> harakiri is an early alpha, built for one living-room setup: Bazzite in Steam Game Mode, an HDR TV and an AV receiver. Expect rough edges and breaking changes. Until 1.0, a feature moves the version by a patch (0.1.0 → 0.1.1) and a breaking change by a minor (0.1.x → 0.2.0).
 
 Each [GitHub release](https://github.com/tcorzo/harakiri/releases) ships one Linux x64 AppImage, and it is all you install. It carries harakiri's own mpv build, with its FFmpeg and libraries, so it needs no system mpv or ffmpeg. It is built and checked for Bazzite (Fedora 44 or newer), and needs glibc 2.43 or newer and the host's `libssl.so.3`.
 

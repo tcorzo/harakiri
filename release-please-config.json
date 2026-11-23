@@ -5,8 +5,14 @@
       "release-type": "simple",
       "include-component-in-tag": false,
       "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
+      "release-as": "0.1.0",
       "extra-files": [
-        { "type": "json", "path": "apps/desktop/package.json", "jsonpath": "$.version" }
+        {
+          "type": "json",
+          "path": "apps/desktop/package.json",
+          "jsonpath": "$.version"
+        }
       ]
     }
   }
