@@ -17,6 +17,7 @@ import {
 import { ListAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
 import { SectionTab } from "../ui/marks";
+import { quitLine, updateStatusQuery } from "./quit-line";
 import { versionLine } from "./version-line";
 
 /**
@@ -46,12 +47,7 @@ export const SettingsScreen = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  // Unsupported means a dev or unpackaged build: nothing will change, so stop asking.
-  const updates = useQuery({
-    queryKey: ["updates", "status"],
-    queryFn: async () => await window.harakiri.updates.status(),
-    refetchInterval: (query) => (query.state.data?.state === "unsupported" ? false : 1000),
-  });
+  const updates = useQuery(updateStatusQuery);
 
   // Where the token is kept changes only at a sign-in. Signing out clears the query cache
   // (`data/forget.ts`), so the next session asks again.
@@ -182,6 +178,14 @@ export const SettingsScreen = () => {
                 }}
               />
             ) : null}
+            <ListAction
+              focusKey="settings-quit"
+              label="Quit harakiri"
+              detail={quitLine(updates.data)}
+              onPress={() => {
+                void window.harakiri.app.quit();
+              }}
+            />
           </div>
         </div>
       </main>
