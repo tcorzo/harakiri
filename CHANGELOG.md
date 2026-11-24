@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.1](https://github.com/tcorzo/harakiri/compare/v0.1.0...v0.1.1) (2026-11-24)
+
+
+### Features
+
+* **desktop:** bring impeccable's live mode into the dev server ([#52](https://github.com/tcorzo/harakiri/issues/52)) ([64b9f42](https://github.com/tcorzo/harakiri/commit/64b9f42b3a812e6e6c918b1915de7b200e677a8e))
+* **desktop:** quit harakiri from the gamepad ([#55](https://github.com/tcorzo/harakiri/issues/55)) ([39b8673](https://github.com/tcorzo/harakiri/commit/39b8673e596b9f14c3ddcb96ce62d4cc766769ab))
+* **desktop:** rework the library into a full-screen stage with picture-only film cards ([#53](https://github.com/tcorzo/harakiri/issues/53)) ([4ff2866](https://github.com/tcorzo/harakiri/commit/4ff28665bbcbe891c581d98e6472d009847a1098))
+* **desktop:** run the renderer in a plain browser on the dev server ([#50](https://github.com/tcorzo/harakiri/issues/50)) ([4434280](https://github.com/tcorzo/harakiri/commit/4434280a8c3b450862f901659a670c403882d01b))
+
+
+### Bug Fixes
+
+* **ci:** give typecheck 4G, so tsc is not killed on a 4-core runner ([#47](https://github.com/tcorzo/harakiri/issues/47)) ([1c4c16e](https://github.com/tcorzo/harakiri/commit/1c4c16e9d51355953acef1b9d99137a81bf096ec))
+* **ci:** leave release-please's changelog and manifest out of the format check ([#51](https://github.com/tcorzo/harakiri/issues/51)) ([0c42fcc](https://github.com/tcorzo/harakiri/commit/0c42fcc88d80213f203846231da788c972c911a5))
+
 ## [0.1.0](https://github.com/tcorzo/harakiri/compare/v0.1.0...v0.1.0) (2026-11-23)
 
 
