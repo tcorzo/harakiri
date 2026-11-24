@@ -2,14 +2,15 @@ import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-naviga
 import { createContext, use, useCallback, useEffect, useRef } from "react";
 import type { ComponentProps, ReactNode } from "react";
 
-import { useActionHandler } from "../input/handlers";
+import { useActionHandler, useNavigationGuard } from "../input/handlers";
 import { ListAction } from "./actions";
+import { holdFocusWithin } from "./focus";
 import { SectionHead } from "./marks";
 
-/** Plays the sheet back into the wings, then runs `then`. */
-type LeaveSheet = (then: () => void) => void;
+/** Runs a row's press: closing rows play the exit first; every press is dropped once it leaves. */
+type Answer = (then: () => void, closes: boolean) => void;
 
-const LeaveContext = createContext<LeaveSheet>((then) => {
+const AnswerContext = createContext<Answer>((then) => {
   then();
 });
 
@@ -22,9 +23,11 @@ const exitTiming: KeyframeAnimationOptions = {
 
 const reducedMotion = (): boolean => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+const noRelease = (): void => undefined;
+
 /**
  * A raised panel from the right that holds focus until the owner answers it; Back closes it. Its
- * owner focuses a row once it mounts. Rows that close it are `SheetAction`s, so it can exit first.
+ * owner focuses a row once it mounts. Its rows are `SheetAction`s, so it can exit before it closes.
  */
 export const Sheet = ({
   title,
@@ -44,29 +47,48 @@ export const Sheet = ({
 
   const house = useRef<HTMLDivElement>(null);
   const exits = useRef<Animation[] | null>(null);
+  const release = useRef(noRelease);
 
-  useEffect(
-    () => () => {
+  // Runs before the owner's own mount effect, which focuses a row inside the hold.
+  useEffect(() => {
+    if (ref.current !== null) {
+      release.current = holdFocusWithin(ref.current);
+    }
+
+    return () => {
+      release.current();
+
       for (const exit of exits.current ?? []) {
         exit.cancel();
       }
-    },
-    []
-  );
+    };
+  }, [ref]);
 
   // Stable, since it only reads refs, so the rows under the context do not re-render with the sheet.
-  const leave = useCallback<LeaveSheet>(
-    (then) => {
-      // A second Back or press while the sheet is already leaving changes nothing.
+  const answer = useCallback<Answer>(
+    (then, closes) => {
+      // Once the sheet is leaving, its answer is given: a later Back or press changes nothing.
       if (exits.current !== null) {
         return;
       }
+
+      if (!closes) {
+        then();
+
+        return;
+      }
+
+      // The close hands focus back to the page, so the hold ends before it runs.
+      const close = (): void => {
+        release.current();
+        then();
+      };
 
       const panel = ref.current;
 
       if (reducedMotion() || panel === null || house.current === null) {
         exits.current = [];
-        then();
+        close();
 
         return;
       }
@@ -80,7 +102,7 @@ export const Sheet = ({
 
       // A cancelled exit (the page went away underneath) rejects, and must not close anything.
       Promise.all(running.map(async (exit) => await exit.finished))
-        .then(then)
+        .then(close)
         .catch(() => null);
     },
     [ref]
@@ -89,10 +111,12 @@ export const Sheet = ({
   useActionHandler(
     "back",
     () => {
-      leave(onClose);
+      answer(onClose, true);
     },
-    "overlay"
+    "modal"
   );
+  // Outranks a guard from anything that mounts under the sheet; the spatial search stays inside it.
+  useNavigationGuard(() => false, "modal");
 
   return (
     <>
@@ -109,7 +133,7 @@ export const Sheet = ({
         >
           <SectionHead>{title}</SectionHead>
           <div className="-mx-3 flex flex-col overflow-hidden px-3 py-2">
-            <LeaveContext value={leave}>{children}</LeaveContext>
+            <AnswerContext value={answer}>{children}</AnswerContext>
           </div>
         </section>
       </FocusContext.Provider>
@@ -117,18 +141,25 @@ export const Sheet = ({
   );
 };
 
-/** A sheet row whose press closes the sheet: it plays the exit, then runs `then`. */
+/**
+ * A sheet row. Its press runs `then`; a row that `closes` (the default) plays the sheet's exit
+ * first. Once the sheet is leaving, no row answers.
+ */
 export const SheetAction = ({
   then,
+  closes = true,
   ...props
-}: Omit<ComponentProps<typeof ListAction>, "onPress"> & { readonly then: () => void }) => {
-  const leave = use(LeaveContext);
+}: Omit<ComponentProps<typeof ListAction>, "onPress"> & {
+  readonly then: () => void;
+  readonly closes?: boolean;
+}) => {
+  const answer = use(AnswerContext);
 
   return (
     <ListAction
       {...props}
       onPress={() => {
-        leave(then);
+        answer(then, closes);
       }}
     />
   );

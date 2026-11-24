@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 
 import { useActionHandler } from "../input/handlers";
 import { quitLine, updateStatusQuery } from "../settings/quit-line";
-import { ListAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
 import { Sheet, SheetAction } from "../ui/sheet";
 
@@ -20,11 +19,12 @@ const ExitSheet = ({ onStay }: { readonly onStay: () => void }) => {
   return (
     <Sheet title="Leave harakiri?" focusKey="exit-sheet" onClose={onStay}>
       <SheetAction focusKey="exit-stay" label="Stay" then={onStay} />
-      <ListAction
+      <SheetAction
         focusKey="exit-quit"
         label="Quit harakiri"
         detail={quitLine(updates)}
-        onPress={() => {
+        closes={false}
+        then={() => {
           void window.harakiri.app.quit();
         }}
       />
