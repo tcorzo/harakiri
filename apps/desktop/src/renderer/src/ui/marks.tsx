@@ -175,14 +175,20 @@ export const ProgrammeNotes = ({
 export const SectionHead = ({
   children,
   className = "",
+  cue = false,
 }: {
   readonly children: ReactNode;
   readonly className?: string;
+  /** The tab draws upward like a cue light once a sheet lands. */
+  readonly cue?: boolean;
 }) => (
   <h2
     className={`text-body text-paper stretch-wide m-0 flex items-center gap-4 font-[760] ${className}`}
   >
-    <span aria-hidden="true" className="bg-band block h-[1.5em] w-[0.5rem] shrink-0" />
+    <span
+      aria-hidden="true"
+      className={`bg-band block h-[1.5em] w-[0.5rem] shrink-0 ${cue ? "animate-cue origin-bottom" : ""}`}
+    />
     {children}
   </h2>
 );

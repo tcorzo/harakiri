@@ -1,4 +1,5 @@
 import { FocusContext, useFocusable } from "@noriginmedia/norigin-spatial-navigation";
+import { noop } from "es-toolkit";
 import { createContext, use, useCallback, useEffect, useRef } from "react";
 import type { ComponentProps, ReactNode } from "react";
 
@@ -14,10 +15,10 @@ const AnswerContext = createContext<Answer>((then) => {
   then();
 });
 
-// The exit mirrors the entrance in styles.css, faster and accelerating away.
+// The exit mirrors the entrance in styles.css, faster and accelerating away from the first frame.
 const exitTiming: KeyframeAnimationOptions = {
-  duration: 200,
-  easing: "cubic-bezier(0.7, 0, 0.84, 0)",
+  duration: 160,
+  easing: "cubic-bezier(0.4, 0, 1, 1)",
   fill: "forwards",
 };
 
@@ -115,6 +116,9 @@ export const Sheet = ({
     },
     "modal"
   );
+  // Menu and Play/Pause would act on the page under the question, so the sheet takes them unanswered.
+  useActionHandler("menu", noop, "modal");
+  useActionHandler("playPause", noop, "modal");
   // Outranks a guard from anything that mounts under the sheet; the spatial search stays inside it.
   useNavigationGuard(() => false, "modal");
 
@@ -129,10 +133,11 @@ export const Sheet = ({
         <section
           ref={ref}
           aria-label={title}
-          className="bg-ink-raised pr-safe-x py-safe-y animate-wings-in [&>h2>span]:animate-cue absolute inset-y-0 right-0 z-20 flex w-[46rem] flex-col gap-6 pl-12 shadow-[-1.5rem_0_4rem_var(--color-shade)] [&>h2>span]:origin-bottom"
+          className="bg-ink-raised pr-safe-x py-safe-y animate-wings-in absolute inset-y-0 right-0 z-20 flex w-[46rem] flex-col gap-6 pl-12 shadow-[-1.5rem_0_4rem_var(--color-shade)]"
         >
-          <SectionHead>{title}</SectionHead>
-          <div className="-mx-3 flex flex-col overflow-hidden px-3 py-2">
+          <SectionHead cue>{title}</SectionHead>
+          {/* Rows keep their height and scroll when a list outgrows the sheet; the padding clears the focus ring. */}
+          <div className="-mx-3 flex flex-col overflow-hidden px-3 py-3 *:shrink-0 *:scroll-my-3">
             <AnswerContext value={answer}>{children}</AnswerContext>
           </div>
         </section>
