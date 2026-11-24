@@ -7,7 +7,7 @@ import { useActionHandler } from "../input/handlers";
 import { quitLine, updateStatusQuery } from "../settings/quit-line";
 import { ListAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
-import { Sheet } from "../ui/sheet";
+import { Sheet, SheetAction } from "../ui/sheet";
 
 /** Asks before the library's last Back leaves the app; Stay is focused, so a stray press stays. */
 const ExitSheet = ({ onStay }: { readonly onStay: () => void }) => {
@@ -19,7 +19,7 @@ const ExitSheet = ({ onStay }: { readonly onStay: () => void }) => {
 
   return (
     <Sheet title="Leave harakiri?" focusKey="exit-sheet" onClose={onStay}>
-      <ListAction focusKey="exit-stay" label="Stay" onPress={onStay} />
+      <SheetAction focusKey="exit-stay" label="Stay" then={onStay} />
       <ListAction
         focusKey="exit-quit"
         label="Quit harakiri"

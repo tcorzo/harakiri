@@ -45,6 +45,10 @@
   --animate-relight: relight 900ms var(--ease-curtain) both;
   --animate-hold: hold linear both;
   --animate-drift: drift 2.4s var(--ease-curtain) infinite;
+  /* A sheet slides in from the wings while the house dims; its cue light draws once it lands. */
+  --animate-wings-in: wings-in 420ms var(--ease-curtain) both;
+  --animate-house-down: house-down 420ms var(--ease-house) both;
+  --animate-cue: cue 320ms var(--ease-curtain) 240ms both;
 
   @keyframes relight {
     from {
@@ -58,6 +62,21 @@
     }
     to {
       transform: scaleX(1);
+    }
+  }
+  @keyframes wings-in {
+    from {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes house-down {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes cue {
+    from {
+      transform: scaleY(0);
     }
   }
   @keyframes drift {

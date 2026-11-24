@@ -1,8 +1,7 @@
 import { useEffect } from "react";
 
-import { ListAction } from "../ui/actions";
 import { focusFirst } from "../ui/focus";
-import { Sheet } from "../ui/sheet";
+import { Sheet, SheetAction } from "../ui/sheet";
 
 export interface TrackOption {
   readonly index: number;
@@ -36,7 +35,7 @@ export const TrackPicker = ({
   return (
     <Sheet title={title} focusKey="track-picker" onClose={onClose}>
       {options.map((option, i) => (
-        <ListAction
+        <SheetAction
           key={option.index}
           focusKey={`track-${i}`}
           label={`${option.label}${option.index === chosen ? ", chosen" : ""}`}
@@ -44,12 +43,12 @@ export const TrackPicker = ({
           onFocus={({ node }) => {
             node.scrollIntoView({ block: "nearest" });
           }}
-          onPress={() => {
+          then={() => {
             onChoose(option.index);
           }}
         >
           {option.label}
-        </ListAction>
+        </SheetAction>
       ))}
     </Sheet>
   );
