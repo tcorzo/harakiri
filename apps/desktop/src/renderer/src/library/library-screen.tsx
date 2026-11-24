@@ -33,6 +33,7 @@ import { focusFirst } from "../ui/focus";
 import { SettingsMark } from "../ui/marks";
 import { hasCardText, PosterCard, StillCard } from "./cards";
 import type { CardProps } from "./cards";
+import { useBackToLeave } from "./exit-sheet";
 import { HeroBar, heroFilmKey, isHeroFilmKey } from "./hero-bar";
 import { upNext, useHeroCycle } from "./hero-cycle";
 import { cardKey, restoreKeys, tonight, useLit } from "./lit";
@@ -358,13 +359,13 @@ const SettingsLink = () => {
   );
 };
 
-const EmptyLibrary = () => {
+const EmptyLibrary = ({ children }: { readonly children: ReactNode }) => {
   useEffect(() => {
     focusFirst("library-settings");
   }, []);
 
   return (
-    <main className="px-safe-x py-safe-y flex h-screen flex-col justify-end gap-6">
+    <main className="px-safe-x py-safe-y relative flex h-screen flex-col justify-end gap-6">
       <h1 className="text-marquee stretch-extra-wide m-0 font-[820]">An empty programme</h1>
       <p className="text-body text-paper-dim max-w-[60ch]">
         The server has no films or series this account can see yet. Add a library on the server, let
@@ -373,6 +374,7 @@ const EmptyLibrary = () => {
       <div>
         <SettingsLink />
       </div>
+      {children}
     </main>
   );
 };
@@ -490,12 +492,7 @@ export const LibraryScreen = () => {
   useActionHandler("menu", () => {
     void navigate({ to: "/settings" });
   });
-  // Back from the rows returns to tonight's screening rather than leaving the app.
-  useActionHandler("back", () => {
-    if (!holding && hero !== null) {
-      focusFirst("hero-play");
-    }
-  });
+  const exitSheet = useBackToLeave(holding, hero !== null);
 
   useEffect(() => {
     if (useLit.getState().place !== null) {
@@ -512,7 +509,7 @@ export const LibraryScreen = () => {
   useStageNavigation(hero !== null, featured.length, cycle.index, rows);
 
   if (hero === null && rows !== null && rows.length === 0) {
-    return <EmptyLibrary />;
+    return <EmptyLibrary>{exitSheet}</EmptyLibrary>;
   }
 
   const playHero = (): void => {
@@ -675,6 +672,8 @@ export const LibraryScreen = () => {
         )}
 
         {rows === null ? null : <Programme server={server} rows={rows} hero={hero !== null} />}
+
+        {exitSheet}
       </main>
     </FocusContext.Provider>
   );
