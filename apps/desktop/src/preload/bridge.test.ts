@@ -44,6 +44,7 @@ describe(createBridge, () => {
     const { ipc } = fakeIpc();
 
     expect(Object.keys(createBridge(ipc, { e2e: false, warn })).toSorted()).toStrictEqual([
+      "app",
       "deviceId",
       "discover",
       "launcher",
@@ -52,6 +53,7 @@ describe(createBridge, () => {
       "updates",
     ]);
     expect(Object.keys(createBridge(ipc, { e2e: true, warn })).toSorted()).toStrictEqual([
+      "app",
       "deviceId",
       "discover",
       "launcher",
@@ -176,6 +178,13 @@ describe(createBridge, () => {
     await expect(createBridge(plain.ipc, { e2e: false, warn }).session.storage()).rejects.toThrow(
       /Invalid option/u
     );
+  });
+
+  it("quit invokes its channel", async () => {
+    const { ipc, invoked } = fakeIpc();
+
+    await createBridge(ipc, { e2e: false, warn }).app.quit();
+    expect(invoked).toContainEqual([channels.appQuit]);
   });
 
   it("parses the update status and restart invokes its channel", async () => {

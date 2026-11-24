@@ -5,9 +5,10 @@ type Handled = "back" | "menu" | "playPause";
 
 /**
  * Who a claim belongs to. A screen claims as a `page`. Something drawn over it that holds focus
- * until the owner answers it claims as an `overlay`, and answers before every page claim.
+ * until the owner answers it claims as an `overlay`, and answers before every page claim. A sheet
+ * claims as a `modal`, and answers before every overlay, even one that mounts after it.
  */
-export type ClaimLayer = "page" | "overlay";
+export type ClaimLayer = "page" | "overlay" | "modal";
 
 interface Claim<T> {
   readonly run: T;
@@ -22,7 +23,11 @@ interface Claim<T> {
  * registers before its page does, so it claims as an overlay instead.
  */
 const top = <T>(claims: readonly Claim<T>[]): T | undefined =>
-  (claims.findLast((claim) => claim.layer === "overlay") ?? claims.at(-1))?.run;
+  (
+    claims.findLast((claim) => claim.layer === "modal") ??
+    claims.findLast((claim) => claim.layer === "overlay") ??
+    claims.at(-1)
+  )?.run;
 
 const stacks: Record<Handled, Claim<() => void>[]> = { back: [], menu: [], playPause: [] };
 

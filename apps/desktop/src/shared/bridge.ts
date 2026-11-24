@@ -20,6 +20,7 @@ export const channels = {
   deviceId: "device:id",
   updateStatus: "updates:status",
   updateRestart: "updates:restart",
+  appQuit: "app:quit",
   launcherStatus: "launcher:status",
   launcherAdd: "launcher:add",
   discover: "server:discover",
@@ -235,6 +236,10 @@ export interface HarakiriBridge {
     readonly storage: () => Promise<"keyring" | "file">;
   };
   readonly discover: () => Promise<DiscoveredServer[]>;
+  readonly app: {
+    /** Quits as closing the window does: playback stops first, and a ready update installs. */
+    readonly quit: () => Promise<void>;
+  };
   readonly updates: {
     readonly status: () => Promise<UpdateStatus>;
     /** Quits and installs the downloaded update; does nothing unless one is ready. */

@@ -196,7 +196,9 @@ const main = async (): Promise<void> => {
 
   started.updates = updates;
   installContentSecurityPolicy(session.defaultSession, isAppUrl, contentSecurityPolicy(appUrl));
-  registerIpc(isAppUrl, updates);
+  registerIpc(isAppUrl, updates, () => {
+    app.quit();
+  });
   warnOnSoftwareCompositing(createWindow());
   // The keyring probe can be slow or wait on a password prompt; it must never hold up the window.
   void logHost();

@@ -68,6 +68,11 @@ export const createBridge = (ipc: BridgeIpc, options: BridgeOptions): HarakiriBr
       },
       storage: async () => await invoke(channels.sessionStorage, SessionStorage),
     },
+    app: {
+      quit: async () => {
+        await invoke(channels.appQuit, z.undefined());
+      },
+    },
     updates: {
       status: async () => await invoke(channels.updateStatus, UpdateStatus),
       restart: async () => {

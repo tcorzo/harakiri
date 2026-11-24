@@ -81,6 +81,7 @@ export const ListAction = (props: ActionProps & { readonly detail?: ReactNode })
       ref={ref}
       type="button"
       aria-label={props.label}
+      data-focus-key={props.focusKey}
       onClick={props.onPress}
       className="group focus-mark hairline focus-visible:bg-paper focus-visible:text-ink flex min-h-[4.5rem] w-full items-baseline gap-8 border-b-2 px-4 py-4 text-left focus-visible:transform-none"
     >
